@@ -1,0 +1,21 @@
+{
+  "name": "timeflow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TimeFlow – a cross-device productivity app that smart-schedules tasks into your calendar.",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm dev:backend",
+    "dev:backend": "pnpm -C apps/backend dev",
+    "dev:web": "pnpm -C apps/web dev",
+    "dev:mobile": "pnpm -C apps/mobile start",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "format": "pnpm -r format"
+  }
+}
+
+

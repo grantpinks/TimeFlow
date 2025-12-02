@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "TimeFlow",
+    "slug": "timeflow",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#3b82f6"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.timeflow.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#3b82f6"
+      },
+      "package": "com.timeflow.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "timeflow"
+  }
+}
+

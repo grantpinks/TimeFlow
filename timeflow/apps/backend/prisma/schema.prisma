@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String   @id @default(cuid())
+  email                   String   @unique
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  // Google integration
+  googleId                String?  @unique
+  googleRefreshToken      String?
+  googleAccessToken       String?
+  googleAccessTokenExpiry DateTime?
+
+  // Preferences
+  timeZone                 String  @default("America/Chicago")
+  wakeTime                 String  @default("08:00") // "HH:mm"
+  sleepTime                String  @default("23:00") // "HH:mm"
+  defaultTaskDurationMinutes Int   @default(30)
+  defaultCalendarId        String?
+
+  tasks          Task[]
+  scheduledTasks ScheduledTask[]
+}
+
+model Task {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  title           String
+  description     String?
+  durationMinutes Int      @default(30)
+  priority        Int      @default(2) // 1 = high, 2 = medium, 3 = low
+  status          String   @default("unscheduled") // unscheduled | scheduled | completed
+
+  dueDate         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  scheduledTask   ScheduledTask?
+}
+
+model ScheduledTask {
+  id                String   @id @default(cuid())
+  taskId            String   @unique
+  task              Task     @relation(fields: [taskId], references: [id])
+
+  provider          String   // "google" | "apple"
+  calendarId        String
+  eventId           String
+
+  startDateTime     DateTime
+  endDateTime       DateTime
+
+  overflowedDeadline Boolean @default(false)
+  lastSyncedAt      DateTime @default(now())
+}
+
+
