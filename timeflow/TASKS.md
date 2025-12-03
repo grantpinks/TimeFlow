@@ -38,8 +38,20 @@ This checklist tracks the implementation status of TimeFlow according to `Projec
 - [x] `GET /api/calendar/list` - List calendars
 - [x] `POST /api/schedule` - Run smart scheduling
 - [x] `PATCH /api/schedule/:taskId` - Manual reschedule
+- [ ] **`POST /api/assistant/chat` - AI assistant conversation**
+- [ ] **`GET /api/assistant/suggestions` - Get schedule recommendations**
 
 **Files**: `apps/backend/src/routes/*.ts`, `apps/backend/src/controllers/*.ts`, `apps/backend/src/services/*.ts`
+
+### 3b. AI Assistant Backend
+- [ ] Create `assistantRoutes.ts` with chat endpoint
+- [ ] Create `assistantController.ts` for request handling
+- [ ] Create `assistantService.ts` with scheduling analysis logic
+- [ ] Implement context builder (tasks + calendar + preferences)
+- [ ] Implement recommendation generator
+- [ ] Add conversation history support (optional: persist to DB)
+
+**Files**: `apps/backend/src/routes/assistantRoutes.ts`, `apps/backend/src/services/assistantService.ts`
 
 ---
 
@@ -99,6 +111,7 @@ This checklist tracks the implementation status of TimeFlow according to `Projec
 - [x] Settings page with preferences form
 - [x] Auth callback handler
 - [x] Auth error page
+- [ ] **AI Assistant page with chat interface**
 
 **Files**: `apps/web/src/app/*/page.tsx`
 
@@ -106,8 +119,26 @@ This checklist tracks the implementation status of TimeFlow according to `Projec
 - [x] TaskList with create/complete/delete
 - [x] CalendarView with task events styling
 - [x] API client wrapper
+- [ ] **ChatMessage component (user/AI bubbles)**
+- [ ] **ChatInput component with send button**
+- [ ] **TypingIndicator animation**
+- [ ] **SchedulePreviewCard for AI suggestions**
+- [ ] **FloatingAssistantButton (icon)**
+- [ ] **QuickActionChips ("Show today", "Schedule all")**
 
 **Files**: `apps/web/src/components/*.tsx`, `apps/web/src/lib/api.ts`, `apps/web/src/hooks/*.ts`
+
+### 9b. AI Assistant Feature
+- [ ] Create `/assistant` page with modern chat UI
+- [ ] Design AI avatar/icon for assistant
+- [ ] Implement chat message history state
+- [ ] Add typing indicator while AI responds
+- [ ] Create quick action chips for common queries
+- [ ] Display inline schedule preview cards
+- [ ] Add "Apply Schedule" button to commit suggestions
+- [ ] Add floating assistant icon on Tasks/Calendar pages
+
+**Files**: `apps/web/src/app/assistant/page.tsx`, `apps/web/src/components/chat/*.tsx`
 
 ---
 
@@ -171,6 +202,7 @@ These items are marked as TODO in the codebase and need attention before product
 | Web App | ✅ Done | `apps/web/src/**` |
 | Mobile App | ✅ Done | `apps/mobile/src/**` |
 | AI Docs | ✅ Done | `CLAUDE.md`, `TASKS.md` |
+| **AI Assistant** | 🚧 Planned | `apps/web/src/app/assistant/**`, `apps/backend/src/services/assistantService.ts` |
 
 ---
 

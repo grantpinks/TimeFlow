@@ -63,14 +63,15 @@
 
 ---
 
-## Sprint 3: Web Frontend Core
+## Sprint 3: Web Frontend Core + AI Assistant
 **Duration**: Week 5-6
-**Focus**: Task list and calendar views in browser
+**Focus**: Task list, calendar views, and AI scheduling assistant
 
 ### Goals
 - [ ] Users can manage tasks in browser
 - [ ] Users can view calendar with scheduled tasks
 - [ ] "Smart Schedule" button works end-to-end
+- [ ] AI Assistant chatbot provides scheduling recommendations
 
 ### Tasks
 
@@ -83,12 +84,49 @@
 | 3.5 | Integrate react-big-calendar with events | Codex | 6-8h | P0 |
 | 3.6 | Wire "Smart Schedule" button to backend | Codex | 3-4h | P0 |
 | 3.7 | Implement settings page | Codex | 3-4h | P1 |
+| 3.8 | **Build AI Assistant page with chat UI** | Codex | 6-8h | P0 |
+| 3.9 | **Create chat message components (bubbles, typing indicator)** | Codex | 3-4h | P0 |
+| 3.10 | **Add floating AI assistant icon/button** | Codex | 2-3h | P1 |
+| 3.11 | **Backend: POST /api/assistant/chat endpoint** | Codex | 4-6h | P0 |
+| 3.12 | **Backend: Analyze tasks + calendar + generate recommendations** | Codex | 6-8h | P0 |
 | 3.G1 | Add loading states and error messages | Gemini | 3-4h | P1 |
 | 3.G2 | Document web app usage in README | Gemini | 2-3h | P1 |
+| 3.G3 | **Document AI Assistant feature and prompts** | Gemini | 2-3h | P1 |
+
+### AI Assistant Feature Spec
+
+**Purpose**: Conversational interface to help users plan their day before committing to a schedule.
+
+**User Flow**:
+1. User navigates to `/assistant` (second main page after Tasks)
+2. Sees modern chat UI with TimeFlow AI avatar/icon
+3. Can ask questions like:
+   - "What does my Tuesday look like?"
+   - "Can I fit a 2-hour study session tomorrow?"
+   - "Schedule my high priority tasks for this week"
+   - "Move my workout to the afternoon"
+4. Assistant analyzes:
+   - User's unscheduled tasks (priorities, durations, due dates)
+   - User's Google Calendar events for the requested day(s)
+   - User's wake/sleep preferences
+5. Assistant responds with:
+   - Visual time slot recommendations
+   - Conflict warnings
+   - "Apply this schedule" button to commit suggestions
+
+**UI Components**:
+- Chat message list (user bubbles right, AI bubbles left)
+- AI avatar icon (modern, friendly)
+- Typing indicator animation
+- Quick action chips ("Show today", "Schedule all", "What's free?")
+- Inline schedule preview cards
+- Floating assistant button on other pages
 
 ### Decision Gate
 - [ ] Can complete full flow: sign in → create task → schedule → see in calendar?
 - [ ] Is UI usable and intuitive?
+- [ ] Can user chat with AI and receive scheduling recommendations?
+- [ ] Can user apply AI suggestions to their calendar?
 
 ---
 
@@ -162,6 +200,8 @@
 | Scheduling algorithm tested | ✅ | Sprint 2 |
 | Tasks appear in Google Calendar | ✅ | Sprint 2 |
 | Web app functional | ✅ | Sprint 3 |
+| **AI Assistant chat working** | ✅ | Sprint 3 |
+| **AI can recommend time slots** | ✅ | Sprint 3 |
 | Mobile app functional | ✅ | Sprint 4 |
 | Security audit passed | ✅ | Sprint 5 |
 | Ready for beta | ✅ | Sprint 5 |
@@ -187,6 +227,8 @@
 - Notifications and reminders
 - Improved mobile UI
 - Analytics dashboard
+- **AI Assistant enhancements**: voice input, proactive suggestions, learning from user patterns
+- **Mobile AI Assistant**: bring chatbot to Expo app
 
 ---
 

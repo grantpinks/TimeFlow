@@ -37,6 +37,14 @@ We'll build:
   - Sorts by due date ASC, priority DESC
   - Marks `overflowedDeadline` if scheduled after due date
 
+- **AI Scheduling Assistant** - Conversational chatbot for schedule planning
+  - Modern chat UI with AI avatar icon
+  - Analyzes tasks, priorities, and calendar events
+  - Recommends optimal time slots based on constraints
+  - Users can ask questions like "What does my Tuesday look like?"
+  - Provides "Apply Schedule" action to commit suggestions
+  - Quick action chips for common queries
+
 - **Calendar Sync** - Google Calendar integration
   - OAuth2 sign-in with read/write access
   - Create/update events for scheduled tasks
@@ -44,6 +52,7 @@ We'll build:
 
 - **Views/Screens**
   - Task List: Unscheduled, Scheduled, Completed sections
+  - **AI Assistant: Chat interface for schedule recommendations (2nd main page)**
   - Calendar View: Week/day view with task events + existing events
   - Settings: Wake/sleep times, timezone, default duration
 
@@ -86,8 +95,10 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 **Key user actions**:
 1. User signs in with Google OAuth
 2. User creates tasks with title, duration, priority, due date
-3. User clicks "Smart Schedule" to auto-place tasks in calendar
-4. Tasks appear in Google Calendar, synced and visible in app
+3. User opens AI Assistant and asks "Schedule my tasks for tomorrow"
+4. AI analyzes tasks + calendar and recommends time slots
+5. User reviews suggestions and clicks "Apply Schedule"
+6. Tasks appear in Google Calendar, synced and visible in app
 
 ---
 
