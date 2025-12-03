@@ -186,6 +186,19 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 
 ## Agent Roles
 
+Each agent has a dedicated instruction file with detailed directives:
+
+| Agent | File | Primary Role |
+|-------|------|--------------|
+| **Architect** | (this file) | Sprint plans, roadmaps, ADRs |
+| **Codex** | `CODEX.md` | Backend implementation, APIs, infrastructure |
+| **Claude** | `CLAUDE_AGENT.md` | Integration, AI features, final QA |
+| **Gemini** | `GEMINI.md` | Documentation, user guides, help content |
+| **Ruthless Reviewer** | (below) | Security audit, code review |
+| **Session Closer** | (below) | Handoffs, commits, next steps |
+
+---
+
 ### 1. Architect Agent (`architect`)
 
 **Primary Responsibility**: Create sprint plans, roadmaps, and architectural decisions.
@@ -205,19 +218,9 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 
 ### 2. Codex Agent (`codex`)
 
+> **Full directives**: See `CODEX.md`
+
 **Primary Responsibility**: Implement backend features, algorithms, and infrastructure.
-
-**Capabilities**:
-- Write production-quality TypeScript code
-- Implement business logic and services
-- Build API endpoints and controllers
-- Write unit and integration tests
-- Fix bugs and performance issues
-
-**Constraints**:
-- MUST write tests for all new features
-- MUST update documentation when implementation changes
-- MUST log all errors appropriately
 
 **Key Files**:
 - `apps/backend/src/**/*.ts`
@@ -228,27 +231,9 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 
 ### 3. Claude Agent (`claude`)
 
+> **Full directives**: See `CLAUDE_AGENT.md`
+
 **Primary Responsibility**: Heavy lifting, complex integrations, AI features, and final QA.
-
-**Capabilities**:
-- End-to-end feature integration across frontend + backend
-- Complex logic implementation (AI Assistant, scheduling intelligence)
-- Prompt engineering for AI-powered features
-- Cross-feature bug fixes and edge case handling
-- Final QA and pre-launch verification
-- Conflict resolution and error recovery flows
-
-**When to Use Claude**:
-- Integrating multiple components together
-- Building AI/ML-powered features
-- Debugging complex cross-system issues
-- Final testing before releases
-- Any task requiring deep reasoning or multi-step problem solving
-
-**Constraints**:
-- MUST verify integrations work end-to-end
-- MUST handle edge cases and error states
-- MUST document any non-obvious decisions made
 
 **Key Files**:
 - `apps/web/src/app/assistant/**` (AI Assistant)
@@ -259,19 +244,9 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 
 ### 4. Gemini Agent (`gemini`)
 
+> **Full directives**: See `GEMINI.md`
+
 **Primary Responsibility**: Create and maintain all project documentation.
-
-**Capabilities**:
-- Write README, user guides, API docs
-- Create architecture explanations
-- Update troubleshooting guides
-- Maintain data mapping docs
-
-**Constraints**:
-- MUST use clear, plain language
-- MUST include "Why this matters" context
-- MUST verify all code examples work
-- MUST update "Last Updated" timestamps
 
 **Key Files**:
 - `README.md`
