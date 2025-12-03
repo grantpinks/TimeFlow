@@ -89,6 +89,11 @@
 | 3.10 | **Add floating AI assistant icon/button** | Codex | 2-3h | P1 |
 | 3.11 | **Backend: POST /api/assistant/chat endpoint** | Codex | 4-6h | P0 |
 | 3.12 | **Backend: Analyze tasks + calendar + generate recommendations** | Codex | 6-8h | P0 |
+| 3.C1 | **Integrate AI Assistant frontend + backend end-to-end** | Claude | 4-6h | P0 |
+| 3.C2 | **Implement intelligent prompt engineering for schedule analysis** | Claude | 6-8h | P0 |
+| 3.C3 | **Build "Apply Schedule" flow with conflict resolution** | Claude | 4-6h | P0 |
+| 3.C4 | **Add conversation context & memory for multi-turn chat** | Claude | 3-4h | P1 |
+| 3.C5 | **Final QA: test all AI Assistant user flows** | Claude | 3-4h | P0 |
 | 3.G1 | Add loading states and error messages | Gemini | 3-4h | P1 |
 | 3.G2 | Document web app usage in README | Gemini | 2-3h | P1 |
 | 3.G3 | **Document AI Assistant feature and prompts** | Gemini | 2-3h | P1 |
@@ -180,6 +185,10 @@
 | 5.6 | Write web E2E tests (Playwright) | Codex | 6-8h | P1 |
 | 5.7 | Set up CI/CD with GitHub Actions | Codex | 4-6h | P1 |
 | 5.8 | Deploy to staging environment | Codex | 4-6h | P1 |
+| 5.C1 | **Final integration: verify all features work together** | Claude | 4-6h | P0 |
+| 5.C2 | **Fix any cross-feature bugs or edge cases** | Claude | 4-6h | P0 |
+| 5.C3 | **Optimize AI Assistant response quality** | Claude | 3-4h | P1 |
+| 5.C4 | **Pre-launch checklist review and sign-off** | Claude | 2-3h | P0 |
 | 5.G1 | Create deployment documentation | Gemini | 3-4h | P1 |
 | 5.G2 | Create user FAQ and help docs | Gemini | 4-6h | P2 |
 | 5.R1 | Security audit (ruthless-reviewer) | Reviewer | 6-8h | P0 |

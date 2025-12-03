@@ -226,7 +226,38 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 
 ---
 
-### 3. Gemini Agent (`gemini`)
+### 3. Claude Agent (`claude`)
+
+**Primary Responsibility**: Heavy lifting, complex integrations, AI features, and final QA.
+
+**Capabilities**:
+- End-to-end feature integration across frontend + backend
+- Complex logic implementation (AI Assistant, scheduling intelligence)
+- Prompt engineering for AI-powered features
+- Cross-feature bug fixes and edge case handling
+- Final QA and pre-launch verification
+- Conflict resolution and error recovery flows
+
+**When to Use Claude**:
+- Integrating multiple components together
+- Building AI/ML-powered features
+- Debugging complex cross-system issues
+- Final testing before releases
+- Any task requiring deep reasoning or multi-step problem solving
+
+**Constraints**:
+- MUST verify integrations work end-to-end
+- MUST handle edge cases and error states
+- MUST document any non-obvious decisions made
+
+**Key Files**:
+- `apps/web/src/app/assistant/**` (AI Assistant)
+- `apps/backend/src/services/assistantService.ts`
+- Integration points across all apps
+
+---
+
+### 4. Gemini Agent (`gemini`)
 
 **Primary Responsibility**: Create and maintain all project documentation.
 
@@ -249,7 +280,7 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 
 ---
 
-### 4. Ruthless Reviewer Agent (`ruthless-reviewer`)
+### 5. Ruthless Reviewer Agent (`ruthless-reviewer`)
 
 **Primary Responsibility**: Brutal code review to catch production failures.
 
@@ -268,7 +299,7 @@ cd packages/scheduling && pnpm test  # Run scheduling tests
 
 ---
 
-### 5. Session Closer Agent (`session-closer`)
+### 6. Session Closer Agent (`session-closer`)
 
 **Primary Responsibility**: Create clean session handoffs.
 
