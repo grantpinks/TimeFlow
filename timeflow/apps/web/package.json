@@ -10,12 +10,14 @@
   },
   "dependencies": {
     "@timeflow/shared": "workspace:*",
-    "next": "^14.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-big-calendar": "^1.8.5",
     "date-fns": "^3.0.6",
-    "luxon": "^3.4.4"
+    "luxon": "^3.4.4",
+    "next": "^14.0.4",
+    "react": "^18.3.1",
+    "react-big-calendar": "^1.8.5",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/luxon": "^3.4.2",
@@ -29,4 +31,3 @@
     "typescript": "^5.3.2"
   }
 }
-
