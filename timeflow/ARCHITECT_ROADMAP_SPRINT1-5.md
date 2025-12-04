@@ -72,6 +72,7 @@
 - [ ] Users can view calendar with scheduled tasks
 - [ ] "Smart Schedule" button works end-to-end
 - [ ] AI Assistant chatbot provides scheduling recommendations
+- [ ] Basic Today page (`/today`) shows today's tasks and events
 
 ### Tasks
 
@@ -89,11 +90,13 @@
 | 3.10 | **Add floating AI assistant icon/button** | Codex | 2-3h | P1 |
 | 3.11 | **Backend: POST /api/assistant/chat endpoint** | Codex | 4-6h | P0 |
 | 3.12 | **Backend: Analyze tasks + calendar + generate recommendations** | Codex | 6-8h | P0 |
+| 3.13 | Implement basic `/today` dashboard (Today view v1, no drag-and-drop) | Codex | 4-6h | P1 |
 | 3.C1 | **Integrate AI Assistant frontend + backend end-to-end** | Claude | 4-6h | P0 |
 | 3.C2 | **Implement intelligent prompt engineering for schedule analysis** | Claude | 6-8h | P0 |
 | 3.C3 | **Build "Apply Schedule" flow with conflict resolution** | Claude | 4-6h | P0 |
 | 3.C4 | **Add conversation context & memory for multi-turn chat** | Claude | 3-4h | P1 |
 | 3.C5 | **Final QA: test all AI Assistant user flows** | Claude | 3-4h | P0 |
+| 3.C6 | Draft UX spec for Phase 2 premium interactions (DnD, transitions, micro-interactions) | Claude | 3-4h | P2 |
 | 3.G1 | Add loading states and error messages | Gemini | 3-4h | P1 |
 | 3.G2 | Document web app usage in README | Gemini | 2-3h | P1 |
 | 3.G3 | **Document AI Assistant feature and prompts** | Gemini | 2-3h | P1 |
@@ -137,12 +140,13 @@
 
 ## Sprint 4: Mobile App & Polish
 **Duration**: Week 7-8
-**Focus**: Mobile app screens, UI refinement
+**Focus**: Mobile app screens, UI refinement, theming foundation
 
 ### Goals
 - [ ] Mobile app shows today's agenda
 - [ ] Mobile app shows all tasks with filters
 - [ ] UI polished across web and mobile
+- [ ] Web layout and theming prepared for Phase 2 polish (design tokens, light/dark ready)
 
 ### Tasks
 
@@ -155,8 +159,10 @@
 | 4.5 | Add pull-to-refresh and loading states | Codex | 2-3h | P1 |
 | 4.6 | Add task creation form to mobile | Codex | 4-6h | P1 |
 | 4.7 | Polish web calendar styling | Codex | 3-4h | P2 |
+| 4.8 | Introduce shared design tokens and theme system (CSS variables) | Codex | 4-6h | P1 |
 | 4.G1 | Document mobile app setup in README | Gemini | 2-3h | P1 |
 | 4.G2 | Create user onboarding guide | Gemini | 3-4h | P2 |
+| 4.G3 | Document design system and theming guidelines | Gemini | 3-4h | P2 |
 
 ### Decision Gate
 - [ ] Does mobile app work on iOS and Android?
@@ -230,6 +236,15 @@
 
 ## Phase 2 Preview (Sprints 6-10)
 
+- **Task categories with color coding** (Professional, Schoolwork, Personal, Misc – visible in task lists, calendar, and AI Assistant)
+- Habit scheduling engine (Reclaim-style habits that auto-schedule with flexible windows, Habit model + Habit Manager UI, integrated into scheduler)
+- Daily planning ritual view v2 (Sunsama-style `/today` flow with 3-column layout: Inbox, Today timeline, Context/AI)
+- Command palette for power users (Cmd/Ctrl+K navigation + quick actions for create task, navigate, run Assistant)
+- Animated page transitions and modal/side-panel animations using Framer Motion
+- Satisfying task-complete micro-interactions (checkbox animation, subtle celebratory visuals)
+- Drag-and-drop with ghost elements and smart guides for calendar/task interactions
+- Visual polish pass: gradients, glow accents, cohesive typography/spacing and component library
+- Seamless light/dark mode built on the shared design token system and `next-themes`
 - Apple Calendar integration
 - Recurring tasks
 - Task templates
@@ -241,5 +256,144 @@
 
 ---
 
-**Last Updated**: 2025-12-02
+## Phase 2 Detailed Plan (Sprints 6-10) – Draft
+
+> Note: Phase 2 scope is intentionally flexible. Exact sprint boundaries can be adjusted based on MVP feedback.
+
+### Sprint 6: Today Ritual v2, Task Categories & Habit Foundations
+**Duration**: Week 11-12  
+**Focus**: `/today` 3-column layout, task categories with color coding, simple habits model.
+
+#### Goals
+- [ ] `/today` page uses 3-column layout (Inbox, Today timeline, Context/AI).
+- [ ] Tasks have color-coded categories (Professional, Schoolwork, Personal, Misc).
+- [ ] Users can define basic habits with simple constraints.
+- [ ] Scheduler can consider habits conceptually (no full auto-placement yet).
+
+#### Task Categories Feature
+
+**Default Categories** (with customizable colors):
+| Category | Default Color | Use Case |
+|----------|---------------|----------|
+| Professional | Blue (#3B82F6) | Work meetings, deadlines, projects |
+| Schoolwork | Purple (#8B5CF6) | Homework, exams, study sessions |
+| Personal | Green (#10B981) | Errands, health, hobbies |
+| Misc | Gray (#6B7280) | Uncategorized tasks |
+
+**Future**: Users can create custom categories with custom colors.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 6.1 | Implement `/today` 3-column layout with responsive design | Codex | 6-8h | P0 |
+| 6.2 | Add basic daily planning ritual flow (banner + stepper) | Codex | 4-6h | P0 |
+| 6.3 | Add `Category` model to `schema.prisma` (id, name, color, userId) | Codex | 2-3h | P0 |
+| 6.4 | Add `categoryId` field to Task model, seed default categories | Codex | 2-3h | P0 |
+| 6.5 | Create Category service/controller/routes (CRUD + defaults) | Codex | 3-4h | P0 |
+| 6.6 | Update TaskList UI to show category color badges/pills | Codex | 3-4h | P0 |
+| 6.7 | Add category selector to task creation/edit forms | Codex | 2-3h | P0 |
+| 6.8 | Update CalendarView to color-code events by category | Codex | 3-4h | P1 |
+| 6.9 | Add Habit model to `schema.prisma` and run migration | Codex | 3-4h | P1 |
+| 6.10 | Create Habit service/controller/routes (CRUD API) | Codex | 4-6h | P1 |
+| 6.11 | Build `HabitManager` UI on `/habits` page (list + create/edit) | Codex | 4-6h | P1 |
+| 6.C1 | Define how habits should influence scheduler in Phase 2+ (rules, edge cases) | Claude | 3-4h | P1 |
+| 6.C2 | Integrate category colors into AI Assistant responses ("your Professional tasks...") | Claude | 2-3h | P2 |
+| 6.G1 | Document `/today` ritual, categories, and habits feature behavior | Gemini | 3-4h | P1 |
+
+---
+
+### Sprint 7: Habit Scheduling Engine & Recurring/Advanced Logic
+**Duration**: Week 13-14  
+**Focus**: Integrate habits into scheduling engine, introduce recurring logic.
+
+#### Goals
+- [ ] Habits can be automatically proposed as time blocks for a given week.
+- [ ] Scheduler respects habit frequency and time-of-day preferences.
+- [ ] Users can see and accept/reject proposed habit placements.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 7.1 | Extend scheduling types to include Habit and recurring metadata | Codex | 3-4h | P0 |
+| 7.2 | Update `scheduleTasks` to generate suggested habit blocks (no auto-commit) | Codex | 6-8h | P0 |
+| 7.3 | Add API endpoint to fetch habit schedule suggestions | Codex | 4-6h | P0 |
+| 7.4 | Add UI on `/today` and `/assistant` to review/accept habit suggestions | Codex | 4-6h | P1 |
+| 7.C1 | Tune scheduling heuristics for habits (overlap rules, flexibility, user prefs) | Claude | 6-8h | P0 |
+| 7.C2 | Collaborate with Assistant prompts to explain habit suggestions clearly | Claude | 3-4h | P1 |
+| 7.G1 | Update docs with examples of habit setups and outcomes | Gemini | 3-4h | P2 |
+
+---
+
+### Sprint 8: Premium Interactions – Transitions, DnD & Micro-Interactions
+**Duration**: Week 15-16  
+**Focus**: Framer Motion integration, drag-and-drop polish, task-complete interactions.
+
+#### Goals
+- [ ] Core pages use smooth, consistent page and modal transitions.
+- [ ] Drag-and-drop for tasks → calendar uses ghost previews and smart guides.
+- [ ] Completing a task feels satisfying via micro-interactions.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 8.1 | Integrate Framer Motion into shared layout for page transitions | Codex | 4-6h | P0 |
+| 8.2 | Add AnimatePresence-based modal/side-panel animations | Codex | 4-6h | P0 |
+| 8.3 | Implement DnD for tasks onto calendar using `dnd-kit` | Codex | 6-8h | P0 |
+| 8.4 | Add ghost previews + snap-to-slot guides during DnD | Codex | 4-6h | P1 |
+| 8.5 | Implement task-complete micro-interaction (checkbox + subtle celebration) | Codex | 4-6h | P1 |
+| 8.C1 | Ensure interactions remain performant and accessible (prefers-reduced-motion, etc.) | Claude | 3-4h | P1 |
+| 8.G1 | Update UX guidelines with interaction patterns and motion rules | Gemini | 3-4h | P2 |
+
+---
+
+### Sprint 9: Command Palette, Light/Dark Mode & Visual System
+**Duration**: Week 17-18  
+**Focus**: Power-user navigation, full theming, visual cohesion.
+
+#### Goals
+- [ ] Command palette enables fast navigation and key actions via keyboard.
+- [ ] Seamless light/dark mode built on design tokens and `next-themes`.
+- [ ] Visual system (colors, typography, spacing) is consistent across app.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 9.1 | Add command palette library (e.g., `cmdk`) and base component | Codex | 4-6h | P1 |
+| 9.2 | Wire high-value commands (create task, go to `/today`, open Assistant) | Codex | 3-4h | P1 |
+| 9.3 | Implement light/dark mode with `next-themes` using existing tokens | Codex | 4-6h | P0 |
+| 9.4 | Apply consistent typography/spacing across core pages | Codex | 4-6h | P1 |
+| 9.C1 | Validate keyboard accessibility and discoverability for command palette | Claude | 3-4h | P1 |
+| 9.G1 | Document theme usage and command palette shortcuts | Gemini | 3-4h | P2 |
+
+---
+
+### Sprint 10: Integrations, Analytics & AI Enhancements
+**Duration**: Week 19-20  
+**Focus**: Apple Calendar, analytics, notifications, smarter Assistant.
+
+#### Goals
+- [ ] Apple Calendar integration available for users who opt in.
+- [ ] Basic analytics for user behavior and feature usage.
+- [ ] Notification system for key events (upcoming tasks, missed habits).
+- [ ] AI Assistant provides proactive suggestions based on patterns.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 10.1 | Implement Apple Calendar integration (OAuth + sync) | Codex | 8-12h | P0 |
+| 10.2 | Add recurring tasks and templates support in backend + UI | Codex | 8-12h | P0 |
+| 10.3 | Implement basic analytics events (page views, key actions, assistant usage) | Codex | 4-6h | P1 |
+| 10.4 | Add notifications/reminders pipeline (cron/queue or external service) | Codex | 6-8h | P1 |
+| 10.C1 | Enhance AI Assistant prompts for proactive suggestions and habit coaching | Claude | 6-8h | P1 |
+| 10.C2 | Review cross-integration edge cases (Google + Apple calendars, recurring items) | Claude | 4-6h | P1 |
+| 10.G1 | Document multi-calendar behavior, analytics, and notification settings | Gemini | 4-6h | P2 |
+
+---
+
+**Last Updated**: 2025-12-03
 
