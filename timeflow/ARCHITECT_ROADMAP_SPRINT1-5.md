@@ -234,9 +234,10 @@
 
 ---
 
-## Phase 2 Preview (Sprints 6-10)
+## Phase 2 Preview (Sprints 6-11)
 
 - **Task categories with color coding** (Professional, Schoolwork, Personal, Misc – visible in task lists, calendar, and AI Assistant)
+- **Branding & visual identity** (logo system, color story, AI assistant mascot, iconography, marketing-ready assets)
 - **Streaks & gamification system** (daily streaks, task completion streaks, milestones, badges to drive engagement)
 - Habit scheduling engine (Reclaim-style habits that auto-schedule with flexible windows, Habit model + Habit Manager UI, integrated into scheduler)
 - Daily planning ritual view v2 (Sunsama-style `/today` flow with 3-column layout: Inbox, Today timeline, Context/AI)
@@ -356,8 +357,32 @@
 
 ---
 
-### Sprint 9: Command Palette, Light/Dark Mode & Visual System
+### Sprint 9: Branding, Visual Identity & AI Mascot
 **Duration**: Week 17-18  
+**Focus**: Brand identity system, logo, AI assistant mascot, and visual assets.
+
+#### Goals
+- [ ] TimeFlow has a clear brand identity (logo, colors, typography story).
+- [ ] AI Assistant has a distinctive mascot/character that appears across web + mobile.
+- [ ] Core UI surfaces (web + mobile) are updated to reflect the brand.
+- [ ] Asset package is ready for marketing site and app stores.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 9.1 | Define brand narrative and attributes (tone, personality, positioning) | Architect | 3-4h | P0 |
+| 9.2 | Design TimeFlow logo system (primary, monochrome, icon-only) | Codex | 4-6h | P0 |
+| 9.3 | Design AI Assistant mascot (character concept, states, small/large variants) | Codex | 6-8h | P0 |
+| 9.4 | Integrate logo + mascot into web app layout (header, sidebar, Assistant UI) | Codex | 4-6h | P1 |
+| 9.5 | Integrate logo + mascot into mobile app (splash, login, tab icons) | Codex | 4-6h | P1 |
+| 9.6 | Create basic brand guidelines doc (colors, type, usage rules, do/don't) | Gemini | 4-6h | P1 |
+| 9.C1 | Ensure mascot feels aligned with Assistant behavior and prompts | Claude | 3-4h | P1 |
+
+---
+
+### Sprint 10: Command Palette, Light/Dark Mode & Visual System
+**Duration**: Week 19-20  
 **Focus**: Power-user navigation, full theming, visual cohesion.
 
 #### Goals
@@ -369,17 +394,17 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 9.1 | Add command palette library (e.g., `cmdk`) and base component | Codex | 4-6h | P1 |
-| 9.2 | Wire high-value commands (create task, go to `/today`, open Assistant) | Codex | 3-4h | P1 |
-| 9.3 | Implement light/dark mode with `next-themes` using existing tokens | Codex | 4-6h | P0 |
-| 9.4 | Apply consistent typography/spacing across core pages | Codex | 4-6h | P1 |
-| 9.C1 | Validate keyboard accessibility and discoverability for command palette | Claude | 3-4h | P1 |
-| 9.G1 | Document theme usage and command palette shortcuts | Gemini | 3-4h | P2 |
+| 10.1 | Add command palette library (e.g., `cmdk`) and base component | Codex | 4-6h | P1 |
+| 10.2 | Wire high-value commands (create task, go to `/today`, open Assistant) | Codex | 3-4h | P1 |
+| 10.3 | Implement light/dark mode with `next-themes` using existing tokens | Codex | 4-6h | P0 |
+| 10.4 | Apply consistent typography/spacing across core pages | Codex | 4-6h | P1 |
+| 10.C1 | Validate keyboard accessibility and discoverability for command palette | Claude | 3-4h | P1 |
+| 10.G1 | Document theme usage and command palette shortcuts | Gemini | 3-4h | P2 |
 
 ---
 
-### Sprint 10: Integrations, Analytics, Streaks & AI Enhancements
-**Duration**: Week 19-20  
+### Sprint 11: Integrations, Analytics, Streaks & AI Enhancements
+**Duration**: Week 21-22  
 **Focus**: Apple Calendar, analytics, streaks/gamification, notifications, smarter Assistant.
 
 #### Goals
@@ -415,18 +440,18 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 10.1 | Implement Apple Calendar integration (OAuth + sync) | Codex | 8-12h | P0 |
-| 10.2 | Add recurring tasks and templates support in backend + UI | Codex | 8-12h | P0 |
-| 10.3 | Implement basic analytics events (page views, key actions, assistant usage) | Codex | 4-6h | P1 |
-| 10.4 | Add notifications/reminders pipeline (cron/queue or external service) | Codex | 6-8h | P1 |
-| 10.5 | Add `UserStreak` model to track daily activity, task streaks, longest streaks | Codex | 3-4h | P1 |
-| 10.6 | Create streak calculation service (check daily, update counts, detect milestones) | Codex | 4-6h | P1 |
-| 10.7 | Build streak display UI (counter in navbar, details page, milestone animations) | Codex | 4-6h | P1 |
-| 10.8 | Add streak reminder notifications ("Don't lose your 15-day streak!") | Codex | 2-3h | P2 |
-| 10.C1 | Enhance AI Assistant prompts for proactive suggestions and habit coaching | Claude | 6-8h | P1 |
-| 10.C2 | Review cross-integration edge cases (Google + Apple calendars, recurring items) | Claude | 4-6h | P1 |
-| 10.C3 | Integrate streaks into AI Assistant ("Great job on your 10-day streak!") | Claude | 2-3h | P2 |
-| 10.G1 | Document multi-calendar behavior, analytics, streaks, and notification settings | Gemini | 4-6h | P2 |
+| 11.1 | Implement Apple Calendar integration (OAuth + sync) | Codex | 8-12h | P0 |
+| 11.2 | Add recurring tasks and templates support in backend + UI | Codex | 8-12h | P0 |
+| 11.3 | Implement basic analytics events (page views, key actions, assistant usage) | Codex | 4-6h | P1 |
+| 11.4 | Add notifications/reminders pipeline (cron/queue or external service) | Codex | 6-8h | P1 |
+| 11.5 | Add `UserStreak` model to track daily activity, task streaks, longest streaks | Codex | 3-4h | P1 |
+| 11.6 | Create streak calculation service (check daily, update counts, detect milestones) | Codex | 4-6h | P1 |
+| 11.7 | Build streak display UI (counter in navbar, details page, milestone animations) | Codex | 4-6h | P1 |
+| 11.8 | Add streak reminder notifications ("Don't lose your 15-day streak!") | Codex | 2-3h | P2 |
+| 11.C1 | Enhance AI Assistant prompts for proactive suggestions and habit coaching | Claude | 6-8h | P1 |
+| 11.C2 | Review cross-integration edge cases (Google + Apple calendars, recurring items) | Claude | 4-6h | P1 |
+| 11.C3 | Integrate streaks into AI Assistant ("Great job on your 10-day streak!") | Claude | 2-3h | P2 |
+| 11.G1 | Document multi-calendar behavior, analytics, streaks, and notification settings | Gemini | 4-6h | P2 |
 
 ---
 
