@@ -272,7 +272,7 @@
 
 #### Task Categories Feature
 
-**Default Categories** (with customizable colors):
+**Default Categories** (user-customizable colors):
 | Category | Default Color | Use Case |
 |----------|---------------|----------|
 | Professional | Blue (#3B82F6) | Work meetings, deadlines, projects |
@@ -280,7 +280,11 @@
 | Personal | Green (#10B981) | Errands, health, hobbies |
 | Misc | Gray (#6B7280) | Uncategorized tasks |
 
-**Future**: Users can create custom categories with custom colors.
+**Customization**:
+- Users can change the color of any category via Settings or inline color picker.
+- Users can rename default categories to fit their workflow.
+- Users can create additional custom categories with any name/color.
+- Color palette: predefined swatches + optional hex input for advanced users.
 
 #### Tasks
 
@@ -293,13 +297,15 @@
 | 6.5 | Create Category service/controller/routes (CRUD + defaults) | Codex | 3-4h | P0 |
 | 6.6 | Update TaskList UI to show category color badges/pills | Codex | 3-4h | P0 |
 | 6.7 | Add category selector to task creation/edit forms | Codex | 2-3h | P0 |
-| 6.8 | Update CalendarView to color-code events by category | Codex | 3-4h | P1 |
-| 6.9 | Add Habit model to `schema.prisma` and run migration | Codex | 3-4h | P1 |
-| 6.10 | Create Habit service/controller/routes (CRUD API) | Codex | 4-6h | P1 |
-| 6.11 | Build `HabitManager` UI on `/habits` page (list + create/edit) | Codex | 4-6h | P1 |
+| 6.8 | Build category customization UI (rename, change color, create new) | Codex | 4-6h | P0 |
+| 6.9 | Add color picker component (preset swatches + hex input) | Codex | 2-3h | P1 |
+| 6.10 | Update CalendarView to color-code events by category | Codex | 3-4h | P1 |
+| 6.11 | Add Habit model to `schema.prisma` and run migration | Codex | 3-4h | P1 |
+| 6.12 | Create Habit service/controller/routes (CRUD API) | Codex | 4-6h | P1 |
+| 6.13 | Build `HabitManager` UI on `/habits` page (list + create/edit) | Codex | 4-6h | P1 |
 | 6.C1 | Define how habits should influence scheduler in Phase 2+ (rules, edge cases) | Claude | 3-4h | P1 |
 | 6.C2 | Integrate category colors into AI Assistant responses ("your Professional tasks...") | Claude | 2-3h | P2 |
-| 6.G1 | Document `/today` ritual, categories, and habits feature behavior | Gemini | 3-4h | P1 |
+| 6.G1 | Document `/today` ritual, categories (incl. customization), and habits | Gemini | 3-4h | P1 |
 
 ---
 
