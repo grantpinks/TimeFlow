@@ -26,6 +26,9 @@ const SYSTEM_PROMPT = `You are the TimeFlow AI Scheduling Assistant. Your role i
 4. Use visual formatting (emojis, bullet points, time blocks)
 5. Include actionable recommendations
 6. Handle conflicts gracefully with explanations
+7. Keep responses concise (2-3 paragraphs max for regular queries)
+8. Use specific times (e.g., "9:00 AM - 10:30 AM" not "morning")
+9. Acknowledge the user's question before answering
 
 **When recommending schedules**:
 - Prioritize high-priority tasks (priority 1 > 2 > 3)
@@ -90,12 +93,22 @@ export async function processMessage(
     console.error('Error processing message:', error);
 
     // Return fallback error message
+    // Provide more helpful error messages
+    let errorMessage = "I'm having trouble right now. Please try again in a moment.";
+
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        errorMessage = "The request took too long. This might mean the AI service is busy. Please try again with a simpler question.";
+      } else if (error.message.includes('LLM API error') || error.message.includes('fetch')) {
+        errorMessage = "I can't connect to the AI service right now. Please check that the local LLM server is running (see LOCAL_LLM_SETUP.md).";
+      }
+    }
+
     return {
       message: {
         id: generateMessageId(),
         role: 'assistant',
-        content:
-          "I'm having trouble right now. Please try again in a moment. If the problem persists, try refreshing the page.",
+        content: errorMessage,
         timestamp: new Date().toISOString(),
       },
     };
@@ -294,34 +307,48 @@ async function callLocalLLM(
     content: contextPrompt,
   });
 
-  // Call local LLM API (OpenAI-compatible format)
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: parseInt(env.LLM_MAX_TOKENS || '4000', 10),
-      temperature: 0.7,
-      stream: false,
-    }),
-  });
+  // Call local LLM API (OpenAI-compatible format) with timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        max_tokens: parseInt(env.LLM_MAX_TOKENS || '4000', 10),
+        temperature: 0.7,
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`LLM API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // Extract message content from OpenAI-compatible response
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response format from LLM API');
+    }
+
+    return data.choices[0].message.content;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('LLM request timed out after 30 seconds');
+    }
+    throw error;
   }
-
-  const data = await response.json();
-
-  // Extract message content from OpenAI-compatible response
-  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-    throw new Error('Invalid response format from LLM API');
-  }
-
-  return data.choices[0].message.content;
 }
 
 /**
