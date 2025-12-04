@@ -237,6 +237,7 @@
 ## Phase 2 Preview (Sprints 6-10)
 
 - **Task categories with color coding** (Professional, Schoolwork, Personal, Misc – visible in task lists, calendar, and AI Assistant)
+- **Streaks & gamification system** (daily streaks, task completion streaks, milestones, badges to drive engagement)
 - Habit scheduling engine (Reclaim-style habits that auto-schedule with flexible windows, Habit model + Habit Manager UI, integrated into scheduler)
 - Daily planning ritual view v2 (Sunsama-style `/today` flow with 3-column layout: Inbox, Today timeline, Context/AI)
 - Command palette for power users (Cmd/Ctrl+K navigation + quick actions for create task, navigate, run Assistant)
@@ -377,15 +378,38 @@
 
 ---
 
-### Sprint 10: Integrations, Analytics & AI Enhancements
+### Sprint 10: Integrations, Analytics, Streaks & AI Enhancements
 **Duration**: Week 19-20  
-**Focus**: Apple Calendar, analytics, notifications, smarter Assistant.
+**Focus**: Apple Calendar, analytics, streaks/gamification, notifications, smarter Assistant.
 
 #### Goals
 - [ ] Apple Calendar integration available for users who opt in.
 - [ ] Basic analytics for user behavior and feature usage.
-- [ ] Notification system for key events (upcoming tasks, missed habits).
+- [ ] **Streaks system tracks and rewards consistent usage.**
+- [ ] Notification system for key events (upcoming tasks, missed habits, streak reminders).
 - [ ] AI Assistant provides proactive suggestions based on patterns.
+
+#### Streaks & Gamification Feature
+
+**Streak Types**:
+| Streak | Description | Incentive |
+|--------|-------------|-----------|
+| Daily Active | Login/use app each day | Keep momentum, "X days in a row" |
+| Task Completion | Complete at least 1 task per day | Builds productivity habit |
+| Planning Ritual | Complete daily planning each morning | Encourages intentionality |
+| Habit Consistency | Complete scheduled habits | Reinforces habit formation |
+
+**Milestones & Badges**:
+- 🔥 **7-day streak** – "On Fire" badge
+- ⚡ **30-day streak** – "Unstoppable" badge
+- 🏆 **100-day streak** – "Centurion" badge
+- 🌟 **Personal best** – Celebrate when user beats their longest streak
+
+**UI Elements**:
+- Streak counter on dashboard/navbar (🔥 12)
+- Streak details in Settings or Profile
+- Celebratory animation when milestone reached
+- "Don't break your streak!" reminder notification (optional)
 
 #### Tasks
 
@@ -395,9 +419,14 @@
 | 10.2 | Add recurring tasks and templates support in backend + UI | Codex | 8-12h | P0 |
 | 10.3 | Implement basic analytics events (page views, key actions, assistant usage) | Codex | 4-6h | P1 |
 | 10.4 | Add notifications/reminders pipeline (cron/queue or external service) | Codex | 6-8h | P1 |
+| 10.5 | Add `UserStreak` model to track daily activity, task streaks, longest streaks | Codex | 3-4h | P1 |
+| 10.6 | Create streak calculation service (check daily, update counts, detect milestones) | Codex | 4-6h | P1 |
+| 10.7 | Build streak display UI (counter in navbar, details page, milestone animations) | Codex | 4-6h | P1 |
+| 10.8 | Add streak reminder notifications ("Don't lose your 15-day streak!") | Codex | 2-3h | P2 |
 | 10.C1 | Enhance AI Assistant prompts for proactive suggestions and habit coaching | Claude | 6-8h | P1 |
 | 10.C2 | Review cross-integration edge cases (Google + Apple calendars, recurring items) | Claude | 4-6h | P1 |
-| 10.G1 | Document multi-calendar behavior, analytics, and notification settings | Gemini | 4-6h | P2 |
+| 10.C3 | Integrate streaks into AI Assistant ("Great job on your 10-day streak!") | Claude | 2-3h | P2 |
+| 10.G1 | Document multi-calendar behavior, analytics, streaks, and notification settings | Gemini | 4-6h | P2 |
 
 ---
 
