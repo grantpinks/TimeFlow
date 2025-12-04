@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { UserProfile, UserPreferencesUpdate } from '@timeflow/shared';
-import * as api from '@/lib/api';
+import * as api from '../lib/api';
 
 export function useUser() {
   const [user, setUser] = useState<UserProfile | null>(null);

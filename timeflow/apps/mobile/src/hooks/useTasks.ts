@@ -28,6 +28,18 @@ export function useTasks() {
     fetchTasks();
   }, [fetchTasks]);
 
+  const createTask = async (data: {
+    title: string;
+    description?: string;
+    durationMinutes?: number;
+    priority?: 1 | 2 | 3;
+    dueDate?: string;
+  }) => {
+    const task = await api.createTask(data);
+    setTasks((prev) => [task, ...prev]);
+    return task;
+  };
+
   const completeTask = async (id: string) => {
     const updated = await api.completeTask(id);
     setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
@@ -44,6 +56,7 @@ export function useTasks() {
     loading,
     error,
     refresh: fetchTasks,
+    createTask,
     completeTask,
     deleteTask,
   };

@@ -5,38 +5,15 @@
  * and persisting results to the database and Google Calendar.
  */
 
+import {
+  scheduleTasks,
+  TaskInput,
+  CalendarEvent as SchedulerEvent,
+  UserPreferences,
+  ScheduledBlock,
+} from '@timeflow/scheduling';
 import { prisma } from '../config/prisma.js';
 import * as calendarService from './googleCalendarService.js';
-
-// TODO: Import from @timeflow/scheduling once package is set up
-// import { scheduleTasks, TaskInput, CalendarEvent as SchedulerEvent, UserPreferences, ScheduledBlock } from '@timeflow/scheduling';
-
-// Temporary inline types until package is wired
-interface TaskInput {
-  id: string;
-  durationMinutes: number;
-  priority: 1 | 2 | 3;
-  dueDate?: string;
-}
-
-interface SchedulerEvent {
-  id?: string;
-  start: string;
-  end: string;
-}
-
-interface UserPreferences {
-  timeZone: string;
-  wakeTime: string;
-  sleepTime: string;
-}
-
-interface ScheduledBlock {
-  taskId: string;
-  start: string;
-  end: string;
-  overflowedDeadline?: boolean;
-}
 
 /**
  * Run smart scheduling for the given tasks.
@@ -93,34 +70,19 @@ export async function scheduleTasksForUser(
   }));
 
   const preferences: UserPreferences = {
-    timeZone: user.timeZone,
-    wakeTime: user.wakeTime,
-    sleepTime: user.sleepTime,
+    timeZone: user.timeZone || 'UTC',
+    wakeTime: user.wakeTime || '08:00',
+    sleepTime: user.sleepTime || '23:00',
   };
 
   // 5. Run scheduling algorithm
-  // TODO: Replace with actual import from @timeflow/scheduling
-  // const scheduledBlocks = scheduleTasks(taskInputs, schedulerEvents, preferences, dateRangeStart, dateRangeEnd);
-
-  // Placeholder: simple sequential scheduling (to be replaced)
-  const scheduledBlocks: ScheduledBlock[] = [];
-  let currentTime = new Date(dateRangeStart);
-
-  for (const task of taskInputs) {
-    const start = currentTime.toISOString();
-    currentTime = new Date(currentTime.getTime() + task.durationMinutes * 60000);
-    const end = currentTime.toISOString();
-
-    scheduledBlocks.push({
-      taskId: task.id,
-      start,
-      end,
-      overflowedDeadline: task.dueDate ? new Date(end) > new Date(task.dueDate) : false,
-    });
-
-    // Add 15 min buffer between tasks
-    currentTime = new Date(currentTime.getTime() + 15 * 60000);
-  }
+  const scheduledBlocks = scheduleTasks(
+    taskInputs,
+    schedulerEvents,
+    preferences,
+    dateRangeStart,
+    dateRangeEnd
+  );
 
   // 6. Create Google Calendar events and persist ScheduledTask records
   for (const block of scheduledBlocks) {

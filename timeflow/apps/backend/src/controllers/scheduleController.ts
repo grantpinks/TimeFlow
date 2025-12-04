@@ -6,12 +6,19 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as scheduleService from '../services/scheduleService.js';
+import { z } from 'zod';
 
 interface ScheduleBody {
   taskIds: string[];
   dateRangeStart: string;
   dateRangeEnd: string;
 }
+
+const scheduleRequestSchema = z.object({
+  taskIds: z.array(z.string().min(1)).nonempty('taskIds array is required'),
+  dateRangeStart: z.string().datetime(),
+  dateRangeEnd: z.string().datetime(),
+});
 
 /**
  * POST /api/schedule
@@ -26,15 +33,12 @@ export async function runSchedule(
     return reply.status(401).send({ error: 'Not authenticated' });
   }
 
-  const { taskIds, dateRangeStart, dateRangeEnd } = request.body;
-
-  if (!taskIds || !Array.isArray(taskIds) || taskIds.length === 0) {
-    return reply.status(400).send({ error: 'taskIds array is required' });
+  const parsed = scheduleRequestSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
   }
 
-  if (!dateRangeStart || !dateRangeEnd) {
-    return reply.status(400).send({ error: 'dateRangeStart and dateRangeEnd are required' });
-  }
+  const { taskIds, dateRangeStart, dateRangeEnd } = parsed.data;
 
   try {
     const scheduledBlocks = await scheduleService.scheduleTasksForUser(
@@ -59,6 +63,11 @@ interface RescheduleBody {
   endDateTime: string;
 }
 
+const rescheduleSchema = z.object({
+  startDateTime: z.string().datetime(),
+  endDateTime: z.string().datetime(),
+});
+
 /**
  * PATCH /api/schedule/:taskId
  * Manually reschedules a task.
@@ -73,11 +82,13 @@ export async function rescheduleTask(
   }
 
   const { taskId } = request.params;
-  const { startDateTime, endDateTime } = request.body;
 
-  if (!startDateTime || !endDateTime) {
-    return reply.status(400).send({ error: 'startDateTime and endDateTime are required' });
+  const parsed = rescheduleSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
   }
+
+  const { startDateTime, endDateTime } = parsed.data;
 
   try {
     await scheduleService.rescheduleTask(user.id, taskId, startDateTime, endDateTime);

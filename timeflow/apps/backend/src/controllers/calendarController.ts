@@ -6,6 +6,12 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as calendarService from '../services/googleCalendarService.js';
+import { z } from 'zod';
+
+const eventQuerySchema = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
+});
 
 /**
  * GET /api/calendar/events
@@ -20,11 +26,12 @@ export async function getEvents(
     return reply.status(401).send({ error: 'Not authenticated' });
   }
 
-  const { from, to } = request.query;
-
-  if (!from || !to) {
-    return reply.status(400).send({ error: 'from and to query params are required' });
+  const parsed = eventQuerySchema.safeParse(request.query);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
   }
+
+  const { from, to } = parsed.data;
 
   try {
     const calendarId = user.defaultCalendarId || 'primary';

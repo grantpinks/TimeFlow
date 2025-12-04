@@ -98,17 +98,34 @@ export async function updateTask(
 export async function deleteTask(taskId: string, userId: string) {
   const existing = await prisma.task.findFirst({
     where: { id: taskId, userId },
+    include: { scheduledTask: true },
   });
 
   if (!existing) {
     return false;
   }
 
-  // Delete related scheduled task first if exists
+  // If task is scheduled, delete the Google Calendar event first
+  if (existing.scheduledTask) {
+    try {
+      const { deleteEvent } = await import('./googleCalendarService.js');
+      await deleteEvent(
+        userId,
+        existing.scheduledTask.calendarId,
+        existing.scheduledTask.eventId
+      );
+    } catch (error) {
+      // Log but don't fail if calendar event deletion fails
+      console.error('Failed to delete calendar event:', error);
+    }
+  }
+
+  // Delete related scheduled task record
   await prisma.scheduledTask.deleteMany({
     where: { taskId },
   });
 
+  // Delete the task
   await prisma.task.delete({
     where: { id: taskId },
   });

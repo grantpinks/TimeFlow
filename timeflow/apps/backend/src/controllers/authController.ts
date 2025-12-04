@@ -7,6 +7,12 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as authService from '../services/authService.js';
 import { env } from '../config/env.js';
+import { z } from 'zod';
+
+const callbackQuerySchema = z.object({
+  code: z.string().optional(),
+  error: z.string().optional(),
+});
 
 /**
  * GET /api/auth/google/start
@@ -28,7 +34,12 @@ export async function handleGoogleCallback(
   request: FastifyRequest<{ Querystring: { code?: string; error?: string } }>,
   reply: FastifyReply
 ) {
-  const { code, error } = request.query;
+  const parsedQuery = callbackQuerySchema.safeParse(request.query);
+  if (!parsedQuery.success) {
+    return reply.status(400).send({ error: parsedQuery.error.flatten().fieldErrors });
+  }
+
+  const { code, error } = parsedQuery.data;
 
   if (error) {
     request.log.error({ error }, 'Google OAuth error');

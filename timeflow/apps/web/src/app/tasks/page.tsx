@@ -1,14 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
 import { Layout } from '@/components/Layout';
 import { TaskList } from '@/components/TaskList';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
 
 export default function TasksPage() {
-  const { tasks, loading, error, createTask, completeTask, deleteTask, refresh } =
-    useTasks();
+  const {
+    tasks,
+    loading,
+    error,
+    createTask,
+    updateTask,
+    completeTask,
+    deleteTask,
+    refresh,
+  } = useTasks();
   const [scheduling, setScheduling] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleResult, setScheduleResult] = useState<string | null>(null);
@@ -148,6 +157,7 @@ export default function TasksPage() {
             <TaskList
               tasks={unscheduledTasks}
               onCreateTask={createTask}
+              onUpdateTask={updateTask}
               onCompleteTask={completeTask}
               onDeleteTask={deleteTask}
               loading={loading}
@@ -171,6 +181,7 @@ export default function TasksPage() {
               <TaskList
                 tasks={scheduledTasks}
                 onCreateTask={createTask}
+                onUpdateTask={updateTask}
                 onCompleteTask={completeTask}
                 onDeleteTask={deleteTask}
               />
@@ -194,6 +205,7 @@ export default function TasksPage() {
               <TaskList
                 tasks={completedTasks}
                 onCreateTask={createTask}
+                onUpdateTask={updateTask}
                 onCompleteTask={completeTask}
                 onDeleteTask={deleteTask}
               />
@@ -201,6 +213,8 @@ export default function TasksPage() {
           </div>
         </div>
       </div>
+
+      <FloatingAssistantButton />
     </Layout>
   );
 }

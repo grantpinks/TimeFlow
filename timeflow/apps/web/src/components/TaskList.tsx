@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import type { Task, CreateTaskRequest } from '@timeflow/shared';
+import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@timeflow/shared';
 
 interface TaskListProps {
   tasks: Task[];
   onCreateTask: (data: CreateTaskRequest) => Promise<void>;
+  onUpdateTask: (id: string, data: UpdateTaskRequest) => Promise<void>;
   onCompleteTask: (id: string) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
   loading?: boolean;
@@ -26,6 +27,7 @@ const priorityColors: Record<number, string> = {
 export function TaskList({
   tasks,
   onCreateTask,
+  onUpdateTask,
   onCompleteTask,
   onDeleteTask,
   loading,
@@ -37,6 +39,15 @@ export function TaskList({
   const [priority, setPriority] = useState<1 | 2 | 3>(2);
   const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingState, setEditingState] = useState<{
+    title: string;
+    description: string;
+    durationMinutes: number;
+    priority: 1 | 2 | 3;
+    dueDate: string;
+  } | null>(null);
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +73,43 @@ export function TaskList({
       console.error('Failed to create task:', err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEditModal = (task: Task) => {
+    setEditingTask(task);
+    setEditingState({
+      title: task.title,
+      description: task.description ?? '',
+      durationMinutes: task.durationMinutes,
+      priority: task.priority as 1 | 2 | 3,
+      dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingTask(null);
+    setEditingState(null);
+    setEditingSubmitting(false);
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask || !editingState?.title.trim()) return;
+    setEditingSubmitting(true);
+
+    try {
+      await onUpdateTask(editingTask.id, {
+        title: editingState.title.trim(),
+        description: editingState.description.trim() || undefined,
+        durationMinutes: editingState.durationMinutes,
+        priority: editingState.priority,
+        dueDate: editingState.dueDate || undefined,
+      });
+      closeEditModal();
+    } catch (err) {
+      console.error('Failed to update task:', err);
+      setEditingSubmitting(false);
     }
   };
 
@@ -269,29 +317,176 @@ export function TaskList({
                 </div>
               </div>
 
-              {/* Delete button */}
-              <button
-                onClick={() => onDeleteTask(task.id)}
-                className="text-slate-400 hover:text-red-500 p-1"
-                title="Delete task"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => openEditModal(task)}
+                  className="text-slate-400 hover:text-slate-700 p-1"
+                  title="Edit task"
+                  disabled={task.status === 'completed'}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => onDeleteTask(task.id)}
+                  className="text-slate-400 hover:text-red-500 p-1"
+                  title="Delete task"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {editingTask && editingState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-lg bg-white rounded-lg shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-slate-500">Edit task</p>
+                <h3 className="text-lg font-semibold text-slate-800 truncate">{editingTask.title}</h3>
+              </div>
+              <button
+                onClick={closeEditModal}
+                className="text-slate-400 hover:text-slate-600"
+                aria-label="Close edit modal"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSubmit} className="px-5 py-4 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm text-slate-700">Title</label>
+                <input
+                  type="text"
+                  value={editingState.title}
+                  onChange={(e) =>
+                    setEditingState((prev) => prev && { ...prev, title: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm text-slate-700">Description</label>
+                <textarea
+                  value={editingState.description}
+                  onChange={(e) =>
+                    setEditingState((prev) => prev && { ...prev, description: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  rows={2}
+                  placeholder="Optional description"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Duration</label>
+                  <select
+                    value={editingState.durationMinutes}
+                    onChange={(e) =>
+                      setEditingState(
+                        (prev) => prev && { ...prev, durationMinutes: Number(e.target.value) }
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value={15}>15 min</option>
+                    <option value={30}>30 min</option>
+                    <option value={45}>45 min</option>
+                    <option value={60}>1 hour</option>
+                    <option value={90}>1.5 hours</option>
+                    <option value={120}>2 hours</option>
+                    <option value={180}>3 hours</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Priority</label>
+                  <select
+                    value={editingState.priority}
+                    onChange={(e) =>
+                      setEditingState(
+                        (prev) => prev && { ...prev, priority: Number(e.target.value) as 1 | 2 | 3 }
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value={1}>High</option>
+                    <option value={2}>Medium</option>
+                    <option value={3}>Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={editingState.dueDate}
+                    onChange={(e) =>
+                      setEditingState((prev) => prev && { ...prev, dueDate: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editingSubmitting || !editingState.title.trim()}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {editingSubmitting ? 'Saving...' : 'Save changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

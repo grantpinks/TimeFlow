@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useUser } from '@/hooks/useUser';
-import { getGoogleAuthUrl } from '@/lib/api';
+import { useUser } from '../hooks/useUser';
+import { getGoogleAuthUrl } from '../lib/api';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -14,7 +14,9 @@ export function Layout({ children }: LayoutProps) {
   const { user, isAuthenticated, logout } = useUser();
 
   const navItems = [
+    { href: '/today', label: 'Today' },
     { href: '/tasks', label: 'Tasks' },
+    { href: '/assistant', label: 'AI Assistant' },
     { href: '/calendar', label: 'Calendar' },
     { href: '/settings', label: 'Settings' },
   ];

@@ -12,7 +12,11 @@ const envSchema = z.object({
   GOOGLE_REDIRECT_URI: z.string().optional(),
   DEFAULT_GOOGLE_CALENDAR_ID: z.string().optional(),
   SESSION_SECRET: z.string().min(1, 'SESSION_SECRET is required'),
-  APP_BASE_URL: z.string().optional()
+  APP_BASE_URL: z.string().optional(),
+  // AI Assistant (Local LLM)
+  LLM_ENDPOINT: z.string().optional(),
+  LLM_MODEL: z.string().optional(),
+  LLM_MAX_TOKENS: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

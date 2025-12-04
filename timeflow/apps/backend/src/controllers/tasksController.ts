@@ -6,6 +6,81 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as tasksService from '../services/tasksService.js';
+import { z } from 'zod';
+
+const TASK_STATUS_VALUES = ['unscheduled', 'scheduled', 'completed'] as const;
+
+/**
+ * Format Zod validation errors into a readable error message.
+ */
+function formatZodError(error: z.ZodError): string {
+  const fieldErrors = error.flatten().fieldErrors;
+  const messages: string[] = [];
+
+  for (const [field, errors] of Object.entries(fieldErrors)) {
+    if (errors && errors.length > 0) {
+      messages.push(`${field}: ${errors.join(', ')}`);
+    }
+  }
+
+  return messages.length > 0 ? messages.join('; ') : 'Validation failed';
+}
+
+/**
+ * Flexible date validator that accepts:
+ * - ISO datetime strings (2025-12-04T17:00:00Z)
+ * - Plain date strings (2025-12-04)
+ * Converts plain dates to ISO datetime at start of day.
+ */
+const flexibleDateString = z
+  .string()
+  .refine(
+    (val) => {
+      // Check if it's a valid ISO datetime
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
+        return !isNaN(Date.parse(val));
+      }
+      // Check if it's a valid YYYY-MM-DD date
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        return !isNaN(Date.parse(val));
+      }
+      return false;
+    },
+    { message: 'Invalid date format. Use YYYY-MM-DD or ISO datetime' }
+  )
+  .transform((val) => {
+    // If it's already ISO datetime, return as-is
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
+      return val;
+    }
+    // Convert YYYY-MM-DD to ISO datetime at start of day
+    return `${val}T00:00:00.000Z`;
+  });
+
+const createTaskSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required'),
+  description: z.string().optional(),
+  durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
+  priority: z.coerce.number().int().min(1).max(3).optional(),
+  dueDate: flexibleDateString.optional(),
+});
+
+const tasksQuerySchema = z.object({
+  status: z.enum(TASK_STATUS_VALUES).optional(),
+});
+
+const updateTaskSchema = z
+  .object({
+    title: z.string().trim().min(1).optional(),
+    description: z.string().optional(),
+    durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
+    priority: z.coerce.number().int().min(1).max(3).optional(),
+    dueDate: flexibleDateString.optional(),
+    status: z.enum(TASK_STATUS_VALUES).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided',
+  });
 
 /**
  * GET /api/tasks
@@ -20,7 +95,12 @@ export async function getTasks(
     return reply.status(401).send({ error: 'Not authenticated' });
   }
 
-  const { status } = request.query;
+  const parsedQuery = tasksQuerySchema.safeParse(request.query);
+  if (!parsedQuery.success) {
+    return reply.status(400).send({ error: formatZodError(parsedQuery.error) });
+  }
+
+  const { status } = parsedQuery.data;
   const tasks = await tasksService.getTasks(user.id, status);
 
   return tasks;
@@ -47,15 +127,16 @@ export async function createTask(
     return reply.status(401).send({ error: 'Not authenticated' });
   }
 
-  const { title, description, durationMinutes, priority, dueDate } = request.body;
-
-  if (!title || title.trim() === '') {
-    return reply.status(400).send({ error: 'Title is required' });
+  const parsed = createTaskSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
+
+  const { title, description, durationMinutes, priority, dueDate } = parsed.data;
 
   const task = await tasksService.createTask({
     userId: user.id,
-    title: title.trim(),
+    title,
     description,
     durationMinutes,
     priority,
@@ -88,7 +169,13 @@ export async function updateTask(
   }
 
   const { id } = request.params;
-  const { title, description, durationMinutes, priority, dueDate, status } = request.body;
+
+  const parsed = updateTaskSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const { title, description, durationMinutes, priority, dueDate, status } = parsed.data;
 
   const task = await tasksService.updateTask(id, user.id, {
     title,

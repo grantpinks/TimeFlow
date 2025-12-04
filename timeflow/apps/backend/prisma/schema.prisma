@@ -27,7 +27,6 @@ model User {
   defaultCalendarId        String?
 
   tasks          Task[]
-  scheduledTasks ScheduledTask[]
 }
 
 model Task {

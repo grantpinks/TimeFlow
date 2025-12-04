@@ -15,6 +15,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTasks } from '../hooks/useTasks';
+import { CreateTaskModal } from '../components/CreateTaskModal';
 import type { Task } from '../lib/api';
 
 type FilterType = 'all' | 'unscheduled' | 'scheduled' | 'completed';
@@ -32,8 +33,9 @@ const priorityLabels: Record<number, string> = {
 };
 
 export function TaskListScreen() {
-  const { tasks, loading, error, refresh, completeTask, deleteTask } = useTasks();
+  const { tasks, loading, error, refresh, completeTask, deleteTask, createTask } = useTasks();
   const [filter, setFilter] = useState<FilterType>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const filteredTasks = tasks.filter((task) => {
     if (filter === 'all') return true;
@@ -63,6 +65,17 @@ export function TaskListScreen() {
         },
       },
     ]);
+  };
+
+  const handleCreateTask = async (taskData: {
+    title: string;
+    description?: string;
+    durationMinutes: number;
+    priority: 1 | 2 | 3;
+    dueDate?: string;
+  }) => {
+    await createTask(taskData);
+    await refresh();
   };
 
   const formatDuration = (minutes: number) => {
@@ -189,6 +202,22 @@ export function TaskListScreen() {
             </Text>
           </View>
         }
+      />
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowCreateModal(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
+
+      {/* Create Task Modal */}
+      <CreateTaskModal
+        visible={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateTask}
       />
     </View>
   );
@@ -329,6 +358,28 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#94a3b8',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 32,
+    color: '#fff',
+    fontWeight: '300',
+    lineHeight: 32,
   },
 });
 

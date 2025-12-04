@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@timeflow/shared';
-import * as api from '@/lib/api';
+import * as api from '../lib/api';
 
 export function useTasks(initialStatus?: string) {
   const [tasks, setTasks] = useState<Task[]>([]);

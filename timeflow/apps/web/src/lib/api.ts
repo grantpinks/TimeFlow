@@ -14,6 +14,9 @@ import type {
   Calendar,
   ScheduleRequest,
   ScheduleResponse,
+  ChatMessage,
+  AssistantChatRequest,
+  AssistantChatResponse,
 } from '@timeflow/shared';
 
 const API_BASE = '/api';
@@ -51,9 +54,13 @@ async function request<T>(
   const token = getAuthToken();
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...((options.headers as Record<string, string>) || {}),
   };
+
+  // Only set Content-Type for requests with a body
+  if (options.method !== 'GET' && options.method !== 'DELETE') {
+    headers['Content-Type'] = 'application/json';
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -203,5 +210,32 @@ export async function rescheduleTask(
     method: 'PATCH',
     body: JSON.stringify({ startDateTime, endDateTime }),
   });
+}
+
+// ===== AI Assistant =====
+
+/**
+ * Send a chat message to the AI assistant.
+ */
+export async function sendChatMessage(
+  message: string,
+  conversationHistory?: ChatMessage[]
+): Promise<AssistantChatResponse> {
+  const body: AssistantChatRequest = {
+    message,
+    conversationHistory,
+  };
+
+  return request<AssistantChatResponse>('/assistant/chat', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+/**
+ * Get conversation history (returns empty for MVP).
+ */
+export async function getChatHistory(): Promise<{ messages: ChatMessage[] }> {
+  return request<{ messages: ChatMessage[] }>('/assistant/history');
 }
 

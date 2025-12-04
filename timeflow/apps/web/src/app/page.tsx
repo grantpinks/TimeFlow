@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useUser } from '@/hooks/useUser';
-import { getGoogleAuthUrl } from '@/lib/api';
+import { useUser } from '../hooks/useUser';
+import { getGoogleAuthUrl } from '../lib/api';
 
 export default function HomePage() {
   const { user, loading, isAuthenticated } = useUser();

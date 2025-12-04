@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { CalendarView, CalendarEventItem } from '@/components/CalendarView';
+import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
 import type { CalendarEvent } from '@timeflow/shared';
@@ -13,6 +14,8 @@ export default function CalendarPage() {
   const [eventsLoading, setEventsLoading] = useState(true);
   const [scheduling, setScheduling] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedTask, setSelectedTask] = useState<{ id: string; title: string } | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
 
   // Fetch calendar events for the current month
   useEffect(() => {
@@ -77,8 +80,68 @@ export default function CalendarPage() {
 
   const handleEventSelect = (event: CalendarEventItem) => {
     if (event.isTask && event.taskId) {
-      // TODO: Open task edit modal
-      console.log('Selected task:', event.taskId);
+      setSelectedTask({ id: event.taskId, title: event.title });
+      setShowTaskModal(true);
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!selectedTask) return;
+
+    try {
+      await api.deleteTask(selectedTask.id);
+      await refreshTasks();
+      setMessage({
+        type: 'success',
+        text: 'Task deleted successfully!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to delete task',
+      });
+    } finally {
+      setShowTaskModal(false);
+      setSelectedTask(null);
+    }
+  };
+
+  const handleUnscheduleTask = async () => {
+    if (!selectedTask) return;
+
+    try {
+      // Update task status to unscheduled
+      await api.updateTask(selectedTask.id, { status: 'unscheduled' });
+      await refreshTasks();
+      setMessage({
+        type: 'success',
+        text: 'Task unscheduled successfully!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to unschedule task',
+      });
+    } finally {
+      setShowTaskModal(false);
+      setSelectedTask(null);
+    }
+  };
+
+  const handleRescheduleTask = async (taskId: string, start: Date, end: Date) => {
+    try {
+      await api.rescheduleTask(taskId, start.toISOString(), end.toISOString());
+      await refreshTasks();
+      setMessage({
+        type: 'success',
+        text: 'Task rescheduled successfully!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to reschedule task',
+      });
+      throw error; // Re-throw so the calendar knows it failed
     }
   };
 
@@ -175,9 +238,74 @@ export default function CalendarPage() {
             tasks={tasks}
             externalEvents={externalEvents}
             onSelectEvent={handleEventSelect}
+            onRescheduleTask={handleRescheduleTask}
           />
         )}
       </div>
+
+      {/* Task Action Modal */}
+      {showTaskModal && selectedTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Task Actions</h3>
+            <p className="text-slate-600 mb-6">{selectedTask.title}</p>
+
+            <div className="space-y-3">
+              <button
+                onClick={handleUnscheduleTask}
+                className="w-full bg-amber-500 text-white px-4 py-3 rounded-lg hover:bg-amber-600 font-medium flex items-center justify-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Unschedule Task
+              </button>
+
+              <button
+                onClick={handleDeleteTask}
+                className="w-full bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 font-medium flex items-center justify-center gap-2"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                Delete Task Permanently
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowTaskModal(false);
+                  setSelectedTask(null);
+                }}
+                className="w-full bg-slate-200 text-slate-700 px-4 py-3 rounded-lg hover:bg-slate-300 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <FloatingAssistantButton />
     </Layout>
   );
 }

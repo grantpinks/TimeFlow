@@ -6,6 +6,7 @@
 
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import { env } from './config/env.js';
 
 // Route registrations (will be created next)
@@ -14,6 +15,7 @@ import { registerUserRoutes } from './routes/userRoutes.js';
 import { registerTaskRoutes } from './routes/tasksRoutes.js';
 import { registerCalendarRoutes } from './routes/calendarRoutes.js';
 import { registerScheduleRoutes } from './routes/scheduleRoutes.js';
+import { registerAssistantRoutes } from './routes/assistantRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -28,6 +30,13 @@ export async function buildServer(): Promise<FastifyInstance> {
     credentials: true,
   });
 
+  // Basic rate limiting to protect the API
+  await server.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
+    keyGenerator: (request) => request.ip,
+  });
+
   // Health check
   server.get('/health', async () => ({ status: 'ok' }));
 
@@ -39,6 +48,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerTaskRoutes(api);
       await registerCalendarRoutes(api);
       await registerScheduleRoutes(api);
+      await registerAssistantRoutes(api);
     },
     { prefix: '/api' }
   );

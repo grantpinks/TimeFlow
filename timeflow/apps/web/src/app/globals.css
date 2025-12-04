@@ -46,6 +46,7 @@ body {
   border-radius: var(--radius-lg);
   padding: var(--spacing-4);
   box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
 }
 
 .rbc-header {
@@ -53,6 +54,12 @@ body {
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-bg-tertiary);
+  transition: background var(--transition-fast) var(--transition-ease);
+}
+
+.rbc-header:hover {
+  background: var(--color-primary-50);
 }
 
 .rbc-today {
@@ -61,6 +68,7 @@ body {
 
 .rbc-off-range-bg {
   background-color: var(--color-bg-tertiary);
+  opacity: 0.5;
 }
 
 .rbc-event {
@@ -70,12 +78,18 @@ body {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   transition: all var(--transition-base) var(--transition-ease);
+  cursor: pointer;
 }
 
 .rbc-event:hover {
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.rbc-event:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
 }
 
 .rbc-event-content {
@@ -85,19 +99,47 @@ body {
 
 /* Task event styling */
 .rbc-event.task-event {
-  background-color: var(--color-primary-500);
+  background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-600) 100%);
   color: var(--color-text-inverse);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.rbc-event.task-event:hover {
+  background: linear-gradient(135deg, var(--color-primary-600) 0%, var(--color-primary-700) 100%);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
 .rbc-event.task-event.overflowed {
-  background-color: var(--color-error);
+  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error-dark) 100%);
   color: var(--color-text-inverse);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  animation: pulse-error 2s ease-in-out infinite;
+}
+
+@keyframes pulse-error {
+  0%, 100% {
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5);
+  }
+}
+
+.rbc-event.task-event.overflowed:hover {
+  background: linear-gradient(135deg, var(--color-error-dark) 0%, #b91c1c 100%);
+  animation: none;
 }
 
 .rbc-event.external-event {
   background-color: var(--color-gray-500);
-  opacity: 0.8;
+  opacity: 0.75;
   color: var(--color-text-inverse);
+  border: 1px dashed var(--color-gray-400);
+}
+
+.rbc-event.external-event:hover {
+  opacity: 0.85;
 }
 
 .rbc-time-slot {
@@ -135,5 +177,76 @@ body {
   background-color: var(--color-primary-500);
   border-color: var(--color-primary-500);
   color: var(--color-text-inverse);
+}
+
+/* Drag and Drop Feedback */
+.rbc-addons-dnd .rbc-addons-dnd-dragged-event {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.rbc-addons-dnd .rbc-addons-dnd-drag-preview {
+  opacity: 0.8;
+  transform: rotate(2deg);
+  box-shadow: var(--shadow-xl);
+  cursor: grabbing !important;
+}
+
+.rbc-addons-dnd .rbc-addons-dnd-resizable {
+  cursor: col-resize;
+}
+
+/* Time Grid Styling */
+.rbc-time-content {
+  border-top: 1px solid var(--color-border-light);
+}
+
+.rbc-time-column {
+  min-height: 100%;
+}
+
+.rbc-timeslot-group {
+  border-left: 1px solid var(--color-border-light);
+  min-height: 60px;
+}
+
+.rbc-current-time-indicator {
+  background-color: var(--color-error);
+  height: 2px;
+  z-index: 10;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+/* Week/Day View Cell Hover */
+.rbc-day-slot .rbc-time-slot:hover {
+  background-color: var(--color-primary-50);
+  transition: background-color var(--transition-fast) var(--transition-ease);
+}
+
+/* Month View Date Cell Styling */
+.rbc-date-cell {
+  padding: var(--spacing-2);
+  text-align: right;
+}
+
+.rbc-date-cell.rbc-now {
+  font-weight: var(--font-weight-bold);
+}
+
+.rbc-date-cell > button {
+  color: var(--color-text-primary);
+  transition: all var(--transition-fast) var(--transition-ease);
+  border-radius: var(--radius-full);
+  padding: var(--spacing-1) var(--spacing-2);
+}
+
+.rbc-date-cell > button:hover {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+/* Selected Date Range */
+.rbc-selected-cell {
+  background-color: var(--color-primary-100);
 }
 

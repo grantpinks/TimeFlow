@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"Start-Process -FilePath ''$env:USERPROFILE\\Desktop\\OllamaSetup.exe'' -Wait\")",
+      "Bash(python -m json.tool:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev)",
+      "Bash(timeout:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(pnpm expo start:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
