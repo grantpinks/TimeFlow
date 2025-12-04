@@ -20,19 +20,22 @@ export async function requireAuth(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
-  const authHeader = request.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return reply.status(401).send({ error: 'Unauthorized: Missing token' });
-  }
-
-  const token = authHeader.slice(7); // Remove "Bearer " prefix
-
-  // TODO: Verify JWT signature and extract claims
-  // For now, treat token as user ID (development only)
-  const userId = token;
-
   try {
+    const authHeader = request.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return reply.status(401).send({ error: 'Unauthorized: Missing token' });
+    }
+
+    const token = authHeader.slice(7);
+    const payload = await request.jwtVerify<{ sub: string; type?: string }>(token);
+
+    if (payload.type && payload.type !== 'access') {
+      return reply.status(401).send({ error: 'Unauthorized: Invalid token type' });
+    }
+
+    const userId = payload.sub;
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -54,6 +57,11 @@ export async function requireAuth(
 
     request.user = authenticatedUser;
   } catch (error) {
+    const code = (error as { code?: string })?.code;
+    if (code && code.startsWith('FST_JWT')) {
+      return reply.status(401).send({ error: 'Unauthorized: Invalid or expired token' });
+    }
+
     request.log.error(error, 'Auth middleware error');
     return reply.status(500).send({ error: 'Internal server error' });
   }

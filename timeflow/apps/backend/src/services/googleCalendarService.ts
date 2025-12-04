@@ -7,6 +7,7 @@
 import { google, calendar_v3 } from 'googleapis';
 import { prisma } from '../config/prisma.js';
 import { getUserOAuth2Client } from '../config/google.js';
+import { decrypt, encrypt } from '../utils/crypto.js';
 
 export interface CalendarEvent {
   id?: string;
@@ -31,7 +32,7 @@ async function getCalendarClient(userId: string): Promise<calendar_v3.Calendar> 
 
   const oauth2Client = getUserOAuth2Client(
     user.googleAccessToken,
-    user.googleRefreshToken,
+    decrypt(user.googleRefreshToken),
     user.googleAccessTokenExpiry?.getTime()
   );
 
@@ -41,7 +42,7 @@ async function getCalendarClient(userId: string): Promise<calendar_v3.Calendar> 
       where: { id: userId },
       data: {
         googleAccessToken: tokens.access_token ?? user.googleAccessToken,
-        googleRefreshToken: tokens.refresh_token ?? user.googleRefreshToken,
+        googleRefreshToken: encrypt(tokens.refresh_token) ?? user.googleRefreshToken,
         googleAccessTokenExpiry: tokens.expiry_date
           ? new Date(tokens.expiry_date)
           : user.googleAccessTokenExpiry,

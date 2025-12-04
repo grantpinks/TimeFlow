@@ -7,6 +7,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import fastifyJwt from '@fastify/jwt';
 import { env } from './config/env.js';
 
 // Route registrations (will be created next)
@@ -30,11 +31,19 @@ export async function buildServer(): Promise<FastifyInstance> {
     credentials: true,
   });
 
+  await server.register(fastifyJwt, {
+    secret: env.SESSION_SECRET,
+    sign: {
+      expiresIn: '15m',
+    },
+  });
+
   // Basic rate limiting to protect the API
   await server.register(rateLimit, {
-    max: 100,
-    timeWindow: '1 minute',
+    max: env.RATE_LIMIT_MAX ?? 100,
+    timeWindow: env.RATE_LIMIT_WINDOW ?? '1 minute',
     keyGenerator: (request) => request.ip,
+    allowList: (req) => req.url?.startsWith('/health') || false,
   });
 
   // Health check

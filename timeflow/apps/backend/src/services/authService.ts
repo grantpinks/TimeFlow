@@ -7,6 +7,7 @@
 import { google } from 'googleapis';
 import { prisma } from '../config/prisma.js';
 import { getOAuth2Client, GOOGLE_SCOPES } from '../config/google.js';
+import { encrypt } from '../utils/crypto.js';
 
 /**
  * Generate the Google OAuth2 authorization URL.
@@ -46,7 +47,7 @@ export async function handleGoogleCallback(code: string) {
     update: {
       email: userInfo.email,
       googleAccessToken: tokens.access_token,
-      googleRefreshToken: tokens.refresh_token ?? undefined,
+      googleRefreshToken: encrypt(tokens.refresh_token) ?? undefined,
       googleAccessTokenExpiry: tokens.expiry_date
         ? new Date(tokens.expiry_date)
         : undefined,
@@ -55,7 +56,7 @@ export async function handleGoogleCallback(code: string) {
       email: userInfo.email,
       googleId: userInfo.id,
       googleAccessToken: tokens.access_token,
-      googleRefreshToken: tokens.refresh_token,
+      googleRefreshToken: encrypt(tokens.refresh_token) ?? undefined,
       googleAccessTokenExpiry: tokens.expiry_date
         ? new Date(tokens.expiry_date)
         : undefined,
@@ -65,13 +66,4 @@ export async function handleGoogleCallback(code: string) {
   return user;
 }
 
-/**
- * Generate a simple token for the user.
- * TODO: Replace with proper JWT signing.
- */
-export function generateToken(userId: string): string {
-  // For MVP, just return user ID as token
-  // TODO: Sign with SESSION_SECRET and add expiry
-  return userId;
-}
 

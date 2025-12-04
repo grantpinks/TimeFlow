@@ -7,10 +7,13 @@ import * as assistantController from '../controllers/assistantController.js';
  */
 export async function registerAssistantRoutes(server: FastifyInstance) {
   // POST /api/assistant/chat
-  // Process a user message and generate an AI response
+  // Process a user message and generate an AI response (LLM calls are expensive)
   server.post(
     '/assistant/chat',
-    { preHandler: requireAuth },
+    {
+      preHandler: requireAuth,
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+    },
     assistantController.chat
   );
 
@@ -18,7 +21,10 @@ export async function registerAssistantRoutes(server: FastifyInstance) {
   // Get conversation history for the user (optional, returns empty for MVP)
   server.get(
     '/assistant/history',
-    { preHandler: requireAuth },
+    {
+      preHandler: requireAuth,
+      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+    },
     assistantController.getHistory
   );
 }

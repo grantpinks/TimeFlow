@@ -9,13 +9,19 @@ import * as scheduleController from '../controllers/scheduleController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerScheduleRoutes(server: FastifyInstance) {
-  // Run smart scheduling
-  server.post('/schedule', { preHandler: requireAuth }, scheduleController.runSchedule);
+  // Run smart scheduling (computationally expensive - stricter limit)
+  server.post('/schedule', {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+  }, scheduleController.runSchedule);
 
   // Manually reschedule a task
   server.patch(
     '/schedule/:taskId',
-    { preHandler: requireAuth },
+    {
+      preHandler: requireAuth,
+      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    },
     scheduleController.rescheduleTask
   );
 }

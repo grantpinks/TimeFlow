@@ -8,6 +8,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import * as authService from '../services/authService.js';
 import { env } from '../config/env.js';
 import { z } from 'zod';
+import { formatZodError } from '../utils/errorFormatter.js';
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -36,7 +37,7 @@ export async function handleGoogleCallback(
 ) {
   const parsedQuery = callbackQuerySchema.safeParse(request.query);
   if (!parsedQuery.success) {
-    return reply.status(400).send({ error: parsedQuery.error.flatten().fieldErrors });
+    return reply.status(400).send({ error: formatZodError(parsedQuery.error) });
   }
 
   const { code, error } = parsedQuery.data;
@@ -52,14 +53,67 @@ export async function handleGoogleCallback(
 
   try {
     const user = await authService.handleGoogleCallback(code);
-    const token = authService.generateToken(user.id);
+    const accessToken = await reply.jwtSign(
+      { sub: user.id, type: 'access' },
+      { expiresIn: '15m' }
+    );
+    const refreshToken = await reply.jwtSign(
+      { sub: user.id, type: 'refresh' },
+      { expiresIn: '7d' }
+    );
 
-    // Redirect to frontend with token
-    // TODO: Use proper cookie/session or return token in a secure way
-    return reply.redirect(`${env.APP_BASE_URL}/auth/callback?token=${token}`);
+    // Redirect to frontend with tokens (MVP: query params; future: HttpOnly cookies)
+    const baseUrl = env.APP_BASE_URL || '';
+    return reply.redirect(
+      `${baseUrl}/auth/callback?token=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(
+        refreshToken
+      )}`
+    );
   } catch (err) {
     request.log.error(err, 'Failed to handle Google callback');
     return reply.redirect(`${env.APP_BASE_URL}/auth/error?error=callback_failed`);
+  }
+}
+
+const refreshBodySchema = z.object({
+  refreshToken: z.string().min(1, 'refreshToken is required'),
+});
+
+/**
+ * POST /api/auth/refresh
+ * Issues a new access token from a refresh token.
+ */
+export async function refreshToken(
+  request: FastifyRequest<{ Body: { refreshToken: string } }>,
+  reply: FastifyReply
+) {
+  const parsed = refreshBodySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  try {
+    const payload = await request.jwtVerify<{ sub: string; type?: string }>({
+      token: parsed.data.refreshToken,
+    });
+
+    if (payload.type !== 'refresh') {
+      return reply.status(401).send({ error: 'Invalid refresh token' });
+    }
+
+    const accessToken = await reply.jwtSign(
+      { sub: payload.sub, type: 'access' },
+      { expiresIn: '15m' }
+    );
+    const newRefreshToken = await reply.jwtSign(
+      { sub: payload.sub, type: 'refresh' },
+      { expiresIn: '7d' }
+    );
+
+    return reply.status(200).send({ accessToken, refreshToken: newRefreshToken });
+  } catch (error) {
+    request.log.error(error, 'Failed to refresh token');
+    return reply.status(401).send({ error: 'Invalid or expired refresh token' });
   }
 }
 
