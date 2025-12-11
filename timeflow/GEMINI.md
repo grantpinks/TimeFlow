@@ -5,7 +5,7 @@
 **Agent**: Gemini
 **Project**: TimeFlow
 **Role**: Documentation & User Experience Writing
-**Last Updated**: 2025-12-02
+**Last Updated**: 2025-12-11
 
 ---
 
@@ -62,7 +62,10 @@ timeflow/
 │   ├── SETUP.md                 # Detailed setup guide
 │   ├── API.md                   # Full API reference
 │   ├── TROUBLESHOOTING.md       # Common issues & fixes
-│   └── USER_GUIDE.md            # End-user documentation
+│   ├── USER_GUIDE.md            # End-user documentation
+│   ├── DEPLOYMENT.md            # Deployment documentation
+│   ├── FAQ.md                   # Frequently Asked Questions
+│   ├── HELP.md                  # Help documentation
 │
 └── sprint_review/               # Sprint retrospectives
     └── SPRINT_X_REVIEW.md
@@ -155,9 +158,29 @@ This starts the Fastify server on `http://localhost:3001`.
 - [ ] Create user onboarding guide
 
 ### Sprint 5
-- [ ] Create deployment documentation
-- [ ] Write user FAQ
-- [ ] Create help documentation
+- [ ] Create deployment documentation [x]
+- [x] Write user FAQ
+- [x] Create help documentation
+
+### Sprint 9
+- [x] Create basic brand guidelines doc
+
+### Sprint 10
+- [ ] Redesign Tasks page UI/UX for a modern, premium feel
+- [ ] Create reusable styled `Card` and `Button` components
+- [ ] Add animations to the Tasks page using Framer Motion
+
+### Sprint 11
+- [x] Document theme usage and command palette shortcuts
+- [x] Document the new database models in `ARCHITECTURE_DECISIONS.md`
+
+### Sprint 12
+- [ ] Document Advanced Habit Scheduling feature for the user guide
+- [ ] Document Streaks & Gamification feature
+
+### Sprint 13
+- [ ] Create user documentation for Smart Meeting Scheduling feature
+- [ ] Document Apple Calendar integration setup
 
 ---
 

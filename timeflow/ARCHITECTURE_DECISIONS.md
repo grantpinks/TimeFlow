@@ -366,5 +366,36 @@ These decisions may need revisiting as TimeFlow evolves:
 
 ---
 
-**Last Updated**: 2025-12-02
+## ADR-011: Database Schema for Conversation History
+
+**Date**: 2025-12-11
+**Status**: Accepted
+
+### Context
+
+The AI Assistant feature requires a way to store and retrieve conversation history. This allows users to view past interactions and for the assistant to have context in multi-turn conversations.
+
+### Decision
+
+Add two new models to the Prisma schema: `Conversation` and `ConversationMessage`.
+
+-   **`Conversation`**: Represents a single conversation thread. It has a relation to the `User` and can have an optional title.
+-   **`ConversationMessage`**: Represents a single message within a conversation. It includes the `role` ("user" or "assistant"), the `content` of the message, and a `metadata` field for additional information.
+
+### Rationale
+
+-   **Separation of Concerns**: A `Conversation` groups related messages, making it easy to retrieve an entire chat history.
+-   **Scalability**: This one-to-many relationship is efficient for querying and allows for long conversations without duplicating user data.
+-   **Flexibility**: The `metadata` field on `ConversationMessage` allows for storing structured data related to a message, such as UI state or tool-call information, without polluting the main content.
+-   **Cascading Deletes**: The schema is set up to delete all messages in a conversation when the parent conversation is deleted, ensuring data integrity.
+
+### Consequences
+
+-   The database size will grow more quickly as conversation data is stored.
+-   API endpoints and services are required to manage conversations and messages (create, read, update, delete).
+-   Care must be taken to handle potentially large `content` fields in messages.
+
+---
+
+**Last Updated**: 2025-12-11
 
