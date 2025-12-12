@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useCommandPalette } from './CommandPalette';
+import { ThemeToggle } from './ThemeToggle';
 import { useUser } from '../hooks/useUser';
 import { getGoogleAuthUrl } from '../lib/api';
 
@@ -12,6 +15,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useUser();
+  const { openPalette } = useCommandPalette();
 
   const navItems = [
     { href: '/today', label: 'Today' },
@@ -22,12 +26,17 @@ export function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col app-shell">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-primary-600">
-            TimeFlow
+      <header className="app-header">
+        <div className="app-container flex items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="rounded-md bg-primary-50 border border-primary-100 p-1.5 group-hover:border-primary-200 transition-colors">
+              <Image src="/branding/main_logo.png" alt="TimeFlow logo" width={36} height={36} priority />
+            </div>
+            <span className="text-2xl font-bold text-primary-700 tracking-tight group-hover:text-primary-600 transition-colors">
+              TimeFlow
+            </span>
           </Link>
           <nav className="flex items-center gap-6">
             {isAuthenticated ? (
@@ -45,15 +54,22 @@ export function Layout({ children }: LayoutProps) {
                     {item.label}
                   </Link>
                 ))}
-                <div className="flex items-center gap-4">
-                  <span className="text-slate-500 text-sm">{user?.email}</span>
-                  <button
-                    onClick={logout}
-                    className="text-slate-500 hover:text-slate-700 text-sm"
-                  >
-                    Sign out
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={openPalette}
+                  className="icon-button"
+                  aria-label="Open command palette"
+                >
+                  Ctrl+K
+                </button>
+                <ThemeToggle />
+                <span className="text-muted text-sm hidden lg:inline">{user?.email}</span>
+                <button
+                  onClick={logout}
+                  className="text-muted hover:text-strong text-sm"
+                >
+                  Sign out
+                </button>
               </>
             ) : (
               <a
@@ -68,17 +84,16 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 px-6 py-8">
-        <div className="max-w-7xl mx-auto">{children}</div>
+      <main className="app-main">
+        <div className="app-container">{children}</div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 px-6 py-4">
-        <div className="max-w-7xl mx-auto text-center text-slate-500 text-sm">
+      <footer className="app-footer">
+        <div className="app-container text-center text-muted text-sm">
           TimeFlow &copy; {new Date().getFullYear()}
         </div>
       </footer>
     </div>
   );
 }
-

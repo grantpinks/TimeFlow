@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(pnpm dev:backend:*)",
+      "Bash(pnpm dev:web:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm prisma migrate:*)",
+      "Bash(npx kill-port:*)",
+      "WebFetch(domain:www.sunsama.com)",
+      "WebFetch(domain:www.motion.com)",
+      "WebFetch(domain:akiflow.com)",
+      "WebFetch(domain:www.usemotion.com)",
+      "Bash(ping:*)",
+      "Bash(pnpm prisma generate:*)",
+      "Bash(timeout /t 3 /nobreak)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

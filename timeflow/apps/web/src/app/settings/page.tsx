@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
-import type { Calendar } from '@timeflow/shared';
+import type { Calendar, DailyScheduleConfig, DaySchedule } from '@timeflow/shared';
 
 export default function SettingsPage() {
   const { user, loading, updatePreferences } = useUser();
@@ -16,6 +16,8 @@ export default function SettingsPage() {
   // Form state
   const [wakeTime, setWakeTime] = useState('08:00');
   const [sleepTime, setSleepTime] = useState('23:00');
+  const [useCustomSchedule, setUseCustomSchedule] = useState(false);
+  const [dailySchedule, setDailySchedule] = useState<DailyScheduleConfig>({});
   const [timeZone, setTimeZone] = useState('America/Chicago');
   const [defaultDuration, setDefaultDuration] = useState(30);
   const [defaultCalendarId, setDefaultCalendarId] = useState<string>('');
@@ -28,6 +30,15 @@ export default function SettingsPage() {
       setTimeZone(user.timeZone);
       setDefaultDuration(user.defaultTaskDurationMinutes);
       setDefaultCalendarId(user.defaultCalendarId || '');
+
+      // Initialize daily schedule
+      if (user.dailySchedule && Object.keys(user.dailySchedule).length > 0) {
+        setUseCustomSchedule(true);
+        setDailySchedule(user.dailySchedule);
+      } else {
+        setUseCustomSchedule(false);
+        setDailySchedule({});
+      }
     }
   }, [user]);
 
@@ -56,6 +67,7 @@ export default function SettingsPage() {
       await updatePreferences({
         wakeTime,
         sleepTime,
+        dailySchedule: useCustomSchedule ? dailySchedule : null,
         timeZone,
         defaultTaskDurationMinutes: defaultDuration,
         defaultCalendarId: defaultCalendarId || undefined,
@@ -68,6 +80,32 @@ export default function SettingsPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Helper function to update a day's schedule
+  const updateDaySchedule = (day: keyof DailyScheduleConfig, field: 'wakeTime' | 'sleepTime', value: string) => {
+    setDailySchedule((prev) => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        wakeTime: field === 'wakeTime' ? value : prev[day]?.wakeTime || wakeTime,
+        sleepTime: field === 'sleepTime' ? value : prev[day]?.sleepTime || sleepTime,
+      },
+    }));
+  };
+
+  // Helper function to toggle custom schedule mode
+  const handleToggleCustomSchedule = (enabled: boolean) => {
+    setUseCustomSchedule(enabled);
+    if (enabled && Object.keys(dailySchedule).length === 0) {
+      // Initialize all days with current wake/sleep times
+      const days: (keyof DailyScheduleConfig)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      const newSchedule: DailyScheduleConfig = {};
+      days.forEach((day) => {
+        newSchedule[day] = { wakeTime, sleepTime };
+      });
+      setDailySchedule(newSchedule);
     }
   };
 
@@ -86,6 +124,17 @@ export default function SettingsPage() {
     'Asia/Shanghai',
     'Asia/Kolkata',
     'Australia/Sydney',
+  ];
+
+  // Days of the week
+  const daysOfWeek: { key: keyof DailyScheduleConfig; label: string }[] = [
+    { key: 'monday', label: 'Mon' },
+    { key: 'tuesday', label: 'Tue' },
+    { key: 'wednesday', label: 'Wed' },
+    { key: 'thursday', label: 'Thu' },
+    { key: 'friday', label: 'Fri' },
+    { key: 'saturday', label: 'Sat' },
+    { key: 'sunday', label: 'Sun' },
   ];
 
   if (loading) {
@@ -119,6 +168,33 @@ export default function SettingsPage() {
         )}
 
         <form onSubmit={handleSave} className="space-y-8">
+          {/* Google / Gmail connection */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Google Connection</h2>
+                <p className="text-slate-600 text-sm">
+                  Gmail inbox requires a connected Google account with read-only access.
+                </p>
+              </div>
+              <span className="text-sm font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
+                Connected
+              </span>
+            </div>
+            <p className="text-sm text-slate-600 mb-3">
+              If emails stop loading, reconnect your Google account to refresh permissions.
+            </p>
+            <a
+              href={api.getGoogleAuthUrl()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+            >
+              Reconnect Google
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+
           {/* Working Hours */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-semibold text-slate-800 mb-4">
@@ -128,30 +204,76 @@ export default function SettingsPage() {
               TimeFlow will only schedule tasks during these hours
             </p>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Wake Time
-                </label>
+            {/* Toggle for custom schedule */}
+            <div className="mb-6">
+              <label className="flex items-center gap-3 cursor-pointer">
                 <input
-                  type="time"
-                  value={wakeTime}
-                  onChange={(e) => setWakeTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  type="checkbox"
+                  checked={useCustomSchedule}
+                  onChange={(e) => handleToggleCustomSchedule(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Sleep Time
-                </label>
-                <input
-                  type="time"
-                  value={sleepTime}
-                  onChange={(e) => setSleepTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
+                <span className="text-sm font-medium text-slate-700">
+                  Set different hours for each day of the week
+                </span>
+              </label>
             </div>
+
+            {!useCustomSchedule ? (
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Wake Time
+                  </label>
+                  <input
+                    type="time"
+                    value={wakeTime}
+                    onChange={(e) => setWakeTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Sleep Time
+                  </label>
+                  <input
+                    type="time"
+                    value={sleepTime}
+                    onChange={(e) => setSleepTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {daysOfWeek.map((day) => (
+                  <div key={day.key} className="grid grid-cols-[80px_1fr_1fr] gap-4 items-center">
+                    <div className="text-sm font-medium text-slate-700">
+                      {day.label}
+                    </div>
+                    <div>
+                      <input
+                        type="time"
+                        value={dailySchedule[day.key]?.wakeTime || wakeTime}
+                        onChange={(e) => updateDaySchedule(day.key, 'wakeTime', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="time"
+                        value={dailySchedule[day.key]?.sleepTime || sleepTime}
+                        onChange={(e) => updateDaySchedule(day.key, 'sleepTime', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <p className="text-xs text-slate-500 mt-4">
+                  💡 Tip: Different wake/sleep times for weekends vs weekdays help create a more realistic schedule
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Time Zone */}
@@ -209,7 +331,7 @@ export default function SettingsPage() {
               <div className="text-slate-500">Loading calendars...</div>
             ) : calendars.length === 0 ? (
               <div className="text-slate-500">
-                No calendars found. Make sure you've connected Google Calendar.
+                No calendars found. Make sure you have connected Google Calendar.
               </div>
             ) : (
               <select
@@ -242,4 +364,3 @@ export default function SettingsPage() {
     </Layout>
   );
 }
-

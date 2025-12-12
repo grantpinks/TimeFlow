@@ -2,6 +2,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import * as assistantService from '../services/assistantService.js';
 import type { AssistantChatRequest } from '@timeflow/shared';
 import { z } from 'zod';
+import { formatZodError } from '../utils/errorFormatter.js';
 
 /**
  * Request body shape for chat endpoint
@@ -35,7 +36,7 @@ export async function chat(
   const user = request.user!; // Guaranteed by requireAuth middleware
   const parsed = chatSchema.safeParse(request.body);
   if (!parsed.success) {
-    return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
   const { message, conversationHistory } = parsed.data;

@@ -62,6 +62,7 @@ const createTaskSchema = z.object({
   description: z.string().optional(),
   durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
   priority: z.coerce.number().int().min(1).max(3).optional(),
+  categoryId: z.string().cuid().optional(),
   dueDate: flexibleDateString.optional(),
 });
 
@@ -75,6 +76,7 @@ const updateTaskSchema = z
     description: z.string().optional(),
     durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
     priority: z.coerce.number().int().min(1).max(3).optional(),
+    categoryId: z.string().cuid().optional(),
     dueDate: flexibleDateString.optional(),
     status: z.enum(TASK_STATUS_VALUES).optional(),
   })
@@ -132,7 +134,7 @@ export async function createTask(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const { title, description, durationMinutes, priority, dueDate } = parsed.data;
+  const { title, description, durationMinutes, priority, dueDate, categoryId } = parsed.data;
 
   const task = await tasksService.createTask({
     userId: user.id,
@@ -140,6 +142,7 @@ export async function createTask(
     description,
     durationMinutes,
     priority,
+    categoryId,
     dueDate: dueDate ? new Date(dueDate) : undefined,
   });
 
@@ -151,6 +154,7 @@ interface UpdateTaskBody {
   description?: string;
   durationMinutes?: number;
   priority?: number;
+  categoryId?: string;
   dueDate?: string;
   status?: string;
 }
@@ -175,13 +179,14 @@ export async function updateTask(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const { title, description, durationMinutes, priority, dueDate, status } = parsed.data;
+  const { title, description, durationMinutes, priority, categoryId, dueDate, status } = parsed.data;
 
   const task = await tasksService.updateTask(id, user.id, {
     title,
     description,
     durationMinutes,
     priority,
+    categoryId,
     dueDate: dueDate ? new Date(dueDate) : undefined,
     status,
   });

@@ -34,6 +34,9 @@ module.exports = {
           900: '#701a75',
         },
       },
+      animation: {
+        'bounce-slow': 'bounce 3s ease-in-out infinite',
+      },
     },
   },
   plugins: [],

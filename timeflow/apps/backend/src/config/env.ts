@@ -13,6 +13,9 @@ const envSchema = z.object({
   DEFAULT_GOOGLE_CALENDAR_ID: z.string().optional(),
   SESSION_SECRET: z.string().min(1, 'SESSION_SECRET is required'),
   APP_BASE_URL: z.string().optional(),
+  ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY is required (32+ chars)'),
+  RATE_LIMIT_MAX: z.coerce.number().optional(),
+  RATE_LIMIT_WINDOW: z.string().optional(),
   // AI Assistant (Local LLM)
   LLM_ENDPOINT: z.string().optional(),
   LLM_MODEL: z.string().optional(),

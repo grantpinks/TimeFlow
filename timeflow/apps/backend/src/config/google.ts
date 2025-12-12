@@ -1,8 +1,9 @@
 /**
- * Google OAuth2 and Calendar API Configuration
+ * Google OAuth2 and Google APIs Configuration
  *
- * Creates a reusable OAuth2 client for interacting with Google APIs.
- * Tokens are managed per-user and stored in the database.
+ * Creates a reusable OAuth2 client for interacting with Google APIs
+ * (Calendar, Gmail, UserInfo). Tokens are managed per-user and stored
+ * in the database.
  */
 
 import { google, Auth } from 'googleapis';
@@ -39,11 +40,16 @@ export function getUserOAuth2Client(
 }
 
 /**
- * Scopes required for Google Calendar read/write access.
+ * Scopes required for Google Calendar + Gmail access
+ * and basic user profile info.
  */
 export const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/calendar.events',
+  // Gmail access (read, compose, and send)
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.compose', // For sending replies and composing emails
+  'https://www.googleapis.com/auth/gmail.modify', // For marking read/unread, archiving
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
 ];

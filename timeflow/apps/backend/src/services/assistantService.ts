@@ -9,50 +9,111 @@ import { env } from '../config/env.js';
 
 /**
  * System prompt that guides the AI assistant's behavior
+ * Updated Sprint 9: Aligned with Flow mascot personality
  */
-const SYSTEM_PROMPT = `You are the TimeFlow AI Scheduling Assistant. Your role is to help users plan their day by analyzing their tasks, calendar events, and preferences.
+const SYSTEM_PROMPT = `I'm Flow, your TimeFlow scheduling assistant. I turn chaos into momentum with calm, intelligent guidance.
 
-**Your Capabilities**:
-- Analyze unscheduled tasks with priorities and due dates
-- Check existing Google Calendar events for conflicts
-- Recommend optimal time slots based on user's wake/sleep times
-- Explain scheduling decisions in friendly, conversational language
-- Warn about deadline conflicts or overflows
+**CRITICAL FORMATTING RULES** (NEVER violate these):
+1. **Maximum response length**: 200 words total
+2. **Use markdown structure**:
+   - Start with h2 heading (double hash) for main topic
+   - Use h3 (triple hash) for sub-sections
+   - Use **bold** for key times, priorities, or actions
+   - Use bullet points (•) or numbered lists for all multi-item content
+   - Use line breaks between sections
+3. **Short paragraphs**: 1-2 sentences maximum per paragraph
+4. **Scannable format**: Users should grasp everything in 5 seconds
+5. **No walls of text**: Break everything into digestible chunks
 
-**Response Guidelines**:
-1. Be conversational, not robotic (use "I" and "you")
-2. Show your work (explain what you analyzed)
-3. Offer options, don't just dictate
-4. Use visual formatting (emojis, bullet points, time blocks)
-5. Include actionable recommendations
-6. Handle conflicts gracefully with explanations
-7. Keep responses concise (2-3 paragraphs max for regular queries)
-8. Use specific times (e.g., "9:00 AM - 10:30 AM" not "morning")
-9. Acknowledge the user's question before answering
+**Response Structure** (follow this template):
+1. Start with h2 heading for main topic
+2. Add 1-sentence context if needed
+3. Use h3 heading for "Key Points" section with bullet list
+4. Use h3 heading for "Recommendation" section with clear action
+5. Keep total under 200 words
+
+**My Capabilities**:
+• Analyze tasks (priorities, due dates, duration)
+• Schedule habits (frequency, preferred times)
+• Check Google Calendar for conflicts
+• Recommend optimal time blocks
+• Flag deadline pressures
+
+**Communication Style**:
+• Intelligent & reassuring, never pushy
+• Concise & plain-language—no jargon
+• Use "I" and "you" naturally
+• Specific times ("9:00 AM - 10:30 AM" not "morning")
+• Minimize emojis (only ✨ for successful schedules)
 
 **When recommending schedules**:
 - Prioritize high-priority tasks (priority 1 > 2 > 3)
 - Respect due dates (earliest deadlines first)
+- For habits: respect frequency (daily, weekly, custom) and preferred time of day
 - Avoid overlapping with existing calendar events
 - Stay within wake/sleep hours
 - Flag tasks that will miss their deadlines
 
-**Output Format**:
-When providing schedule recommendations, ALWAYS include a structured output section at the end in this exact format:
+**Habit Scheduling**:
+• Daily: Once per day at preferred time
+• Weekly: Only on specified days (Mon, Wed, Fri)
+• Custom: At regular intervals (every 2 days)
+• Preferred times: morning (wake-noon), afternoon (noon-5 PM), evening (5 PM-sleep)
+• "Schedule my habits" = create 7-day recurring schedule
 
+**Output Format** (TWO parts):
+
+**PART 1 - User Response** (what they see):
+• Max 200 words, highly formatted with headings/bullets
+• Follow the response structure template above
+• Use markdown (##, ###, **bold**, bullets)
+• End with clear action
+• NEVER mention JSON or technical details
+
+**PART 2 - Structured Output** (invisible, system only):
+After your response, add:
 ---
 [STRUCTURED_OUTPUT]
-\`\`\`json
+[Triple backticks]json
 {
   "blocks": [
-    { "taskId": "task-id-1", "start": "ISO-datetime", "end": "ISO-datetime" },
-    { "taskId": "task-id-2", "start": "ISO-datetime", "end": "ISO-datetime" }
+    { "taskId": "id", "start": "ISO-datetime", "end": "ISO-datetime" },
+    { "habitId": "id", "title": "Title", "start": "ISO-datetime", "end": "ISO-datetime" }
   ],
   "confidence": "high"
 }
-\`\`\`
+[Triple backticks]
 
-Remember: Your goal is to help users make informed scheduling decisions, not to overwhelm them.`;
+**REMEMBER**:
+• 200 words max
+• Scannable in 5 seconds
+• Use structure template
+• Never reference structured output in user response`;
+
+/**
+ * Detect which mascot state to display based on response content
+ */
+function detectMascotState(response: string, schedulePreview?: SchedulePreview): string {
+  // Celebrating: When schedule is successfully created with high confidence
+  if (schedulePreview && schedulePreview.blocks.length > 0 && schedulePreview.confidence === 'high') {
+    return 'celebrating';
+  }
+
+  // Thinking: When analyzing complex schedules or showing reasoning
+  const thinkingKeywords = ['let me analyze', 'looking at', 'considering', 'examining', 'checking'];
+  if (thinkingKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
+    return 'thinking';
+  }
+
+  // Guiding: When providing recommendations or actionable next steps
+  const guidingKeywords = ['recommend', 'suggest', 'try', 'here\'s how', 'you could', 'consider', 'i\'d suggest'];
+  if (guidingKeywords.some(keyword => response.toLowerCase().includes(keyword))) {
+    return 'guiding';
+  }
+
+  // Default: General conversation or simple answers
+  return 'default';
+}
 
 /**
  * Process a user message and generate an AI response
@@ -72,17 +133,19 @@ export async function processMessage(
     // Parse the response to extract structured data
     const { naturalLanguage, schedulePreview } = parseResponse(llmResponse);
 
+    // Detect appropriate mascot state
+    const mascotState = detectMascotState(naturalLanguage, schedulePreview);
+
     // Create the assistant message
     const assistantMessage: ChatMessage = {
       id: generateMessageId(),
       role: 'assistant',
       content: naturalLanguage,
       timestamp: new Date().toISOString(),
-      metadata: schedulePreview
-        ? {
-            schedulePreview,
-          }
-        : undefined,
+      metadata: {
+        ...(schedulePreview ? { schedulePreview } : {}),
+        mascotState,
+      },
     };
 
     return {
@@ -151,6 +214,17 @@ async function buildContextPrompt(
     },
     include: {
       scheduledTask: true,
+    },
+  });
+
+  // Fetch active habits
+  const habits = await prisma.habit.findMany({
+    where: {
+      userId,
+      isActive: true,
+    },
+    orderBy: {
+      createdAt: 'asc',
     },
   });
 
@@ -239,6 +313,30 @@ async function buildContextPrompt(
       }
     });
     prompt += '\n';
+  }
+
+  // Add active habits
+  if (habits.length > 0) {
+    prompt += `**Active Habits** (${habits.length} habits):\n`;
+    habits.forEach((habit, index) => {
+      const frequencyText =
+        habit.frequency === 'daily' ? 'Daily' :
+        habit.frequency === 'weekly' ? `Weekly (${habit.daysOfWeek.join(', ')})` :
+        'Custom schedule';
+
+      const timeOfDayText = habit.preferredTimeOfDay
+        ? ` - Preferred: ${habit.preferredTimeOfDay}`
+        : '';
+
+      prompt += `${index + 1}. ${habit.title} (${habit.durationMinutes} min, ${frequencyText}${timeOfDayText}) - ID: ${habit.id}\n`;
+
+      if (habit.description) {
+        prompt += `   Note: ${habit.description}\n`;
+      }
+    });
+    prompt += '\n';
+  } else {
+    prompt += "**Active Habits**: None set up yet.\n\n";
   }
 
   // Add Google Calendar events
@@ -371,9 +469,13 @@ function parseResponse(llmResponse: string): {
   }
 
   // Extract natural language (everything before structured output)
-  const naturalLanguage = llmResponse
-    .substring(0, structuredMatch.index)
-    .replace(/---\s*$/, '')
+  // Also remove the [STRUCTURED_OUTPUT] marker and any trailing separators
+  let naturalLanguage = llmResponse.substring(0, structuredMatch.index);
+
+  // Remove trailing separators (---, ***, etc.)
+  naturalLanguage = naturalLanguage
+    .replace(/[-*=]{3,}\s*$/g, '')
+    .replace(/\[STRUCTURED_OUTPUT\]/g, '')
     .trim();
 
   // Parse structured output

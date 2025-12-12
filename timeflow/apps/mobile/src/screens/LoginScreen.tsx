@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
@@ -86,7 +87,7 @@ export function LoginScreen() {
       <View style={styles.content}>
         {/* Logo/Branding */}
         <View style={styles.header}>
-          <Text style={styles.logo}>TimeFlow</Text>
+          <Image source={require('../../assets/branding/main_logo.png')} style={styles.logoImg} resizeMode="contain" />
           <Text style={styles.tagline}>Smart Task Scheduling</Text>
         </View>
 
@@ -142,6 +143,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#3b82f6',
     marginBottom: 8,
+  },
+  logoImg: {
+    width: 160,
+    height: 80,
+    marginBottom: 12,
   },
   tagline: {
     fontSize: 16,

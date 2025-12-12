@@ -7,10 +7,27 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../config/prisma.js';
 import { z } from 'zod';
+import { formatZodError } from '../utils/errorFormatter.js';
+
+const dayScheduleSchema = z.object({
+  wakeTime: z.string().regex(/^\d{2}:\d{2}$/, 'wakeTime must be HH:mm'),
+  sleepTime: z.string().regex(/^\d{2}:\d{2}$/, 'sleepTime must be HH:mm'),
+});
+
+const dailyScheduleSchema = z.object({
+  monday: dayScheduleSchema.optional(),
+  tuesday: dayScheduleSchema.optional(),
+  wednesday: dayScheduleSchema.optional(),
+  thursday: dayScheduleSchema.optional(),
+  friday: dayScheduleSchema.optional(),
+  saturday: dayScheduleSchema.optional(),
+  sunday: dayScheduleSchema.optional(),
+}).optional().nullable();
 
 const preferencesSchema = z.object({
   wakeTime: z.string().regex(/^\d{2}:\d{2}$/, 'wakeTime must be HH:mm').optional(),
   sleepTime: z.string().regex(/^\d{2}:\d{2}$/, 'sleepTime must be HH:mm').optional(),
+  dailySchedule: dailyScheduleSchema,
   timeZone: z.string().min(1, 'timeZone is required').optional(),
   defaultTaskDurationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
   defaultCalendarId: z.string().min(1).optional(),
@@ -33,14 +50,31 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     timeZone: user.timeZone,
     wakeTime: user.wakeTime,
     sleepTime: user.sleepTime,
+    dailySchedule: user.dailySchedule || null,
     defaultTaskDurationMinutes: user.defaultTaskDurationMinutes,
     defaultCalendarId: user.defaultCalendarId,
   };
 }
 
+interface DaySchedule {
+  wakeTime: string;
+  sleepTime: string;
+}
+
+interface DailyScheduleConfig {
+  monday?: DaySchedule;
+  tuesday?: DaySchedule;
+  wednesday?: DaySchedule;
+  thursday?: DaySchedule;
+  friday?: DaySchedule;
+  saturday?: DaySchedule;
+  sunday?: DaySchedule;
+}
+
 interface UpdatePreferencesBody {
   wakeTime?: string;
   sleepTime?: string;
+  dailySchedule?: DailyScheduleConfig | null;
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;
@@ -62,10 +96,10 @@ export async function updatePreferences(
 
   const parsed = preferencesSchema.safeParse(request.body);
   if (!parsed.success) {
-    return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const { wakeTime, sleepTime, timeZone, defaultTaskDurationMinutes, defaultCalendarId } =
+  const { wakeTime, sleepTime, dailySchedule, timeZone, defaultTaskDurationMinutes, defaultCalendarId } =
     parsed.data;
 
   const updated = await prisma.user.update({
@@ -73,6 +107,7 @@ export async function updatePreferences(
     data: {
       wakeTime,
       sleepTime,
+      dailySchedule: dailySchedule !== undefined ? dailySchedule : undefined,
       timeZone,
       defaultTaskDurationMinutes,
       defaultCalendarId,
@@ -85,6 +120,7 @@ export async function updatePreferences(
     timeZone: updated.timeZone,
     wakeTime: updated.wakeTime,
     sleepTime: updated.sleepTime,
+    dailySchedule: updated.dailySchedule || null,
     defaultTaskDurationMinutes: updated.defaultTaskDurationMinutes,
     defaultCalendarId: updated.defaultCalendarId,
   };

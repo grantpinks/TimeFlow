@@ -18,26 +18,27 @@ export default function CalendarPage() {
   const [showTaskModal, setShowTaskModal] = useState(false);
 
   // Fetch calendar events for the current month
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const now = new Date();
-        const start = new Date(now.getFullYear(), now.getMonth(), 1);
-        const end = new Date(now.getFullYear(), now.getMonth() + 2, 0); // End of next month
+  const fetchExternalEvents = async () => {
+    try {
+      setEventsLoading(true);
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 2, 0); // End of next month
 
-        const events = await api.getCalendarEvents(
-          start.toISOString(),
-          end.toISOString()
-        );
-        setExternalEvents(events);
-      } catch (err) {
-        console.error('Failed to fetch calendar events:', err);
-      } finally {
-        setEventsLoading(false);
-      }
+      const events = await api.getCalendarEvents(
+        start.toISOString(),
+        end.toISOString()
+      );
+      setExternalEvents(events);
+    } catch (err) {
+      console.error('Failed to fetch calendar events:', err);
+    } finally {
+      setEventsLoading(false);
     }
+  };
 
-    fetchEvents();
+  useEffect(() => {
+    fetchExternalEvents();
   }, []);
 
   const unscheduledTasks = tasks.filter((t) => t.status === 'unscheduled');
@@ -131,7 +132,11 @@ export default function CalendarPage() {
   const handleRescheduleTask = async (taskId: string, start: Date, end: Date) => {
     try {
       await api.rescheduleTask(taskId, start.toISOString(), end.toISOString());
-      await refreshTasks();
+      // Refresh both tasks and calendar events to show the updated schedule
+      await Promise.all([
+        refreshTasks(),
+        fetchExternalEvents(),
+      ]);
       setMessage({
         type: 'success',
         text: 'Task rescheduled successfully!',
@@ -139,20 +144,79 @@ export default function CalendarPage() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: 'Failed to reschedule task',
+        text: error instanceof Error ? error.message : 'Failed to reschedule task',
       });
       throw error; // Re-throw so the calendar knows it failed
     }
   };
 
+  const handleCompleteTaskById = async (taskId: string) => {
+    try {
+      await api.completeTask(taskId);
+      await refreshTasks();
+      setMessage({
+        type: 'success',
+        text: 'Task completed!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to complete task',
+      });
+    }
+  };
+
+  const handleEditTaskById = (taskId: string) => {
+    // TODO: Navigate to task edit page or show edit modal
+    console.log('Edit task:', taskId);
+    setMessage({
+      type: 'success',
+      text: 'Edit functionality coming soon!',
+    });
+  };
+
+  const handleUnscheduleTaskById = async (taskId: string) => {
+    try {
+      await api.updateTask(taskId, { status: 'unscheduled' });
+      await refreshTasks();
+      await fetchExternalEvents();
+      setMessage({
+        type: 'success',
+        text: 'Task unscheduled successfully!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to unschedule task',
+      });
+    }
+  };
+
+  const handleDeleteTaskById = async (taskId: string) => {
+    try {
+      await api.deleteTask(taskId);
+      await refreshTasks();
+      await fetchExternalEvents();
+      setMessage({
+        type: 'success',
+        text: 'Task deleted successfully!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to delete task',
+      });
+    }
+  };
+
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="page-shell">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="page-header">
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">Calendar</h1>
-            <p className="text-slate-600 mt-1">
+            <h1 className="page-title">Calendar</h1>
+            <p className="page-subtitle">
               View your scheduled tasks alongside your Google Calendar events
             </p>
           </div>
@@ -230,8 +294,8 @@ export default function CalendarPage() {
 
         {/* Calendar */}
         {tasksLoading || eventsLoading ? (
-          <div className="h-[700px] bg-white rounded-lg shadow-sm border border-slate-200 flex items-center justify-center">
-            <div className="text-slate-500">Loading calendar...</div>
+          <div className="h-[700px] surface-card rounded-lg flex items-center justify-center">
+            <div className="text-muted">Loading calendar...</div>
           </div>
         ) : (
           <CalendarView
@@ -239,6 +303,10 @@ export default function CalendarPage() {
             externalEvents={externalEvents}
             onSelectEvent={handleEventSelect}
             onRescheduleTask={handleRescheduleTask}
+            onCompleteTask={handleCompleteTaskById}
+            onEditTask={handleEditTaskById}
+            onUnscheduleTask={handleUnscheduleTaskById}
+            onDeleteTask={handleDeleteTaskById}
           />
         )}
       </div>
@@ -309,4 +377,3 @@ export default function CalendarPage() {
     </Layout>
   );
 }
-

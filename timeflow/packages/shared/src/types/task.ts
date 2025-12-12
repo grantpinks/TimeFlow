@@ -4,6 +4,8 @@
  * These types represent task data as exposed via the API.
  */
 
+import type { Category } from './category.js';
+
 /**
  * Task status values.
  */
@@ -25,6 +27,8 @@ export interface Task {
   durationMinutes: number;
   priority: TaskPriority;
   status: TaskStatus;
+  categoryId?: string | null;
+  category?: Category | null;
   dueDate?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -53,6 +57,7 @@ export interface CreateTaskRequest {
   description?: string;
   durationMinutes?: number;
   priority?: TaskPriority;
+  categoryId?: string;
   dueDate?: string;
 }
 
@@ -64,6 +69,7 @@ export interface UpdateTaskRequest {
   description?: string;
   durationMinutes?: number;
   priority?: TaskPriority;
+  categoryId?: string;
   dueDate?: string;
   status?: TaskStatus;
 }

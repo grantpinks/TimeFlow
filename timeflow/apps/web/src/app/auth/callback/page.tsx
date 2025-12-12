@@ -2,14 +2,15 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { setAuthToken } from '../../../lib/api';
+import { setAuthToken, setRefreshToken } from '../../../lib/api';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get('token');
+    const token = searchParams.get('token') || searchParams.get('accessToken');
+    const refreshToken = searchParams.get('refreshToken');
     const error = searchParams.get('error');
 
     if (error) {
@@ -19,6 +20,9 @@ export default function AuthCallbackPage() {
 
     if (token) {
       setAuthToken(token);
+      if (refreshToken) {
+        setRefreshToken(refreshToken);
+      }
       router.push('/tasks');
     } else {
       router.push('/auth/error?error=no_token');

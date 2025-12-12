@@ -22,5 +22,12 @@ export async function registerCalendarRoutes(server: FastifyInstance) {
     { preHandler: requireAuth },
     calendarController.listCalendars
   );
+
+  // Create habit events in calendar
+  server.post(
+    '/calendar/create-habit-events',
+    { preHandler: requireAuth },
+    calendarController.createHabitEvents
+  );
 }
 

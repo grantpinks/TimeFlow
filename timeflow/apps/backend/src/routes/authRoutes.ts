@@ -6,6 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as authController from '../controllers/authController.js';
+import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerAuthRoutes(server: FastifyInstance) {
   // Start Google OAuth flow
@@ -17,6 +18,12 @@ export async function registerAuthRoutes(server: FastifyInstance) {
   server.get('/auth/google/callback', {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, authController.handleGoogleCallback);
+
+  // Check Google OAuth status
+  server.get('/auth/google/status', {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+  }, authController.getGoogleOAuthStatus);
 
   // Refresh JWT
   server.post('/auth/refresh', {

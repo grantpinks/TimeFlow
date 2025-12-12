@@ -8,7 +8,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -17,22 +17,11 @@ import { TodayScreen } from './src/screens/TodayScreen';
 
 const Tab = createBottomTabNavigator();
 
-// Simple icon components (replace with proper icons in production)
-function TasksIcon({ color }: { color: string }) {
-  return (
-    <View style={[styles.iconContainer, { borderColor: color }]}>
-      <Text style={[styles.iconText, { color }]}>☐</Text>
-    </View>
-  );
-}
-
-function TodayIcon({ color }: { color: string }) {
-  return (
-    <View style={[styles.iconContainer, { borderColor: color }]}>
-      <Text style={[styles.iconText, { color }]}>📅</Text>
-    </View>
-  );
-}
+const IconImage = ({ source, tint }: { source: any; tint: string }) => (
+  <View style={[styles.iconContainer, { borderColor: tint }]}>
+    <Image source={source} style={[styles.iconImg, { tintColor: tint }]} resizeMode="contain" />
+  </View>
+);
 
 function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,7 +29,7 @@ function AppNavigator() {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#0BAF9A" />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -53,7 +42,7 @@ function AppNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#3b82f6',
+        tabBarActiveTintColor: '#0BAF9A',
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           backgroundColor: '#fff',
@@ -81,7 +70,9 @@ function AppNavigator() {
         component={TodayScreen}
         options={{
           headerTitle: "Today's Agenda",
-          tabBarIcon: ({ color }) => <TodayIcon color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconImage source={require('./assets/branding/icon_only.png')} tint={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -89,7 +80,9 @@ function AppNavigator() {
         component={TaskListScreen}
         options={{
           headerTitle: 'All Tasks',
-          tabBarIcon: ({ color }) => <TasksIcon color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconImage source={require('./assets/branding/flow-default.png')} tint={color} />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -127,8 +120,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconText: {
-    fontSize: 18,
+  iconImg: {
+    width: 18,
+    height: 18,
   },
 });
-

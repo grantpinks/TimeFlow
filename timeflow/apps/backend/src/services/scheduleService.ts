@@ -73,6 +73,7 @@ export async function scheduleTasksForUser(
     timeZone: user.timeZone || 'UTC',
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
+    dailySchedule: user.dailySchedule as any || null,
   };
 
   // 5. Run scheduling algorithm
@@ -131,6 +132,7 @@ export async function scheduleTasksForUser(
 
 /**
  * Manually reschedule a single task.
+ * Handles both already-scheduled tasks (update) and unscheduled tasks (create schedule).
  */
 export async function rescheduleTask(
   userId: string,
@@ -146,34 +148,64 @@ export async function rescheduleTask(
     throw new Error('User not found');
   }
 
-  const scheduledTask = await prisma.scheduledTask.findUnique({
-    where: { taskId },
-    include: { task: true },
+  const calendarId = user.defaultCalendarId || 'primary';
+
+  // Fetch task with existing scheduled task (if any)
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, userId },
+    include: { scheduledTask: true },
   });
 
-  if (!scheduledTask || scheduledTask.task.userId !== userId) {
-    throw new Error('Scheduled task not found');
+  if (!task) {
+    throw new Error('Task not found');
   }
 
-  // Update Google Calendar event
-  await calendarService.updateEvent(
-    userId,
-    scheduledTask.calendarId,
-    scheduledTask.eventId,
-    {
+  if (task.scheduledTask) {
+    // Task is already scheduled - update existing schedule
+    await calendarService.updateEvent(
+      userId,
+      task.scheduledTask.calendarId,
+      task.scheduledTask.eventId,
+      {
+        start: startDateTime,
+        end: endDateTime,
+      }
+    );
+
+    await prisma.scheduledTask.update({
+      where: { taskId },
+      data: {
+        startDateTime: new Date(startDateTime),
+        endDateTime: new Date(endDateTime),
+        lastSyncedAt: new Date(),
+      },
+    });
+  } else {
+    // Task is unscheduled - create new schedule
+    const eventId = await calendarService.createEvent(userId, calendarId, {
+      summary: `[TimeFlow] ${task.title}`,
+      description: task.description || undefined,
       start: startDateTime,
       end: endDateTime,
-    }
-  );
+    });
 
-  // Update database record
-  await prisma.scheduledTask.update({
-    where: { taskId },
-    data: {
-      startDateTime: new Date(startDateTime),
-      endDateTime: new Date(endDateTime),
-      lastSyncedAt: new Date(),
-    },
-  });
+    await prisma.scheduledTask.create({
+      data: {
+        taskId,
+        provider: 'google',
+        calendarId,
+        eventId,
+        startDateTime: new Date(startDateTime),
+        endDateTime: new Date(endDateTime),
+        overflowedDeadline: false,
+      },
+    });
+
+    // Update task status to scheduled
+    await prisma.task.update({
+      where: { id: taskId },
+      data: { status: 'scheduled' },
+    });
+  }
 }
 

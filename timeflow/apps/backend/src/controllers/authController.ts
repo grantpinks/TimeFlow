@@ -6,6 +6,8 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as authService from '../services/authService.js';
+import * as categoryService from '../services/categoryService.js';
+import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
@@ -53,6 +55,10 @@ export async function handleGoogleCallback(
 
   try {
     const user = await authService.handleGoogleCallback(code);
+
+    // Ensure user has default categories (created on first login)
+    await categoryService.ensureDefaultCategories(user.id);
+
     const accessToken = await reply.jwtSign(
       { sub: user.id, type: 'access' },
       { expiresIn: '15m' }
@@ -117,3 +123,32 @@ export async function refreshToken(
   }
 }
 
+/**
+ * GET /api/auth/google/status
+ * Check if user has valid Google OAuth tokens.
+ */
+export async function getGoogleOAuthStatus(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!dbUser) {
+    return reply.status(404).send({ error: 'User not found' });
+  }
+
+  const hasGoogleAuth = !!(dbUser.googleRefreshToken && dbUser.googleAccessToken);
+  const isExpired = dbUser.googleAccessTokenExpiry
+    ? new Date(dbUser.googleAccessTokenExpiry) < new Date()
+    : true;
+
+  return {
+    connected: hasGoogleAuth,
+    expired: isExpired,
+    needsReauth: hasGoogleAuth && isExpired,
+  };
+}

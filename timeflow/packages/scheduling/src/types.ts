@@ -40,15 +40,38 @@ export interface CalendarEvent {
 }
 
 /**
+ * Per-day wake/sleep time configuration
+ */
+export interface DaySchedule {
+  wakeTime: string; // "HH:mm"
+  sleepTime: string; // "HH:mm"
+}
+
+/**
+ * Daily schedule with per-day wake/sleep times
+ */
+export interface DailyScheduleConfig {
+  monday?: DaySchedule;
+  tuesday?: DaySchedule;
+  wednesday?: DaySchedule;
+  thursday?: DaySchedule;
+  friday?: DaySchedule;
+  saturday?: DaySchedule;
+  sunday?: DaySchedule;
+}
+
+/**
  * User preferences that affect scheduling.
  */
 export interface UserPreferences {
   /** IANA timezone string (e.g., "America/Chicago") */
   timeZone: string;
-  /** Wake time in "HH:mm" format (24-hour) */
+  /** Wake time in "HH:mm" format (24-hour) - Default for all days */
   wakeTime: string;
-  /** Sleep time in "HH:mm" format (24-hour) */
+  /** Sleep time in "HH:mm" format (24-hour) - Default for all days */
   sleepTime: string;
+  /** Optional per-day wake/sleep times - overrides default if present */
+  dailySchedule?: DailyScheduleConfig | null;
 }
 
 /**
@@ -71,5 +94,37 @@ export interface ScheduledBlock {
 export interface TimeInterval {
   start: number; // Unix timestamp in milliseconds
   end: number;   // Unix timestamp in milliseconds
+}
+
+/**
+ * Habit frequency types.
+ */
+export type HabitFrequency = 'daily' | 'weekly' | 'custom';
+
+/**
+ * User's time-of-day preference for a habit.
+ */
+export type TimeOfDayPreference = 'morning' | 'afternoon' | 'evening';
+
+/**
+ * Input representation of a habit to generate scheduling suggestions.
+ */
+export interface HabitInput {
+  id: string;
+  durationMinutes: number;
+  frequency: HabitFrequency;
+  daysOfWeek?: string[];
+  preferredTimeOfDay?: TimeOfDayPreference | null;
+}
+
+/**
+ * Suggested time block for a habit (non-committed).
+ */
+export interface HabitSuggestionBlock {
+  habitId: string;
+  start: string;
+  end: string;
+  status: 'proposed' | 'accepted' | 'rejected';
+  reason?: string;
 }
 

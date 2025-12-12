@@ -7,6 +7,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as scheduleService from '../services/scheduleService.js';
 import { z } from 'zod';
+import { formatZodError } from '../utils/errorFormatter.js';
 
 interface ScheduleBody {
   taskIds: string[];
@@ -35,7 +36,7 @@ export async function runSchedule(
 
   const parsed = scheduleRequestSchema.safeParse(request.body);
   if (!parsed.success) {
-    return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
   const { taskIds, dateRangeStart, dateRangeEnd } = parsed.data;
@@ -85,7 +86,7 @@ export async function rescheduleTask(
 
   const parsed = rescheduleSchema.safeParse(request.body);
   if (!parsed.success) {
-    return reply.status(400).send({ error: parsed.error.flatten().fieldErrors });
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
   const { startDateTime, endDateTime } = parsed.data;

@@ -41,6 +41,11 @@ pnpm dev:web
 pnpm dev:mobile
 ```
 
+## Sprint 7 additions
+
+- Habit scheduling suggestions (`GET /api/habits/suggestions`) surfaced on the Today page for active habits (read-only, non-committed).
+- Gmail inbox preview (`GET /api/email/inbox`) with Focused/All toggle on the Today page. Requires Google account connection with Gmail read-only scope; use Settings → Google Connection to reconnect if needed.
+
 ## Environment Variables
 
 The backend uses a `.env` file under `apps/backend`. See `apps/backend/.env.example` for the

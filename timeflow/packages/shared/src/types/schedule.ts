@@ -39,3 +39,33 @@ export interface RescheduleRequest {
   endDateTime: string;
 }
 
+/**
+ * Suggested block for a habit (non-committed).
+ */
+export interface HabitSuggestionBlock {
+  habitId: string;
+  start: string;
+  end: string;
+  status: 'proposed' | 'accepted' | 'rejected';
+  reason?: string;
+}
+
+/**
+ * Enriched habit suggestion with habit details.
+ */
+export interface EnrichedHabitSuggestion extends HabitSuggestionBlock {
+  habit: {
+    id: string;
+    title: string;
+    description: string | null;
+    durationMinutes: number;
+  };
+}
+
+/**
+ * Response payload for habit scheduling suggestions.
+ */
+export interface HabitSuggestionsResponse {
+  suggestions: EnrichedHabitSuggestion[];
+}
+

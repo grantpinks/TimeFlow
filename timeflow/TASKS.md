@@ -190,6 +190,30 @@ These items are marked as TODO in the codebase and need attention before product
 - [ ] **CI/CD**: Set up GitHub Actions
 
 ---
+## Phase 7: Advanced Scheduling Features
+
+### 14. Backend Enhancements (Sprint 10)
+- [ ] Enhance `Habit` model in `schema.prisma` with flexible scheduling fields
+- [ ] Create `Meeting` and `SchedulingLink` models in `schema.prisma`
+- [ ] Create `meetingService.ts` and `schedulingLinkService.ts` (CRUD only)
+- [ ] Add command palette library (`cmdk`) and wire high-value commands
+- [ ] Implement light/dark mode with `next-themes` using design tokens
+
+### 15. Habit Engine & UI (Sprint 11)
+- [ ] Create `suggestHabitBlocks` function in scheduling package
+- [ ] Add API endpoint to fetch and commit habit schedule suggestions
+- [ ] Build "Plan Your Habits" UI on `/today` page to review/accept suggestions
+- [ ] Add `UserStreak` model and streak calculation service to backend
+- [ ] Build streak display UI (navbar counter, details page, animations)
+
+### 16. Smart Meeting Scheduling (Sprint 12)
+- [ ] Create public `/book/[urlSlug]` page for booking meetings
+- [ ] Build `GET /api/availability/[urlSlug]` endpoint to show available slots
+- [ ] Integrate with Google Calendar API to create events from bookings
+- [ ] Implement "Scheduling Links" management UI in Settings page
+- [ ] Implement Apple Calendar integration (OAuth + sync)
+
+---
 
 ## Quick Reference
 
@@ -207,5 +231,5 @@ These items are marked as TODO in the codebase and need attention before product
 
 ---
 
-**Last Updated**: 2025-12-03
+**Last Updated**: 2025-12-09
 

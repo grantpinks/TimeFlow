@@ -11,7 +11,15 @@
       "Bash(taskkill:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(pnpm expo start:*)"
+      "Bash(pnpm expo start:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm add:*)",
+      "Bash(git add:*)",
+      "Bash(pnpm prisma migrate dev:*)",
+      "Bash(pnpm prisma studio:*)",
+      "Bash(pnpm prisma generate:*)",
+      "Bash(pnpm dev:web:*)",
+      "Bash(Start-Sleep -Seconds 5)"
     ],
     "deny": [],
     "ask": []

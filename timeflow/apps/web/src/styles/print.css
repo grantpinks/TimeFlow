@@ -1,0 +1,211 @@
+/**
+ * Print Stylesheet for TimeFlow Tasks Page
+ *
+ * Optimizes the tasks page for printing by:
+ * - Hiding interactive elements (buttons, forms, toolbars)
+ * - Using single-column layout
+ * - Adding page breaks appropriately
+ * - Removing animations and shadows
+ */
+
+@media print {
+  /* Page setup */
+  @page {
+    margin: 1cm;
+    size: portrait;
+  }
+
+  /* Reset colors for better printing */
+  * {
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide navigation and interactive elements */
+  nav,
+  header nav,
+  .floating-assistant-button,
+  button:not(.print-keep),
+  .bulk-action-toolbar,
+  input[type="checkbox"],
+  input[type="text"],
+  input[type="date"],
+  select,
+  textarea,
+  form,
+  .keyboard-shortcuts-modal {
+    display: none !important;
+  }
+
+  /* Hide search, filter, and sort controls */
+  [class*="SearchBar"],
+  [class*="FilterPanel"],
+  [class*="sort"] {
+    display: none !important;
+  }
+
+  /* Single column layout */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Force single column for task sections */
+  [class*="grid"] {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Remove shadows and transitions */
+  * {
+    box-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /* Task cards */
+  [class*="TaskCard"],
+  [class*="task-card"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 0.5cm;
+    border: 1px solid #ddd !important;
+    padding: 0.5cm !important;
+    background: white !important;
+  }
+
+  /* Section headers */
+  h1 {
+    font-size: 24pt;
+    margin-bottom: 0.5cm;
+    border-bottom: 2px solid #333;
+    padding-bottom: 0.2cm;
+  }
+
+  h2 {
+    font-size: 16pt;
+    margin-top: 0.5cm;
+    margin-bottom: 0.3cm;
+    page-break-after: avoid;
+  }
+
+  h3 {
+    font-size: 12pt;
+    margin-top: 0.3cm;
+    margin-bottom: 0.2cm;
+  }
+
+  /* Page break control */
+  .print-page-break {
+    page-break-before: always;
+  }
+
+  .no-page-break {
+    page-break-inside: avoid;
+  }
+
+  /* Task metadata */
+  [class*="priority"],
+  [class*="category"],
+  [class*="badge"] {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid #999;
+    border-radius: 3px;
+    font-size: 9pt;
+    margin-right: 4px;
+  }
+
+  /* Task sections */
+  .task-section {
+    margin-bottom: 1cm;
+  }
+
+  /* Print header - add date and page info */
+  .print-header {
+    display: block !important;
+    text-align: right;
+    font-size: 10pt;
+    color: #666;
+    margin-bottom: 0.5cm;
+  }
+
+  /* Task status indicators */
+  .task-completed {
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  /* Category color borders */
+  [style*="border-left"] {
+    border-left-width: 3px !important;
+  }
+
+  /* Overflow warnings */
+  [class*="overflow"],
+  [class*="overdue"] {
+    color: #d00 !important;
+    font-weight: bold;
+  }
+
+  /* Icons - convert to text */
+  svg {
+    display: none !important;
+  }
+
+  /* Links */
+  a {
+    text-decoration: underline;
+    color: black !important;
+  }
+
+  /* Remove floating elements */
+  [class*="fixed"],
+  [class*="absolute"] {
+    position: static !important;
+  }
+
+  /* Habits section */
+  [class*="habit"] {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 0.3cm;
+  }
+
+  /* Footer */
+  .print-footer {
+    display: block !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 9pt;
+    color: #666;
+    border-top: 1px solid #ddd;
+    padding-top: 0.2cm;
+  }
+
+  /* Add print timestamp */
+  .print-header::after {
+    content: "Printed: " attr(data-date);
+  }
+
+  /* Ensure proper spacing */
+  p {
+    margin: 0.2cm 0;
+    line-height: 1.4;
+  }
+
+  /* Status messages */
+  [class*="error"],
+  [class*="success"],
+  [class*="warning"] {
+    border: 1px solid #999 !important;
+    padding: 0.3cm !important;
+    margin: 0.3cm 0 !important;
+    background: white !important;
+  }
+}

@@ -10,13 +10,17 @@ import rateLimit from '@fastify/rate-limit';
 import fastifyJwt from '@fastify/jwt';
 import { env } from './config/env.js';
 
-// Route registrations (will be created next)
+// Route registrations
 import { registerAuthRoutes } from './routes/authRoutes.js';
 import { registerUserRoutes } from './routes/userRoutes.js';
 import { registerTaskRoutes } from './routes/tasksRoutes.js';
+import { registerCategoryRoutes } from './routes/categoryRoutes.js';
 import { registerCalendarRoutes } from './routes/calendarRoutes.js';
 import { registerScheduleRoutes } from './routes/scheduleRoutes.js';
 import { registerAssistantRoutes } from './routes/assistantRoutes.js';
+import { registerHabitRoutes } from './routes/habitRoutes.js';
+import { registerEmailRoutes } from './routes/emailRoutes.js';
+import { registerConversationRoutes } from './routes/conversationRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -55,13 +59,16 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerAuthRoutes(api);
       await registerUserRoutes(api);
       await registerTaskRoutes(api);
+      await registerCategoryRoutes(api);
       await registerCalendarRoutes(api);
       await registerScheduleRoutes(api);
       await registerAssistantRoutes(api);
+      await registerHabitRoutes(api);
+      await registerEmailRoutes(api);
+      await registerConversationRoutes(api);
     },
     { prefix: '/api' }
   );
 
   return server;
 }
-

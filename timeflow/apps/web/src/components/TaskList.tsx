@@ -1,7 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { useDroppable } from '@dnd-kit/core';
 import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@timeflow/shared';
+import { useCategories } from '@/hooks/useCategories';
+import { TaskCard } from '@/components/ui/TaskCard';
+import { Button, Input, Select, Textarea, Label, TemplateModal } from '@/components/ui';
+import { saveTaskTemplate } from '@/utils/taskTemplates';
+import type { TaskTemplate } from '@/utils/taskTemplates';
 
 interface TaskListProps {
   tasks: Task[];
@@ -10,6 +17,11 @@ interface TaskListProps {
   onCompleteTask: (id: string) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
   loading?: boolean;
+  droppableId?: string;
+  autoOpenForm?: boolean;
+  selectionMode?: boolean;
+  selectedTasks?: Set<string>;
+  onToggleSelect?: (taskId: string) => void;
 }
 
 const priorityLabels: Record<number, string> = {
@@ -31,13 +43,31 @@ export function TaskList({
   onCompleteTask,
   onDeleteTask,
   loading,
+  droppableId,
+  autoOpenForm = false,
+  selectionMode = false,
+  selectedTasks = new Set(),
+  onToggleSelect,
 }: TaskListProps) {
+  const { categories } = useCategories();
+  const prefersReducedMotion = useReducedMotion();
+  const { setNodeRef, isOver } = useDroppable({
+    id: droppableId || 'default',
+  });
   const [showForm, setShowForm] = useState(false);
+
+  // Auto-open form when triggered by keyboard shortcut
+  useEffect(() => {
+    if (autoOpenForm) {
+      setShowForm(true);
+    }
+  }, [autoOpenForm]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [duration, setDuration] = useState(30);
   const [priority, setPriority] = useState<1 | 2 | 3>(2);
   const [dueDate, setDueDate] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingState, setEditingState] = useState<{
@@ -46,8 +76,10 @@ export function TaskList({
     durationMinutes: number;
     priority: 1 | 2 | 3;
     dueDate: string;
+    categoryId: string;
   } | null>(null);
   const [editingSubmitting, setEditingSubmitting] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +93,7 @@ export function TaskList({
         durationMinutes: duration,
         priority,
         dueDate: dueDate || undefined,
+        categoryId: categoryId || undefined,
       });
       // Reset form
       setTitle('');
@@ -68,6 +101,7 @@ export function TaskList({
       setDuration(30);
       setPriority(2);
       setDueDate('');
+      setCategoryId('');
       setShowForm(false);
     } catch (err) {
       console.error('Failed to create task:', err);
@@ -84,6 +118,7 @@ export function TaskList({
       durationMinutes: task.durationMinutes,
       priority: task.priority as 1 | 2 | 3,
       dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
+      categoryId: task.categoryId ?? '',
     });
   };
 
@@ -105,6 +140,7 @@ export function TaskList({
         durationMinutes: editingState.durationMinutes,
         priority: editingState.priority,
         dueDate: editingState.dueDate || undefined,
+        categoryId: editingState.categoryId || undefined,
       });
       closeEditModal();
     } catch (err) {
@@ -128,47 +164,109 @@ export function TaskList({
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
+  // Template handlers
+  const handleSelectTemplate = (template: Omit<TaskTemplate, 'id'>) => {
+    setTitle(template.title);
+    setDescription(template.description || '');
+    setDuration(template.durationMinutes);
+    setPriority(template.priority);
+    setCategoryId(template.categoryId || '');
+    setShowForm(true);
+  };
+
+  const handleSaveAsTemplate = () => {
+    if (!title.trim()) {
+      alert('Please enter a task title first');
+      return;
+    }
+
+    const templateName = prompt('Enter a name for this template:');
+    if (!templateName) return;
+
+    saveTaskTemplate({
+      name: templateName.trim(),
+      title: title.trim(),
+      description: description.trim(),
+      durationMinutes: duration,
+      priority,
+      categoryId: categoryId || undefined,
+    });
+
+    alert('Template saved successfully!');
+  };
+
   return (
     <div className="space-y-4">
       {/* Add task button/form */}
       {!showForm ? (
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-primary-400 hover:text-primary-600 transition-colors"
-        >
-          + Add Task
-        </button>
+        <div className="space-y-2">
+          <Button
+            onClick={() => setShowForm(true)}
+            variant="ghost"
+            className="w-full border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-primary-400 hover:text-primary-600"
+          >
+            + Add Task
+          </Button>
+          <Button
+            onClick={() => setShowTemplateModal(true)}
+            variant="ghost"
+            size="sm"
+            className="w-full text-slate-500 hover:text-primary-600"
+            leftIcon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            }
+          >
+            From Template
+          </Button>
+        </div>
       ) : (
         <form
           onSubmit={handleSubmit}
           className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 space-y-4"
         >
-          <input
+          <Input
             type="text"
             placeholder="Task title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             autoFocus
           />
 
-          <textarea
+          <Textarea
             placeholder="Description (optional)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
             rows={2}
           />
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-slate-600 mb-1">
-                Duration
-              </label>
-              <select
+              <Label>Category</Label>
+              <Select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">No category</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div>
+              <Label>Duration</Label>
+              <Select
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value={15}>15 min</option>
                 <option value={30}>30 min</option>
@@ -177,318 +275,273 @@ export function TaskList({
                 <option value={90}>1.5 hours</option>
                 <option value={120}>2 hours</option>
                 <option value={180}>3 hours</option>
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-600 mb-1">
-                Priority
-              </label>
-              <select
+              <Label>Priority</Label>
+              <Select
                 value={priority}
                 onChange={(e) => setPriority(Number(e.target.value) as 1 | 2 | 3)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value={1}>High</option>
                 <option value={2}>Medium</option>
                 <option value={3}>Low</option>
-              </select>
+              </Select>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-600 mb-1">
-                Due Date
-              </label>
-              <input
+              <Label>Due Date</Label>
+              <Input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end">
-            <button
+          <div className="flex gap-2 justify-between">
+            <Button
               type="button"
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800"
+              onClick={handleSaveAsTemplate}
+              variant="ghost"
+              size="sm"
+              disabled={!title.trim()}
+              leftIcon={
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                  />
+                </svg>
+              }
+              title="Save as template"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !title.trim()}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-            >
-              {submitting ? 'Adding...' : 'Add Task'}
-            </button>
+              Save as Template
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => setShowForm(false)}
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting || !title.trim()}
+                variant="primary"
+                loading={submitting}
+              >
+                {submitting ? 'Adding...' : 'Add Task'}
+              </Button>
+            </div>
           </div>
         </form>
       )}
 
       {/* Task list */}
       {loading ? (
-        <div className="text-center text-slate-500 py-8">Loading tasks...</div>
+        <div ref={setNodeRef} className="text-center text-slate-500 py-8">
+          Loading tasks...
+        </div>
       ) : tasks.length === 0 ? (
-        <div className="text-center text-slate-500 py-8">
+        <div
+          ref={setNodeRef}
+          className={`text-center text-slate-500 py-8 rounded-lg border-2 border-dashed transition-colors ${
+            isOver ? 'border-primary-400 bg-primary-50' : 'border-slate-200'
+          }`}
+        >
           No tasks yet. Add one above!
         </div>
       ) : (
-        <ul className="space-y-2">
+        <motion.div
+          ref={setNodeRef}
+          className={`space-y-3 p-4 rounded-lg transition-colors ${
+            isOver ? 'bg-primary-50 border-2 border-primary-400' : ''
+          }`}
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: prefersReducedMotion ? 0 : 0.05,
+              },
+            },
+          }}
+          initial="hidden"
+          animate="show"
+        >
           {tasks.map((task) => (
-            <li
+            <TaskCard
               key={task.id}
-              className={`bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex items-center gap-4 ${
-                task.status === 'completed' ? 'opacity-60' : ''
-              }`}
-            >
-              {/* Complete button */}
-              <button
-                onClick={() => onCompleteTask(task.id)}
-                disabled={task.status === 'completed'}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                  task.status === 'completed'
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'border-slate-300 hover:border-green-500'
-                }`}
-              >
-                {task.status === 'completed' && (
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                )}
-              </button>
-
-              {/* Task info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`font-medium ${
-                      task.status === 'completed'
-                        ? 'line-through text-slate-400'
-                        : 'text-slate-800'
-                    }`}
-                  >
-                    {task.title}
-                  </span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded ${
-                      priorityColors[task.priority]
-                    }`}
-                  >
-                    {priorityLabels[task.priority]}
-                  </span>
-                  {task.status === 'scheduled' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-primary-100 text-primary-700">
-                      Scheduled
-                    </span>
-                  )}
-                </div>
-                <div className="text-sm text-slate-500 flex gap-3 mt-1">
-                  <span>{formatDuration(task.durationMinutes)}</span>
-                  {task.dueDate && (
-                    <span>Due: {formatDate(task.dueDate)}</span>
-                  )}
-                  {task.scheduledTask && (
-                    <span>
-                      Scheduled:{' '}
-                      {new Date(task.scheduledTask.startDateTime).toLocaleString(
-                        'en-US',
-                        {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
-                        }
-                      )}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => openEditModal(task)}
-                  className="text-slate-400 hover:text-slate-700 p-1"
-                  title="Edit task"
-                  disabled={task.status === 'completed'}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => onDeleteTask(task.id)}
-                  className="text-slate-400 hover:text-red-500 p-1"
-                  title="Delete task"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </li>
+              task={task}
+              onEdit={openEditModal}
+              onDelete={onDeleteTask}
+              onComplete={onCompleteTask}
+              draggable={!selectionMode}
+              selectable={selectionMode}
+              selected={selectedTasks.has(task.id)}
+              onToggleSelect={onToggleSelect}
+            />
           ))}
-        </ul>
+        </motion.div>
       )}
 
-      {editingTask && editingState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-          <div className="w-full max-w-lg bg-white rounded-lg shadow-xl border border-slate-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500">Edit task</p>
-                <h3 className="text-lg font-semibold text-slate-800 truncate">{editingTask.title}</h3>
-              </div>
-              <button
-                onClick={closeEditModal}
-                className="text-slate-400 hover:text-slate-600"
-                aria-label="Close edit modal"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdateSubmit} className="px-5 py-4 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm text-slate-700">Title</label>
-                <input
-                  type="text"
-                  value={editingState.title}
-                  onChange={(e) =>
-                    setEditingState((prev) => prev && { ...prev, title: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm text-slate-700">Description</label>
-                <textarea
-                  value={editingState.description}
-                  onChange={(e) =>
-                    setEditingState((prev) => prev && { ...prev, description: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                  rows={2}
-                  placeholder="Optional description"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
+      <AnimatePresence>
+        {editingTask && editingState && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+            initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: prefersReducedMotion ? 1 : 0 }}
+          >
+            <motion.div
+              className="w-full max-w-lg bg-white rounded-lg shadow-xl border border-slate-200"
+              initial={prefersReducedMotion ? false : { y: 20, opacity: 0 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 1 } : { y: 10, opacity: 0 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
                 <div>
-                  <label className="block text-sm text-slate-700 mb-1">Duration</label>
-                  <select
-                    value={editingState.durationMinutes}
-                    onChange={(e) =>
-                      setEditingState(
-                        (prev) => prev && { ...prev, durationMinutes: Number(e.target.value) }
-                      )
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value={15}>15 min</option>
-                    <option value={30}>30 min</option>
-                    <option value={45}>45 min</option>
-                    <option value={60}>1 hour</option>
-                    <option value={90}>1.5 hours</option>
-                    <option value={120}>2 hours</option>
-                    <option value={180}>3 hours</option>
-                  </select>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Edit task</p>
+                  <h3 className="text-lg font-semibold text-slate-800 truncate">{editingTask.title}</h3>
                 </div>
+                <button
+                  onClick={closeEditModal}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Close edit modal"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-                <div>
-                  <label className="block text-sm text-slate-700 mb-1">Priority</label>
-                  <select
-                    value={editingState.priority}
+              <form onSubmit={handleUpdateSubmit} className="px-5 py-4 space-y-4">
+                <div className="space-y-2">
+                  <Label required>Title</Label>
+                  <Input
+                    type="text"
+                    value={editingState.title}
                     onChange={(e) =>
-                      setEditingState(
-                        (prev) => prev && { ...prev, priority: Number(e.target.value) as 1 | 2 | 3 }
-                      )
+                      setEditingState((prev) => prev && { ...prev, title: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value={1}>High</option>
-                    <option value={2}>Medium</option>
-                    <option value={3}>Low</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-slate-700 mb-1">Due Date</label>
-                  <input
-                    type="date"
-                    value={editingState.dueDate}
-                    onChange={(e) =>
-                      setEditingState((prev) => prev && { ...prev, dueDate: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    required
                   />
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeEditModal}
-                  className="px-4 py-2 text-slate-600 hover:text-slate-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editingSubmitting || !editingState.title.trim()}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {editingSubmitting ? 'Saving...' : 'Save changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                <div className="space-y-2">
+                  <Label optional>Description</Label>
+                  <Textarea
+                    value={editingState.description}
+                    onChange={(e) =>
+                      setEditingState((prev) => prev && { ...prev, description: e.target.value })
+                    }
+                    rows={2}
+                    placeholder="Optional description"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Category</Label>
+                    <Select
+                      value={editingState.categoryId}
+                      onChange={(e) =>
+                        setEditingState((prev) => prev && { ...prev, categoryId: e.target.value })
+                      }
+                    >
+                      <option value="">No category</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Duration</Label>
+                    <Select
+                      value={editingState.durationMinutes}
+                      onChange={(e) =>
+                        setEditingState(
+                          (prev) => prev && { ...prev, durationMinutes: Number(e.target.value) }
+                        )
+                      }
+                    >
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>1 hour</option>
+                      <option value={90}>1.5 hours</option>
+                      <option value={120}>2 hours</option>
+                      <option value={180}>3 hours</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Priority</Label>
+                    <Select
+                      value={editingState.priority}
+                      onChange={(e) =>
+                        setEditingState(
+                          (prev) => prev && { ...prev, priority: Number(e.target.value) as 1 | 2 | 3 }
+                        )
+                      }
+                    >
+                      <option value={1}>High</option>
+                      <option value={2}>Medium</option>
+                      <option value={3}>Low</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Due Date</Label>
+                    <Input
+                      type="date"
+                      value={editingState.dueDate}
+                      onChange={(e) =>
+                        setEditingState((prev) => prev && { ...prev, dueDate: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button
+                    type="button"
+                    onClick={closeEditModal}
+                    variant="ghost"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={editingSubmitting || !editingState.title.trim()}
+                    variant="primary"
+                    loading={editingSubmitting}
+                  >
+                    {editingSubmitting ? 'Saving...' : 'Save changes'}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Template Modal */}
+      <TemplateModal
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        onSelectTemplate={handleSelectTemplate}
+        categories={categories}
+      />
     </div>
   );
 }
-
