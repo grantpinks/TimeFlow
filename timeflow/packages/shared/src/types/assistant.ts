@@ -31,6 +31,7 @@ export type AssistantAction =
 export interface AssistantChatRequest {
   message: string;
   conversationHistory?: ChatMessage[]; // Optional: for context
+  conversationId?: string; // Optional: use specific conversation for history fallback
 }
 
 // Response from POST /api/assistant/chat

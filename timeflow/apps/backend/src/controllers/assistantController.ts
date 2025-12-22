@@ -13,6 +13,7 @@ interface ChatRequestBody {
 
 const chatSchema = z.object({
   message: z.string().trim().min(1, 'Message is required'),
+  conversationId: z.string().min(1).optional(),
   conversationHistory: z
     .array(
       z.object({
@@ -20,6 +21,7 @@ const chatSchema = z.object({
         role: z.enum(['user', 'assistant']),
         content: z.string(),
         timestamp: z.string().datetime().optional(),
+        metadata: z.record(z.any()).optional(),
       })
     )
     .optional(),
@@ -39,13 +41,14 @@ export async function chat(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const { message, conversationHistory } = parsed.data;
+  const { message, conversationHistory, conversationId } = parsed.data;
 
   try {
     const response = await assistantService.processMessage(
       user.id,
       message,
-      conversationHistory
+      conversationHistory,
+      conversationId
     );
 
     return reply.status(200).send(response);

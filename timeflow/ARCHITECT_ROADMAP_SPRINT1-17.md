@@ -1,4 +1,4 @@
-# TimeFlow Sprint Roadmap (Sprints 1-17)
+# TimeFlow Sprint Roadmap (Sprints 1-20)
 
 **Project**: TimeFlow
 **Duration**: 32 weeks (2 weeks per sprint)
@@ -235,7 +235,7 @@
 
 ---
 
-## Phase 2 Preview (Sprints 6-16)
+## Phase 2 Preview (Sprints 6-17)
 
 - **Task categories with color coding** (Professional, Schoolwork, Personal, Misc – visible in task lists, calendar, and AI Assistant)
 - **Branding & visual identity** (logo system, color story, AI assistant mascot, iconography, marketing-ready assets)
@@ -260,7 +260,7 @@
 
 ---
 
-## Phase 2 Detailed Plan (Sprints 6-16) – Draft
+## Phase 2 Detailed Plan (Sprints 6-17) – Draft
 
 > Note: Phase 2 scope is intentionally flexible. Exact sprint boundaries can be adjusted based on MVP feedback.
 
@@ -567,8 +567,8 @@
 - [ ] AI Assistant responses are consistently well-formatted (headings, bullets, clear sections) and avoid leaking technical JSON/IDs to users.
 - [ ] Assistant can move from “recommendation mode” to actually applying schedules: previewing changes, getting confirmation, and writing to calendar + tasks.
 - [ ] Model and prompts respect fixed events (e.g., classes), avoid hallucinated conflicts, and answer availability questions progressively (e.g., “When am I free this week?”) with useful detail.
-- [ ] gpt-oss (`9398339cb0d`, via Docker Desktop models) is integrated behind the `assistantModelProvider` abstraction and ready to be used as the new default model, subject to evaluation.
-- [ ] Offline evaluation suite (using `KNOWN_ISSUES.md` and `AI Response Adjustments` transcripts) demonstrates that gpt-oss (`9398339cb0d`) meets or exceeds the current `llama3.2` model on reasoning quality, schedule correctness, and safety.
+- [ ] Model abstraction supports multiple models; default production model is llama3.2, with gpt-oss available for evaluation and future consideration.
+- [ ] Offline evaluation suite (using `KNOWN_ISSUES.md` and `AI Response Adjustments` transcripts) compares gpt-oss (`9398339cb0d`) vs `llama3.2` on reasoning quality, schedule correctness, and safety.
 - [ ] AI Assistant chat UI feels visually consistent with the high-quality starting/hero state and the rest of the branded app.
 
 #### Tasks
@@ -577,19 +577,20 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 13.1 | Audit current assistant prompts, tools, and responses using `KNOWN_ISSUES.md` and `AI Response Adjustments` samples; produce a focused issue list (formatting, hallucinations, workflow gaps) | Claude | 3-4h | P0 |
-| 13.2 | Define evaluation criteria and test set for key flows (daily planning, “When am I free this week?”, apply schedule, habit scheduling) | Claude | 3-4h | P0 |
+| 13.1 | DONE - Audit current assistant prompts, tools, and responses using `KNOWN_ISSUES.md` and `AI Response Adjustments` samples; produce a focused issue list (formatting, hallucinations, workflow gaps) | Claude | 3-4h | P0 |
+| 13.2 | Define evaluation criteria and test set for key flows (daily planning, "When am I free this week?", apply schedule, habit scheduling) | Claude | 3-4h | P0 |
+| 13.2b | DONE - Add automated AI regression tests: backend prompt harness hitting `/api/assistant/chat` with curated prompts, plus unit tests for `parseResponse`/structured-output and mascot state detection; runbook: `docs/SPRINT_13_AI_REGRESSION_RUNBOOK.md` | Codex | 3-4h | P0 |
 
 **Model & Infrastructure**
 
-| 13.3 | Implement abstraction layer in backend (e.g., `assistantModelProvider`) to support swapping between the current `llama3.2` model, gpt-oss (`9398339cb0d`), and future models | Codex | 4-6h | P0 |
-| 13.4 | Run side-by-side experiments comparing `llama3.2` vs gpt-oss (`9398339cb0d`) (and any other candidates) on the evaluation set; capture cost, latency, and quality metrics | Codex | 4-6h | P0 |
-| 13.5 | Decide and configure the default production model as gpt-oss (`9398339cb0d`) if it meets quality/safety bars, plus a fallback strategy (e.g., cheaper or more robust backup for non-critical requests) | Claude | 3-4h | P1 |
+| 13.3 | DONE - Implement abstraction layer in backend (e.g., `assistantModelProvider`) to support swapping between the current `llama3.2` model, gpt-oss (`9398339cb0d`), and future models | Codex | 4-6h | P0 |
+| 13.4 | DONE - Run side-by-side experiments comparing `llama3.2` vs gpt-oss (`9398339cb0d`) (and any other candidates) on the evaluation set; capture cost, latency, and quality metrics | Codex | 4-6h | P0 |
+| 13.5 | DONE - Decide and configure the default production model as llama3.2 (document fallback strategy; keep gpt-oss available for future evaluation) | Claude | 3-4h | P1 |
 
 **Prompt & Behavior Layer**
 
-| 13.6 | Redesign core system prompt to clearly separate “conversation mode” vs “action/scheduling mode”, including when to emit structured schedules vs natural language | Claude | 4-6h | P0 |
-| 13.7 | Introduce explicit instructions for respecting fixed events (classes, appointments) and avoiding hallucinated conflicts or impossible moves | Claude | 3-4h | P0 |
+| 13.6 | DONE - Redesign core system prompt to clearly separate “conversation mode” vs “action/scheduling mode”, including when to emit structured schedules vs natural language| Claude | 4-6h | P0 |
+| 13.7 | DONE - Introduce explicit instructions for respecting fixed events (classes, appointments) and avoiding hallucinated conflicts or impossible moves| Claude | 3-4h | P0 |
 | 13.8 | Implement robust server-side post-processing that strips all technical markers/IDs before sending responses to the client, except where explicitly required | Codex | 4-6h | P0 |
 | 13.9 | Add guardrails/templates for availability questions (“When am I free this week?”) so responses prioritize near-term days, explain rationale, and stay within actual free blocks | Claude | 3-4h | P1 |
 
@@ -646,6 +647,10 @@
 - [ ] External users can book meetings based on the user's real availability across Google and Apple calendars.
 - [ ] Meeting bookings create calendar events with correct time zones and conflict handling.
 - [ ] Assistant can help users create and manage scheduling links.
+- [ ] Booking respects **meeting constraints**: work hours, max booking horizon, buffers, and a per-day meeting cap.
+- [ ] Scheduling + availability support **Fixed vs Flexible time**: meetings are non-reschedulable and block time; deep work blocks can move and may not block meeting availability.
+- [ ] **In-context scheduling** exists inside TimeFlow surfaces (email/task views) so users can start scheduling without leaving their workflow.
+- [ ] **Inbox Foundations**: Gmail inbox experience is trustworthy (filters + accuracy improvements) to set up Sprint 15 Gmail label sync success.
 
 #### Tasks
 
@@ -657,14 +662,109 @@
 | 14.4 | Build `GET /api/availability/[urlSlug]` endpoint to aggregate availability from Google + Apple calendars and existing tasks/habits | Codex | 5-7h | P0 |
 | 14.5 | Integrate with Google & Apple Calendar APIs to create and update events when bookings are confirmed or rescheduled | Codex | 5-7h | P0 |
 | 14.6 | Implement "Scheduling Links" management UI in Settings (create, edit, pause/resume, delete, copy/share link) | Codex | 4-6h | P1 |
+| 14.7 | Add meeting booking constraints to Scheduling Links: **work hours**, **max future date range**, **buffer times**, **max meetings/day** (model + API + UI). | Codex | 6-8h | P0 |
+| 14.8 | Update availability computation to enforce constraints (clamp date range; apply buffers around busy blocks; enforce daily cap; timezone safe). | Codex | 6-8h | P0 |
+| 14.9 | Enforce constraints at booking time (server-side) to prevent race conditions/double booking; return user-friendly errors. | Codex | 4-6h | P0 |
 | 14.C1 | Review and refine cross-integration edge cases (double-booking, overlapping events, cancellations, time zone changes) | Claude | 4-6h | P1 |
 | 14.C2 | Enhance AI Assistant prompts and flows for creating, updating, and explaining scheduling links and booked meetings (e.g., "Set up a 30-min check-in this week") | Claude | 3-4h | P1 |
+| 14.C3 | Define precise semantics for constraints (work hours precedence vs calendar free/busy; buffers around tasks/events; daily cap counting; DST). | Claude | 3-4h | P1 |
 | 14.G1 | Document Smart Meeting Scheduling and multi-calendar behavior, including how availability is computed and how users manage their links | Gemini | 4-6h | P2 |
+| 14.G2 | **Inbox Foundations guide** (filters, inbox page UX, categorization accuracy + overrides) | Gemini | 3-4h | P1 |
+
+**Fixed vs Flexible Time (Scheduling + Availability)**
+
+> Why: Booking and scheduling must understand what truly blocks time (meetings) vs what can move (deep work). This improves both meeting availability and the user’s ability to plan.
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 14.10 | Add Task/ScheduledTask “hard set time” + “blocks time (busy)” flags; default meetings/external events to hard+busy, deep work to flexible (not busy). | Codex | 4-6h | P0 |
+| 14.11 | Update scheduler + rescheduler to respect flags: never move hard-set blocks; allow moving flexible blocks; treat busy blocks as conflicts. | Codex | 6-8h | P0 |
+| 14.12 | Update availability endpoint to treat “busy” blocks as unavailable and ignore non-busy flexible blocks (unless user opts-in). | Codex | 4-6h | P0 |
+| 14.12a | Add UI controls for tasks/blocks: **Fixed time** (hard set) and **Busy** (blocks calendar). Provide sensible defaults (meeting = fixed+busy, deep work = flexible+not busy). | Codex | 4-6h | P0 |
+| 14.C4 | Define semantics and defaults: how flags interact with calendar events, tasks, habits, and booking links; edge cases (DST, multi-day, partial blocks). | Claude | 3-4h | P1 |
+| 14.G3 | Document “Fixed vs Flexible Time” user-facing behavior and the recommended defaults (meeting vs deep work). | Gemini | 3-4h | P1 |
+
+**In-Context Scheduling (Competitive Differentiator)**
+
+> From `docs/COMPETITOR_ANALYSIS_FYXER_AI.md`: competitors win by operating in the inbox/calendar workflow. TimeFlow should ship at least one “start scheduling from context” entry point in Sprint 14.
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 14.17 | Add “Schedule meeting” entry points from TimeFlow UI surfaces: email viewer and/or tasks (pre-fill title + attendees placeholder + duration). | Codex | 4-6h | P1 |
+| 14.18 | Implement a lightweight “quick add” parser for meeting intent (e.g., `Meet with Alex 30m next week`) to prefill the scheduling link/booking flow (no full NLP). | Codex | 3-4h | P2 |
+| 14.C6 | Define the minimal “in-context” UX and copy that avoids magic/black-box behavior (clear user control, editable prefill). | Claude | 2-3h | P2 |
+
+**Inbox Foundations (Prep for Sprint 15)**
+
+> Why: Sprint 15 will apply labels inside Gmail. That only feels valuable if the in-app inbox view has strong filters and users trust the categorization.
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 14.13 | Add a dedicated `/inbox` page (full inbox) with search, pagination, and thread view; add an “Open Inbox” button from `/today`. | Codex | 6-8h | P0 |
+| 14.14 | Add **quick filters** on inbox views: `Work` vs `Personal` (and `All`), plus the full category pill strip (finance, travel, etc.). | Codex | 3-4h | P0 |
+| 14.15 | Improve email fetch efficiency + reliability (reduce N+1 calls, bound concurrency, cache server-side, improve rate limit strategy). | Codex | 4-6h | P1 |
+| 14.16 | Add “Correct category” action on an email/thread in-app; persist a user override and apply it before heuristic categorization. | Codex | 6-8h | P1 |
+| 14.C5 | Define categorization quality targets and an eval set (what “accurate” means, error taxonomy, how to measure improvements). | Claude | 3-4h | P1 |
 
 ---
 
-### Sprint 15: App Overhaul & Public Mobile Launch
+### Sprint 15: Gmail Label Sync (Thread-Level)
 **Duration**: Week 29-30  
+**Focus**: Mirror TimeFlow’s inbox organization directly inside Gmail by creating real Gmail labels and applying them at the **thread level**, with background sync and safe fallbacks.
+
+#### Goals
+- [ ] TimeFlow can **create/ensure Gmail labels** for each enabled email category (namespaced, e.g., `TimeFlow/Work`).
+- [ ] TimeFlow can **apply category labels to Gmail threads** deterministically and idempotently.
+- [ ] A consumer user can enable/disable Gmail label sync and run a manual “Sync now”.
+- [ ] New incoming mail is labeled quickly via **Gmail watch + Pub/Sub** (or, if unavailable, via **sync-on-inbox-fetch** fallback).
+- [ ] Category color settings map to Gmail’s supported label color palette (best-effort mapping + user override).
+- [ ] Email labeling earns user trust via **user control + transparency** (rules + easy correction + “why” explanations).
+
+#### Tasks
+
+**Backend: Gmail Label Sync Core**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 15.1 | Extend DB schema to persist per-user Gmail label mappings and sync state (labelId, labelName, color mapping, lastHistoryId, watch expiration). | Codex | 4-6h | P0 |
+| 15.2 | Implement Gmail Label Sync service: list/create/patch labels; apply labels to threads via Gmail API; idempotent operations. | Codex | 8-12h | P0 |
+| 15.3 | Add API endpoints: enable/disable sync, status, run sync now, and per-category Gmail label settings updates. | Codex | 6-8h | P0 |
+| 15.4 | Implement fallback “sync on inbox fetch” path behind a flag, with strict rate limiting and small batch size. | Codex | 4-6h | P1 |
+
+**Background Sync: Gmail Watch + Pub/Sub**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 15.5 | Implement Gmail watch setup + Pub/Sub push handler endpoint; validate push authenticity; dedupe by historyId. | Codex | 8-12h | P0 |
+| 15.6 | Implement watch renewal job and operational safeguards (retry, dead-letter strategy, alerting hooks). | Codex | 4-6h | P1 |
+| 15.C1 | Define sync semantics (thread-level add/remove rules, conflicts with user-applied labels, backfill policy). | Claude | 3-4h | P1 |
+
+**Frontend: Settings UX**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 15.7 | Add “Gmail Label Sync” settings under Email Categories: master toggle, status, “Sync now”, per-category name/color mapping controls. | Codex | 6-8h | P1 |
+| 15.G1 | Document setup + limitations (Gmail color palette limits, sensitive scope verification, Pub/Sub requirements), plus troubleshooting playbook. | Gemini | 4-6h | P1 |
+
+**User Control & Transparency (Differentiator vs Fyxer AI)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 15.8 | Add **user-defined rules** for categorization (e.g., “all emails from domain X → Work”) and apply rules before heuristics; ensure rules influence Gmail label sync. | Codex | 6-8h | P1 |
+| 15.9 | Add “Why this label?” transparency UI (show rule match / Gmail label match / keyword match) to reduce black-box feel. | Codex | 4-6h | P1 |
+| 15.10 | Add optional **action-oriented labels** in TimeFlow (`NeedsReply`, `ToRead`, `NeedsAction`) and map them to Gmail labels (namespaced) if enabled. | Codex | 6-8h | P2 |
+| 15.C2 | Define rule precedence and explanation taxonomy (what gets shown to user; how to avoid leaking sensitive data). | Claude | 3-4h | P1 |
+
+#### Acceptance Criteria
+- Enabled user sees new `TimeFlow/*` labels in Gmail and threads are labeled correctly.
+- Background sync labels new mail within minutes when watch is enabled; fallback path labels on next inbox fetch when watch disabled.
+- Label operations are safe under rate limits and are idempotent (retries do not produce duplicates or thrash colors).
+- Clear docs exist for OAuth scopes, verification requirements, Pub/Sub setup, and operational monitoring.
+
+---
+
+### Sprint 16: App Overhaul & Public Mobile Launch
+**Duration**: Week 31-32  
 **Focus**: Make TimeFlow feel like a polished, app-store-ready product across web and mobile, with a premium, cohesive UI and smooth interactions.
 
 #### Goals
@@ -679,31 +779,31 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 15.1 | Align `/today`, Tasks, Calendar, and Assistant mobile screens with updated Phase 2 designs (layout, sections, typography, color) | Codex | 6-8h | P0 |
-| 15.2 | Audit and refine mobile navigation patterns (tabs, stacks, modals) to ensure smooth transitions between core screens | Codex | 4-6h | P1 |
-| 15.3 | Implement deep links/shortcuts for key flows (e.g., open Today, open specific task or meeting link) | Codex | 4-6h | P1 |
+| 16.1 | Align `/today`, Tasks, Calendar, and Assistant mobile screens with updated Phase 2 designs (layout, sections, typography, color) | Codex | 6-8h | P0 |
+| 16.2 | Audit and refine mobile navigation patterns (tabs, stacks, modals) to ensure smooth transitions between core screens | Codex | 4-6h | P1 |
+| 16.3 | Implement deep links/shortcuts for key flows (e.g., open Today, open specific task or meeting link) | Codex | 4-6h | P1 |
 
 **Visual System & Components on Mobile**
 
-| 15.4 | Port web `Card`, `Button`, and form components into reusable mobile equivalents (or shared design system components) | Codex | 6-8h | P1 |
-| 15.5 | Align mobile color tokens and typography scale with `docs/BRAND_GUIDELINES.md` (headings, body, accent colors) | Codex | 3-4h | P1 |
-| 15.6 | Ensure iconography (including Flow mascot usage on mobile) is crisp and consistent across device densities | Codex | 3-4h | P1 |
+| 16.4 | Port web `Card`, `Button`, and form components into reusable mobile equivalents (or shared design system components) | Codex | 6-8h | P1 |
+| 16.5 | Align mobile color tokens and typography scale with `docs/BRAND_GUIDELINES.md` (headings, body, accent colors) | Codex | 3-4h | P1 |
+| 16.6 | Ensure iconography (including Flow mascot usage on mobile) is crisp and consistent across device densities | Codex | 3-4h | P1 |
 
 **Animations & Premium Feel**
 
-| 15.7 | Implement smooth screen transitions and micro-interactions using an Expo-friendly animation library (e.g., Reanimated/Moti) with `prefers-reduced-motion` support | Codex | 6-8h | P1 |
-| 15.8 | Add delightful yet subtle feedback for key actions (task complete, schedule applied, habit checked off) consistent with Sprint 8 motion guidelines | Codex | 4-6h | P1 |
+| 16.7 | Implement smooth screen transitions and micro-interactions using an Expo-friendly animation library (e.g., Reanimated/Moti) with `prefers-reduced-motion` support | Codex | 6-8h | P1 |
+| 16.8 | Add delightful yet subtle feedback for key actions (task complete, schedule applied, habit checked off) consistent with Sprint 8 motion guidelines | Codex | 4-6h | P1 |
 
 **App Store Readiness**
 
-| 15.9 | Implement app icons, splash screens, and launch screens for iOS and Android following brand guidelines | Codex | 4-6h | P1 |
-| 15.10 | Prepare App Store / Play Store metadata: descriptions, screenshots, preview videos, and privacy policy links | Gemini | 4-6h | P1 |
-| 15.11 | Integrate basic mobile analytics (screen views, key actions, crashes) aligned with web analytics events | Codex | 4-6h | P1 |
+| 16.9 | Implement app icons, splash screens, and launch screens for iOS and Android following brand guidelines | Codex | 4-6h | P1 |
+| 16.10 | Prepare App Store / Play Store metadata: descriptions, screenshots, preview videos, and privacy policy links | Gemini | 4-6h | P1 |
+| 16.11 | Integrate basic mobile analytics (screen views, key actions, crashes) aligned with web analytics events | Codex | 4-6h | P1 |
 
 **Stability & Performance**
 
-| 15.12 | Profile mobile app performance (startup time, navigation latency, memory usage) and address top issues | Codex | 4-6h | P1 |
-| 15.13 | Implement offline-friendly behaviors for core flows (task creation/editing, viewing Today and Calendar snapshots) | Codex | 4-6h | P1 |
+| 16.12 | Profile mobile app performance (startup time, navigation latency, memory usage) and address top issues | Codex | 4-6h | P1 |
+| 16.13 | Implement offline-friendly behaviors for core flows (task creation/editing, viewing Today and Calendar snapshots) | Codex | 4-6h | P1 |
 
 #### Acceptance Criteria
 - Mobile apps pass internal QA on a representative set of devices (iOS + Android) with good performance and no critical crashes.
@@ -712,8 +812,8 @@
 
 ---
 
-### Sprint 16: Subscriptions, Payments & Scale
-**Duration**: Week 31-32  
+### Sprint 17: Subscriptions, Payments & Scale
+**Duration**: Week 33-34  
 **Focus**: Introduce subscription-based pricing and payments, wire value-adding features into tiers, and prepare the platform for public scale.
 
 #### Goals
@@ -728,32 +828,32 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 16.1 | Define subscription tiers (Free/Trial, Standard, Unlimited) with pricing, limits, and feature entitlements | Architect | 4-6h | P0 |
-| 16.2 | Design upgrade/downgrade flows and in-app messaging for plan changes (including trial to paid, grace periods) | Claude | 4-6h | P1 |
+| 17.1 | Define subscription tiers (Free/Trial, Standard, Unlimited) with pricing, limits, and feature entitlements | Architect | 4-6h | P0 |
+| 17.2 | Design upgrade/downgrade flows and in-app messaging for plan changes (including trial to paid, grace periods) | Claude | 4-6h | P1 |
 
 **Payments & Subscription Infrastructure**
 
-| 16.3 | Integrate Stripe (or chosen provider) for subscription creation, billing, and secure payment methods | Codex | 8-12h | P0 |
-| 16.4 | Implement webhook handlers to sync subscription status (active, trialing, past_due, canceled) into the backend user/account models | Codex | 4-6h | P0 |
-| 16.5 | Build a subscription management UI in Settings (view plan, change plan, update payment method, cancel) | Codex | 6-8h | P1 |
+| 17.3 | Integrate Stripe (or chosen provider) for subscription creation, billing, and secure payment methods | Codex | 8-12h | P0 |
+| 17.4 | Implement webhook handlers to sync subscription status (active, trialing, past_due, canceled) into the backend user/account models | Codex | 4-6h | P0 |
+| 17.5 | Build a subscription management UI in Settings (view plan, change plan, update payment method, cancel) | Codex | 6-8h | P1 |
 
 **Feature Gating & Value-Add Features**
 
-| 16.6 | Implement an entitlement system (e.g., `canUseUnlimitedAI`, `hasRecurringTasks`, `hasAdvancedAnalytics`, `hasStreaks`) and enforce it across web + mobile | Codex | 6-8h | P1 |
-| 16.7 | Add recurring tasks and templates support in backend + UI, scoped to appropriate subscription tiers | Codex | 8-12h | P0 |
-| 16.8 | Implement basic analytics events (page views, key actions, Assistant usage) and a simple internal analytics dashboard | Codex | 4-6h | P1 |
-| 16.9 | Complete `UserStreak` model and streak calculation service; build streak display UI (navbar counter, details page, milestone animations) | Codex | 6-8h | P1 |
-| 16.10 | Implement streak reminder notifications ("Don't lose your 15-day streak!"), tied to subscription entitlements | Codex | 3-4h | P2 |
-| 16.C1 | Extend AI Assistant prompts to incorporate subscription context (e.g., suggesting upgrades when hitting limits, celebrating streaks/goals) | Claude | 4-6h | P1 |
-| 16.G1 | Document subscription tiers, billing flows, and data/analytics behavior for internal and external stakeholders | Gemini | 4-6h | P2 |
+| 17.6 | Implement an entitlement system (e.g., `canUseUnlimitedAI`, `hasRecurringTasks`, `hasAdvancedAnalytics`, `hasStreaks`) and enforce it across web + mobile | Codex | 6-8h | P1 |
+| 17.7 | Add recurring tasks and templates support in backend + UI, scoped to appropriate subscription tiers | Codex | 8-12h | P0 |
+| 17.8 | Implement basic analytics events (page views, key actions, Assistant usage) and a simple internal analytics dashboard | Codex | 4-6h | P1 |
+| 17.9 | Complete `UserStreak` model and streak calculation service; build streak display UI (navbar counter, details page, milestone animations) | Codex | 6-8h | P1 |
+| 17.10 | Implement streak reminder notifications ("Don't lose your 15-day streak!"), tied to subscription entitlements | Codex | 3-4h | P2 |
+| 17.C1 | Extend AI Assistant prompts to incorporate subscription context (e.g., suggesting upgrades when hitting limits, celebrating streaks/goals) | Claude | 4-6h | P1 |
+| 17.G1 | Document subscription tiers, billing flows, and data/analytics behavior for internal and external stakeholders | Gemini | 4-6h | P2 |
 
 **Scaling & Reliability for Public Launch**
 
-| 16.11 | Review and update API rate limits, circuit breakers, and backpressure strategies for expected public traffic | Codex | 4-6h | P1 |
-| 16.12 | Implement monitoring and alerting for key services (scheduler latency, error rates, payment failures, queue backlogs) | Codex | 4-6h | P1 |
-| 16.13 | Define and document SLOs/SLAs for uptime and response times; establish on-call and incident response runbooks | Reviewer | 4-6h | P1 |
+| 17.11 | Review and update API rate limits, circuit breakers, and backpressure strategies for expected public traffic | Codex | 4-6h | P1 |
+| 17.12 | Implement monitoring and alerting for key services (scheduler latency, error rates, payment failures, queue backlogs) | Codex | 4-6h | P1 |
+| 17.13 | Define and document SLOs/SLAs for uptime and response times; establish on-call and incident response runbooks | Reviewer | 4-6h | P1 |
 
-#### Streaks & Gamification Feature (Reference for Sprint 16)
+#### Streaks & Gamification Feature (Reference for Sprint 17)
 
 **Streak Types**:
 | Streak | Description | Incentive |
@@ -781,8 +881,8 @@
 
 ---
 
-### Sprint 17: Pre-Launch Hardening & Scalability
-**Duration**: Week 33-34
+### Sprint 18: Pre-Launch Hardening & Scalability
+**Duration**: Week 35-36
 **Focus**: Address critical security vulnerabilities, scalability bottlenecks, and future-proof the architecture for a safe and successful public launch.
 
 #### Goals
@@ -793,10 +893,55 @@
 
 #### Tasks
 This sprint focuses on hardening the existing application. For a detailed breakdown of tasks, priorities, and implementation plans, see the full sprint plan:
-- **[View Full Plan: Sprint 17 Pre-Launch Plan](./docs/SPRINT_17_PRELAUNCH_PLAN.md)**
+- **[View Full Plan: Sprint 18 Pre-Launch Plan](./docs/SPRINT_18_PRELAUNCH_PLAN.md)**
 
 #### Decision Gate
 - [ ] Have all P0 security tasks been implemented and reviewed?
 - [ ] Is the backend application containerized and ready for scalable deployment?
 - [ ] Is the production database connection strategy confirmed to be stable?
+
+---
+
+## Phase 3 Preview (Post-Sprint 18)
+
+These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSIS_FYXER_AI.md` while keeping Sprints 14–15 focused on shipping reliable foundations (constraints, fixed vs flexible time, inbox trust, Gmail label sync).
+
+### Sprint 19: Email Workflow & Automation
+**Duration**: Week 37-38  
+**Focus**: Go deeper into “in workflow” email management while preserving user trust via control + transparency.
+
+#### Goals
+- [ ] Advanced, user-friendly rule system (multi-condition rules, priority ordering, rule testing/simulation).
+- [ ] Optional automation surfaces (action queues like `NeedsReply`, `ToRead`, `NeedsAction`) with safe defaults.
+- [ ] UX that explains “why” and supports undo/recovery (no black box).
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 19.1 | Expand rules engine: multi-condition rules (domain/sender/subject keywords), precedence/priority, and a “test rule” simulator UI. | Codex | 8-12h | P0 |
+| 19.2 | Add action-oriented states/labels in TimeFlow (queues + filters) and optionally map them to Gmail labels (namespaced). | Codex | 6-8h | P1 |
+| 19.3 | Add “why + history + undo” UX: show explanation, show last changes, allow undo for the last action. | Codex | 6-8h | P1 |
+| 19.4 | Investigate Gmail-native UX surface: Chrome extension or Gmail add-on; write a decision memo with a minimal POC plan. | Claude | 4-6h | P2 |
+| 19.5 | (Future) AI-drafted replies exploration: safety constraints, evaluation, and opt-in UX; document an incremental rollout plan. | Claude | 4-6h | P2 |
+
+---
+
+### Sprint 20: Group Scheduling & Multi-Attendee Availability
+**Duration**: Week 39-40  
+**Focus**: Multi-attendee scheduling that respects constraints, time zones, and conflict safety.
+
+#### Goals
+- [ ] Support scheduling with multiple attendees (availability intersection).
+- [ ] Reuse Sprint 14 constraints (work hours, buffers, daily caps) across attendees where applicable.
+- [ ] Maintain high reliability under race conditions and partial failures.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 20.1 | Add multi-attendee availability computation (intersection of free/busy windows; timezone-safe). | Codex | 8-12h | P0 |
+| 20.2 | Add booking flows for multiple attendees (invites, confirmations, reschedules, cancellations). | Codex | 8-12h | P0 |
+| 20.C1 | Define UX and rules for attendee constraints (whose work hours apply; buffers; caps; organizer vs participant). | Claude | 4-6h | P1 |
+| 20.G1 | Document group scheduling behavior, privacy boundaries, and failure modes. | Gemini | 4-6h | P1 |
 

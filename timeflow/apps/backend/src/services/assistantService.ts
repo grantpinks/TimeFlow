@@ -6,89 +6,32 @@ import type {
   SchedulePreview,
 } from '@timeflow/shared';
 import { env } from '../config/env.js';
+import { getPromptManager } from './promptManager.js';
+import { convertToChatMessages } from './conversationService.js';
+import {
+  separateFixedAndMovable,
+  buildFixedEventsContext,
+  buildMovableEventsContext,
+} from '../utils/eventClassifier.js';
+import {
+  validateSchedulePreview,
+  applyValidationToPreview,
+  type UserPreferences,
+} from '../utils/scheduleValidator.js';
 
 /**
- * System prompt that guides the AI assistant's behavior
- * Updated Sprint 9: Aligned with Flow mascot personality
+ * Get the PromptManager singleton instance
+ * Sprint 13.6: File-based prompt system with multiple modes
  */
-const SYSTEM_PROMPT = `I'm Flow, your TimeFlow scheduling assistant. I turn chaos into momentum with calm, intelligent guidance.
+const promptManager = getPromptManager();
+const MAX_HISTORY_MESSAGES = 8;
+const DEBUG_LOGS = env.NODE_ENV !== 'production';
 
-**CRITICAL FORMATTING RULES** (NEVER violate these):
-1. **Maximum response length**: 200 words total
-2. **Use markdown structure**:
-   - Start with h2 heading (double hash) for main topic
-   - Use h3 (triple hash) for sub-sections
-   - Use **bold** for key times, priorities, or actions
-   - Use bullet points (•) or numbered lists for all multi-item content
-   - Use line breaks between sections
-3. **Short paragraphs**: 1-2 sentences maximum per paragraph
-4. **Scannable format**: Users should grasp everything in 5 seconds
-5. **No walls of text**: Break everything into digestible chunks
-
-**Response Structure** (follow this template):
-1. Start with h2 heading for main topic
-2. Add 1-sentence context if needed
-3. Use h3 heading for "Key Points" section with bullet list
-4. Use h3 heading for "Recommendation" section with clear action
-5. Keep total under 200 words
-
-**My Capabilities**:
-• Analyze tasks (priorities, due dates, duration)
-• Schedule habits (frequency, preferred times)
-• Check Google Calendar for conflicts
-• Recommend optimal time blocks
-• Flag deadline pressures
-
-**Communication Style**:
-• Intelligent & reassuring, never pushy
-• Concise & plain-language—no jargon
-• Use "I" and "you" naturally
-• Specific times ("9:00 AM - 10:30 AM" not "morning")
-• Minimize emojis (only ✨ for successful schedules)
-
-**When recommending schedules**:
-- Prioritize high-priority tasks (priority 1 > 2 > 3)
-- Respect due dates (earliest deadlines first)
-- For habits: respect frequency (daily, weekly, custom) and preferred time of day
-- Avoid overlapping with existing calendar events
-- Stay within wake/sleep hours
-- Flag tasks that will miss their deadlines
-
-**Habit Scheduling**:
-• Daily: Once per day at preferred time
-• Weekly: Only on specified days (Mon, Wed, Fri)
-• Custom: At regular intervals (every 2 days)
-• Preferred times: morning (wake-noon), afternoon (noon-5 PM), evening (5 PM-sleep)
-• "Schedule my habits" = create 7-day recurring schedule
-
-**Output Format** (TWO parts):
-
-**PART 1 - User Response** (what they see):
-• Max 200 words, highly formatted with headings/bullets
-• Follow the response structure template above
-• Use markdown (##, ###, **bold**, bullets)
-• End with clear action
-• NEVER mention JSON or technical details
-
-**PART 2 - Structured Output** (invisible, system only):
-After your response, add:
----
-[STRUCTURED_OUTPUT]
-[Triple backticks]json
-{
-  "blocks": [
-    { "taskId": "id", "start": "ISO-datetime", "end": "ISO-datetime" },
-    { "habitId": "id", "title": "Title", "start": "ISO-datetime", "end": "ISO-datetime" }
-  ],
-  "confidence": "high"
+function logDebug(...args: unknown[]): void {
+  if (DEBUG_LOGS) {
+    console.log(...args);
+  }
 }
-[Triple backticks]
-
-**REMEMBER**:
-• 200 words max
-• Scannable in 5 seconds
-• Use structure template
-• Never reference structured output in user response`;
 
 /**
  * Detect which mascot state to display based on response content
@@ -116,22 +59,277 @@ function detectMascotState(response: string, schedulePreview?: SchedulePreview):
 }
 
 /**
+ * Detect if user is adjusting a previous plan
+ * Fix #6: Visual feedback for plan adjustments
+ */
+function detectPlanAdjustment(
+  userMessage: string,
+  conversationHistory?: ChatMessage[]
+): boolean {
+  if (!conversationHistory || conversationHistory.length === 0) {
+    return false;
+  }
+
+  // Check if previous assistant message had a schedule preview
+  const lastAssistantMessage = conversationHistory
+    .slice()
+    .reverse()
+    .find((msg) => msg.role === 'assistant');
+
+  const hadPreviousSchedule = lastAssistantMessage?.metadata?.schedulePreview !== undefined;
+
+  if (!hadPreviousSchedule) {
+    return false;
+  }
+
+  // Check for adjustment keywords
+  const lower = userMessage.toLowerCase();
+  const adjustmentKeywords = [
+    'adjust',
+    'change',
+    'modify',
+    'instead',
+    'actually',
+    'but',
+    'rather',
+    'different',
+    'move it to',
+    'change it to',
+    'not that',
+    'no,',
+    'wait,',
+  ];
+
+  return adjustmentKeywords.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Detect which AI assistant mode to use based on user intent
+ *
+ * Sprint 13.6: Separate conversation mode vs action/scheduling mode
+ *
+ * Modes:
+ * - 'conversation': Q&A, information requests, general chat (no scheduling actions)
+ * - 'scheduling': Generate schedule blocks, apply tasks to calendar
+ * - 'availability': "When am I free?" queries, show time gaps
+ *
+ * @param userMessage - The user's message/query
+ * @param hasUnscheduledTasks - Whether user has tasks awaiting scheduling (diagnostic context)
+ * @returns The detected assistant mode
+ */
+function detectMode(
+  userMessage: string,
+  hasUnscheduledTasks: boolean
+): 'conversation' | 'scheduling' | 'availability' {
+  const lower = userMessage.toLowerCase();
+
+  // Availability mode: "When am I free?" type queries
+  const availabilityKeywords = [
+    'when am i free',
+    'when are you free',
+    'what time',
+    'available',
+    'free time',
+    'open slots',
+    'when can i',
+  ];
+  const isAvailabilityRequest = availabilityKeywords.some((kw) => lower.includes(kw));
+
+  // Scheduling mode: Explicit scheduling requests
+  // Fix #3: Expanded keyword list to catch more natural language variations
+  const schedulingKeywords = [
+    'schedule my',
+    'schedule these',
+    'schedule them',
+    'schedule it',
+    'schedule this',
+    'schedule tasks',
+    'schedule task',
+    'schedule everything',
+    'plan my',
+    'plan these',
+    'plan it',
+    'plan my tasks',
+    'block time',
+    'time block',
+    'time-block',
+    'organize',
+    'fit in',
+    'put on my calendar',
+    'add to calendar',
+    'add my tasks to my calendar',
+    'add tasks to my calendar',
+    'add my tasks to the calendar',
+    'add tasks to the calendar',
+    'add my tasks to calendar',
+    'add tasks to calendar',
+    'create a schedule',
+    'set up a schedule',
+    'make a schedule',
+    'help me schedule',
+    'can we schedule',
+    "let's schedule",
+    "i'd like to schedule",
+    'i would like to schedule',
+    'want to schedule',
+    'need to schedule',
+    'going to schedule',
+    'gonna schedule',
+    'should schedule',
+    'could you schedule',
+    'can you schedule',
+    'please schedule',
+    'schedule for',
+    'schedule on',
+    'schedule at',
+    'schedule during',
+    'schedule in',
+    'schedule between',
+    'schedule from',
+    'arrange my',
+    'arrange these',
+    'set up my tasks',
+    'put these on',
+    'add these to',
+  ];
+
+  const isSchedulingRequest = schedulingKeywords.some((kw) => lower.includes(kw));
+
+  if (isAvailabilityRequest && !isSchedulingRequest) {
+    return 'availability';
+  }
+
+  if (isSchedulingRequest) {
+    return 'scheduling';
+  }
+
+  // Default: Conversation mode (Q&A, information, general chat)
+  void hasUnscheduledTasks;
+  return 'conversation';
+}
+
+/**
  * Process a user message and generate an AI response
+ *
+ * Sprint 13.6 & 13.7: Integrated mode detection, event classification, and validation
  */
 export async function processMessage(
   userId: string,
   message: string,
-  conversationHistory?: ChatMessage[]
+  conversationHistory?: ChatMessage[],
+  conversationId?: string
 ): Promise<AssistantChatResponse> {
   try {
-    // Build the context prompt with user data
-    const contextPrompt = await buildContextPrompt(userId, message);
+    // Fetch user to get preferences (needed for mode detection and validation)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
 
-    // Call the LLM API (local or cloud)
-    const llmResponse = await callLocalLLM(contextPrompt, conversationHistory);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Fetch unscheduled tasks count for mode detection
+    const unscheduledTasksCount = await prisma.task.count({
+      where: {
+        userId,
+        status: 'unscheduled',
+      },
+    });
+
+    logDebug(`[AssistantService][Debug] unscheduledTasksCount=${unscheduledTasksCount}`);
+    logDebug('[AssistantService][Debug] detectMode input:', {
+      hasUnscheduledTasks: unscheduledTasksCount > 0,
+    });
+
+    // Detect assistant mode based on user intent
+    const mode = detectMode(message, unscheduledTasksCount > 0);
+
+    // Fix #4: History retention - fallback only if history omitted and conversationId provided
+    let resolvedHistory = conversationHistory;
+    let usedHistoryFallback = false;
+    if (resolvedHistory === undefined && conversationId) {
+      logDebug('[AssistantService][Debug] No history provided, attempting DB fallback...');
+      const fallbackConversation = await prisma.conversation.findFirst({
+        where: { id: conversationId, userId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+            take: MAX_HISTORY_MESSAGES,
+          },
+        },
+      });
+
+      if (fallbackConversation?.messages?.length) {
+        resolvedHistory = convertToChatMessages(fallbackConversation.messages);
+        usedHistoryFallback = true;
+        logDebug(
+          `[AssistantService][Debug] Loaded ${resolvedHistory.length} messages from conversation ${fallbackConversation.id}`
+        );
+      }
+    }
+
+    logDebug('[AssistantService][Debug] conversationHistory:', {
+      count: resolvedHistory?.length || 0,
+      fallback: usedHistoryFallback,
+    });
+
+    // Fix #6: Detect plan adjustments for better context awareness
+    const isPlanAdjustment = detectPlanAdjustment(message, resolvedHistory);
+    if (isPlanAdjustment) {
+      logDebug('[AssistantService][Debug] Plan adjustment detected');
+    }
+
+    // Get mode-specific system prompt
+    const systemPrompt = promptManager.getPrompt(mode);
+
+    // Build the context prompt with user data and classified events
+    const { contextPrompt, calendarEvents, taskIds } = await buildContextPrompt(
+      userId,
+      message,
+      mode,
+      isPlanAdjustment
+    );
+
+    // Call the LLM API with mode-specific system prompt
+    const llmResponse = await callLocalLLM(contextPrompt, resolvedHistory, systemPrompt, mode);
 
     // Parse the response to extract structured data
-    const { naturalLanguage, schedulePreview } = parseResponse(llmResponse);
+    let { naturalLanguage, schedulePreview } = parseResponse(llmResponse);
+
+    if (mode === 'scheduling' && !schedulePreview) {
+      logDebug('[AssistantService][Debug] Missing structured output in scheduling response.');
+      const retryPrompt = `${contextPrompt}\n\nIMPORTANT: The previous response omitted the required [STRUCTURED_OUTPUT]. Reformat your response to include BOTH the natural language summary and the [STRUCTURED_OUTPUT] JSON. End with the JSON code block and add no text after it.`;
+      const retryResponse = await callLocalLLM(retryPrompt, resolvedHistory, systemPrompt, mode);
+      const retryParsed = parseResponse(retryResponse);
+      if (retryParsed.schedulePreview) {
+        naturalLanguage = retryParsed.naturalLanguage;
+        schedulePreview = retryParsed.schedulePreview;
+      }
+    }
+
+    // Validate schedule preview if in scheduling mode (Sprint 13.7)
+    if (mode === 'scheduling' && schedulePreview) {
+      const userPrefs: UserPreferences = {
+        wakeTime: user.wakeTime,
+        sleepTime: user.sleepTime,
+        timeZone: user.timeZone,
+      };
+
+      const validation = validateSchedulePreview(
+        schedulePreview,
+        calendarEvents,
+        userPrefs,
+        taskIds
+      );
+
+      // Apply validation results to preview (adds errors/warnings, adjusts confidence)
+      schedulePreview = applyValidationToPreview(schedulePreview, validation);
+
+      logDebug(
+        `[AssistantService][Debug] Validation: ${validation.valid ? 'PASSED' : 'FAILED'} (errors=${validation.errors.length}, warnings=${validation.warnings.length})`
+      );
+    }
 
     // Detect appropriate mascot state
     const mascotState = detectMascotState(naturalLanguage, schedulePreview);
@@ -147,6 +345,8 @@ export async function processMessage(
         mascotState,
       },
     };
+
+    logDebug(`[AssistantService][Debug] Mode: ${mode}, Mascot: ${mascotState}, Preview: ${schedulePreview ? 'YES' : 'NO'}`);
 
     return {
       message: assistantMessage,
@@ -180,11 +380,25 @@ export async function processMessage(
 
 /**
  * Build a context-rich prompt with user data, tasks, and calendar events
+ *
+ * Sprint 13.6 & 13.7: Includes event classification and mode-specific context
+ *
+ * @param userId - User ID
+ * @param userMessage - User's message
+ * @param mode - Assistant mode (conversation, scheduling, availability)
+ * @param isPlanAdjustment - Whether user is adjusting a previous plan (Fix #6)
+ * @returns Context prompt, calendar events, and task IDs (for validation)
  */
 async function buildContextPrompt(
   userId: string,
-  userMessage: string
-): Promise<string> {
+  userMessage: string,
+  mode: 'conversation' | 'scheduling' | 'availability',
+  isPlanAdjustment: boolean = false
+): Promise<{
+  contextPrompt: string;
+  calendarEvents: any[];
+  taskIds: string[];
+}> {
   // Fetch user with preferences
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -256,14 +470,32 @@ async function buildContextPrompt(
     minute: '2-digit',
   });
 
+  const wakeLabel = formatUserTime(user.wakeTime);
+  const sleepLabel = formatUserTime(user.sleepTime);
+
   let prompt = `**User Profile**:
 - Timezone: ${user.timeZone}
-- Working hours: ${user.wakeTime} - ${user.sleepTime}
+- Working hours: ${wakeLabel} - ${sleepLabel}
 - Default task duration: ${user.defaultTaskDurationMinutes} minutes
 
 **Current Date/Time**: ${currentDateTime}
 
 `;
+
+  if (mode === 'scheduling' || mode === 'availability') {
+    // Fix #5: Make wake/sleep constraints extremely prominent and clear
+    prompt += `\n**CRITICAL SCHEDULING CONSTRAINTS**\n`;
+    prompt += `================================\n`;
+    prompt += `User Wake Time: ${wakeLabel} (${user.timeZone})\n`;
+    prompt += `User Sleep Time: ${sleepLabel} (${user.timeZone})\n`;
+    prompt += `Valid Scheduling Window: ${wakeLabel} - ${sleepLabel}\n`;
+    prompt += `================================\n`;
+    prompt += `RULES:\n`;
+    prompt += `- NEVER schedule tasks before ${wakeLabel}\n`;
+    prompt += `- NEVER schedule tasks after ${sleepLabel}\n`;
+    prompt += `- Tasks must END before ${sleepLabel} (not just start)\n`;
+    prompt += `- All scheduled blocks MUST be within ${wakeLabel} - ${sleepLabel}\n\n`;
+  }
 
   // Add unscheduled tasks
   if (unscheduledTasks.length > 0) {
@@ -282,7 +514,7 @@ async function buildContextPrompt(
         : 'no due date';
 
       const urgent = task.dueDate && new Date(task.dueDate).getTime() < now.getTime() + 24 * 60 * 60 * 1000
-        ? ' ⚠️ URGENT'
+        ? ' URGENT'
         : '';
 
       prompt += `${index + 1}. [${priorityLabel}] ${task.title} (${task.durationMinutes} min, ${dueInfo})${urgent} - ID: ${task.id}\n`;
@@ -290,6 +522,9 @@ async function buildContextPrompt(
     prompt += '\n';
   } else {
     prompt += "**Unscheduled Tasks**: None! You're all caught up.\n\n";
+    if (mode === 'scheduling') {
+      prompt += "**Scheduling Status**: No unscheduled tasks are available to schedule. If the user asked to schedule, explain that they need to add tasks first.\n\n";
+    }
   }
 
   // Add scheduled tasks
@@ -339,41 +574,91 @@ async function buildContextPrompt(
     prompt += "**Active Habits**: None set up yet.\n\n";
   }
 
-  // Add Google Calendar events
-  if (calendarEvents.length > 0) {
-    prompt += `**Google Calendar Events (Next 7 Days)**:\n`;
-    calendarEvents.forEach((event) => {
-      const start = new Date(event.start).toLocaleString('en-US', {
-        timeZone: user.timeZone,
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+  // Classify calendar events into fixed vs movable (Sprint 13.7)
+  const { fixed: fixedEvents, movable: movableEvents } = separateFixedAndMovable(calendarEvents);
+
+  // Add calendar events based on mode
+  if (mode === 'scheduling' || mode === 'availability') {
+    // In scheduling/availability modes, distinguish between fixed and movable events
+    if (fixedEvents.length > 0 || movableEvents.length > 0) {
+      prompt += buildFixedEventsContext(fixedEvents, user.timeZone);
+      prompt += '\n';
+      prompt += buildMovableEventsContext(movableEvents, user.timeZone);
+      prompt += '\n';
+    } else {
+      prompt += '**Calendar Events**: No events in the next 7 days.\n\n';
+    }
+  } else {
+    // In conversation mode, show all events without classification
+    if (calendarEvents.length > 0) {
+      prompt += `**Google Calendar Events (Next 7 Days)**:\n`;
+      calendarEvents.forEach((event) => {
+        const start = new Date(event.start).toLocaleString('en-US', {
+          timeZone: user.timeZone,
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const end = new Date(event.end).toLocaleString('en-US', {
+          timeZone: user.timeZone,
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        prompt += `- ${start} - ${end}: ${event.summary}\n`;
       });
-      const end = new Date(event.end).toLocaleString('en-US', {
-        timeZone: user.timeZone,
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      prompt += `- ${start} - ${end}: ${event.summary}\n`;
-    });
-    prompt += '\n';
+      prompt += '\n';
+    }
+  }
+
+  // Fix #6: Add plan adjustment context for better acknowledgment
+  if (isPlanAdjustment) {
+    prompt += `**Important Context**: The user is ADJUSTING or MODIFYING a previous schedule suggestion. Acknowledge their changes and create a NEW schedule based on their adjustments.\n\n`;
   }
 
   // Add user's message
   prompt += `**User's Question**: "${userMessage}"\n\n`;
-  prompt += `Based on this information, provide a helpful, conversational response with scheduling recommendations if applicable.`;
 
-  return prompt;
+  if (mode === 'scheduling') {
+    prompt += `Based on this information, provide a scheduling response in TWO parts: (1) natural language summary, and (2) [STRUCTURED_OUTPUT] JSON. The JSON is mandatory even if no tasks can be scheduled.\n\n`;
+    prompt += `OUTPUT FORMAT (MANDATORY):\n`;
+    prompt += `[STRUCTURED_OUTPUT]\n`;
+    prompt += `\`\`\`json\n`;
+    prompt += `{\n`;
+    prompt += `  "blocks": [],\n`;
+    prompt += `  "summary": "",\n`;
+    prompt += `  "conflicts": [],\n`;
+    prompt += `  "confidence": "high"\n`;
+    prompt += `}\n`;
+    prompt += `\`\`\`\n`;
+    prompt += `Do not add any text after the closing backticks.\n`;
+  } else if (mode === 'availability') {
+    prompt += `Based on this information, provide a clear availability summary and highlight open slots.`;
+  } else {
+    prompt += `Based on this information, provide a helpful, conversational response.`;
+  }
+
+  // Collect task IDs for validation
+  const taskIds = unscheduledTasks.map((task) => task.id);
+
+  return {
+    contextPrompt: prompt,
+    calendarEvents,
+    taskIds,
+  };
 }
 
 /**
  * Call local LLM API (OpenAI-compatible endpoint like Ollama)
  * Works with: Ollama, LM Studio, LocalAI, vLLM, etc.
+ *
+ * Sprint 13.6: Accepts system prompt parameter for mode-specific prompts
  */
 async function callLocalLLM(
   contextPrompt: string,
-  conversationHistory?: ChatMessage[]
+  conversationHistory: ChatMessage[] | undefined,
+  systemPrompt: string,
+  mode: 'conversation' | 'scheduling' | 'availability'
 ): Promise<string> {
   // Get LLM endpoint from environment (default to Ollama)
   const endpoint = env.LLM_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
@@ -385,12 +670,12 @@ async function callLocalLLM(
   // Add system prompt
   messages.push({
     role: 'system',
-    content: SYSTEM_PROMPT,
+    content: systemPrompt,
   });
 
   // Add conversation history (last 5 messages)
   if (conversationHistory && conversationHistory.length > 0) {
-    const recentHistory = conversationHistory.slice(-5);
+    const recentHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
     recentHistory.forEach((msg) => {
       messages.push({
         role: msg.role,
@@ -409,6 +694,19 @@ async function callLocalLLM(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
+  const temperature = mode === 'scheduling' ? 0.2 : mode === 'availability' ? 0.4 : 0.7;
+  const parsedMaxTokens = parseInt(env.LLM_MAX_TOKENS || '4000', 10);
+  const maxTokens = Number.isNaN(parsedMaxTokens) ? 4000 : parsedMaxTokens;
+
+  logDebug('[AssistantService][Debug] LLM request:', {
+    mode,
+    model,
+    messages: messages.length,
+    contextChars: contextPrompt.length,
+    temperature,
+    maxTokens,
+  });
+
   try {
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -418,8 +716,8 @@ async function callLocalLLM(
       body: JSON.stringify({
         model,
         messages,
-        max_tokens: parseInt(env.LLM_MAX_TOKENS || '4000', 10),
-        temperature: 0.7,
+        max_tokens: maxTokens,
+        temperature,
         stream: false,
       }),
       signal: controller.signal,
@@ -439,7 +737,10 @@ async function callLocalLLM(
       throw new Error('Invalid response format from LLM API');
     }
 
-    return data.choices[0].message.content;
+    const llmResponse = data.choices[0].message.content;
+    logDebug(`[AssistantService][Debug] LLM response length: ${llmResponse.length} chars`);
+
+    return llmResponse;
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
@@ -456,21 +757,57 @@ function parseResponse(llmResponse: string): {
   naturalLanguage: string;
   schedulePreview?: SchedulePreview;
 } {
-  // Look for structured output section
-  const structuredMatch = llmResponse.match(
-    /\[STRUCTURED_OUTPUT\]\s*```json\s*([\s\S]*?)\s*```/
-  );
+  const marker = '[STRUCTURED_OUTPUT]';
+  const markerIndex = llmResponse.indexOf(marker);
 
-  if (!structuredMatch) {
-    // No structured output, return just the natural language
-    return {
-      naturalLanguage: llmResponse.trim(),
-    };
+  const tryParseJson = (raw: string): any | null => {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      const cleaned = raw.replace(/,\s*([}\]])/g, '$1');
+      try {
+        return JSON.parse(cleaned);
+      } catch {
+        return null;
+      }
+    }
+  };
+
+  const extractJsonPayload = (text: string): string | null => {
+    const fencedMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (fencedMatch && fencedMatch[1]) {
+      return fencedMatch[1];
+    }
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      return text.slice(firstBrace, lastBrace + 1);
+    }
+    return null;
+  };
+
+  let naturalLanguage = llmResponse.trim();
+  let jsonPayload: string | null = null;
+
+  if (markerIndex !== -1) {
+    naturalLanguage = llmResponse.substring(0, markerIndex);
+    const afterMarker = llmResponse.slice(markerIndex + marker.length);
+    jsonPayload = extractJsonPayload(afterMarker);
+  } else {
+    const fencedMatch = llmResponse.match(/```(?:json)?\s*[\s\S]*?\s*```/i);
+    if (fencedMatch && fencedMatch[0]) {
+      jsonPayload = extractJsonPayload(fencedMatch[0]);
+      naturalLanguage = llmResponse.replace(fencedMatch[0], '').trim();
+    } else {
+      jsonPayload = extractJsonPayload(llmResponse);
+      if (jsonPayload) {
+        const firstBrace = llmResponse.indexOf('{');
+        if (firstBrace > 0) {
+          naturalLanguage = llmResponse.slice(0, firstBrace).trim();
+        }
+      }
+    }
   }
-
-  // Extract natural language (everything before structured output)
-  // Also remove the [STRUCTURED_OUTPUT] marker and any trailing separators
-  let naturalLanguage = llmResponse.substring(0, structuredMatch.index);
 
   // Remove trailing separators (---, ***, etc.)
   naturalLanguage = naturalLanguage
@@ -478,14 +815,24 @@ function parseResponse(llmResponse: string): {
     .replace(/\[STRUCTURED_OUTPUT\]/g, '')
     .trim();
 
+  if (!jsonPayload) {
+    logDebug('[AssistantService][Debug] No structured JSON payload found in response.');
+    return { naturalLanguage };
+  }
+
   // Parse structured output
   try {
-    const structuredData = JSON.parse(structuredMatch[1]);
+    const structuredData = tryParseJson(jsonPayload);
+    if (!structuredData) {
+      logDebug('[AssistantService][Debug] Structured output JSON parsing failed.');
+      return { naturalLanguage };
+    }
+    const summary = structuredData.summary || structuredData.reasoning || '';
 
     const schedulePreview: SchedulePreview = {
-      blocks: structuredData.blocks || [],
-      summary: structuredData.summary || '',
-      conflicts: structuredData.conflicts || [],
+      blocks: Array.isArray(structuredData.blocks) ? structuredData.blocks : [],
+      summary,
+      conflicts: Array.isArray(structuredData.conflicts) ? structuredData.conflicts : [],
       confidence: structuredData.confidence || 'medium',
     };
 
@@ -503,8 +850,29 @@ function parseResponse(llmResponse: string): {
 }
 
 /**
+ * Convert "HH:mm" to a 12-hour label (e.g., "08:30" -> "8:30 AM").
+ */
+function formatUserTime(timeValue: string): string {
+  const [hour, minute] = timeValue.split(':').map(Number);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return timeValue;
+  }
+
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 || 12;
+  const minuteLabel = minute.toString().padStart(2, '0');
+  return `${hour12}:${minuteLabel} ${period}`;
+}
+
+/**
  * Generate a unique message ID
  */
 function generateMessageId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
+
+export const __test__ = {
+  detectMode,
+  detectPlanAdjustment,
+  parseResponse,
+};

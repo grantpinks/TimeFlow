@@ -4,6 +4,28 @@ This document provides an overview of features that are currently planned or in 
 
 ---
 
+## Sprint 15 Features
+
+### 1. Gmail Label Sync (Thread-Level)
+
+**Status**: Planned (Documentation)
+
+**Overview**:
+TimeFlow already categorizes your inbox on the TimeFlow dashboard. This feature extends that organization into Gmail itself by creating real Gmail labels (e.g., `TimeFlow/Work`) and applying them at the **thread level**.
+
+**How It Will Work**:
+
+1. **Create Labels**: When enabled, TimeFlow creates/ensures a set of `TimeFlow/*` labels using the Gmail API.
+2. **Color Mapping**: Category colors are mapped into Gmail’s supported label color palette (best-effort) with user overrides in Settings.
+3. **Thread-Level Apply**: TimeFlow applies the category label to the entire conversation thread (not just a single message) for consistency.
+4. **Background Sync**: New mail is labeled via Gmail `watch` + Pub/Sub push notifications; if watch is unavailable, a bounded “sync-on-inbox-fetch” fallback is used.
+
+**Docs**:
+- Sprint plan: `docs/SPRINT_15_PLAN.md`
+- Implementation guide: `docs/SPRINT_15_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`
+
+---
+
 ## Sprint 7 Features
 
 ### 1. Habit Scheduling

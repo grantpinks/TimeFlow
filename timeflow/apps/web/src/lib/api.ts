@@ -429,11 +429,13 @@ export async function rescheduleTask(
  */
 export async function sendChatMessage(
   message: string,
-  conversationHistory?: ChatMessage[]
+  conversationHistory?: ChatMessage[],
+  conversationId?: string
 ): Promise<AssistantChatResponse> {
   const body: AssistantChatRequest = {
     message,
     conversationHistory,
+    conversationId,
   };
 
   return request<AssistantChatResponse>('/assistant/chat', {

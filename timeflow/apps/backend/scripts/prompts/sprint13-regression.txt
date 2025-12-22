@@ -1,0 +1,47 @@
+# Sprint 13 AI regression prompts
+
+What tasks do I have?
+---
+Schedule my tasks for tomorrow.
+---
+When am I free this week?
+---
+I'd like to schedule these tasks tomorrow from 9am-12pm and 1pm-5pm.
+---
+Can we schedule it?
+---
+Add my tasks to my calendar.
+---
+Help me schedule my homework and laundry for today.
+---
+What is due today?
+---
+Schedule my high priority tasks first.
+---
+When can I fit in a 2 hour study block?
+---
+Please organize my tasks around my fixed events.
+---
+Schedule my tasks but keep evenings free.
+---
+Can you make a schedule for next week?
+---
+Show me open slots tomorrow.
+---
+What is on my calendar?
+---
+Schedule my habits for this week.
+---
+Plan my tasks and avoid my CS 101 lecture.
+---
+Schedule these tasks for tomorrow morning.
+---
+I have no tasks. Can you schedule anyway?
+---
+FLOW: Conversation -> Scheduling
+USER: What tasks do I have?
+USER: Schedule my tasks for tomorrow.
+---
+FLOW: Availability -> Scheduling
+USER: When am I free this week?
+USER: Schedule my tasks for tomorrow.

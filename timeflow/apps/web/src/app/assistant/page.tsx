@@ -23,16 +23,38 @@ export default function AssistantPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<api.Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
 
   // Determine current mascot state
   const [mascotState, setMascotState] = useState<'default' | 'thinking' | 'celebrating' | 'guiding'>('default');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingSaveRef = useRef<ChatMessage[]>([]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveInFlightRef = useRef(false);
+  const latestMessagesRef = useRef<ChatMessage[]>([]);
+  const conversationIdRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    conversationIdRef.current = currentConversationId;
+  }, [currentConversationId]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
 
   // Load saved conversations on mount
   useEffect(() => {
@@ -95,8 +117,11 @@ export default function AssistantPage() {
       const conversation = await api.getConversation(id);
       if (conversation.messages) {
         setMessages(conversation.messages);
+        latestMessagesRef.current = conversation.messages;
         setCurrentConversationId(id);
         setSidebarOpen(false);
+        pendingSaveRef.current = [];
+        setSaveStatus('idle');
       }
     } catch (error) {
       console.error('Failed to load conversation:', error);
@@ -108,6 +133,67 @@ export default function AssistantPage() {
     setCurrentConversationId(null);
     setSchedulePreview(null);
     setMascotState('default');
+    pendingSaveRef.current = [];
+    setSaveStatus('idle');
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+  };
+
+  const scheduleAutoSaveFlush = (delayMs: number) => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      void flushAutoSave();
+    }, delayMs);
+  };
+
+  const flushAutoSave = async () => {
+    if (saveInFlightRef.current) return;
+    const pending = pendingSaveRef.current.slice();
+    if (pending.length === 0) return;
+
+    pendingSaveRef.current = [];
+    saveInFlightRef.current = true;
+    setSaveStatus('saving');
+
+    let hadError = false;
+
+    try {
+      const conversationId = conversationIdRef.current;
+      if (!conversationId) {
+        const title = `Chat - ${new Date().toLocaleDateString()}`;
+        const conversation = await api.createConversation({
+          title,
+          messages: latestMessagesRef.current,
+        });
+        setCurrentConversationId(conversation.id);
+        await loadConversations();
+      } else {
+        await api.addMessagesToConversation(conversationId, pending);
+      }
+      setSaveStatus('idle');
+    } catch (error) {
+      console.error('Failed to auto-save conversation:', error);
+      hadError = true;
+      pendingSaveRef.current = pending.concat(pendingSaveRef.current);
+      setSaveStatus('error');
+      scheduleAutoSaveFlush(4000);
+    } finally {
+      saveInFlightRef.current = false;
+      if (!hadError && pendingSaveRef.current.length > 0) {
+        scheduleAutoSaveFlush(800);
+      }
+    }
+  };
+
+  const queueAutoSave = (newMessages: ChatMessage[]) => {
+    if (!isAuthenticated) return;
+    pendingSaveRef.current.push(...newMessages);
+    scheduleAutoSaveFlush(800);
   };
 
   if (!isAuthenticated || !user) {
@@ -137,12 +223,20 @@ export default function AssistantPage() {
     setLoading(true);
 
     try {
-      const response = await api.sendChatMessage(input.trim(), [...messages, userMessage]);
-      setMessages((prev) => [...prev, response.message]);
+      const response = await api.sendChatMessage(
+        input.trim(),
+        [...messages, userMessage],
+        currentConversationId || undefined
+      );
+      const newMessages = [...messages, userMessage, response.message];
+      setMessages(newMessages);
 
       if (response.suggestions) {
         setSchedulePreview(response.suggestions);
       }
+
+      latestMessagesRef.current = newMessages;
+      queueAutoSave([userMessage, response.message]);
     } catch (error) {
       console.error('Failed to send message:', error);
 
@@ -152,7 +246,12 @@ export default function AssistantPage() {
         content: 'Sorry, I encountered an error. Please try again.',
         timestamp: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => {
+        const updated = [...prev, errorMessage];
+        latestMessagesRef.current = updated;
+        return updated;
+      });
+      queueAutoSave([userMessage, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -168,19 +267,18 @@ export default function AssistantPage() {
     setApplying(true);
 
     try {
-      const taskBlocks = schedulePreview.blocks.filter((b) => 'taskId' in b && b.taskId);
+      const taskBlocks = schedulePreview.blocks.filter(
+        (block) => 'taskId' in block && block.taskId
+      ) as Array<{ taskId: string; start: string; end: string }>;
       const habitBlocks = schedulePreview.blocks.filter((b) => 'habitId' in b && b.habitId);
 
       let tasksScheduled = 0;
       let habitsScheduled = 0;
 
       if (taskBlocks.length > 0) {
-        const taskIds = taskBlocks.map((b) => b.taskId as string);
-        const dates = taskBlocks.map((b) => new Date(b.start).getTime());
-        const dateRangeStart = new Date(Math.min(...dates)).toISOString();
-        const dateRangeEnd = new Date(Math.max(...dates) + 24 * 60 * 60 * 1000).toISOString();
-
-        await api.runSchedule({ taskIds, dateRangeStart, dateRangeEnd });
+        for (const block of taskBlocks) {
+          await api.rescheduleTask(block.taskId, block.start, block.end);
+        }
         tasksScheduled = taskBlocks.length;
       }
 
@@ -197,7 +295,10 @@ export default function AssistantPage() {
       }
 
       await refreshTasks();
-      setSchedulePreview(null);
+
+      // Fix #2: Keep preview visible after applying (don't immediately hide it)
+      // User can manually dismiss it if needed
+      // setSchedulePreview(null); // Removed - let user dismiss manually
 
       let successText = 'Schedule applied!';
       if (tasksScheduled > 0 && habitsScheduled > 0) {
@@ -215,7 +316,12 @@ export default function AssistantPage() {
         timestamp: new Date().toISOString(),
         metadata: { mascotState: 'celebrating' },
       };
-      setMessages((prev) => [...prev, successMessage]);
+      setMessages((prev) => {
+        const updated = [...prev, successMessage];
+        latestMessagesRef.current = updated;
+        return updated;
+      });
+      queueAutoSave([successMessage]);
     } catch (error) {
       console.error('Failed to apply schedule:', error);
 
@@ -225,7 +331,12 @@ export default function AssistantPage() {
         content: 'Failed to apply schedule. Please try again.',
         timestamp: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => {
+        const updated = [...prev, errorMessage];
+        latestMessagesRef.current = updated;
+        return updated;
+      });
+      queueAutoSave([errorMessage]);
     } finally {
       setApplying(false);
     }
@@ -252,8 +363,9 @@ export default function AssistantPage() {
             <button
               onClick={() => setSidebarOpen(false)}
               className="text-slate-400 hover:text-white"
+              aria-label="Close sidebar"
             >
-              ✕
+              X
             </button>
           </div>
 
@@ -458,6 +570,17 @@ export default function AssistantPage() {
                   Send
                 </button>
               </form>
+              {saveStatus !== 'idle' && (
+                <div
+                  className={`mt-2 text-xs ${
+                    saveStatus === 'error' ? 'text-red-600' : 'text-slate-500'
+                  }`}
+                >
+                  {saveStatus === 'saving'
+                    ? 'Saving chat...'
+                    : 'Auto-save failed. Retrying...'}
+                </div>
+              )}
             </div>
           </div>
         </div>

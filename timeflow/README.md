@@ -41,6 +41,11 @@ pnpm dev:web
 pnpm dev:mobile
 ```
 
+## AI Regression Harness
+
+The AI regression prompt harness lives under `apps/backend/scripts`. For full setup and usage,
+see `docs/SPRINT_13_AI_REGRESSION_RUNBOOK.md`.
+
 ## Sprint 7 additions
 
 - Habit scheduling suggestions (`GET /api/habits/suggestions`) surfaced on the Today page for active habits (read-only, non-committed).

@@ -1,0 +1,202 @@
+{
+  "summary": {
+    "total": 19,
+    "ok": 19,
+    "failed": 0,
+    "previews": 12,
+    "timestamp": "2025-12-22T18:13:29.758Z",
+    "endpoint": "http://localhost:3001/api/assistant/chat"
+  },
+  "results": [
+    {
+      "prompt": "What tasks do I have?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5834,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null
+    },
+    {
+      "prompt": "Schedule my tasks for tomorrow.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 6401,
+      "preview": true,
+      "blocksCount": 4,
+      "conflictsCount": 4,
+      "confidence": "low"
+    },
+    {
+      "prompt": "When am I free this week?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 4583,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null
+    },
+    {
+      "prompt": "I'd like to schedule these tasks tomorrow from 9am-12pm and 1pm-5pm.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 7164,
+      "preview": true,
+      "blocksCount": 4,
+      "conflictsCount": 6,
+      "confidence": "low"
+    },
+    {
+      "prompt": "Can we schedule it?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5306,
+      "preview": true,
+      "blocksCount": 3,
+      "conflictsCount": 2,
+      "confidence": "low"
+    },
+    {
+      "prompt": "Add my tasks to my calendar.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 3679,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null
+    },
+    {
+      "prompt": "Help me schedule my homework and laundry for today.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 3005,
+      "preview": true,
+      "blocksCount": 1,
+      "conflictsCount": 1,
+      "confidence": "low"
+    },
+    {
+      "prompt": "What is due today?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 2565,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null
+    },
+    {
+      "prompt": "Schedule my high priority tasks first.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 4500,
+      "preview": true,
+      "blocksCount": 2,
+      "conflictsCount": 2,
+      "confidence": "medium"
+    },
+    {
+      "prompt": "When can I fit in a 2 hour study block?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5279,
+      "preview": true,
+      "blocksCount": 3,
+      "conflictsCount": 2,
+      "confidence": "low"
+    },
+    {
+      "prompt": "Please organize my tasks around my fixed events.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5408,
+      "preview": true,
+      "blocksCount": 3,
+      "conflictsCount": 2,
+      "confidence": "low"
+    },
+    {
+      "prompt": "Schedule my tasks but keep evenings free.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 4227,
+      "preview": true,
+      "blocksCount": 2,
+      "conflictsCount": 0,
+      "confidence": "high"
+    },
+    {
+      "prompt": "Can you make a schedule for next week?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 7238,
+      "preview": true,
+      "blocksCount": 4,
+      "conflictsCount": 3,
+      "confidence": "low"
+    },
+    {
+      "prompt": "Show me open slots tomorrow.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 3012,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null
+    },
+    {
+      "prompt": "What is on my calendar?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 3108,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null
+    },
+    {
+      "prompt": "Schedule my habits for this week.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 15374,
+      "preview": true,
+      "blocksCount": 1,
+      "conflictsCount": 1,
+      "confidence": "low"
+    },
+    {
+      "prompt": "Plan my tasks and avoid my CS 101 lecture.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 6396,
+      "preview": true,
+      "blocksCount": 3,
+      "conflictsCount": 3,
+      "confidence": "low"
+    },
+    {
+      "prompt": "Schedule these tasks for tomorrow morning.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5368,
+      "preview": true,
+      "blocksCount": 3,
+      "conflictsCount": 3,
+      "confidence": "low"
+    },
+    {
+      "prompt": "I have no tasks. Can you schedule anyway?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 2731,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null
+    }
+  ]
+}

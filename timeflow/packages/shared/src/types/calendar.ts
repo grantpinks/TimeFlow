@@ -13,6 +13,8 @@ export interface CalendarEvent {
   description?: string;
   start: string; // ISO datetime
   end: string;   // ISO datetime
+  attendees?: { email: string }[]; // For meeting detection (Sprint 13.7)
+  isFixed?: boolean; // Optional metadata for fixed/movable classification (Sprint 13.7)
 }
 
 /**

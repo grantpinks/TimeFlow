@@ -39,6 +39,33 @@ NODE_ENV="production"
 
 ---
 
+## Optional: Gmail Label Sync (Sprint 15)
+
+If you enable the “Gmail Label Sync” feature (labels applied inside Gmail), you’ll also need Google Cloud Pub/Sub and a stable public push endpoint.
+
+### Google Cloud Setup
+
+- Enable Gmail API in your Google Cloud project.
+- Ensure OAuth consent screen and scopes include Gmail access (label application requires `gmail.modify`).
+- Plan for Google OAuth verification if rolling out to consumer users.
+
+### Pub/Sub Setup (Watch Notifications)
+
+- Create a Pub/Sub **topic** (e.g., `gmail-watch-topic`).
+- Create a **push subscription** to your backend endpoint (e.g., `POST /api/integrations/gmail/push`).
+- Prefer configuring Pub/Sub push auth (OIDC) or an allowlist at the edge/WAF layer.
+
+### Operational Notes
+
+- Gmail watch subscriptions expire; you must renew them periodically.
+- Push delivery is at-least-once; your handler must be idempotent and dedupe by historyId.
+
+Docs:
+- Sprint plan: `docs/SPRINT_15_PLAN.md`
+- Implementation guide: `docs/SPRINT_15_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`
+
+---
+
 ## Deployment Steps
 
 ### 1. Database Setup
@@ -100,7 +127,49 @@ curl https://your-backend.com/health
 
 **AI Assistant not working**:
 - Check LLM_ENDPOINT is reachable
-- Verify LLM server is running
+- Verify LLM server is running (Ollama or llama.cpp)
+- For Ollama: Ensure model is pulled (`docker compose exec ollama ollama pull llama3.2`)
+
+## AI Model Configuration
+
+TimeFlow uses llama3.2 as the default AI model, with support for llama3.3 and gpt-oss as alternatives.
+
+### Using llama3.2 (Default)
+
+1. **Start Ollama** (via docker-compose):
+   ```bash
+   docker compose up -d ollama
+   ```
+
+2. **Pull the llama3.2 model**:
+   ```bash
+   docker compose exec ollama ollama pull llama3.2
+   ```
+
+3. **Start the backend** (llama3.2 is already configured as default):
+   ```bash
+   cd apps/backend
+   pnpm dev:backend
+   ```
+
+### Switching to a Different Model
+
+To use llama3.3 or another model:
+
+1. **Update your .env**:
+   ```bash
+   ASSISTANT_MODEL="llama3.3"
+   ```
+
+2. **Pull the model if needed**:
+   ```bash
+   docker compose exec ollama ollama pull llama3.3
+   ```
+
+3. **Restart the backend**:
+   ```bash
+   pnpm dev:backend
+   ```
 
 ---
 

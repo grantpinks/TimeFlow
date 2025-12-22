@@ -135,10 +135,11 @@ export const EMAIL_CATEGORIES: Record<EmailCategory, EmailCategoryConfig> = {
  * Categorize an email based on Gmail labels, keywords, and patterns
  */
 export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | 'snippet' | 'labels'>): EmailCategory {
-  const from = email.from.toLowerCase();
+  const fromText = email.from.toLowerCase();
+  const fromAddress = extractEmailAddress(fromText);
   const subject = email.subject.toLowerCase();
   const snippet = (email.snippet || '').toLowerCase();
-  const combinedText = `${from} ${subject} ${snippet}`;
+  const combinedText = `${fromText} ${subject} ${snippet}`;
   const labels = email.labels || [];
 
   // Step 1: Check Gmail labels first (highest priority)
@@ -156,7 +157,7 @@ export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | '
   for (const [categoryId, config] of Object.entries(EMAIL_CATEGORIES)) {
     if (config.domains && config.domains.length > 0) {
       for (const domain of config.domains) {
-        if (from.includes(domain)) {
+        if (fromAddress.includes(domain)) {
           return categoryId as EmailCategory;
         }
       }
@@ -189,7 +190,7 @@ export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | '
           categoryScores[categoryId as EmailCategory] += 2;
         }
         // Check from (lower weight, but still relevant)
-        if (from.includes(keyword)) {
+        if (fromText.includes(keyword)) {
           categoryScores[categoryId as EmailCategory] += 1;
         }
       }
@@ -219,9 +220,14 @@ export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | '
 
   // Check if it's likely work-related (corporate domains)
   const corporateDomainPattern = /[a-z0-9]+@[a-z0-9-]+\.(com|io|net|org|co)$/i;
-  const isGenericDomain = /(gmail|yahoo|hotmail|outlook|icloud)\.com/i.test(from);
+  const isGenericDomain = /(gmail|yahoo|hotmail|outlook|icloud)\.com/i.test(fromAddress);
+  const placeholderDomainPattern = /@(example\.com|example\.org|example\.net|test\.com|localhost)$/i;
 
-  if (corporateDomainPattern.test(from) && !isGenericDomain && maxScore === 0) {
+  if (maxScore === 0 && placeholderDomainPattern.test(fromAddress)) {
+    return 'other';
+  }
+
+  if (corporateDomainPattern.test(fromAddress) && !isGenericDomain && maxScore === 0) {
     // Likely work email from corporate domain
     return 'work';
   }
@@ -231,8 +237,8 @@ export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | '
     (subject.includes('edition') ||
      subject.includes('issue') ||
      snippet.includes('unsubscribe') ||
-     from.includes('newsletter') ||
-     from.includes('noreply')) &&
+     fromText.includes('newsletter') ||
+     fromText.includes('noreply')) &&
     bestCategory === 'other'
   ) {
     return 'newsletter';
@@ -254,6 +260,20 @@ export function categorizeEmails(emails: EmailMessage[]): EmailMessage[] {
     ...email,
     category: categorizeEmail(email),
   }));
+}
+
+function extractEmailAddress(rawFrom: string): string {
+  const bracketMatch = rawFrom.match(/<([^>]+)>/);
+  if (bracketMatch && bracketMatch[1]) {
+    return bracketMatch[1];
+  }
+
+  const directMatch = rawFrom.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i);
+  if (directMatch && directMatch[0]) {
+    return directMatch[0];
+  }
+
+  return rawFrom;
 }
 
 /**

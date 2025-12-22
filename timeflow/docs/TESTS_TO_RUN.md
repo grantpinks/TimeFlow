@@ -4,6 +4,20 @@ This document outlines tests that are pending or require further attention to en
 
 ## Pending Tests
 
+### Test Case: Sprint 13 AI Regression Harness
+
+**Description**: Run the scripted AI prompt harness to validate mode detection and structured output.
+
+**Steps**:
+1. Start backend and local LLM service.
+2. Set `AI_REGRESSION_USER_EMAIL` (or `AI_REGRESSION_TOKEN`) and optional `PROMPT_DELAY_MS`.
+3. Run `node scripts/test-ai-prompts.js` from `timeflow/apps/backend`.
+4. Review the JSON report for failures or missing previews.
+5. See `docs/SPRINT_13_AI_REGRESSION_RUNBOOK.md` for full details and troubleshooting.
+
+**Expected Outcome**: All prompts return 200, scheduling prompts return previews with blocks, and report shows zero failures.
+
+
 ### Test Case: Wake and Sleep Times Respect in Scheduling
 
 **Description**: Verify that the scheduling algorithm correctly respects the user-defined wake and sleep times when creating a schedule. Tasks should not be scheduled outside of these boundaries.

@@ -33,14 +33,14 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
    - Model also attempts to recommend moving a set event that is unmovable such as class
 
 ### Proposed Solutions / Tracking
-- **Enhanced Prompt Template**: Add clear instructions for when to generate actionable schedules  
-  - [ ] Sprint 13 – Tasks 13.6, 13.7 (`assistantSystemPrompt`, action vs conversation modes) — Status: TODO
+- **Enhanced Prompt Template**: Add clear instructions for when to generate actionable schedules
+  - [x] Sprint 13 – Tasks 13.6, 13.7 (`assistantSystemPrompt`, action vs conversation modes) — Status: DONE
 - **Response Post-Processing**: Server-side stripping of ALL technical markers before sending to client  
   - [ ] Sprint 13 – Task 13.8 (server-side sanitization) — Status: TODO
 - **UI State Management**: Better visual indicators when schedule is ready to apply  
   - [ ] Sprint 13 – Tasks 13.11, 13.12 (schedule preview + explicit “Apply Schedule” copy) — Status: TODO
 - **Model Upgrade**: Prioritize upgrading to gpt-oss (`9398339cb0d`, via Docker Desktop models) as the primary Assistant model, with `llama3.2` or another option as a fallback, validated via experiments before rollout  
-  - [ ] Sprint 13 – Tasks 13.3–13.5 (model provider abstraction, gpt-oss evaluation, and rollout) — Status: TODO
+  - [x] Sprint 13 – Tasks 13.3–13.5 (model provider abstraction, gpt-oss evaluation, and rollout) — Status: DONE
 - **Explicit Action Triggers**: AI should say "I've prepared a schedule. Click 'Apply Schedule' below to add these to your calendar."  
   - [ ] Sprint 13 – Tasks 13.10–13.13 (apply-schedule action, safeguards, and assistant messaging) — Status: TODO
 
@@ -92,6 +92,8 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
 
 ## AI Assistant Page
 - Scrollablility of the conversation is very limited to 1-2 prompts above the current prompt. We need to improve memory of conversation.  
+- Chat history retrieval returns 401 even after successful save (frontend auth header missing on retrieval calls).  
+  - [ ] Sprint 13 ƒ?" Frontend auth token for assistant history (new ticket) ƒ?" Status: TODO
   - [ ] Sprint 13 – Tasks 13.17, 13.18 (scroll behavior + memory handling) — Status: TODO
 - Animations only stay for intial start up of the page. When conversation starts Flow goes into a tiny bubbble next to the chat. I would like the Flow icon to switch to the corresponding mode and stays bouncing and animated in the middle during thinking then pops out with an as an icon when he has a response.  
   - [ ] Sprint 9.5 – mascot states (initial implementation) — Status: DONE  
@@ -99,4 +101,4 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
 
 ---
 
-*Last Updated: 2025-12-10*
+*Last Updated: 2025-12-21*
