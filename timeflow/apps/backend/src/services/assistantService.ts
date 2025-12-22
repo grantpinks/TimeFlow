@@ -124,14 +124,30 @@ function detectMode(
   const lower = userMessage.toLowerCase();
 
   // Availability mode: "When am I free?" type queries
+  // Task 13.9: Enhanced availability question templates
   const availabilityKeywords = [
     'when am i free',
     'when are you free',
+    'when am i available',
     'what time',
     'available',
     'free time',
     'open slots',
     'when can i',
+    'do i have time',
+    'do i have any free',
+    'am i free',
+    'what does my schedule look like',
+    'what does my day look like',
+    'what does tomorrow look like',
+    'show me my schedule',
+    'show me my availability',
+    'busiest day',
+    'most packed day',
+    'next big block',
+    'free mornings',
+    'free afternoons',
+    'free evenings',
   ];
   const isAvailabilityRequest = availabilityKeywords.some((kw) => lower.includes(kw));
 
@@ -332,13 +348,18 @@ export async function processMessage(
     }
 
     // Detect appropriate mascot state
-    const mascotState = detectMascotState(naturalLanguage, schedulePreview);
+    const cleanedResponse = sanitizeAssistantContent(
+      naturalLanguage,
+      mode,
+      Boolean(schedulePreview)
+    );
+    const mascotState = detectMascotState(cleanedResponse, schedulePreview);
 
     // Create the assistant message
     const assistantMessage: ChatMessage = {
       id: generateMessageId(),
       role: 'assistant',
-      content: naturalLanguage,
+        content: cleanedResponse,
       timestamp: new Date().toISOString(),
       metadata: {
         ...(schedulePreview ? { schedulePreview } : {}),
@@ -850,6 +871,66 @@ function parseResponse(llmResponse: string): {
 }
 
 /**
+ * Strip technical markers and IDs from the user-facing response.
+ */
+function sanitizeAssistantContent(
+  content: string,
+  mode: 'conversation' | 'scheduling' | 'availability',
+  hasSchedulePreview: boolean
+): string {
+  let sanitized = content;
+
+  // Remove structured output marker and anything after it.
+  sanitized = sanitized.replace(/\[STRUCTURED_OUTPUT\][\s\S]*$/gi, '');
+
+  // Remove fenced code blocks (JSON or otherwise).
+  sanitized = sanitized.replace(/```[\s\S]*?```/g, '');
+
+  // Remove inline JSON objects that look like schedule payloads.
+  sanitized = sanitized.replace(
+    /\{[\s\S]*?"(taskId|habitId|blocks|conflicts|confidence|summary)"[\s\S]*?\}/gi,
+    ''
+  );
+
+  // Remove internal tags and identifiers.
+  sanitized = sanitized
+    .replace(/\[TimeFlow\]/gi, '')
+    .replace(/\[FIXED:[^\]]*\]/gi, '')
+    .replace(/\[MOVABLE:[^\]]*\]/gi, '')
+    .replace(/\bID:\s*[A-Za-z0-9_-]+\b/g, '')
+    .replace(/\b(task|habit|event)_(?:[A-Za-z0-9_-]+)\b/gi, '');
+
+  // Remove lines that still mention technical fields.
+  sanitized = sanitized
+    .split('\n')
+    .filter((line) => {
+      return !/(taskId|habitId|eventId|calendarId|schedulePreview|structured_output|\"blocks\"|\"conflicts\"|\"confidence\"|\"summary\")/i.test(
+        line
+      );
+    })
+    .join('\n');
+
+  // Normalize whitespace after removals.
+  sanitized = sanitized
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/ {2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  if (!sanitized) {
+    if (mode === 'scheduling' && hasSchedulePreview) {
+      return "I've prepared a schedule. Review it below and click Apply to add it to your calendar.";
+    }
+    if (mode === 'availability') {
+      return 'Here are your open slots based on your current calendar.';
+    }
+    return 'How can I help you?';
+  }
+
+  return sanitized;
+}
+
+/**
  * Convert "HH:mm" to a 12-hour label (e.g., "08:30" -> "8:30 AM").
  */
 function formatUserTime(timeValue: string): string {
@@ -875,4 +956,5 @@ export const __test__ = {
   detectMode,
   detectPlanAdjustment,
   parseResponse,
+  sanitizeAssistantContent,
 };

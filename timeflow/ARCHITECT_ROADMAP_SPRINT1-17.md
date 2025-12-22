@@ -589,16 +589,16 @@
 
 **Prompt & Behavior Layer**
 
-| 13.6 | DONE - Redesign core system prompt to clearly separate “conversation mode” vs “action/scheduling mode”, including when to emit structured schedules vs natural language| Claude | 4-6h | P0 |
+| 13.6 | DONE - Redesign core system prompt to clearly separate "conversation mode" vs "action/scheduling mode", including when to emit structured schedules vs natural language| Claude | 4-6h | P0 |
 | 13.7 | DONE - Introduce explicit instructions for respecting fixed events (classes, appointments) and avoiding hallucinated conflicts or impossible moves| Claude | 3-4h | P0 |
 | 13.8 | Implement robust server-side post-processing that strips all technical markers/IDs before sending responses to the client, except where explicitly required | Codex | 4-6h | P0 |
-| 13.9 | Add guardrails/templates for availability questions (“When am I free this week?”) so responses prioritize near-term days, explain rationale, and stay within actual free blocks | Claude | 3-4h | P1 |
+| 13.9 | DONE - Add guardrails/templates for availability questions ("When am I free this week?") so responses prioritize near-term days, explain rationale, and stay within actual free blocks | Claude | 3-4h | P1 |
 
 **Scheduling Workflows & “Apply Schedule”**
 
-| 13.10 | Extend assistant backend to support an explicit “apply schedule” action that writes recommended blocks into the scheduling engine with proper task status updates | Codex | 6-8h | P0 |
+| 13.10 | DONE - Extend assistant backend to support an explicit "apply schedule" action that writes recommended blocks into the scheduling engine with proper task status updates| Codex | 6-8h | P0 |
 | 13.11 | Wire AI-generated schedules into a visual preview component (e.g., `SchedulePreviewCard`) that shows where tasks would land before confirmation, and ensure idempotent re-runs | Codex | 4-6h | P0 |
-| 13.12 | Update AI Assistant responses to clearly signal when a schedule is ready (“I’ve prepared a schedule. Review it below and click Apply to add it to your calendar.”) | Claude | 3-4h | P1 |
+| 13.12 | DONE - Update AI Assistant responses to clearly signal when a schedule is ready ("I've prepared a schedule. Review it below and click Apply to add it to your calendar.") | Claude | 3-4h | P1 |
 | 13.13 | Add backend safeguards so the apply action cannot move fixed events and must respect wake/sleep and per-day constraints | Codex | 4-6h | P0 |
 
 **Scheduling Constraints & Per-Day Settings**

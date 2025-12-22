@@ -15,6 +15,16 @@ export async function registerScheduleRoutes(server: FastifyInstance) {
     config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
   }, scheduleController.runSchedule);
 
+  // Apply an AI-generated schedule preview
+  server.post(
+    '/schedule/apply',
+    {
+      preHandler: requireAuth,
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+    },
+    scheduleController.applySchedule
+  );
+
   // Manually reschedule a task
   server.patch(
     '/schedule/:taskId',

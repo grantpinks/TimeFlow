@@ -267,32 +267,32 @@ export default function AssistantPage() {
     setApplying(true);
 
     try {
-      const taskBlocks = schedulePreview.blocks.filter(
-        (block) => 'taskId' in block && block.taskId
-      ) as Array<{ taskId: string; start: string; end: string }>;
-      const habitBlocks = schedulePreview.blocks.filter((b) => 'habitId' in b && b.habitId);
+      const applyBlocks = schedulePreview.blocks
+        .map((block) => {
+          if ('taskId' in block && block.taskId) {
+            return { taskId: block.taskId, start: block.start, end: block.end };
+          }
+          if ('habitId' in block && block.habitId) {
+            return {
+              habitId: (block as any).habitId,
+              title: (block as any).title,
+              start: block.start,
+              end: block.end,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean) as Array<{
+        taskId?: string;
+        habitId?: string;
+        title?: string;
+        start: string;
+        end: string;
+      }>;
 
-      let tasksScheduled = 0;
-      let habitsScheduled = 0;
-
-      if (taskBlocks.length > 0) {
-        for (const block of taskBlocks) {
-          await api.rescheduleTask(block.taskId, block.start, block.end);
-        }
-        tasksScheduled = taskBlocks.length;
-      }
-
-      if (habitBlocks.length > 0) {
-        const habitEvents = habitBlocks.map((b) => ({
-          habitId: (b as any).habitId,
-          title: (b as any).title,
-          start: b.start,
-          end: b.end,
-        }));
-
-        const result = await api.createHabitEvents(habitEvents);
-        habitsScheduled = result.created;
-      }
+      const result = await api.applySchedule(applyBlocks);
+      const tasksScheduled = result.tasksScheduled;
+      const habitsScheduled = result.habitsScheduled;
 
       await refreshTasks();
 
@@ -342,11 +342,14 @@ export default function AssistantPage() {
     }
   };
 
+  // Task 13.9: Enhanced availability question templates
   const quickActions = [
     'What does my schedule look like today?',
-    'Schedule my high priority tasks',
-    'Schedule my habits',
+    'When am I free today?',
     'When am I free this week?',
+    'Schedule my high priority tasks',
+    'Do I have 2 hours free tomorrow?',
+    'What's my busiest day this week?',
   ];
 
   return (

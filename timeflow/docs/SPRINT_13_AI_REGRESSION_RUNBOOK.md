@@ -111,6 +111,14 @@ USER: Schedule my tasks for tomorrow.
 
 ---
 
+## Output Sanitization
+
+- Assistant responses are server-sanitized to remove technical markers, IDs, and JSON/code blocks.
+- Schedule previews remain available in the API response `suggestions` object.
+- If the LLM returns only technical content, a safe fallback message is used.
+
+---
+
 ## Security Notes
 
 - Tokens are generated locally using `SESSION_SECRET` and the user id.

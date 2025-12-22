@@ -59,6 +59,66 @@ export async function runSchedule(
   }
 }
 
+interface ApplyScheduleBody {
+  blocks: Array<{
+    taskId?: string;
+    habitId?: string;
+    title?: string;
+    start: string;
+    end: string;
+  }>;
+}
+
+const applyScheduleSchema = z.object({
+  blocks: z.array(
+    z
+      .object({
+        taskId: z.string().optional(),
+        habitId: z.string().optional(),
+        title: z.string().optional(),
+        start: z.string().datetime(),
+        end: z.string().datetime(),
+      })
+      .refine(
+        (block) =>
+          (block.taskId && !block.habitId) || (!block.taskId && block.habitId),
+        { message: 'Each block must include either taskId or habitId' }
+      )
+  ),
+});
+
+/**
+ * POST /api/schedule/apply
+ * Apply an AI-generated schedule preview.
+ */
+export async function applySchedule(
+  request: FastifyRequest<{ Body: ApplyScheduleBody }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = applyScheduleSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const { blocks } = parsed.data;
+
+  try {
+    const result = await scheduleService.applyScheduleBlocks(user.id, blocks);
+    return result;
+  } catch (error) {
+    request.log.error(error, 'Apply schedule failed');
+    if (error instanceof Error && error.message.startsWith('Schedule validation failed')) {
+      return reply.status(400).send({ error: error.message });
+    }
+    return reply.status(500).send({ error: 'Apply schedule failed' });
+  }
+}
+
 interface RescheduleBody {
   startDateTime: string;
   endDateTime: string;

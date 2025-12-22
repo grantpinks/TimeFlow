@@ -32,6 +32,22 @@ export interface ScheduleResponse {
 }
 
 /**
+ * Request body for applying an AI-generated schedule.
+ */
+export type ApplyScheduleBlock =
+  | { taskId: string; start: string; end: string }
+  | { habitId: string; start: string; end: string; title?: string };
+
+export interface ApplyScheduleRequest {
+  blocks: ApplyScheduleBlock[];
+}
+
+export interface ApplyScheduleResponse {
+  tasksScheduled: number;
+  habitsScheduled: number;
+}
+
+/**
  * Request body for manually rescheduling a task.
  */
 export interface RescheduleRequest {

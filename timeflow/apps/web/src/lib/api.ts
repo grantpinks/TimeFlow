@@ -14,6 +14,9 @@ import type {
   Calendar,
   ScheduleRequest,
   ScheduleResponse,
+  ApplyScheduleRequest,
+  ApplyScheduleResponse,
+  ApplyScheduleBlock,
   ChatMessage,
   AssistantChatRequest,
   AssistantChatResponse,
@@ -405,6 +408,17 @@ export async function runSchedule(data: ScheduleRequest): Promise<ScheduleRespon
   return request<ScheduleResponse>('/schedule', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Apply an AI-generated schedule preview.
+ */
+export async function applySchedule(blocks: ApplyScheduleBlock[]): Promise<ApplyScheduleResponse> {
+  const body: ApplyScheduleRequest = { blocks };
+  return request<ApplyScheduleResponse>('/schedule/apply', {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 

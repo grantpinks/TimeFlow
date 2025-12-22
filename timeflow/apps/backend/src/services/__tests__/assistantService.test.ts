@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { __test__ } from '../assistantService';
 import type { ChatMessage, SchedulePreview } from '@timeflow/shared';
 
-const { detectMode, detectPlanAdjustment, parseResponse } = __test__;
+const { detectMode, detectPlanAdjustment, parseResponse, sanitizeAssistantContent } = __test__;
 
 describe('assistantService helpers', () => {
   describe('detectMode', () => {
@@ -139,6 +139,50 @@ describe('assistantService helpers', () => {
 
       const parsed = parseResponse(response);
       expect(parsed.schedulePreview?.summary).toBe('Not enough time today.');
+    });
+  });
+
+  describe('sanitizeAssistantContent', () => {
+    it('removes structured output markers, JSON, and IDs', () => {
+      const content = [
+        '## Your Schedule',
+        '',
+        '- Task A (ID: task_123)',
+        '[STRUCTURED_OUTPUT]',
+        '```json',
+        '{',
+        '  "blocks": [],',
+        '  "summary": "Example"',
+        '}',
+        '```',
+      ].join('\n');
+
+      const sanitized = sanitizeAssistantContent(content, 'scheduling', true);
+      expect(sanitized).toContain('## Your Schedule');
+      expect(sanitized).toContain('- Task A');
+      expect(sanitized).not.toContain('STRUCTURED_OUTPUT');
+      expect(sanitized).not.toContain('task_123');
+      expect(sanitized).not.toContain('"blocks"');
+    });
+
+    it('strips internal tags and keeps readable text', () => {
+      const content = 'Your [TimeFlow] Workout is movable. [FIXED: class] CS 101 Lecture.';
+      const sanitized = sanitizeAssistantContent(content, 'conversation', false);
+      expect(sanitized).toBe('Your Workout is movable. CS 101 Lecture.');
+    });
+
+    it('falls back to a safe message when output is only technical data', () => {
+      const content = [
+        '[STRUCTURED_OUTPUT]',
+        '```json',
+        '{ "blocks": [] }',
+        '```',
+      ].join('\n');
+
+      const sanitized = sanitizeAssistantContent(content, 'scheduling', true);
+      expect(sanitized).toBe(
+        "I've prepared a schedule. Review it below and click Apply to add it to your calendar."
+      );
     });
   });
 });

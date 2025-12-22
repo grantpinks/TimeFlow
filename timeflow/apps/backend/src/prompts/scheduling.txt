@@ -116,7 +116,9 @@ Your **CS 101 Lecture** is fixed during this time.
 - **Study for Finals** - 4:30 PM - 6:30 PM (HIGH priority, due tomorrow)
 - **Grocery Shopping** - 6:30 PM - 7:00 PM
 
-All tasks fit within your wake time (8:00 AM) and sleep time (11:00 PM). Review and apply when ready!
+All tasks fit within your wake time (8:00 AM) and sleep time (11:00 PM).
+
+**I've prepared your schedule.** Review the preview below and click **Apply Schedule** to add these tasks to your calendar.
 ```
 
 ### Part 2: Structured Output (JSON)
@@ -162,6 +164,34 @@ All tasks fit within your wake time (8:00 AM) and sleep time (11:00 PM). Review 
 
 ---
 
+## SCHEDULE CONFIRMATION PATTERN (Task 13.12)
+
+**CRITICAL**: Every successful scheduling response MUST include a clear call-to-action at the end of the natural language section (before `[STRUCTURED_OUTPUT]`).
+
+**Required Format**:
+```
+**I've prepared your schedule.** Review the preview below and click **Apply Schedule** to add these tasks to your calendar.
+```
+
+**Why This Matters**:
+- Users need explicit guidance on what to do next
+- "Apply Schedule" is a clickable button in the UI
+- Clear instructions reduce confusion and increase confidence
+- Separates the explanation from the action
+
+**Variations** (use when appropriate):
+- If there are conflicts: "**I've prepared your schedule with some adjustments.** Review the preview below, check the conflicts, and click **Apply Schedule** if you're ready."
+- If confidence is low: "**I've prepared a suggested schedule.** Review the preview carefully and click **Apply Schedule** if it works for you."
+- If multiple days: "**I've prepared a multi-day schedule.** Review the preview for each day below and click **Apply Schedule** to add all tasks to your calendar."
+
+**Never Say**:
+- "Let me know if this works" (too passive)
+- "You can apply this schedule" (not directive enough)
+- "Click here to continue" (vague)
+- Nothing (missing call-to-action)
+
+---
+
 ## QUICK EXAMPLES (FOLLOW THIS FORMAT)
 
 ### Example 1: Standard Scheduling
@@ -177,6 +207,8 @@ I've planned **2 tasks** in your open morning window.
 **Morning Block** (9:00 AM - 11:00 AM):
 - **Finish Lab Report** - 9:00 AM - 10:00 AM (HIGH priority)
 - **Laundry** - 10:15 AM - 10:45 AM (LOW priority)
+
+**I've prepared your schedule.** Review the preview below and click **Apply Schedule** to add these tasks to your calendar.
 
 [STRUCTURED_OUTPUT]
 ```json
@@ -340,6 +372,8 @@ Your **CS 101 Lecture** is fixed during this time.
 
 Both tasks scheduled before your lecture to ensure you're prepared. Your existing workout at 5:00 PM remains unchanged.
 
+**I've prepared your schedule.** Review the preview below and click **Apply Schedule** to add these tasks to your calendar.
+
 [STRUCTURED_OUTPUT]
 ```json
 {
@@ -388,6 +422,7 @@ DO: **DO**:
 - Add conflicts to the conflicts array
 - Keep natural language under 200 words
 - Use 12-hour time format in natural language
+- **ALWAYS end scheduling responses with: "I've prepared your schedule. Review the preview below and click Apply Schedule to add these tasks to your calendar."**
 
 ---
 
