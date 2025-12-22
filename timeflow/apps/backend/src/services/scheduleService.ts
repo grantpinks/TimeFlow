@@ -5,6 +5,7 @@
  * and persisting results to the database and Google Calendar.
  */
 
+import crypto from 'node:crypto';
 import {
   scheduleTasks,
   TaskInput,
@@ -159,6 +160,69 @@ export async function applyScheduleBlocks(
 
   const calendarId = user.defaultCalendarId || 'primary';
 
+  const normalizedBlocks = blocks
+    .map((block) => {
+      if ('taskId' in block && block.taskId) {
+        return {
+          type: 'task',
+          id: block.taskId,
+          start: block.start,
+          end: block.end,
+          title: null,
+        };
+      }
+      if ('habitId' in block && block.habitId) {
+        return {
+          type: 'habit',
+          id: block.habitId,
+          start: block.start,
+          end: block.end,
+          title: block.title ?? null,
+        };
+      }
+      return {
+        type: 'unknown',
+        id: '',
+        start: block.start,
+        end: block.end,
+        title: null,
+      };
+    })
+    .sort((a, b) => {
+      return (
+        a.type.localeCompare(b.type) ||
+        a.id.localeCompare(b.id) ||
+        a.start.localeCompare(b.start) ||
+        a.end.localeCompare(b.end) ||
+        (a.title ?? '').localeCompare(b.title ?? '')
+      );
+    });
+
+  const requestHash = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(normalizedBlocks))
+    .digest('hex');
+
+  const existingApplied = await prisma.appliedSchedule.findUnique({
+    where: {
+      userId_requestHash: {
+        userId,
+        requestHash,
+      },
+    },
+    select: {
+      tasksScheduled: true,
+      habitsScheduled: true,
+    },
+  });
+
+  if (existingApplied) {
+    return {
+      tasksScheduled: existingApplied.tasksScheduled,
+      habitsScheduled: existingApplied.habitsScheduled,
+    };
+  }
+
   const taskBlocks = blocks.filter(
     (block): block is { taskId: string; start: string; end: string } => 'taskId' in block
   );
@@ -234,6 +298,35 @@ export async function applyScheduleBlocks(
     rangeEnd.toISOString()
   );
 
+  const existingEventKeys = new Set(
+    calendarEvents.map((event) => `${event.summary}|${event.start}|${event.end}`)
+  );
+
+  const scheduledHabitKeys = new Set<string>();
+  if (habitIds.length > 0) {
+    const scheduledHabits = await prisma.scheduledHabit.findMany({
+      where: {
+        userId,
+        habitId: { in: habitIds },
+        startDateTime: {
+          gte: rangeStart,
+          lte: rangeEnd,
+        },
+      },
+      select: {
+        habitId: true,
+        startDateTime: true,
+        endDateTime: true,
+      },
+    });
+
+    scheduledHabits.forEach((habit) => {
+      scheduledHabitKeys.add(
+        `${habit.habitId}|${habit.startDateTime.toISOString()}|${habit.endDateTime.toISOString()}`
+      );
+    });
+  }
+
   const userPrefs: ValidationPreferences = {
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
@@ -276,7 +369,8 @@ export async function applyScheduleBlocks(
       }
       const wakeCheck = isWithinWakeHours(block.start, block.end, userPrefs);
       if (!wakeCheck.valid) {
-        habitErrors.push(`Habit ${block.habitId} outside wake hours: ${wakeCheck.reason}`);
+        const reason = wakeCheck.reason || 'violates wake/sleep constraints';
+        habitErrors.push(`Habit ${block.habitId}: ${reason}`);
       }
       for (const event of fixedEvents) {
         if (hasTimeOverlap(block.start, block.end, event.start, event.end)) {
@@ -311,19 +405,56 @@ export async function applyScheduleBlocks(
   }
 
   let habitsScheduled = 0;
+  const seenHabitKeys = new Set<string>();
   for (const block of habitBlocks) {
     const habitTitle = block.title || habitMap.get(block.habitId)?.title;
     if (!habitTitle) {
       continue;
     }
-    await calendarService.createEvent(userId, calendarId, {
-      summary: `[TimeFlow Habit] ${habitTitle}`,
+    const startIso = new Date(block.start).toISOString();
+    const endIso = new Date(block.end).toISOString();
+    const habitKey = `${block.habitId}|${startIso}|${endIso}`;
+    if (scheduledHabitKeys.has(habitKey) || seenHabitKeys.has(habitKey)) {
+      continue;
+    }
+    const summary = `[TimeFlow Habit] ${habitTitle}`;
+    const eventKey = `${summary}|${block.start}|${block.end}`;
+    if (existingEventKeys.has(eventKey)) {
+      seenHabitKeys.add(habitKey);
+      continue;
+    }
+    const eventId = await calendarService.createEvent(userId, calendarId, {
+      summary,
       description: 'Scheduled habit from TimeFlow',
       start: block.start,
       end: block.end,
     });
+    await prisma.scheduledHabit.create({
+      data: {
+        habitId: block.habitId,
+        userId,
+        provider: 'google',
+        calendarId,
+        eventId,
+        startDateTime: new Date(block.start),
+        endDateTime: new Date(block.end),
+      },
+    });
     habitsScheduled += 1;
+    existingEventKeys.add(eventKey);
+    scheduledHabitKeys.add(habitKey);
+    seenHabitKeys.add(habitKey);
   }
+
+  await prisma.appliedSchedule.create({
+    data: {
+      userId,
+      requestHash,
+      blocks: normalizedBlocks,
+      tasksScheduled,
+      habitsScheduled,
+    },
+  });
 
   return { tasksScheduled, habitsScheduled };
 }

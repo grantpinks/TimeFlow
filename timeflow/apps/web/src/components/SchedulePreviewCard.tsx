@@ -1,10 +1,12 @@
 'use client';
 
-import type { SchedulePreview, Task } from '@timeflow/shared';
+import type { Habit, SchedulePreview, Task } from '@timeflow/shared';
 
 interface SchedulePreviewCardProps {
   preview: SchedulePreview;
   tasks: Task[];
+  habits: Habit[];
+  timeZone?: string;
   onApply: () => void;
   onCancel: () => void;
   applying?: boolean;
@@ -13,17 +15,21 @@ interface SchedulePreviewCardProps {
 export default function SchedulePreviewCard({
   preview,
   tasks,
+  habits,
+  timeZone,
   onApply,
   onCancel,
   applying = false,
 }: SchedulePreviewCardProps) {
   const getTaskById = (taskId: string) => tasks.find((t) => t.id === taskId);
+  const getHabitById = (habitId: string) => habits.find((h) => h.id === habitId);
 
   const formatTime = (isoString: string) =>
     new Date(isoString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
+      ...(timeZone ? { timeZone } : {}),
     });
 
   const formatDate = (isoString: string) =>
@@ -31,9 +37,14 @@ export default function SchedulePreviewCard({
       weekday: 'short',
       month: 'short',
       day: 'numeric',
+      ...(timeZone ? { timeZone } : {}),
     });
 
-  const blocksByDate = preview.blocks.reduce((acc, block) => {
+  const sortedBlocks = [...preview.blocks].sort(
+    (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+  );
+
+  const blocksByDate = sortedBlocks.reduce((acc, block) => {
     const date = formatDate(block.start);
     if (!acc[date]) {
       acc[date] = [];
@@ -71,17 +82,28 @@ export default function SchedulePreviewCard({
             </div>
             <div className="divide-y divide-slate-200">
               {blocks.map((block, index) => {
-                const task = getTaskById(block.taskId);
-                const title = task?.title ?? 'Task';
+                const isHabitBlock = Boolean(block.habitId && !block.taskId);
+                const task = block.taskId ? getTaskById(block.taskId) : undefined;
+                const habit = block.habitId ? getHabitById(block.habitId) : undefined;
+                const title = task?.title ?? habit?.title ?? block.title ?? (isHabitBlock ? 'Habit' : 'Task');
 
                 return (
-                  <div key={`${block.taskId}-${index}`} className="flex items-center gap-3 px-3 py-2">
-                    <div className="w-2 h-2 rounded-full bg-primary-500" aria-hidden />
+                  <div
+                    key={`${block.taskId ?? block.habitId ?? 'block'}-${index}`}
+                    className="flex items-center gap-3 px-3 py-2"
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full ${isHabitBlock ? 'bg-emerald-500' : 'bg-primary-500'}`}
+                      aria-hidden
+                    />
                     <div className="flex-1">
                       <p className="font-medium text-slate-800">{title}</p>
                       <p className="text-sm text-slate-500">
                         {formatTime(block.start)} - {formatTime(block.end)}
                       </p>
+                      {isHabitBlock && (
+                        <p className="text-xs text-emerald-700 mt-1">Habit</p>
+                      )}
                     </div>
                     {block.overflowedDeadline && (
                       <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">

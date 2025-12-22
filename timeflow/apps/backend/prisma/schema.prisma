@@ -31,6 +31,7 @@ model User {
   categories      Category[]
   habits          Habit[]
   scheduledHabits ScheduledHabit[]
+  appliedSchedules AppliedSchedule[]
   conversations   Conversation[]
   emailCategoryConfigs EmailCategoryConfig[]
 }
@@ -142,6 +143,20 @@ model ScheduledHabit {
   updatedAt       DateTime @updatedAt
 
   @@index([habitId])
+  @@index([userId])
+}
+
+model AppliedSchedule {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  requestHash    String
+  blocks         Json
+  tasksScheduled Int
+  habitsScheduled Int
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, requestHash])
   @@index([userId])
 }
 

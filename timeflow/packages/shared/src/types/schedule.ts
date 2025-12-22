@@ -17,10 +17,12 @@ export interface ScheduleRequest {
  * A scheduled block in the response.
  */
 export interface ScheduledBlock {
-  taskId: string;
+  taskId?: string;
   start: string;
   end: string;
   overflowedDeadline?: boolean;
+  habitId?: string;
+  title?: string;
 }
 
 /**

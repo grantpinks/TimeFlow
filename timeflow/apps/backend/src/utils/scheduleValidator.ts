@@ -1,4 +1,4 @@
-import type { SchedulePreview, ScheduledBlock } from '@timeflow/shared';
+import type { SchedulePreview } from '@timeflow/shared';
 import type { CalendarEvent } from '@timeflow/shared';
 import { classifyEvent } from './eventClassifier.js';
 
@@ -55,9 +55,12 @@ export function validateSchedulePreview(
 
   // Validate each block
   for (const block of preview.blocks) {
+    if (!block.taskId) {
+      continue;
+    }
     // Validation 1: Task ID exists
     if (!taskIds.includes(block.taskId)) {
-      errors.push(`❌ Invalid task ID: ${block.taskId}`);
+      errors.push(`Error: Invalid task ID: ${block.taskId}`);
       continue; // Skip further validation for this block
     }
 
@@ -66,18 +69,18 @@ export function validateSchedulePreview(
     const endDate = new Date(block.end);
 
     if (isNaN(startDate.getTime())) {
-      errors.push(`❌ Invalid start time for task ${block.taskId}: ${block.start}`);
+      errors.push(`Error: Invalid start time for task ${block.taskId}: ${block.start}`);
       continue;
     }
 
     if (isNaN(endDate.getTime())) {
-      errors.push(`❌ Invalid end time for task ${block.taskId}: ${block.end}`);
+      errors.push(`Error: Invalid end time for task ${block.taskId}: ${block.end}`);
       continue;
     }
 
     // Validation 3: Start before end
     if (startDate >= endDate) {
-      errors.push(`❌ Start time must be before end time for task ${block.taskId}`);
+      errors.push(`Error: Start time must be before end time for task ${block.taskId}`);
       continue;
     }
 
@@ -90,7 +93,7 @@ export function validateSchedulePreview(
       for (const fixedEvent of overlappingFixed) {
         const classification = classifyEvent(fixedEvent);
         errors.push(
-          `❌ Overlaps with fixed event: "${fixedEvent.summary}" [${classification.reason}]`
+          `Error: Overlaps with fixed event: "${fixedEvent.summary}" [${classification.reason}]`
         );
       }
     }
@@ -98,9 +101,14 @@ export function validateSchedulePreview(
     // Validation 5: Within wake/sleep hours
     const wakeCheck = isWithinWakeHours(block.start, block.end, userPrefs);
     if (!wakeCheck.valid) {
-      warnings.push(
-        `⚠️ Task scheduled outside wake hours (${userPrefs.wakeTime} - ${userPrefs.sleepTime}): ${wakeCheck.reason}`
-      );
+      const reason = wakeCheck.reason || 'Task violates wake/sleep constraints';
+      if (wakeCheck.crossesMidnight) {
+        errors.push(`Error: ${reason}`);
+      } else {
+        warnings.push(
+          `Warning: Task scheduled outside wake hours (${userPrefs.wakeTime} - ${userPrefs.sleepTime}): ${reason}`
+        );
+      }
     }
 
     // Validation 6: No overlap with other blocks in this schedule
@@ -112,7 +120,7 @@ export function validateSchedulePreview(
 
     if (overlappingBlocks.length > 0) {
       errors.push(
-        `❌ Task ${block.taskId} overlaps with ${overlappingBlocks.length} other scheduled task(s)`
+        `Error: Task ${block.taskId} overlaps with ${overlappingBlocks.length} other scheduled task(s)`
       );
     }
   }
@@ -166,7 +174,7 @@ export function isWithinWakeHours(
   start: string,
   end: string,
   userPrefs: UserPreferences
-): { valid: boolean; reason?: string } {
+): { valid: boolean; reason?: string; crossesMidnight?: boolean } {
   const startDate = new Date(start);
   const endDate = new Date(end);
 
@@ -181,6 +189,16 @@ export function isWithinWakeHours(
   const endLocal = new Date(
     endDate.toLocaleString('en-US', { timeZone: userPrefs.timeZone })
   );
+
+  if (startLocal.toDateString() !== endLocal.toDateString()) {
+    const startTimeStr = formatTime(startLocal.getHours(), startLocal.getMinutes());
+    const endTimeStr = formatTime(endLocal.getHours(), endLocal.getMinutes());
+    return {
+      valid: false,
+      crossesMidnight: true,
+      reason: `Block crosses midnight (${startTimeStr} to ${endTimeStr}). This is only allowed by manual drag.`,
+    };
+  }
 
   // Get hour and minute in local timezone
   const startHour = startLocal.getHours();

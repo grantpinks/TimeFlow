@@ -597,9 +597,9 @@
 **Scheduling Workflows & “Apply Schedule”**
 
 | 13.10 | DONE - Extend assistant backend to support an explicit "apply schedule" action that writes recommended blocks into the scheduling engine with proper task status updates| Codex | 6-8h | P0 |
-| 13.11 | Wire AI-generated schedules into a visual preview component (e.g., `SchedulePreviewCard`) that shows where tasks would land before confirmation, and ensure idempotent re-runs | Codex | 4-6h | P0 |
+| 13.11 | DONE - Wire AI-generated schedules into a visual preview component (e.g., `SchedulePreviewCard`) that shows where tasks would land before confirmation, and ensure idempotent re-runs| Codex | 4-6h | P0 |
 | 13.12 | DONE - Update AI Assistant responses to clearly signal when a schedule is ready ("I've prepared a schedule. Review it below and click Apply to add it to your calendar.") | Claude | 3-4h | P1 |
-| 13.13 | Add backend safeguards so the apply action cannot move fixed events and must respect wake/sleep and per-day constraints | Codex | 4-6h | P0 |
+| 13.13 | DONE - Add backend safeguards so the apply action cannot move fixed events and must respect wake/sleep and per-day constraints | Codex | 4-6h | P0 |
 
 **Scheduling Constraints & Per-Day Settings**
 
@@ -614,9 +614,9 @@
 
 **Conversation UX & Memory**
 
-| 13.17 | Improve AI Assistant page scroll behavior so users can review a longer conversation history comfortably | Codex | 3-4h | P1 |
+| 13.17 | DONE - Improve AI Assistant page scroll behavior so users can review a longer conversation history comfortably | Codex | 3-4h | P1 |
 | 13.18 | Enhance conversation memory handling so relevant prior context is preserved across multiple turns without truncating recent messages too aggressively | Codex | 4-6h | P1 |
-| 13.19 | Refine Flow mascot animation/state logic on Assistant page so it remains prominent (centered, animated) while “thinking” and transitions cleanly back to chat icon on response | Codex | 3-4h | P1 |
+| 13.19 | Refine Flow mascot animation/state logic on Assistant page so it remains prominent (centered, animated) while "thinking" and transitions cleanly back to chat icon on response | Codex | 3-4h | P1 |
 
 **Chat UI Layout & Visual Continuity**
 

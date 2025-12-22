@@ -7,6 +7,7 @@ import remarkGfm from 'remark-gfm';
 import { Layout } from '../../components/Layout';
 import SchedulePreviewCard from '../../components/SchedulePreviewCard';
 import { useTasks } from '../../hooks/useTasks';
+import { useHabits } from '../../hooks/useHabits';
 import { useUser } from '../../hooks/useUser';
 import * as api from '../../lib/api';
 import type { ChatMessage, SchedulePreview } from '@timeflow/shared';
@@ -14,6 +15,7 @@ import type { ChatMessage, SchedulePreview } from '@timeflow/shared';
 export default function AssistantPage() {
   const { user, isAuthenticated } = useUser();
   const { tasks, refresh: refreshTasks } = useTasks();
+  const { habits } = useHabits();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -29,16 +31,47 @@ export default function AssistantPage() {
   const [mascotState, setMascotState] = useState<'default' | 'thinking' | 'celebrating' | 'guiding'>('default');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const pendingSaveRef = useRef<ChatMessage[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveInFlightRef = useRef(false);
   const latestMessagesRef = useRef<ChatMessage[]>([]);
   const conversationIdRef = useRef<string | null>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Task 13.17: Improved scroll behavior
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // Check if user is near bottom of scroll area
+  const checkIfNearBottom = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return true;
+
+    const threshold = 150; // pixels from bottom
+    const isNear = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    return isNear;
+  };
+
+  // Handle scroll events to detect user position
+  const handleScroll = () => {
+    const nearBottom = checkIfNearBottom();
+    setIsNearBottom(nearBottom);
+    setShowScrollButton(!nearBottom && messages.length > 0);
+  };
+
+  // Smart auto-scroll: Only scroll to bottom if user is already near bottom
   useEffect(() => {
+    if (isNearBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isNearBottom]);
+
+  // Scroll to bottom manually (for button click)
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    setIsNearBottom(true);
+    setShowScrollButton(false);
+  };
 
   useEffect(() => {
     latestMessagesRef.current = messages;
@@ -122,6 +155,9 @@ export default function AssistantPage() {
         setSidebarOpen(false);
         pendingSaveRef.current = [];
         setSaveStatus('idle');
+        // Task 13.17: Reset scroll position to bottom when loading conversation
+        setIsNearBottom(true);
+        setShowScrollButton(false);
       }
     } catch (error) {
       console.error('Failed to load conversation:', error);
@@ -139,6 +175,9 @@ export default function AssistantPage() {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
+    // Task 13.17: Reset scroll position when starting new chat
+    setIsNearBottom(true);
+    setShowScrollButton(false);
   };
 
   const scheduleAutoSaveFlush = (delayMs: number) => {
@@ -434,7 +473,11 @@ export default function AssistantPage() {
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto flex items-center">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto flex items-center relative"
+          >
             <div className="w-full max-w-5xl mx-auto px-6">
               {/* Flow Mascot - Large and Centered */}
               {messages.length === 0 && (
@@ -544,12 +587,43 @@ export default function AssistantPage() {
                   <SchedulePreviewCard
                     preview={schedulePreview}
                     tasks={tasks}
+                    habits={habits}
+                    timeZone={user.timeZone}
                     onApply={handleApplySchedule}
                     onCancel={() => setSchedulePreview(null)}
                     applying={applying}
                   />
                 </div>
               )}
+            </div>
+
+            {/* Task 13.17: Scroll to Bottom Button */}
+            <div
+              className={`fixed bottom-24 right-8 z-10 transition-all duration-300 ${
+                showScrollButton
+                  ? 'opacity-100 translate-y-0'
+                  : 'opacity-0 translate-y-4 pointer-events-none'
+              }`}
+            >
+              <button
+                onClick={scrollToBottom}
+                className="bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                aria-label="Scroll to bottom"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+              </button>
             </div>
           </div>
 
