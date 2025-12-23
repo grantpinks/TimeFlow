@@ -33,6 +33,12 @@ GOOGLE_CLIENT_SECRET="<google-oauth-secret>"
 GOOGLE_REDIRECT_URI="https://your-domain.com/api/auth/google/callback"
 APP_BASE_URL="https://your-frontend.com"
 NODE_ENV="production"
+LLM_PROVIDER="openai"
+OPENAI_API_KEY="<openai-api-key>"
+OPENAI_MODEL="gpt-4o-mini"
+LLM_ENDPOINT="http://localhost:11434/v1/chat/completions"
+LLM_MODEL="llama3.2"
+LLM_MAX_TOKENS="4000"
 ```
 
 **Generate secrets**: `openssl rand -base64 32`
@@ -61,8 +67,8 @@ If you enable the “Gmail Label Sync” feature (labels applied inside Gmail), 
 - Push delivery is at-least-once; your handler must be idempotent and dedupe by historyId.
 
 Docs:
-- Sprint plan: `docs/SPRINT_15_PLAN.md`
-- Implementation guide: `docs/SPRINT_15_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`
+- Sprint plan: `docs/SPRINT_16_PLAN.md`
+- Implementation guide: `docs/SPRINT_16_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`
 
 ---
 
@@ -126,9 +132,23 @@ curl https://your-backend.com/health
 - Check APP_BASE_URL is correct
 
 **AI Assistant not working**:
-- Check LLM_ENDPOINT is reachable
-- Verify LLM server is running (Ollama or llama.cpp)
+- If using OpenAI: ensure `OPENAI_API_KEY` is set and `LLM_PROVIDER="openai"`
+- If using local LLM: check `LLM_ENDPOINT` is reachable and the server is running
 - For Ollama: Ensure model is pulled (`docker compose exec ollama ollama pull llama3.2`)
+
+## OpenAI Provider Configuration
+
+TimeFlow can use OpenAI for `/api/assistant/chat` with strict JSON scheduling output.
+
+Set in your hosting environment (do not commit secrets):
+
+```bash
+LLM_PROVIDER="openai"
+OPENAI_API_KEY="<openai-api-key>"
+OPENAI_MODEL="gpt-4o-mini"
+```
+
+Scheduling mode uses strict JSON schema output and server-side validation to keep schedule previews safe.
 
 ## AI Model Configuration
 

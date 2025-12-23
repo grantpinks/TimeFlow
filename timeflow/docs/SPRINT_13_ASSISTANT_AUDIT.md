@@ -28,7 +28,7 @@ This audit examined the TimeFlow AI Assistant's prompts, behavior, and response 
 ## 1. Pre-Audit State Assessment
 
 ### System Configuration
-- **Model**: Originally qwen2.5:0.5b (494MB, 0.5B parameters) - **TOO SMALL**
+- **Model**: Originally qwen2.5:0.5b (494MB, 0.5B parameters) - **TOO SMALL** 
 - **Prompt**: Single 78-line hardcoded prompt in `assistantService.ts`
 - **Mode Detection**: Only mascot state detection (celebrating/thinking/guiding)
 - **Event Handling**: All calendar events treated equally (no fixed vs movable distinction)

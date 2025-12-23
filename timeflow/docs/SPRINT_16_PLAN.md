@@ -1,4 +1,4 @@
-# Sprint 15: Gmail Label Sync (Thread-Level)
+# Sprint 16: Gmail Label Sync (Thread-Level)
 
 **Project**: TimeFlow  
 **Duration**: 2 weeks  
@@ -15,16 +15,16 @@ This sprint adds **real Gmail labels** (created via the Gmail API) and applies t
 
 ---
 
-## Prerequisites (From Sprint 14: Inbox Foundations)
+## Prerequisites (From Sprint 15: Inbox Foundations)
 
-To make Sprint 15 fully valuable (and avoid users distrusting labels applied inside Gmail), the following should exist first:
+To make Sprint 16 fully valuable (and avoid users distrusting labels applied inside Gmail), the following should exist first:
 
 - A dedicated Inbox surface (`/inbox`) reachable from `/today`.
 - Clear filters, especially **Work vs Personal** (plus deeper category pills).
 - A way for users to **correct misclassified** emails/threads and persist an override.
 - Some basic measurement of categorization quality (even a small eval set).
 
-See: `docs/SPRINT_14_INBOX_FOUNDATIONS.md`.
+See: `docs/SPRINT_15_INBOX_FOUNDATIONS.md`.
 
 ---
 
@@ -68,7 +68,7 @@ Location: `Settings → Email Categories → Gmail Label Sync`
   - **label color picker** (Gmail palette) with preview
   - optional: “Reset to defaults” (restores default names + mapped colors)
 
-#### UI Requirements (Sprint 15)
+#### UI Requirements (Sprint 16)
 
 - **Adjust label names**: user can rename the Gmail label that TimeFlow creates/ensures for each category.
 - **Customize label colors**: user can choose a color for each Gmail label from the Gmail-supported palette (store as `{ backgroundColor, textColor }`).
@@ -178,8 +178,8 @@ Extend it to include:
 
 ## Deliverables
 
-- Roadmap updated with Sprint 15 inserted before Sprint 16.
-- Agent-ready implementation guide (see `docs/SPRINT_15_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`).
+- Roadmap updated with Sprint 16 scheduled after Sprint 15 meeting scheduling and Sprint 14 calendar overhaul.
+- Agent-ready implementation guide (see `docs/SPRINT_16_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`).
 - Deployment guide updated with Pub/Sub + watch setup steps.
 
 ---
@@ -193,6 +193,6 @@ Extend it to include:
 
 ---
 
-**Last Updated**: 2025-12-15
+**Last Updated**: 2025-12-23
 
 

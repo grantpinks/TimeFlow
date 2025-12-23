@@ -13,7 +13,8 @@
       "WebFetch(domain:www.usemotion.com)",
       "Bash(ping:*)",
       "Bash(pnpm prisma generate:*)",
-      "Bash(timeout /t 3 /nobreak)"
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

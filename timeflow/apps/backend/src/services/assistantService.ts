@@ -106,6 +106,34 @@ function detectPlanAdjustment(
 }
 
 /**
+ * Detect if user intent is to reschedule existing tasks.
+ */
+function detectRescheduleIntent(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  const rescheduleKeywords = [
+    'reschedule',
+    'reschedule my',
+    'reschedule tasks',
+    'reschedule task',
+    'move my task',
+    'move my tasks',
+    'move task',
+    'move tasks',
+    'move it to',
+    'move this to',
+    'shift my',
+    'shift this',
+    'push back',
+    'push it back',
+    'change time',
+    'change the time',
+    'adjust the time',
+  ];
+
+  return rescheduleKeywords.some((kw) => lower.includes(kw));
+}
+
+/**
  * Task 13.18: Intelligent conversation memory selection
  *
  * Preserves important context across long conversations by:
@@ -311,6 +339,19 @@ function detectMode(
     'set up my tasks',
     'put these on',
     'add these to',
+    'reschedule',
+    'reschedule my',
+    'reschedule tasks',
+    'reschedule task',
+    'move my task',
+    'move my tasks',
+    'move task',
+    'move tasks',
+    'move it to',
+    'move this to',
+    'shift my',
+    'shift this',
+    'change time',
   ];
 
   const isSchedulingRequest = schedulingKeywords.some((kw) => lower.includes(kw));
@@ -400,6 +441,7 @@ export async function processMessage(
     if (isPlanAdjustment) {
       logDebug('[AssistantService][Debug] Plan adjustment detected');
     }
+    const wantsReschedule = detectRescheduleIntent(message);
 
     // Get mode-specific system prompt
     const systemPrompt = promptManager.getPrompt(mode);
@@ -409,7 +451,8 @@ export async function processMessage(
       userId,
       message,
       mode,
-      isPlanAdjustment
+      isPlanAdjustment,
+      wantsReschedule
     );
 
     // Call the LLM API with mode-specific system prompt
@@ -521,7 +564,8 @@ async function buildContextPrompt(
   userId: string,
   userMessage: string,
   mode: 'conversation' | 'scheduling' | 'availability',
-  isPlanAdjustment: boolean = false
+  isPlanAdjustment: boolean = false,
+  includeScheduledTaskIds: boolean = false
 ): Promise<{
   contextPrompt: string;
   calendarEvents: any[];
@@ -597,6 +641,7 @@ async function buildContextPrompt(
     hour: '2-digit',
     minute: '2-digit',
   });
+  const shouldIncludeScheduledIds = mode === 'scheduling' && includeScheduledTaskIds;
 
   const wakeLabel = formatUserTime(user.wakeTime);
   const sleepLabel = formatUserTime(user.sleepTime);

@@ -21,8 +21,8 @@ TimeFlow already categorizes your inbox on the TimeFlow dashboard. This feature 
 4. **Background Sync**: New mail is labeled via Gmail `watch` + Pub/Sub push notifications; if watch is unavailable, a bounded “sync-on-inbox-fetch” fallback is used.
 
 **Docs**:
-- Sprint plan: `docs/SPRINT_15_PLAN.md`
-- Implementation guide: `docs/SPRINT_15_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`
+- Sprint plan: `docs/SPRINT_16_PLAN.md`
+- Implementation guide: `docs/SPRINT_16_GMAIL_LABEL_SYNC_IMPLEMENTATION_GUIDE.md`
 
 ---
 
