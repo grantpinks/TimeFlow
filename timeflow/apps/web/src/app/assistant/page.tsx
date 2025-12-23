@@ -26,6 +26,7 @@ export default function AssistantPage() {
   const [conversations, setConversations] = useState<api.Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
+  const [manualSaveStatus, setManualSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
   // Determine current mascot state
   const [mascotState, setMascotState] = useState<'default' | 'thinking' | 'celebrating' | 'guiding'>('default');
@@ -42,6 +43,7 @@ export default function AssistantPage() {
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
+  // Scroll behavior functions
   // Check if user is near bottom of scroll area
   const checkIfNearBottom = () => {
     const container = messagesContainerRef.current;
@@ -132,16 +134,68 @@ export default function AssistantPage() {
     }
   };
 
+  // Generate smart title based on conversation content
+  const generateSmartTitle = (messages: ChatMessage[]): string => {
+    if (messages.length === 0) return `Chat - ${new Date().toLocaleDateString()}`;
+
+    // Get first user message
+    const firstUserMessage = messages.find(msg => msg.role === 'user');
+    if (!firstUserMessage) return `Chat - ${new Date().toLocaleDateString()}`;
+
+    // Extract first 40 chars or first sentence
+    let title = firstUserMessage.content.trim();
+    const firstSentence = title.match(/^[^.!?]+/);
+    if (firstSentence) {
+      title = firstSentence[0];
+    }
+
+    if (title.length > 40) {
+      title = title.substring(0, 40) + '...';
+    }
+
+    return title;
+  };
+
+  // Delete conversation handler
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering load conversation
+
+    if (!confirm('Delete this conversation?')) return;
+
+    try {
+      await api.deleteConversation(id);
+
+      // If we deleted the current conversation, start a new chat
+      if (currentConversationId === id) {
+        handleNewChat();
+      }
+
+      await loadConversations();
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+    }
+  };
+
   const handleSaveConversation = async () => {
     if (messages.length === 0) return;
 
+    setManualSaveStatus('saving');
+
     try {
-      const title = `Chat - ${new Date().toLocaleDateString()}`;
+      const title = generateSmartTitle(messages);
       const conversation = await api.createConversation({ title, messages });
       setCurrentConversationId(conversation.id);
       await loadConversations();
+      setManualSaveStatus('success');
+
+      // Reset to idle after 2 seconds
+      setTimeout(() => setManualSaveStatus('idle'), 2000);
     } catch (error) {
       console.error('Failed to save conversation:', error);
+      setManualSaveStatus('error');
+
+      // Reset to idle after 3 seconds
+      setTimeout(() => setManualSaveStatus('idle'), 3000);
     }
   };
 
@@ -171,6 +225,7 @@ export default function AssistantPage() {
     setMascotState('default');
     pendingSaveRef.current = [];
     setSaveStatus('idle');
+    setManualSaveStatus('idle');
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
@@ -204,7 +259,7 @@ export default function AssistantPage() {
     try {
       const conversationId = conversationIdRef.current;
       if (!conversationId) {
-        const title = `Chat - ${new Date().toLocaleDateString()}`;
+        const title = generateSmartTitle(latestMessagesRef.current);
         const conversation = await api.createConversation({
           title,
           messages: latestMessagesRef.current,
@@ -421,20 +476,33 @@ export default function AssistantPage() {
 
             <div className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
               {conversations.map((convo) => (
-                <button
+                <div
                   key={convo.id}
-                  onClick={() => handleLoadConversation(convo.id)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-colors ${
+                  className={`relative group rounded-lg hover:bg-slate-800 transition-colors ${
                     currentConversationId === convo.id ? 'bg-slate-800' : ''
                   }`}
                 >
-                  <div className="text-sm font-medium truncate">
-                    {convo.title || 'Untitled Chat'}
-                  </div>
-                  <div className="text-xs text-slate-400 mt-1">
-                    {convo._count?.messages || 0} messages
-                  </div>
-                </button>
+                  <button
+                    onClick={() => handleLoadConversation(convo.id)}
+                    className="w-full text-left px-3 py-2.5 pr-10"
+                  >
+                    <div className="text-sm font-medium truncate">
+                      {convo.title || 'Untitled Chat'}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      {convo._count?.messages || 0} messages • {new Date(convo.updatedAt).toLocaleDateString()}
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteConversation(convo.id, e)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 p-1.5 rounded transition-all"
+                    aria-label="Delete conversation"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           </div>
@@ -465,9 +533,24 @@ export default function AssistantPage() {
             {messages.length > 0 && (
               <button
                 onClick={handleSaveConversation}
-                className="text-primary-600 hover:text-primary-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-primary-50 transition-colors"
+                disabled={manualSaveStatus === 'saving'}
+                className={`text-sm font-medium px-4 py-2 rounded-lg transition-all ${
+                  manualSaveStatus === 'success'
+                    ? 'bg-green-100 text-green-700'
+                    : manualSaveStatus === 'error'
+                    ? 'bg-red-100 text-red-700'
+                    : manualSaveStatus === 'saving'
+                    ? 'bg-slate-100 text-slate-500 cursor-wait'
+                    : 'text-primary-600 hover:text-primary-700 hover:bg-primary-50'
+                }`}
               >
-                Save Chat
+                {manualSaveStatus === 'saving'
+                  ? 'Saving...'
+                  : manualSaveStatus === 'success'
+                  ? 'Saved!'
+                  : manualSaveStatus === 'error'
+                  ? 'Failed'
+                  : 'Save Chat'}
               </button>
             )}
           </div>
@@ -476,9 +559,9 @@ export default function AssistantPage() {
           <div
             ref={messagesContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto flex items-center relative"
+            className="flex-1 overflow-y-auto relative"
           >
-            <div className="w-full max-w-5xl mx-auto px-6">
+            <div className="w-full max-w-5xl mx-auto px-6 flex flex-col min-h-full">
               {/* Flow Mascot - Large and Centered */}
               {messages.length === 0 && (
                 <div className="flex flex-col items-center justify-center pt-12">

@@ -48,11 +48,13 @@ If the user asks to schedule tasks during available time, respond:
 
 ### Structure
 
-- Start with **## heading** (double hash) for main topic
+- Start with **## heading** (double hash) for main topic (large, prominent)
 - Use **### subheadings** (triple hash) for each day
 - Use **bold** for times and event names
+- Add blank lines before and after bullet lists
 - Maximum 200 words total
 - Scannable in 5 seconds
+- Never use generic labels like "Key Points"
 
 ### Time Gaps
 

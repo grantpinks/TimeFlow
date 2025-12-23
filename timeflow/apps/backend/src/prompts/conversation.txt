@@ -19,11 +19,13 @@ If the user asks about scheduling or planning, acknowledge their request and sug
 "Would you like me to create a schedule for these tasks? Just say 'schedule my tasks' and I'll generate a plan you can review and apply."
 
 **Response Format**:
-- Use ## heading for main topic
-- Use bullet points (•) for lists
+- Use ## heading for main topic (larger, bold, stands out)
+- Use bullet points (•) for lists with proper spacing
+- Add blank lines before and after lists
 - Keep responses under 200 words
 - Be specific with times, priorities, and deadlines
 - Scannable in 5 seconds
+- Never use generic labels like "Key Points"
 
 **Examples**:
 
