@@ -608,14 +608,14 @@
 
 **Evaluation, QA & Telemetry**
 
-| 13.14 | Implement offline evaluation harness that replays `AI Response Adjustments` conversations against the new model/prompt stack and scores them | Codex | 6-8h | P1 |
+| 13.14 | DONE - Implement offline evaluation harness that replays `AI Response Adjustments` conversations against the new model/prompt stack and scores them | Codex | 6-8h | P1 |
 | 13.15 | Add logging/metrics for assistant failures (parsing errors, invalid schedules, user cancels after preview) to track regression risk | Codex | 3-4h | P1 |
 | 13.16 | Run ruthless-reviewer style QA on key AI flows (daily plan, rescheduling, availability queries, apply schedule) and file any remaining critical issues | Reviewer | 4-6h | P1 |
 
 **Conversation UX & Memory**
 
 | 13.17 | DONE - Improve AI Assistant page scroll behavior so users can review a longer conversation history comfortably | Codex | 3-4h | P1 |
-| 13.18 | Enhance conversation memory handling so relevant prior context is preserved across multiple turns without truncating recent messages too aggressively | Codex | 4-6h | P1 |
+| 13.18 | DONE - Enhance conversation memory handling so relevant prior context is preserved across multiple turns without truncating recent messages too aggressively | Codex | 4-6h | P1 |
 | 13.19 | Refine Flow mascot animation/state logic on Assistant page so it remains prominent (centered, animated) while "thinking" and transitions cleanly back to chat icon on response | Codex | 3-4h | P1 |
 
 **Chat UI Layout & Visual Continuity**
