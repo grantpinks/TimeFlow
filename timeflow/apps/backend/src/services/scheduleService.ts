@@ -82,7 +82,7 @@ export async function scheduleTasksForUser(
     timeZone: user.timeZone || 'UTC',
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
-    dailySchedule: user.dailySchedule as any || null,
+    dailySchedule: user.dailyScheduleConstraints || user.dailySchedule || null,
   };
 
   // 5. Run scheduling algorithm
@@ -331,6 +331,7 @@ export async function applyScheduleBlocks(
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
     timeZone: user.timeZone || 'UTC',
+    dailySchedule: user.dailyScheduleConstraints || user.dailySchedule || null,
   };
 
   if (taskBlocks.length > 0) {

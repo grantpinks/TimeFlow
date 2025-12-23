@@ -1,4 +1,4 @@
-import type { SchedulePreview } from '@timeflow/shared';
+import type { DailyScheduleConfig, SchedulePreview } from '@timeflow/shared';
 import type { CalendarEvent } from '@timeflow/shared';
 import { classifyEvent } from './eventClassifier.js';
 
@@ -18,6 +18,8 @@ export interface UserPreferences {
   wakeTime: string; // "HH:mm" format (e.g., "08:00")
   sleepTime: string; // "HH:mm" format (e.g., "23:00")
   timeZone: string; // IANA timezone (e.g., "America/Chicago")
+  dailySchedule?: DailyScheduleConfig | null;
+  dailyScheduleConstraints?: DailyScheduleConfig | null;
 }
 
 /**
@@ -105,8 +107,10 @@ export function validateSchedulePreview(
       if (wakeCheck.crossesMidnight) {
         errors.push(`Error: ${reason}`);
       } else {
+        const wakeTime = wakeCheck.wakeTime || userPrefs.wakeTime;
+        const sleepTime = wakeCheck.sleepTime || userPrefs.sleepTime;
         warnings.push(
-          `Warning: Task scheduled outside wake hours (${userPrefs.wakeTime} - ${userPrefs.sleepTime}): ${reason}`
+          `Warning: Task scheduled outside wake hours (${wakeTime} - ${sleepTime}): ${reason}`
         );
       }
     }
@@ -174,13 +178,9 @@ export function isWithinWakeHours(
   start: string,
   end: string,
   userPrefs: UserPreferences
-): { valid: boolean; reason?: string; crossesMidnight?: boolean } {
+): { valid: boolean; reason?: string; crossesMidnight?: boolean; wakeTime?: string; sleepTime?: string } {
   const startDate = new Date(start);
   const endDate = new Date(end);
-
-  // Parse wake/sleep times (format: "HH:mm")
-  const [wakeHour, wakeMinute] = userPrefs.wakeTime.split(':').map(Number);
-  const [sleepHour, sleepMinute] = userPrefs.sleepTime.split(':').map(Number);
 
   // Convert UTC times to user's local timezone
   const startLocal = new Date(
@@ -199,6 +199,26 @@ export function isWithinWakeHours(
       reason: `Block crosses midnight (${startTimeStr} to ${endTimeStr}). This is only allowed by manual drag.`,
     };
   }
+
+  const dayNames: Array<keyof DailyScheduleConfig> = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ];
+  const dayName = dayNames[startLocal.getDay()];
+  const dailySchedule = userPrefs.dailyScheduleConstraints || userPrefs.dailySchedule;
+  const daySchedule = dailySchedule?.[dayName];
+
+  const resolvedWakeTime = daySchedule?.wakeTime || userPrefs.wakeTime;
+  const resolvedSleepTime = daySchedule?.sleepTime || userPrefs.sleepTime;
+
+  // Parse wake/sleep times (format: "HH:mm")
+  const [wakeHour, wakeMinute] = resolvedWakeTime.split(':').map(Number);
+  const [sleepHour, sleepMinute] = resolvedSleepTime.split(':').map(Number);
 
   // Get hour and minute in local timezone
   const startHour = startLocal.getHours();
@@ -219,6 +239,8 @@ export function isWithinWakeHours(
     return {
       valid: false,
       reason: `Task starts at ${startTimeStr}, before wake time ${wakeTimeStr}`,
+      wakeTime: resolvedWakeTime,
+      sleepTime: resolvedSleepTime,
     };
   }
 
@@ -229,10 +251,12 @@ export function isWithinWakeHours(
     return {
       valid: false,
       reason: `Task ends at ${endTimeStr}, after sleep time ${sleepTimeStr}`,
+      wakeTime: resolvedWakeTime,
+      sleepTime: resolvedSleepTime,
     };
   }
 
-  return { valid: true };
+  return { valid: true, wakeTime: resolvedWakeTime, sleepTime: resolvedSleepTime };
 }
 
 /**

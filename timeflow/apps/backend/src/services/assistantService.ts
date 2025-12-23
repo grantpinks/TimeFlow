@@ -24,7 +24,9 @@ import {
  * Sprint 13.6: File-based prompt system with multiple modes
  */
 const promptManager = getPromptManager();
-const MAX_HISTORY_MESSAGES = 8;
+const MAX_HISTORY_MESSAGES = 8; // Legacy fallback limit
+const MAX_HISTORY_TOKENS = 3000; // Task 13.18: Token-based limit for context window
+const ALWAYS_KEEP_RECENT = 10; // Task 13.18: Always preserve last 10 messages
 const DEBUG_LOGS = env.NODE_ENV !== 'production';
 
 function logDebug(...args: unknown[]): void {
@@ -101,6 +103,108 @@ function detectPlanAdjustment(
   ];
 
   return adjustmentKeywords.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Task 13.18: Intelligent conversation memory selection
+ *
+ * Preserves important context across long conversations by:
+ * 1. Estimating token usage to stay within limits
+ * 2. Always keeping first message (sets conversation intent/context)
+ * 3. Always keeping messages with important metadata (schedules, plans)
+ * 4. Always keeping recent messages (last N exchanges)
+ * 5. Selectively trimming middle messages
+ *
+ * @param history - Full conversation history
+ * @param maxTokens - Maximum tokens to preserve (default 3000)
+ * @returns Intelligently selected subset of conversation history
+ */
+function selectConversationContext(
+  history: ChatMessage[] | undefined,
+  maxTokens: number = MAX_HISTORY_TOKENS
+): ChatMessage[] {
+  if (!history || history.length === 0) {
+    return [];
+  }
+
+  // Simple token estimator: ~4 chars per token (OpenAI approximation)
+  const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
+
+  // If history is short, keep it all
+  if (history.length <= ALWAYS_KEEP_RECENT) {
+    return history;
+  }
+
+  // Categorize messages by importance
+  interface MessageWithPriority {
+    message: ChatMessage;
+    index: number;
+    priority: 'critical' | 'important' | 'normal';
+    tokens: number;
+  }
+
+  const categorized: MessageWithPriority[] = history.map((msg, idx) => {
+    const tokens = estimateTokens(msg.content);
+    let priority: 'critical' | 'important' | 'normal' = 'normal';
+
+    // Critical: First message (sets context), messages with schedules
+    if (idx === 0) {
+      priority = 'critical';
+    } else if (msg.metadata?.schedulePreview) {
+      priority = 'critical';
+    }
+    // Important: Recent messages, messages mentioning constraints/planning
+    else if (idx >= history.length - ALWAYS_KEEP_RECENT) {
+      priority = 'important';
+    } else {
+      const lower = msg.content.toLowerCase();
+      const importantKeywords = [
+        'wake time', 'sleep time', 'bedtime', 'constraint', 'fixed event',
+        'cannot move', 'appointment', 'meeting', 'deadline', 'priority',
+        'schedule these', 'plan my', 'tasks for'
+      ];
+      if (importantKeywords.some(kw => lower.includes(kw))) {
+        priority = 'important';
+      }
+    }
+
+    return { message: msg, index: idx, priority, tokens };
+  });
+
+  // Start with all critical and important messages
+  const selected: MessageWithPriority[] = categorized.filter(
+    m => m.priority === 'critical' || m.priority === 'important'
+  );
+
+  let totalTokens = selected.reduce((sum, m) => sum + m.tokens, 0);
+
+  // Add normal priority messages from most recent backwards if we have token budget
+  const normalMessages = categorized
+    .filter(m => m.priority === 'normal')
+    .reverse(); // Start from most recent
+
+  for (const msg of normalMessages) {
+    if (totalTokens + msg.tokens <= maxTokens) {
+      selected.push(msg);
+      totalTokens += msg.tokens;
+    }
+  }
+
+  // Sort back to chronological order and extract messages
+  const result = selected
+    .sort((a, b) => a.index - b.index)
+    .map(m => m.message);
+
+  logDebug('[AssistantService][Task 13.18] Context selection:', {
+    originalCount: history.length,
+    selectedCount: result.length,
+    estimatedTokens: totalTokens,
+    maxTokens,
+    keptFirst: result.length > 0 && result[0] === history[0],
+    keptRecent: result.length >= Math.min(ALWAYS_KEEP_RECENT, history.length),
+  });
+
+  return result;
 }
 
 /**
@@ -262,6 +366,7 @@ export async function processMessage(
     const mode = detectMode(message, unscheduledTasksCount > 0);
 
     // Fix #4: History retention - fallback only if history omitted and conversationId provided
+    // Task 13.18: Fetch more messages from DB (intelligent selection will trim later)
     let resolvedHistory = conversationHistory;
     let usedHistoryFallback = false;
     if (resolvedHistory === undefined && conversationId) {
@@ -271,7 +376,7 @@ export async function processMessage(
         include: {
           messages: {
             orderBy: { createdAt: 'asc' },
-            take: MAX_HISTORY_MESSAGES,
+            take: 50, // Task 13.18: Fetch more messages, let intelligent selection decide what to keep
           },
         },
       });
@@ -330,6 +435,8 @@ export async function processMessage(
         wakeTime: user.wakeTime,
         sleepTime: user.sleepTime,
         timeZone: user.timeZone,
+        dailySchedule: user.dailySchedule,
+        dailyScheduleConstraints: user.dailyScheduleConstraints,
       };
 
       const validation = validateSchedulePreview(
@@ -493,15 +600,28 @@ async function buildContextPrompt(
 
   const wakeLabel = formatUserTime(user.wakeTime);
   const sleepLabel = formatUserTime(user.sleepTime);
+  const dailyScheduleLines = formatDailyScheduleConstraints(
+    user.dailyScheduleConstraints || user.dailySchedule,
+    user.wakeTime,
+    user.sleepTime
+  );
 
   let prompt = `**User Profile**:
 - Timezone: ${user.timeZone}
-- Working hours: ${wakeLabel} - ${sleepLabel}
+- Working hours (default): ${wakeLabel} - ${sleepLabel}
 - Default task duration: ${user.defaultTaskDurationMinutes} minutes
 
 **Current Date/Time**: ${currentDateTime}
 
 `;
+
+  if (dailyScheduleLines.length > 0) {
+    prompt += `**Per-Day Working Hours (Local Time)**:\n`;
+    dailyScheduleLines.forEach((line) => {
+      prompt += `- ${line}\n`;
+    });
+    prompt += `\n`;
+  }
 
   if (mode === 'scheduling' || mode === 'availability') {
     // Fix #5: Make wake/sleep constraints extremely prominent and clear
@@ -510,6 +630,12 @@ async function buildContextPrompt(
     prompt += `User Wake Time: ${wakeLabel} (${user.timeZone})\n`;
     prompt += `User Sleep Time: ${sleepLabel} (${user.timeZone})\n`;
     prompt += `Valid Scheduling Window: ${wakeLabel} - ${sleepLabel}\n`;
+    if (dailyScheduleLines.length > 0) {
+      prompt += `Per-Day Overrides:\n`;
+      dailyScheduleLines.forEach((line) => {
+        prompt += `- ${line}\n`;
+      });
+    }
     prompt += `================================\n`;
     prompt += `RULES:\n`;
     prompt += `- NEVER schedule tasks before ${wakeLabel}\n`;
@@ -694,10 +820,10 @@ async function callLocalLLM(
     content: systemPrompt,
   });
 
-  // Add conversation history (last 5 messages)
+  // Task 13.18: Add intelligently selected conversation history
   if (conversationHistory && conversationHistory.length > 0) {
-    const recentHistory = conversationHistory.slice(-MAX_HISTORY_MESSAGES);
-    recentHistory.forEach((msg) => {
+    const selectedHistory = selectConversationContext(conversationHistory, MAX_HISTORY_TOKENS);
+    selectedHistory.forEach((msg) => {
       messages.push({
         role: msg.role,
         content: msg.content,
@@ -943,6 +1069,39 @@ function formatUserTime(timeValue: string): string {
   const hour12 = hour % 12 || 12;
   const minuteLabel = minute.toString().padStart(2, '0');
   return `${hour12}:${minuteLabel} ${period}`;
+}
+
+function formatDailyScheduleConstraints(
+  dailySchedule: Record<string, { wakeTime?: string; sleepTime?: string }> | null | undefined,
+  defaultWake: string,
+  defaultSleep: string
+): string[] {
+  if (!dailySchedule || Object.keys(dailySchedule).length === 0) {
+    return [];
+  }
+
+  const dayOrder = [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
+
+  return dayOrder
+    .map((day) => {
+      const schedule = dailySchedule[day];
+      if (!schedule) {
+        return null;
+      }
+      const wakeLabel = formatUserTime(schedule.wakeTime || defaultWake);
+      const sleepLabel = formatUserTime(schedule.sleepTime || defaultSleep);
+      const dayLabel = day.charAt(0).toUpperCase() + day.slice(1, 3);
+      return `${dayLabel}: ${wakeLabel} - ${sleepLabel}`;
+    })
+    .filter((line): line is string => Boolean(line));
 }
 
 /**

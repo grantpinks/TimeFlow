@@ -388,7 +388,7 @@ export default function AssistantPage() {
     'When am I free this week?',
     'Schedule my high priority tasks',
     'Do I have 2 hours free tomorrow?',
-    'What's my busiest day this week?',
+    'What is my busiest day this week?',
   ];
 
   return (

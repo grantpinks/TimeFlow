@@ -24,6 +24,7 @@ model User {
   wakeTime                 String  @default("08:00") // "HH:mm" - Default for all days
   sleepTime                String  @default("23:00") // "HH:mm" - Default for all days
   dailySchedule            Json?   // Per-day wake/sleep times: { monday: { wakeTime, sleepTime }, ... }
+  dailyScheduleConstraints Json?   // Per-day wake/sleep times (preferred)
   defaultTaskDurationMinutes Int   @default(30)
   defaultCalendarId        String?
 

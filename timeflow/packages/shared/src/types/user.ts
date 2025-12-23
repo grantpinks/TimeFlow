@@ -36,6 +36,7 @@ export interface UserProfile {
   wakeTime: string;
   sleepTime: string;
   dailySchedule?: DailyScheduleConfig | null;
+  dailyScheduleConstraints?: DailyScheduleConfig | null;
   defaultTaskDurationMinutes: number;
   defaultCalendarId?: string | null;
 }
@@ -47,6 +48,7 @@ export interface UserPreferencesUpdate {
   wakeTime?: string;
   sleepTime?: string;
   dailySchedule?: DailyScheduleConfig | null;
+  dailyScheduleConstraints?: DailyScheduleConfig | null;
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;

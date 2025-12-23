@@ -86,7 +86,7 @@ export async function getHabitSuggestionsForUser(
     timeZone: user.timeZone || 'UTC',
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
-    dailySchedule: (user as any).dailySchedule || null,
+    dailySchedule: user.dailyScheduleConstraints || user.dailySchedule || null,
   };
 
   const suggestions = suggestHabitBlocks(habitInputs, schedulerEvents, preferences, dateRangeStart, dateRangeEnd);

@@ -32,9 +32,10 @@ export default function SettingsPage() {
       setDefaultCalendarId(user.defaultCalendarId || '');
 
       // Initialize daily schedule
-      if (user.dailySchedule && Object.keys(user.dailySchedule).length > 0) {
+      const schedule = user.dailyScheduleConstraints || user.dailySchedule;
+      if (schedule && Object.keys(schedule).length > 0) {
         setUseCustomSchedule(true);
-        setDailySchedule(user.dailySchedule);
+        setDailySchedule(schedule);
       } else {
         setUseCustomSchedule(false);
         setDailySchedule({});
@@ -68,6 +69,7 @@ export default function SettingsPage() {
         wakeTime,
         sleepTime,
         dailySchedule: useCustomSchedule ? dailySchedule : null,
+        dailyScheduleConstraints: useCustomSchedule ? dailySchedule : null,
         timeZone,
         defaultTaskDurationMinutes: defaultDuration,
         defaultCalendarId: defaultCalendarId || undefined,
@@ -270,7 +272,7 @@ export default function SettingsPage() {
                   </div>
                 ))}
                 <p className="text-xs text-slate-500 mt-4">
-                  💡 Tip: Different wake/sleep times for weekends vs weekdays help create a more realistic schedule
+                  Tip: Different wake/sleep times for weekends vs weekdays help create a more realistic schedule
                 </p>
               </div>
             )}

@@ -63,14 +63,10 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
 - Database schema: `userSchedule` JSON field or new `DailySchedule` table
 
 ### Implementation Plan / Tracking
-1. Add `dailyScheduleConstraints` JSON field to User model  
-   - [ ] Sprint 13 – Task 13.26 (add field + migration) — Status: TODO
-2. Create settings UI with day-of-week selector  
-   - [ ] Sprint 13 – Task 13.27 (settings UI & UX) — Status: TODO
-3. Update scheduling algorithm and Assistant logic to check day-specific constraints (including weekends)  
-   - [ ] Sprint 13 – Task 13.27 — Status: TODO
-4. Migrate existing users: copy wake/sleepTime to all days  
-   - [ ] Sprint 13 – Task 13.26 (data migration step) — Status: TODO
+1. Add `dailyScheduleConstraints` JSON field to User model - DONE (Sprint 13 Task 13.26)
+2. Create settings UI with day-of-week selector - DONE (Sprint 13 Task 13.27)
+3. Update scheduling algorithm and Assistant logic to check day-specific constraints (including weekends) - DONE (Sprint 13 Task 13.27)
+4. Migrate existing users: copy wake/sleepTime to all days - DONE (Sprint 13 Task 13.26)
 
 
 ## Known UI Issues

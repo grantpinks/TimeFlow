@@ -603,8 +603,8 @@
 
 **Scheduling Constraints & Per-Day Settings**
 
-| 13.26 | Add `dailyScheduleConstraints` (per-day wake/sleep) field to User model and migrate existing wake/sleep defaults to all days (see `KNOWN_ISSUES.md` – Wake/Bedtime Per-Day Constraints) | Codex | 4-6h | P0 |
-| 13.27 | Build per-day wake/bedtime settings UI and update scheduling algorithm and Assistant logic to respect day-specific constraints (including weekends) | Codex | 6-8h | P0 |
+| 13.26 | DONE - Add `dailyScheduleConstraints` (per-day wake/sleep) field to User model and migrate existing wake/sleep defaults to all days (see `KNOWN_ISSUES.md` – Wake/Bedtime Per-Day Constraints) | Codex | 4-6h | P0 |
+| 13.27 | DONE - Build per-day wake/bedtime settings UI and update scheduling algorithm and Assistant logic to respect day-specific constraints (including weekends) | Codex | 6-8h | P0 |
 
 **Evaluation, QA & Telemetry**
 
