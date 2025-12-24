@@ -587,11 +587,11 @@ export default function AssistantPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={reduceMotion ? { duration: 0 } : { duration: 0.3 }}
-                    className="flex flex-col items-center justify-center min-h-[60vh] sm:min-h-[70vh] px-4 sm:px-6"
+                    className="flex flex-col items-center justify-start pt-20 sm:pt-24 md:pt-28 pb-12 min-h-[80vh] px-4 sm:px-6"
                   >
                     <div className="text-center mb-8 sm:mb-10">
                       <motion.div
-                        className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-72 lg:h-72 mx-auto mb-6 sm:mb-8"
+                        className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 mx-auto mb-6 sm:mb-8"
                         animate={reduceMotion ? { y: 0 } : { y: [0, -10, 0] }}
                         transition={
                           reduceMotion
