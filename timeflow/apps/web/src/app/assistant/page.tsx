@@ -463,13 +463,16 @@ export default function AssistantPage() {
     <Layout>
       <div className="flex h-[calc(100vh-128px)] surface-card relative overflow-hidden">
         {/* Saved Chats Sidebar */}
-        <div
+        <aside
           className={`absolute inset-y-0 left-0 bg-slate-900 text-white w-64 md:w-72 transform transition-transform duration-300 ease-in-out z-20 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
+          role="navigation"
+          aria-label="Saved conversations"
+          aria-hidden={!sidebarOpen}
         >
           <div className="p-4 border-b border-slate-700 flex items-center justify-between">
-            <h2 className="font-semibold">Saved Chats</h2>
+            <h2 className="font-semibold" id="sidebar-title">Saved Chats</h2>
             <button
               onClick={() => setSidebarOpen(false)}
               className="text-slate-400 hover:text-white"
@@ -482,12 +485,13 @@ export default function AssistantPage() {
           <div className="p-3">
             <button
               onClick={handleNewChat}
-              className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-lg font-medium mb-3 transition-colors"
+              className="w-full bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-lg font-medium mb-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+              aria-label="Start a new chat conversation"
             >
               + New Chat
             </button>
 
-            <div className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto">
+            <nav className="space-y-1 max-h-[calc(100vh-200px)] overflow-y-auto" aria-label="Conversation history">
               {conversations.map((convo) => (
                 <div
                   key={convo.id}
@@ -517,9 +521,9 @@ export default function AssistantPage() {
                   </button>
                 </div>
               ))}
-            </div>
+            </nav>
           </div>
-        </div>
+        </aside>
 
         {/* Overlay when sidebar is open */}
         {sidebarOpen && (
@@ -573,8 +577,10 @@ export default function AssistantPage() {
             ref={messagesContainerRef}
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto relative bg-gradient-to-br from-white via-primary-50/5 to-white"
+            role="main"
+            aria-label="Chat conversation with Flow assistant"
           >
-            <span className="sr-only" role="status" aria-live="polite">
+            <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
               {mascotStatus}
             </span>
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col min-h-full">
@@ -697,10 +703,11 @@ export default function AssistantPage() {
                         {/* Flow Mascot */}
                         <Image
                           src={`/branding/flow-${mascotState}.png`}
-                          alt="Flow"
+                          alt={`Flow assistant mascot in ${mascotState} state`}
                           fill
                           className="object-contain drop-shadow-2xl relative z-10"
                           priority
+                          aria-hidden="false"
                         />
                       </motion.div>
                       <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-slate-900 mb-4 sm:mb-6">
@@ -712,7 +719,7 @@ export default function AssistantPage() {
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl mx-auto w-full px-2 sm:px-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl mx-auto w-full px-2 sm:px-4" role="group" aria-label="Quick action suggestions">
                       {quickActions.map((action, index) => (
                         <motion.button
                           key={index}
@@ -726,7 +733,8 @@ export default function AssistantPage() {
                           onClick={() => handleQuickAction(action)}
                           whileHover={reduceMotion ? undefined : { scale: 1.02 }}
                           whileTap={reduceMotion ? undefined : { scale: 0.98 }}
-                          className="min-h-[44px] text-left p-3 sm:p-4 lg:p-5 border-2 border-slate-200 rounded-xl hover:bg-gradient-to-br hover:from-primary-50 hover:to-blue-50 hover:border-primary-300 hover:shadow-md transition-all duration-200 group"
+                          className="min-h-[44px] text-left p-3 sm:p-4 lg:p-5 border-2 border-slate-200 rounded-xl hover:bg-gradient-to-br hover:from-primary-50 hover:to-blue-50 hover:border-primary-300 hover:shadow-md transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                          aria-label={`Quick action: ${action}`}
                         >
                           <div className="text-sm sm:text-base lg:text-lg font-medium text-slate-700 group-hover:text-primary-700">
                             {action}
@@ -774,9 +782,11 @@ export default function AssistantPage() {
                           >
                             <Image
                               src={`/branding/flow-${msgMascotState}.png`}
-                              alt={`Flow ${msgMascotState}`}
+                              alt={`Flow assistant ${msgMascotState}`}
                               fill
                               className="object-contain drop-shadow-md hover:scale-105 transition-transform cursor-default"
+                              role="img"
+                              aria-label={`Flow is ${msgMascotState === 'guiding' ? 'ready to help' : msgMascotState}`}
                             />
                           </motion.div>
                         )}
@@ -859,9 +869,11 @@ export default function AssistantPage() {
                       >
                         <Image
                           src="/branding/flow-thinking.png"
-                          alt="Flow thinking"
+                          alt="Flow is analyzing your request"
                           fill
                           className="object-contain drop-shadow-md"
+                          role="img"
+                          aria-label="Flow assistant is thinking and processing your request"
                         />
                       </motion.div>
                       <div className="flex items-center space-x-2.5">
@@ -929,19 +941,25 @@ export default function AssistantPage() {
           {/* Input Area - Fixed at Bottom */}
           <div className="border-t border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
             <div className="max-w-7xl mx-auto">
-              <form onSubmit={handleSendMessage} className="flex gap-2 sm:gap-3">
+              <form onSubmit={handleSendMessage} className="flex gap-2 sm:gap-3" role="search" aria-label="Send message to Flow">
+                <label htmlFor="message-input" className="sr-only">Type your message to Flow assistant</label>
                 <input
+                  id="message-input"
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Message Flow..."
                   disabled={loading}
                   className="flex-1 min-h-[44px] px-3 sm:px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 text-base"
+                  aria-label="Message input"
+                  aria-describedby="message-hint"
                 />
+                <span id="message-hint" className="sr-only">Press Enter to send or click the Send button</span>
                 <button
                   type="submit"
                   disabled={loading || !input.trim()}
-                  className="min-h-[44px] bg-primary-600 text-white px-4 sm:px-6 py-3 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                  className="min-h-[44px] bg-primary-600 text-white px-4 sm:px-6 py-3 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                  aria-label={loading ? "Sending message..." : "Send message"}
                 >
                   Send
                 </button>

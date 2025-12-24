@@ -13,7 +13,7 @@ export default function ThinkingState({
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 sm:px-6">
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 sm:px-6" role="status" aria-live="polite" aria-label="Flow is thinking">
       <div className="text-center mb-6 sm:mb-8">
         {/* Centered Medium Mascot with Bounce Animation and Liquid Glow */}
         <motion.div
@@ -136,10 +136,12 @@ export default function ThinkingState({
           {/* Flow Mascot Thinking */}
           <Image
             src="/branding/flow-thinking.png"
-            alt="Flow is thinking"
+            alt="Flow assistant in thinking state, processing your request"
             fill
             className="object-contain drop-shadow-2xl relative z-10"
             priority
+            role="img"
+            aria-label="Flow is analyzing your request and preparing a response"
           />
         </motion.div>
 
