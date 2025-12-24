@@ -591,7 +591,7 @@ export default function AssistantPage() {
                   >
                     <div className="text-center mb-8 sm:mb-10">
                       <motion.div
-                        className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 mx-auto mb-6 sm:mb-8"
+                        className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 lg:w-72 lg:h-72 mx-auto mb-6 sm:mb-8"
                         animate={reduceMotion ? { y: 0 } : { y: [0, -10, 0] }}
                         transition={
                           reduceMotion
@@ -928,7 +928,7 @@ export default function AssistantPage() {
 
           {/* Input Area - Fixed at Bottom */}
           <div className="border-t border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-7xl mx-auto">
               <form onSubmit={handleSendMessage} className="flex gap-2 sm:gap-3">
                 <input
                   type="text"
@@ -936,12 +936,12 @@ export default function AssistantPage() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Message Flow..."
                   disabled={loading}
-                  className="flex-1 px-3 sm:px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+                  className="flex-1 min-h-[44px] px-3 sm:px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 text-base"
                 />
                 <button
                   type="submit"
                   disabled={loading || !input.trim()}
-                  className="bg-primary-600 text-white px-4 sm:px-6 py-3 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                  className="min-h-[44px] bg-primary-600 text-white px-4 sm:px-6 py-3 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
                 >
                   Send
                 </button>
