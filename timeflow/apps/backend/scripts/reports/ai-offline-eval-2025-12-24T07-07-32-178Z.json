@@ -1,0 +1,69 @@
+{
+  "summary": {
+    "totalCases": 1,
+    "skippedCases": 1,
+    "ok": 1,
+    "failed": 0,
+    "previews": 0,
+    "turnsTotal": 1,
+    "averageOverallScore": 93,
+    "averageScannabilityScore": 90,
+    "averageLeakScore": 100,
+    "timestamp": "2025-12-24T07:07:32.179Z",
+    "endpoint": "http://localhost:3001/api/assistant/chat",
+    "adjustmentsDir": "C:\\Users\\theth\\Desktop\\Productivity Pro\\AI Response Adjustments"
+  },
+  "results": [
+    {
+      "id": "Response 12\\Response When am I Free this Week",
+      "header": "Convo 1: 12/9/25 11:49pm",
+      "notes": [
+        "Should provide details on the most recent days slots not just a random friday slot. Should be progressive.##"
+      ],
+      "ok": true,
+      "status": 200,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "score": {
+        "overall": 93,
+        "scannability": 90,
+        "leakScore": 100
+      },
+      "turns": [
+        {
+          "prompt": "When am i free this week?",
+          "status": 200,
+          "ok": true,
+          "durationMs": 320,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "score": {
+            "overall": 93,
+            "scannability": 90,
+            "leakScore": 100,
+            "violations": [],
+            "stats": {
+              "length": 296,
+              "paragraphs": 1,
+              "bullets": 7,
+              "headings": 0,
+              "maxParagraphChars": 296,
+              "avgParagraphChars": 296,
+              "longLineCount": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "skipped": [
+    {
+      "file": "Response 12\\Response 1",
+      "reason": "No user prompts found"
+    }
+  ]
+}

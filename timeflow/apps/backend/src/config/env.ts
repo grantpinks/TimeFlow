@@ -18,8 +18,11 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW: z.string().optional(),
   // AI Assistant (Local LLM)
   LLM_ENDPOINT: z.string().optional(),
+  LLM_PROVIDER: z.string().optional(),
   LLM_MODEL: z.string().optional(),
   LLM_MAX_TOKENS: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_MODEL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

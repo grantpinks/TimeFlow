@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { __test__ } from '../assistantService';
 import type { ChatMessage, SchedulePreview } from '@timeflow/shared';
 
-const { detectMode, detectPlanAdjustment, parseResponse, sanitizeAssistantContent } = __test__;
+const {
+  detectMode,
+  detectPlanAdjustment,
+  detectRescheduleIntent,
+  detectDailyPlanIntent,
+  parseResponse,
+  sanitizeAssistantContent,
+} = __test__;
 
 describe('assistantService helpers', () => {
   describe('detectMode', () => {
@@ -77,6 +84,29 @@ describe('assistantService helpers', () => {
 
       const result = detectPlanAdjustment('Looks good, thanks.', history);
       expect(result).toBe(false);
+    });
+  });
+
+  describe('detectRescheduleIntent', () => {
+    it('detects reschedule language', () => {
+      expect(detectRescheduleIntent('Please reschedule my task.')).toBe(true);
+      expect(detectRescheduleIntent('Move my task to 3pm.')).toBe(true);
+      expect(detectRescheduleIntent('Move Reply to emails to 8 PM today.')).toBe(true);
+    });
+
+    it('returns false for non-reschedule language', () => {
+      expect(detectRescheduleIntent('What tasks do I have?')).toBe(false);
+    });
+  });
+
+  describe('detectDailyPlanIntent', () => {
+    it('detects daily plan language', () => {
+      expect(detectDailyPlanIntent('Plan my day')).toBe(true);
+      expect(detectDailyPlanIntent('What should I do today?')).toBe(true);
+    });
+
+    it('returns false for unrelated language', () => {
+      expect(detectDailyPlanIntent('Schedule my tasks')).toBe(false);
     });
   });
 

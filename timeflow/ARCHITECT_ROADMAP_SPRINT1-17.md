@@ -621,13 +621,13 @@
 
 | 13.20 | Audit current Assistant starting/hero state vs in-conversation chat UI (using `docs/BRAND_GUIDELINES.md` and `docs/COMPETITOR_AUDIT.md`) and define target conversation layout | Claude | 3-4h | P1 |
 | 13.21 | Redesign chat layout (header, background, message list, side panels) so transitioning from hero → active chat preserves the same premium look, color palette, and typography | Claude | 6-8h | P0 |
-| 13.22 | Implement responsive styles so the updated chat UI looks great on desktop and mobile, and matches other core surfaces (Today, Tasks, Calendar) | Claude | 4-6h | P1 |
+| 13.22 | DONE - Implement responsive styles so the updated chat UI looks great on desktop and mobile, and matches other core surfaces (Today, Tasks, Calendar) | Codex | 4-6h | P1 |
 
 **Assistant Motion & Visual Polish**
 
 | 13.23 | Implement Framer Motion-based animations for assistant message bubbles (staggered entrance, subtle fade/slide) aligned with motion guidelines from Sprints 8 and 11 | Codex | 4-6h | P1 |
 | 13.24 | Add polished typing indicator and “assistant is thinking” animation that smoothly coordinates with Flow mascot states (no jarring jumps) | Codex | 3-4h | P1 |
-| 13.25 | Ensure all Assistant page animations respect `prefers-reduced-motion` and remain performant on low-powered devices | Codex | 3-4h | P1 |
+| 13.25 | DONE - Ensure all Assistant page animations respect `prefers-reduced-motion` and remain performant on low-powered devices | Codex | 3-4h | P1 |
 
 #### Acceptance Criteria
 - Assistant no longer leaks raw JSON structures or internal IDs in user-facing responses across the tested scenarios.

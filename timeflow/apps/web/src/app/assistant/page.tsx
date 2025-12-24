@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Layout } from '../../components/Layout';
 import SchedulePreviewCard from '../../components/SchedulePreviewCard';
+import ThinkingState from '../../components/ThinkingState';
 import { useTasks } from '../../hooks/useTasks';
 import { useHabits } from '../../hooks/useHabits';
 import { useUser } from '../../hooks/useUser';
@@ -16,11 +18,13 @@ export default function AssistantPage() {
   const { user, isAuthenticated } = useUser();
   const { tasks, refresh: refreshTasks } = useTasks();
   const { habits } = useHabits();
+  const reduceMotion = useReducedMotion();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [schedulePreview, setSchedulePreview] = useState<SchedulePreview | null>(null);
+  const [previewApplied, setPreviewApplied] = useState(false);
   const [applying, setApplying] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<api.Conversation[]>([]);
@@ -74,6 +78,14 @@ export default function AssistantPage() {
     setIsNearBottom(true);
     setShowScrollButton(false);
   };
+
+  const mascotStatus = loading
+    ? 'Flow is thinking.'
+    : mascotState === 'celebrating'
+      ? 'Flow is celebrating.'
+      : mascotState === 'guiding'
+        ? 'Flow is guiding.'
+        : 'Flow is ready.';
 
   useEffect(() => {
     latestMessagesRef.current = messages;
@@ -222,6 +234,7 @@ export default function AssistantPage() {
     setMessages([]);
     setCurrentConversationId(null);
     setSchedulePreview(null);
+    setPreviewApplied(false);
     setMascotState('default');
     pendingSaveRef.current = [];
     setSaveStatus('idle');
@@ -327,6 +340,7 @@ export default function AssistantPage() {
 
       if (response.suggestions) {
         setSchedulePreview(response.suggestions);
+        setPreviewApplied(false);
       }
 
       latestMessagesRef.current = newMessages;
@@ -390,9 +404,8 @@ export default function AssistantPage() {
 
       await refreshTasks();
 
-      // Fix #2: Keep preview visible after applying (don't immediately hide it)
-      // User can manually dismiss it if needed
-      // setSchedulePreview(null); // Removed - let user dismiss manually
+      setSchedulePreview(null);
+      setPreviewApplied(false);
 
       let successText = 'Schedule applied!';
       if (tasksScheduled > 0 && habitsScheduled > 0) {
@@ -559,122 +572,325 @@ export default function AssistantPage() {
           <div
             ref={messagesContainerRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto relative"
+            className="flex-1 overflow-y-auto relative bg-gradient-to-br from-white via-primary-50/5 to-white"
           >
-            <div className="w-full max-w-5xl mx-auto px-6 flex flex-col min-h-full">
-              {/* Flow Mascot - Large and Centered */}
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center pt-12">
-                  <div className="text-center mb-8">
-                    <div className="relative w-48 h-48 sm:w-56 sm:h-56 md:w-64 md:h-64 mx-auto mb-6 animate-bounce-slow">
-                      <Image
-                        src={`/branding/flow-${mascotState}.png`}
-                        alt="Flow"
-                        fill
-                        className="object-contain drop-shadow-2xl"
-                        priority
-                      />
-                    </div>
-                    <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-slate-900 mb-4">
-                      How can I help you today?
-                    </h1>
-                    <p className="text-lg sm:text-xl text-slate-600 mb-8">
-                      Ask me about your schedule, tasks, or habits
-                    </p>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-3xl mx-auto w-full">
-                    {quickActions.map((action, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleQuickAction(action)}
-                        className="text-left p-3 sm:p-4 border-2 border-slate-200 rounded-xl hover:bg-gradient-to-br hover:from-primary-50 hover:to-blue-50 hover:border-primary-300 hover:shadow-md transition-all duration-200 group"
+            <span className="sr-only" role="status" aria-live="polite">
+              {mascotStatus}
+            </span>
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col min-h-full">
+              {/* Hero State - Large and Centered */}
+              <AnimatePresence mode="wait">
+                {messages.length === 0 && !loading && (
+                  <motion.div
+                    key="hero"
+                    initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={reduceMotion ? { duration: 0 } : { duration: 0.3 }}
+                    className="flex flex-col items-center justify-center min-h-[60vh] sm:min-h-[70vh] px-4 sm:px-6"
+                  >
+                    <div className="text-center mb-8 sm:mb-10">
+                      <motion.div
+                        className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 lg:w-72 lg:h-72 mx-auto mb-6 sm:mb-8"
+                        animate={reduceMotion ? { y: 0 } : { y: [0, -10, 0] }}
+                        transition={
+                          reduceMotion
+                            ? { duration: 0 }
+                            : {
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              }
+                        }
                       >
-                        <div className="text-sm sm:text-base font-medium text-slate-700 group-hover:text-primary-700">
-                          {action}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+                        {/* Liquid Blob Glow Effect - Radial Gradient Rings */}
+                        <motion.div
+                          className="absolute inset-0"
+                          style={{
+                            width: '180%',
+                            height: '180%',
+                            left: '-40%',
+                            top: '-40%',
+                            background: 'radial-gradient(ellipse 50% 60% at 50% 50%, rgba(11, 175, 154, 0.25) 0%, rgba(11, 175, 154, 0.15) 30%, rgba(59, 130, 246, 0.1) 50%, rgba(59, 130, 246, 0.05) 70%, transparent 100%)',
+                            filter: 'blur(40px)',
+                            borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
+                          }}
+                          animate={
+                            reduceMotion
+                              ? { opacity: 0.6, scale: 1 }
+                              : {
+                                  scale: [1, 1.08, 1],
+                                  opacity: [0.8, 1, 0.8],
+                                }
+                          }
+                          transition={
+                            reduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 3,
+                                  repeat: Infinity,
+                                  ease: 'easeInOut',
+                                }
+                          }
+                        />
+                        <motion.div
+                          className="absolute inset-0"
+                          style={{
+                            width: '150%',
+                            height: '150%',
+                            left: '-25%',
+                            top: '-25%',
+                            background: 'radial-gradient(ellipse 50% 60% at 50% 50%, rgba(11, 175, 154, 0.4) 0%, rgba(11, 175, 154, 0.25) 30%, rgba(59, 130, 246, 0.15) 60%, transparent 100%)',
+                            filter: 'blur(30px)',
+                            borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
+                          }}
+                          animate={
+                            reduceMotion
+                              ? { opacity: 0.7, scale: 1 }
+                              : {
+                                  scale: [1, 1.12, 1],
+                                  opacity: [0.9, 1, 0.9],
+                                }
+                          }
+                          transition={
+                            reduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 2.5,
+                                  repeat: Infinity,
+                                  ease: 'easeInOut',
+                                  delay: 0.2,
+                                }
+                          }
+                        />
+                        <motion.div
+                          className="absolute inset-0"
+                          style={{
+                            width: '120%',
+                            height: '120%',
+                            left: '-10%',
+                            top: '-10%',
+                            background: 'radial-gradient(ellipse 50% 60% at 50% 50%, rgba(11, 175, 154, 0.5) 0%, rgba(11, 175, 154, 0.3) 40%, rgba(59, 130, 246, 0.2) 70%, transparent 100%)',
+                            filter: 'blur(20px)',
+                            borderRadius: '50% 50% 50% 50% / 60% 60% 40% 40%',
+                          }}
+                          animate={
+                            reduceMotion
+                              ? { opacity: 0.8, scale: 1 }
+                              : {
+                                  scale: [1, 1.15, 1],
+                                  opacity: [1, 0.95, 1],
+                                }
+                          }
+                          transition={
+                            reduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 2,
+                                  repeat: Infinity,
+                                  ease: 'easeInOut',
+                                  delay: 0.4,
+                                }
+                          }
+                        />
 
-              {/* Messages */}
-              {messages.length > 0 && (
-              <div className="space-y-6 max-w-5xl mx-auto px-6 py-4">
-                {messages.map((message) => {
-                  const msgMascotState = message.metadata?.mascotState || 'default';
+                        {/* Flow Mascot */}
+                        <Image
+                          src={`/branding/flow-${mascotState}.png`}
+                          alt="Flow"
+                          fill
+                          className="object-contain drop-shadow-2xl relative z-10"
+                          priority
+                        />
+                      </motion.div>
+                      <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-slate-900 mb-4 sm:mb-6">
+                        How can I help you today?
+                      </h1>
+                      <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-slate-600 mb-8 sm:mb-12">
+                        Ask me about your schedule, tasks, or habits
+                      </p>
+                    </div>
 
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                    >
-                      {message.role === 'assistant' && (
-                        <div className="relative w-8 h-8 flex-shrink-0">
-                          <Image
-                            src={`/branding/flow-${msgMascotState}.png`}
-                            alt="Flow"
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                      )}
-
-                      <div className={`flex-1 ${message.role === 'user' ? 'max-w-[80%]' : ''}`}>
-                        {message.role === 'assistant' ? (
-                          <div className="prose prose-sm max-w-none">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {message.content}
-                            </ReactMarkdown>
+                    {/* Quick Actions */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl mx-auto w-full px-2 sm:px-4">
+                      {quickActions.map((action, index) => (
+                        <motion.button
+                          key={index}
+                          initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={
+                            reduceMotion
+                              ? { duration: 0 }
+                              : { delay: index * 0.05, duration: 0.2 }
+                          }
+                          onClick={() => handleQuickAction(action)}
+                          whileHover={reduceMotion ? undefined : { scale: 1.02 }}
+                          whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                          className="min-h-[44px] text-left p-3 sm:p-4 lg:p-5 border-2 border-slate-200 rounded-xl hover:bg-gradient-to-br hover:from-primary-50 hover:to-blue-50 hover:border-primary-300 hover:shadow-md transition-all duration-200 group"
+                        >
+                          <div className="text-sm sm:text-base lg:text-lg font-medium text-slate-700 group-hover:text-primary-700">
+                            {action}
                           </div>
-                        ) : (
-                          <div className="bg-primary-600 text-white px-4 py-3 rounded-2xl">
-                            {message.content}
-                          </div>
-                        )}
-                      </div>
-
-                      {message.role === 'user' && <div className="w-8"></div>}
+                        </motion.button>
+                      ))}
                     </div>
-                  );
-                })}
-
-                {/* Loading indicator */}
-                {loading && (
-                  <div className="flex gap-4">
-                    <div className="relative w-8 h-8 flex-shrink-0 animate-pulse">
-                      <Image
-                        src="/branding/flow-thinking.png"
-                        alt="Flow thinking"
-                        fill
-                        className="object-contain"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                    </div>
-                  </div>
+                  </motion.div>
                 )}
 
-                <div ref={messagesEndRef} />
-              </div>
+                {/* Thinking State - Medium Centered Mascot */}
+                {loading && messages.length === 0 && (
+                  <motion.div
+                    key="thinking"
+                    initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={reduceMotion ? { duration: 0 } : { duration: 0.3 }}
+                  >
+                    <ThinkingState />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Conversation State - Messages */}
+              {messages.length > 0 && (
+                <div className="space-y-4 sm:space-y-6 w-full py-4 sm:py-6">
+                  {messages.map((message, index) => {
+                    const msgMascotState = message.metadata?.mascotState || 'guiding';
+
+                    return (
+                      <motion.div
+                        key={message.id}
+                        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
+                        className={`flex gap-3 sm:gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                      >
+                        {message.role === 'assistant' && (
+                          <motion.div
+                            initial={reduceMotion ? false : { opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
+                            className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0"
+                          >
+                            <Image
+                              src={`/branding/flow-${msgMascotState}.png`}
+                              alt={`Flow ${msgMascotState}`}
+                              fill
+                              className="object-contain drop-shadow-md hover:scale-105 transition-transform cursor-default"
+                            />
+                          </motion.div>
+                        )}
+
+                        <div
+                          className={
+                            message.role === 'user'
+                              ? 'max-w-[88%] sm:max-w-[75%]'
+                              : 'flex-1 min-w-0 max-w-full sm:max-w-[85%]'
+                          }
+                        >
+                          {message.role === 'assistant' ? (
+                            <div className="prose prose-sm sm:prose-base lg:prose-lg max-w-none pl-4 sm:pl-6 border-l-2 sm:border-l-4 border-primary-500 py-2 sm:py-3">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  h2: ({ node, ...props }) => (
+                                    <h2 className="text-xl sm:text-2xl font-semibold text-slate-900 mt-5 mb-3 sm:mt-6 sm:mb-4" {...props} />
+                                  ),
+                                  h3: ({ node, ...props }) => (
+                                    <h3 className="text-lg sm:text-xl font-semibold text-slate-800 mt-4 mb-2 sm:mt-5 sm:mb-3" {...props} />
+                                  ),
+                                  p: ({ node, ...props }) => (
+                                    <p className="text-sm sm:text-base text-slate-700 leading-relaxed mb-3 sm:mb-4" {...props} />
+                                  ),
+                                  ul: ({ node, ...props }) => (
+                                    <ul className="text-sm sm:text-base text-slate-700 space-y-2 mb-3 sm:mb-4 list-disc list-inside" {...props} />
+                                  ),
+                                  ol: ({ node, ...props }) => (
+                                    <ol className="text-sm sm:text-base text-slate-700 space-y-2 mb-3 sm:mb-4 list-decimal list-inside" {...props} />
+                                  ),
+                                  code: ({ node, inline, ...props }: any) =>
+                                    inline ? (
+                                      <code className="bg-primary-50 text-primary-700 px-2 py-1 rounded text-xs sm:text-sm" {...props} />
+                                    ) : (
+                                      <code className="block bg-slate-100 border border-slate-200 rounded-lg p-4 text-xs sm:text-sm overflow-x-auto" {...props} />
+                                    ),
+                                }}
+                              >
+                                {message.content}
+                              </ReactMarkdown>
+                            </div>
+                          ) : (
+                            <motion.div
+                              initial={reduceMotion ? false : { opacity: 0, x: 20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
+                              className="bg-gradient-to-br from-primary-600 to-primary-700 text-white px-4 py-3 sm:px-6 sm:py-4 rounded-2xl shadow-md text-sm sm:text-base"
+                            >
+                              {message.content}
+                            </motion.div>
+                          )}
+                        </div>
+
+                        {message.role === 'user' && <div className="w-10 sm:w-12 md:w-14 lg:w-16"></div>}
+                      </motion.div>
+                    );
+                  })}
+
+                  {/* Inline Loading indicator (when continuing conversation) */}
+                  {loading && messages.length > 0 && (
+                    <motion.div
+                      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
+                      className="flex gap-4"
+                    >
+                      <motion.div
+                        animate={reduceMotion ? { scale: 1 } : { scale: [0.98, 1.02, 0.98] }}
+                        transition={
+                          reduceMotion
+                            ? { duration: 0 }
+                            : {
+                                duration: 0.8,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              }
+                        }
+                        className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0"
+                      >
+                        <Image
+                          src="/branding/flow-thinking.png"
+                          alt="Flow thinking"
+                          fill
+                          className="object-contain drop-shadow-md"
+                        />
+                      </motion.div>
+                      <div className="flex items-center space-x-2.5">
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-primary-500 rounded-full animate-bounce motion-reduce:animate-none" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-primary-500 rounded-full animate-bounce motion-reduce:animate-none" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-primary-500 rounded-full animate-bounce motion-reduce:animate-none" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div ref={messagesEndRef} />
+                </div>
               )}
 
               {/* Schedule Preview */}
               {schedulePreview && (
-                <div className="mt-6">
+                <div className="mt-4 sm:mt-6">
                   <SchedulePreviewCard
                     preview={schedulePreview}
                     tasks={tasks}
                     habits={habits}
                     timeZone={user.timeZone}
                     onApply={handleApplySchedule}
-                    onCancel={() => setSchedulePreview(null)}
+                    onCancel={() => {
+                      setSchedulePreview(null);
+                      setPreviewApplied(false);
+                    }}
                     applying={applying}
+                    applied={previewApplied}
                   />
                 </div>
               )}
@@ -682,7 +898,7 @@ export default function AssistantPage() {
 
             {/* Task 13.17: Scroll to Bottom Button */}
             <div
-              className={`fixed bottom-24 right-8 z-10 transition-all duration-300 ${
+              className={`fixed bottom-20 right-4 sm:bottom-24 sm:right-8 z-10 transition-all duration-300 ${
                 showScrollButton
                   ? 'opacity-100 translate-y-0'
                   : 'opacity-0 translate-y-4 pointer-events-none'
@@ -690,11 +906,11 @@ export default function AssistantPage() {
             >
               <button
                 onClick={scrollToBottom}
-                className="bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
+                className="bg-primary-600 hover:bg-primary-700 text-white p-2.5 sm:p-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2"
                 aria-label="Scroll to bottom"
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-4 h-4 sm:w-5 sm:h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -711,7 +927,7 @@ export default function AssistantPage() {
           </div>
 
           {/* Input Area - Fixed at Bottom */}
-          <div className="border-t border-slate-200 bg-white px-6 py-4">
+          <div className="border-t border-slate-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
             <div className="max-w-5xl mx-auto">
               <form onSubmit={handleSendMessage} className="flex gap-2 sm:gap-3">
                 <input
@@ -720,12 +936,12 @@ export default function AssistantPage() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Message Flow..."
                   disabled={loading}
-                  className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+                  className="flex-1 px-3 sm:px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
                 />
                 <button
                   type="submit"
                   disabled={loading || !input.trim()}
-                  className="bg-primary-600 text-white px-6 py-3 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                  className="bg-primary-600 text-white px-4 sm:px-6 py-3 rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
                 >
                   Send
                 </button>

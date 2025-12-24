@@ -18,6 +18,7 @@ import {
   applyValidationToPreview,
   type UserPreferences,
 } from '../utils/scheduleValidator.js';
+import { buildAvailabilitySummary } from '../utils/availability.js';
 
 /**
  * Get the PromptManager singleton instance
@@ -130,7 +131,39 @@ function detectRescheduleIntent(userMessage: string): boolean {
     'adjust the time',
   ];
 
-  return rescheduleKeywords.some((kw) => lower.includes(kw));
+  const reschedulePatterns = [
+    /\bmove\s+.+\s+to\s+/,
+    /\bmove\s+.+\s+at\s+/,
+    /\bshift\s+.+\s+to\s+/,
+    /\bpush\s+.+\s+to\s+/,
+    /\bchange\s+.+\s+to\s+/,
+    /\bmove\s+.+\s+tomorrow\b/,
+    /\bmove\s+.+\s+today\b/,
+  ];
+
+  return (
+    rescheduleKeywords.some((kw) => lower.includes(kw)) ||
+    reschedulePatterns.some((pattern) => pattern.test(lower))
+  );
+}
+
+/**
+ * Detect if user intent is to get a daily plan summary.
+ */
+function detectDailyPlanIntent(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  const dailyPlanKeywords = [
+    'plan my day',
+    'daily plan',
+    'plan today',
+    'plan for today',
+    'my plan for today',
+    'what should i do today',
+    'today plan',
+    'plan my day today',
+  ];
+
+  return dailyPlanKeywords.some((kw) => lower.includes(kw));
 }
 
 /**
@@ -404,7 +437,7 @@ export async function processMessage(
     });
 
     // Detect assistant mode based on user intent
-    const mode = detectMode(message, unscheduledTasksCount > 0);
+    let mode = detectMode(message, unscheduledTasksCount > 0);
 
     // Fix #4: History retention - fallback only if history omitted and conversationId provided
     // Task 13.18: Fetch more messages from DB (intelligent selection will trim later)
@@ -442,6 +475,17 @@ export async function processMessage(
       logDebug('[AssistantService][Debug] Plan adjustment detected');
     }
     const wantsReschedule = detectRescheduleIntent(message);
+    const wantsDailyPlan = detectDailyPlanIntent(message);
+
+    if (wantsReschedule && mode !== 'scheduling') {
+      logDebug('[AssistantService][Debug] Reschedule intent detected; switching to scheduling mode.');
+      mode = 'scheduling';
+    }
+
+    if (mode === 'scheduling' && wantsDailyPlan && unscheduledTasksCount === 0) {
+      logDebug('[AssistantService][Debug] Daily plan request with no unscheduled tasks; using conversation mode.');
+      mode = 'conversation';
+    }
 
     // Get mode-specific system prompt
     const systemPrompt = promptManager.getPrompt(mode);
@@ -452,8 +496,37 @@ export async function processMessage(
       message,
       mode,
       isPlanAdjustment,
-      wantsReschedule
+      wantsReschedule,
+      wantsDailyPlan
     );
+
+    const userPrefs: UserPreferences = {
+      wakeTime: user.wakeTime,
+      sleepTime: user.sleepTime,
+      timeZone: user.timeZone,
+      dailySchedule: user.dailySchedule,
+      dailyScheduleConstraints: user.dailyScheduleConstraints,
+    };
+
+    if (mode === 'availability') {
+      const availabilitySummary = buildAvailabilitySummary({
+        message,
+        calendarEvents,
+        userPrefs,
+      });
+      const cleanedResponse = sanitizeAssistantContent(availabilitySummary, mode, false);
+      const mascotState = detectMascotState(cleanedResponse);
+
+      return {
+        message: {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: cleanedResponse,
+          timestamp: new Date().toISOString(),
+          metadata: { mascotState },
+        },
+      };
+    }
 
     // Call the LLM API with mode-specific system prompt
     const llmResponse = await callLocalLLM(contextPrompt, resolvedHistory, systemPrompt, mode);
@@ -474,14 +547,6 @@ export async function processMessage(
 
     // Validate schedule preview if in scheduling mode (Sprint 13.7)
     if (mode === 'scheduling' && schedulePreview) {
-      const userPrefs: UserPreferences = {
-        wakeTime: user.wakeTime,
-        sleepTime: user.sleepTime,
-        timeZone: user.timeZone,
-        dailySchedule: user.dailySchedule,
-        dailyScheduleConstraints: user.dailyScheduleConstraints,
-      };
-
       const validation = validateSchedulePreview(
         schedulePreview,
         calendarEvents,
@@ -558,6 +623,8 @@ export async function processMessage(
  * @param userMessage - User's message
  * @param mode - Assistant mode (conversation, scheduling, availability)
  * @param isPlanAdjustment - Whether user is adjusting a previous plan (Fix #6)
+ * @param includeScheduledTaskIds - Whether scheduled tasks should include IDs for rescheduling
+ * @param dailyPlanRequest - Whether the user asked for a daily plan summary
  * @returns Context prompt, calendar events, and task IDs (for validation)
  */
 async function buildContextPrompt(
@@ -565,7 +632,8 @@ async function buildContextPrompt(
   userMessage: string,
   mode: 'conversation' | 'scheduling' | 'availability',
   isPlanAdjustment: boolean = false,
-  includeScheduledTaskIds: boolean = false
+  includeScheduledTaskIds: boolean = false,
+  dailyPlanRequest: boolean = false
 ): Promise<{
   contextPrompt: string;
   calendarEvents: any[];
@@ -715,7 +783,11 @@ async function buildContextPrompt(
   } else {
     prompt += "**Unscheduled Tasks**: None! You're all caught up.\n\n";
     if (mode === 'scheduling') {
-      prompt += "**Scheduling Status**: No unscheduled tasks are available to schedule. If the user asked to schedule, explain that they need to add tasks first.\n\n";
+      if (includeScheduledTaskIds) {
+        prompt += "**Rescheduling Status**: No unscheduled tasks available. Focus on moving tasks listed under \"Already Scheduled Tasks\" only.\n\n";
+      } else {
+        prompt += "**Scheduling Status**: No unscheduled tasks are available to schedule. If the user asked to schedule, explain that they need to add tasks first.\n\n";
+      }
     }
   }
 
@@ -736,10 +808,15 @@ async function buildContextPrompt(
           hour: '2-digit',
           minute: '2-digit',
         });
-        prompt += `- ${start} - ${end}: ${task.title}\n`;
+        const idSuffix = shouldIncludeScheduledIds ? ` - ID: ${task.id}` : '';
+        prompt += `- ${start} - ${end}: ${task.title}${idSuffix}\n`;
       }
     });
     prompt += '\n';
+    if (shouldIncludeScheduledIds) {
+      prompt +=
+        '**Rescheduling Guidance**: Only move tasks listed under "Already Scheduled Tasks" when the user explicitly asks to reschedule them.\n\n';
+    }
   }
 
   // Add active habits
@@ -808,6 +885,13 @@ async function buildContextPrompt(
     prompt += `**Important Context**: The user is ADJUSTING or MODIFYING a previous schedule suggestion. Acknowledge their changes and create a NEW schedule based on their adjustments.\n\n`;
   }
 
+  if (dailyPlanRequest) {
+    prompt += `**Daily Plan Request**: Provide a concise plan for today based on scheduled tasks and calendar events. Highlight open slots if available.\n\n`;
+  }
+  if (shouldIncludeScheduledIds) {
+    prompt += '**Reschedule Request**: The user is asking to move existing scheduled tasks. Only output blocks for tasks listed under "Already Scheduled Tasks".\n\n';
+  }
+
   // Add user's message
   prompt += `**User's Question**: "${userMessage}"\n\n`;
 
@@ -831,7 +915,9 @@ async function buildContextPrompt(
   }
 
   // Collect task IDs for validation
-  const taskIds = unscheduledTasks.map((task) => task.id);
+  const taskIds = shouldIncludeScheduledIds
+    ? [...unscheduledTasks, ...scheduledTasks].map((task) => task.id)
+    : unscheduledTasks.map((task) => task.id);
 
   return {
     contextPrompt: prompt,
@@ -852,9 +938,14 @@ async function callLocalLLM(
   systemPrompt: string,
   mode: 'conversation' | 'scheduling' | 'availability'
 ): Promise<string> {
-  // Get LLM endpoint from environment (default to Ollama)
-  const endpoint = env.LLM_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
-  const model = env.LLM_MODEL || 'llama3.2';
+  const provider = (env.LLM_PROVIDER || 'local').toLowerCase();
+  const isOpenAI = provider === 'openai';
+  const endpoint = isOpenAI
+    ? env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions'
+    : env.LLM_ENDPOINT || 'http://localhost:11434/v1/chat/completions';
+  const model = isOpenAI
+    ? env.OPENAI_MODEL || env.LLM_MODEL || 'gpt-4o'
+    : env.LLM_MODEL || 'llama3.2';
 
   // Build messages array in OpenAI format
   const messages: Array<{ role: string; content: string }> = [];
@@ -892,6 +983,8 @@ async function callLocalLLM(
 
   logDebug('[AssistantService][Debug] LLM request:', {
     mode,
+    provider,
+    endpoint,
     model,
     messages: messages.length,
     contextChars: contextPrompt.length,
@@ -900,11 +993,20 @@ async function callLocalLLM(
   });
 
   try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (isOpenAI) {
+      const apiKey = env.OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new Error('OPENAI_API_KEY is required when LLM_PROVIDER is openai.');
+      }
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         model,
         messages,
@@ -1159,6 +1261,8 @@ function generateMessageId(): string {
 export const __test__ = {
   detectMode,
   detectPlanAdjustment,
+  detectRescheduleIntent,
+  detectDailyPlanIntent,
   parseResponse,
   sanitizeAssistantContent,
 };

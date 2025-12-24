@@ -14,7 +14,8 @@
       "Bash(ping:*)",
       "Bash(pnpm prisma generate:*)",
       "Bash(timeout /t 3 /nobreak)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

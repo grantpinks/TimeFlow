@@ -81,8 +81,13 @@ Accessibility: Target AA for text on backgrounds; reserve Amber for accents, not
 - Large (128–256px): Allow subtle gradient in body and inner glow; keep flat outlines.
 
 ### Motion Guidance
-- Durations 120–200ms ease-out; respect `prefers-reduced-motion`.
-- Limit sparkle bursts to 3–5 particles, fade within 250ms.
+- Durations 120-200ms ease-out; respect `prefers-reduced-motion`.
+- Limit sparkle bursts to 3-5 particles, fade within 250ms.
+- Assistant UI motion tokens:
+  - Message entrance: 200ms ease-out with small vertical offset (disable when reduced motion).
+  - Mascot float/glow: 2-3s loop; render static when reduced motion.
+  - Confidence pulse: 1s loop with 2s delay; disable when reduced motion.
+  - Hover/tap scale: 1.02/0.98 on buttons; disable when reduced motion.
 
 ---
 

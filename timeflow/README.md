@@ -41,6 +41,8 @@ pnpm dev:web
 pnpm dev:mobile
 ```
 
+For detailed instructions on managing the development stack (starting, restarting, shutting down), see `docs/STACK_MANAGEMENT.md`.
+
 ## AI Regression Harness
 
 The AI regression prompt harness lives under `apps/backend/scripts`. For full setup and usage,
