@@ -8,171 +8,138 @@ datasource db {
 }
 
 model User {
-  id                      String   @id @default(cuid())
-  email                   String   @unique
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
-
-  // Google integration
-  googleId                String?  @unique
-  googleRefreshToken      String?
-  googleAccessToken       String?
-  googleAccessTokenExpiry DateTime?
-
-  // Preferences
-  timeZone                 String  @default("America/Chicago")
-  wakeTime                 String  @default("08:00") // "HH:mm" - Default for all days
-  sleepTime                String  @default("23:00") // "HH:mm" - Default for all days
-  dailySchedule            Json?   // Per-day wake/sleep times: { monday: { wakeTime, sleepTime }, ... }
-  dailyScheduleConstraints Json?   // Per-day wake/sleep times (preferred)
-  defaultTaskDurationMinutes Int   @default(30)
-  defaultCalendarId        String?
-
-  tasks           Task[]
-  categories      Category[]
-  habits          Habit[]
-  scheduledHabits ScheduledHabit[]
-  appliedSchedules AppliedSchedule[]
-  conversations   Conversation[]
-  emailCategoryConfigs EmailCategoryConfig[]
+  id                         String                @id @default(cuid())
+  email                      String                @unique
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  googleId                   String?               @unique
+  googleRefreshToken         String?
+  googleAccessToken          String?
+  googleAccessTokenExpiry    DateTime?
+  timeZone                   String                @default("America/Chicago")
+  wakeTime                   String                @default("08:00")
+  sleepTime                  String                @default("23:00")
+  defaultTaskDurationMinutes Int                   @default(30)
+  defaultCalendarId          String?
+  dailySchedule              Json?
+  dailyScheduleConstraints   Json?
+  appliedSchedules           AppliedSchedule[]
+  AssistantMetric            AssistantMetric[]
+  categories                 Category[]
+  conversations              Conversation[]
+  emailCategoryConfigs       EmailCategoryConfig[]
+  habits                     Habit[]
+  scheduledHabits            ScheduledHabit[]
+  tasks                      Task[]
 }
 
 model Task {
-  id              String   @id @default(cuid())
+  id              String         @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
-
   title           String
   description     String?
-  durationMinutes Int      @default(30)
-  priority        Int      @default(2) // 1 = high, 2 = medium, 3 = low
-  status          String   @default("unscheduled") // unscheduled | scheduled | completed
-
-  categoryId      String?
-  category        Category? @relation(fields: [categoryId], references: [id])
-
+  durationMinutes Int            @default(30)
+  priority        Int            @default(2)
+  status          String         @default("unscheduled")
   dueDate         DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  categoryId      String?
   scheduledTask   ScheduledTask?
+  category        Category?      @relation(fields: [categoryId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
 }
 
 model ScheduledTask {
-  id                String   @id @default(cuid())
-  taskId            String   @unique
-  task              Task     @relation(fields: [taskId], references: [id])
-
-  provider          String   // "google" | "apple"
-  calendarId        String
-  eventId           String
-
-  startDateTime     DateTime
-  endDateTime       DateTime
-
-  overflowedDeadline Boolean @default(false)
-  lastSyncedAt      DateTime @default(now())
+  id                 String   @id @default(cuid())
+  taskId             String   @unique
+  provider           String
+  calendarId         String
+  eventId            String
+  startDateTime      DateTime
+  endDateTime        DateTime
+  overflowedDeadline Boolean  @default(false)
+  lastSyncedAt       DateTime @default(now())
+  task               Task     @relation(fields: [taskId], references: [id])
 }
 
 model Category {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-
   name      String
-  color     String   // hex color code, e.g., "#3B82F6"
+  color     String
   isDefault Boolean  @default(false)
   order     Int      @default(0)
-
-  tasks     Task[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  tasks     Task[]
 
   @@unique([userId, name])
   @@index([userId])
 }
 
 model Habit {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-
-  title       String
-  description String?
-
-  // Frequency settings
-  frequency   String   // "daily" | "weekly" | "custom"
-  daysOfWeek  String[] // ["mon", "tue", "wed"] for weekly habits
-
-  // Time preferences
-  preferredTimeOfDay String?  // "morning" | "afternoon" | "evening" | null
-  durationMinutes    Int      @default(30)
-
-  // Status
-  isActive    Boolean  @default(true)
-
-  scheduledHabits ScheduledHabit[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String           @id @default(cuid())
+  userId             String
+  title              String
+  description        String?
+  frequency          String
+  daysOfWeek         String[]
+  preferredTimeOfDay String?
+  durationMinutes    Int              @default(30)
+  isActive           Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  user               User             @relation(fields: [userId], references: [id])
+  scheduledHabits    ScheduledHabit[]
 
   @@index([userId])
 }
 
 model ScheduledHabit {
-  id              String   @id @default(cuid())
-  habitId         String
-  habit           Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
-
-  // Calendar integration
-  provider        String   // "google" | "apple"
-  calendarId      String
-  eventId         String
-
-  // Scheduled time
-  startDateTime   DateTime
-  endDateTime     DateTime
-
-  // Metadata
-  status          String   @default("scheduled") // "scheduled" | "completed" | "skipped"
-  lastSyncedAt    DateTime @default(now())
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id            String   @id @default(cuid())
+  habitId       String
+  userId        String
+  provider      String
+  calendarId    String
+  eventId       String
+  startDateTime DateTime
+  endDateTime   DateTime
+  status        String   @default("scheduled")
+  lastSyncedAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id])
 
   @@index([habitId])
   @@index([userId])
 }
 
 model AppliedSchedule {
-  id             String   @id @default(cuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id])
-  requestHash    String
-  blocks         Json
-  tasksScheduled Int
+  id              String   @id @default(cuid())
+  userId          String
+  requestHash     String
+  blocks          Json
+  tasksScheduled  Int
   habitsScheduled Int
-  createdAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, requestHash])
   @@index([userId])
 }
 
 model Conversation {
-  id        String   @id @default(cuid())
+  id        String                @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
-
-  title     String?  // Optional user-provided title (e.g., "Monday Planning")
-  isPinned  Boolean  @default(false)
-
+  title     String?
+  isPinned  Boolean               @default(false)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  user      User                  @relation(fields: [userId], references: [id])
   messages  ConversationMessage[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([userId, updatedAt])
@@ -181,13 +148,11 @@ model Conversation {
 model ConversationMessage {
   id             String       @id @default(cuid())
   conversationId String
+  role           String
+  content        String
+  metadata       Json?
+  createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  role      String   // "user" | "assistant"
-  content   String   @db.Text
-  metadata  Json?    // Store mascotState, schedulePreview, etc.
-
-  createdAt DateTime @default(now())
 
   @@index([conversationId])
 }
@@ -195,18 +160,31 @@ model ConversationMessage {
 model EmailCategoryConfig {
   id          String   @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
-
-  categoryId  String   // matches EmailCategory union (e.g., "work", "personal")
+  categoryId  String
   color       String?
   enabled     Boolean  @default(true)
   name        String?
   description String?
   emoji       String?
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, categoryId])
+  @@index([userId])
+}
+
+model AssistantMetric {
+  id             String   @id
+  userId         String
+  type           String
+  mode           String?
+  conversationId String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  User           User     @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([type])
   @@index([userId])
 }

@@ -126,7 +126,7 @@ export async function addMessagesToConversation(
       conversationId,
       role: msg.role,
       content: msg.content,
-      metadata: msg.metadata || null,
+      metadata: (msg.metadata as any) || null,
     })),
   });
 

@@ -71,19 +71,19 @@ interface ApplyScheduleBody {
 
 const applyScheduleSchema = z.object({
   blocks: z.array(
-    z
-      .object({
-        taskId: z.string().optional(),
-        habitId: z.string().optional(),
+    z.union([
+      z.object({
+        taskId: z.string(),
+        start: z.string(),
+        end: z.string(),
+      }),
+      z.object({
+        habitId: z.string(),
+        start: z.string(),
+        end: z.string(),
         title: z.string().optional(),
-        start: z.string().datetime(),
-        end: z.string().datetime(),
-      })
-      .refine(
-        (block) =>
-          (block.taskId && !block.habitId) || (!block.taskId && block.habitId),
-        { message: 'Each block must include either taskId or habitId' }
-      )
+      }),
+    ])
   ),
 });
 
@@ -108,7 +108,7 @@ export async function applySchedule(
   const { blocks } = parsed.data;
 
   try {
-    const result = await scheduleService.applyScheduleBlocks(user.id, blocks);
+    const result = await scheduleService.applyScheduleBlocks(user.id, blocks as any);
     return result;
   } catch (error) {
     request.log.error(error, 'Apply schedule failed');

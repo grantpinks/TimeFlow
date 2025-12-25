@@ -1,5 +1,9 @@
 # Sprint 14 Plan: Calendar Dashboard Overhaul (Color-Coded, Actionable)
 
+## Reference Layout (Design Template)
+
+![Calendar dashboard reference layout](./assets/calendar-dashboard-reference.jpg)
+
 **Project**: TimeFlow  
 **Duration**: 2 weeks  
 **Status**: Planned (documentation-only)  

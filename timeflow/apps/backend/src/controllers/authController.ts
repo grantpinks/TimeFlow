@@ -99,9 +99,9 @@ export async function refreshToken(
   }
 
   try {
-    const payload = await request.jwtVerify<{ sub: string; type?: string }>({
-      token: parsed.data.refreshToken,
-    });
+    const payload = request.server.jwt.verify<{ sub: string; type?: string }>(
+      parsed.data.refreshToken
+    );
 
     if (payload.type !== 'refresh') {
       return reply.status(401).send({ error: 'Invalid refresh token' });

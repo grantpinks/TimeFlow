@@ -102,7 +102,7 @@ export async function sendEmail(
   }
 
   try {
-    const result = await gmailService.sendEmail(user.id, parsed.data);
+    const result = await gmailService.sendEmail(user.id, parsed.data as any);
     return reply.send(result);
   } catch (error) {
     if (error instanceof GmailRateLimitError) {

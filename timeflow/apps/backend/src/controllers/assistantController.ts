@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import * as assistantService from '../services/assistantService.js';
-import type { AssistantChatRequest } from '@timeflow/shared';
+import type { AssistantChatRequest, ChatMessage } from '@timeflow/shared';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 
@@ -17,10 +17,10 @@ const chatSchema = z.object({
   conversationHistory: z
     .array(
       z.object({
-        id: z.string().optional(),
+        id: z.string(),
         role: z.enum(['user', 'assistant']),
         content: z.string(),
-        timestamp: z.string().datetime().optional(),
+        timestamp: z.string(),
         metadata: z.record(z.any()).optional(),
       })
     )
@@ -47,7 +47,7 @@ export async function chat(
     const response = await assistantService.processMessage(
       user.id,
       message,
-      conversationHistory,
+      conversationHistory as ChatMessage[] | undefined,
       conversationId
     );
 

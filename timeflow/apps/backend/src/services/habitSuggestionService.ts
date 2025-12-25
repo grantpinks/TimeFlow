@@ -11,6 +11,7 @@ import {
   type HabitSuggestionBlock,
   type UserPreferences,
 } from '@timeflow/scheduling';
+import type { DailyScheduleConfig } from '@timeflow/shared';
 import { prisma } from '../config/prisma.js';
 import * as calendarService from './googleCalendarService.js';
 
@@ -86,7 +87,7 @@ export async function getHabitSuggestionsForUser(
     timeZone: user.timeZone || 'UTC',
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
-    dailySchedule: user.dailyScheduleConstraints || user.dailySchedule || null,
+    dailySchedule: (user.dailyScheduleConstraints as DailyScheduleConfig | null) || (user.dailySchedule as DailyScheduleConfig | null) || null,
   };
 
   const suggestions = suggestHabitBlocks(habitInputs, schedulerEvents, preferences, dateRangeStart, dateRangeEnd);
@@ -135,7 +136,7 @@ export async function acceptSuggestion(
 
   // Create Google Calendar event
   const calendarId = user.defaultCalendarId || 'primary';
-  const event = await calendarService.createEvent(userId, calendarId, {
+  const eventId = await calendarService.createEvent(userId, calendarId, {
     summary: `[Habit] ${habit.title}`,
     description: habit.description || undefined,
     start,
@@ -149,7 +150,7 @@ export async function acceptSuggestion(
       userId,
       provider: 'google',
       calendarId,
-      eventId: event.id,
+      eventId,
       startDateTime: new Date(start),
       endDateTime: new Date(end),
       status: 'scheduled',

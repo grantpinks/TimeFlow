@@ -10,6 +10,7 @@ export interface ChatMessage {
   metadata?: {
     schedulePreview?: SchedulePreview;
     action?: AssistantAction;
+    mascotState?: string;
   };
 }
 

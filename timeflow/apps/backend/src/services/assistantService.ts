@@ -4,6 +4,7 @@ import type {
   ChatMessage,
   AssistantChatResponse,
   SchedulePreview,
+  DailyScheduleConfig,
 } from '@timeflow/shared';
 import { env } from '../config/env.js';
 import { getPromptManager } from './promptManager.js';
@@ -504,8 +505,8 @@ export async function processMessage(
       wakeTime: user.wakeTime,
       sleepTime: user.sleepTime,
       timeZone: user.timeZone,
-      dailySchedule: user.dailySchedule,
-      dailyScheduleConstraints: user.dailyScheduleConstraints,
+      dailySchedule: user.dailySchedule as DailyScheduleConfig | null,
+      dailyScheduleConstraints: user.dailyScheduleConstraints as DailyScheduleConfig | null,
     };
 
     if (mode === 'availability') {
@@ -714,7 +715,7 @@ async function buildContextPrompt(
   const wakeLabel = formatUserTime(user.wakeTime);
   const sleepLabel = formatUserTime(user.sleepTime);
   const dailyScheduleLines = formatDailyScheduleConstraints(
-    user.dailyScheduleConstraints || user.dailySchedule,
+    (user.dailyScheduleConstraints as any) || (user.dailySchedule as any),
     user.wakeTime,
     user.sleepTime
   );

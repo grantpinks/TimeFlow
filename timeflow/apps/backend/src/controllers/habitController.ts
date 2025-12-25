@@ -71,7 +71,7 @@ export async function createHabit(
 
   const habit = await habitService.createHabit({
     userId: user.id,
-    ...parsed.data,
+    ...(parsed.data as any),
   });
 
   return reply.status(201).send(habit);

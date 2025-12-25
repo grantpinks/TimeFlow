@@ -13,7 +13,7 @@ import {
   UserPreferences,
   ScheduledBlock,
 } from '@timeflow/scheduling';
-import type { ApplyScheduleBlock, ApplyScheduleResponse, SchedulePreview } from '@timeflow/shared';
+import type { ApplyScheduleBlock, ApplyScheduleResponse, SchedulePreview, DailyScheduleConfig } from '@timeflow/shared';
 import { prisma } from '../config/prisma.js';
 import * as calendarService from './googleCalendarService.js';
 import { separateFixedAndMovable } from '../utils/eventClassifier.js';
@@ -82,7 +82,7 @@ export async function scheduleTasksForUser(
     timeZone: user.timeZone || 'UTC',
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
-    dailySchedule: user.dailyScheduleConstraints || user.dailySchedule || null,
+    dailySchedule: (user.dailyScheduleConstraints as DailyScheduleConfig | null) || (user.dailySchedule as DailyScheduleConfig | null) || null,
   };
 
   // 5. Run scheduling algorithm
@@ -331,7 +331,7 @@ export async function applyScheduleBlocks(
     wakeTime: user.wakeTime || '08:00',
     sleepTime: user.sleepTime || '23:00',
     timeZone: user.timeZone || 'UTC',
-    dailySchedule: user.dailyScheduleConstraints || user.dailySchedule || null,
+    dailySchedule: (user.dailyScheduleConstraints as DailyScheduleConfig | null) || (user.dailySchedule as DailyScheduleConfig | null) || null,
   };
 
   if (taskBlocks.length > 0) {

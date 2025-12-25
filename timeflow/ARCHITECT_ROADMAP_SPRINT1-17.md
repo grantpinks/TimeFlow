@@ -641,6 +641,8 @@
 **Duration**: Week 27-28  
 **Focus**: Redesign `/calendar` into a high-utility planning surface (based on the provided UI reference): upcoming events, unscheduled tasks, and a color-coded calendar—without breaking existing behavior.
 
+**Design Reference**: See `docs/SPRINT_14_CALENDAR_DASHBOARD_PLAN.md` (includes embedded reference layout image).
+
 #### Goals
 - [ ] Calendar page becomes a dashboard: **Upcoming Events**, **Unscheduled Tasks**, and the main **Calendar** view in one cohesive layout.
 - [ ] Strong color coding: tasks use category colors; external events are visually distinct and readable.

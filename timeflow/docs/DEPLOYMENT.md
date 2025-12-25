@@ -1,5 +1,7 @@
 # TimeFlow Deployment Guide
 
+> **⚠️ For production deployment to public cloud (Render + Vercel + Supabase), see the comprehensive guide**: [`PRODUCTION_DEPLOYMENT_GUIDE.md`](./PRODUCTION_DEPLOYMENT_GUIDE.md)
+
 **Version**: 1.0
 **Last Updated**: 2025-12-04
 
@@ -7,7 +9,7 @@
 
 ## Overview
 
-This guide walks through deploying TimeFlow to production.
+This guide covers local development deployment and Docker setup.
 
 ---
 

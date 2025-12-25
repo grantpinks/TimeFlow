@@ -61,7 +61,7 @@ export async function createCategory(
   }
 
   try {
-    const category = await categoryService.createCategory(userId, result.data);
+    const category = await categoryService.createCategory(userId, result.data as { name: string; color: string; order?: number });
     return reply.code(201).send(category);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Unique constraint')) {

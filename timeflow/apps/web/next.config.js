@@ -2,10 +2,12 @@
 const nextConfig = {
   transpilePackages: ['@timeflow/shared', '@timeflow/scheduling'],
   async rewrites() {
+    // Use production API URL if set, otherwise default to local development
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*',
+        destination: `${apiUrl}/api/:path*`,
       },
     ];
   },

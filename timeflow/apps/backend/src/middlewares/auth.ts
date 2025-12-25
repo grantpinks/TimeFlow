@@ -28,7 +28,7 @@ export async function requireAuth(
     }
 
     const token = authHeader.slice(7);
-    const payload = await request.jwtVerify<{ sub: string; type?: string }>(token);
+    const payload = request.server.jwt.verify<{ sub: string; type?: string }>(token);
 
     if (payload.type && payload.type !== 'access') {
       return reply.status(401).send({ error: 'Unauthorized: Invalid token type' });
