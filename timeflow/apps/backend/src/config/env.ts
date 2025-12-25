@@ -28,8 +28,13 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  // For scaffolding we throw early; in production this could be logged more gracefully.
-  console.error('❌ Invalid environment configuration:', parsed.error.flatten().fieldErrors);
+  console.error('❌ Invalid environment configuration:');
+  console.error(JSON.stringify(parsed.error.flatten().fieldErrors, null, 2));
+  console.error('\n📋 Current environment variables:');
+  console.error('  DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
+  console.error('  SESSION_SECRET:', process.env.SESSION_SECRET ? '✓ Set' : '✗ Missing');
+  console.error('  ENCRYPTION_KEY:', process.env.ENCRYPTION_KEY ? `✓ Set (${process.env.ENCRYPTION_KEY.length} chars)` : '✗ Missing');
+  console.error('  PORT:', process.env.PORT || '(using default 4000)');
   throw new Error('Invalid environment configuration');
 }
 
