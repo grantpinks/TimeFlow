@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -9,9 +11,15 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "strictFunctionTypes": false,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
+    "paths": {
+      "@timeflow/shared": ["../../packages/shared/src"],
+      "@timeflow/shared/*": ["../../packages/shared/src/*"],
+      "@timeflow/scheduling": ["../../packages/scheduling/src"],
+      "@timeflow/scheduling/*": ["../../packages/scheduling/src/*"]
+    }
   },
-  "include": ["src", "prisma", "../../packages/*/src"]
+  "include": ["src"]
 }
 
 
