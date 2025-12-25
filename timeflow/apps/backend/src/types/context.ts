@@ -14,11 +14,11 @@ export interface AuthenticatedUser {
 }
 
 /**
- * Extend Fastify's request interface to include authenticated user.
+ * Extend Fastify JWT to properly type the user object.
  */
-declare module 'fastify' {
-  interface FastifyRequest {
-    user?: AuthenticatedUser;
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    user: AuthenticatedUser;
   }
 }
 
