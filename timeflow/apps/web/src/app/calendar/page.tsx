@@ -257,7 +257,7 @@ export default function CalendarPage() {
     training?: { useForTraining?: boolean; example?: api.CategoryTrainingExampleSnapshot }
   ) => {
     try {
-      await api.updateEventCategorization(eventId, categoryId, 'google', training);
+      await api.updateEventCategorization(eventId, categoryId, 'google', training as any);
 
       // Clear cache and refresh categorizations to get updated data
       clearCategorizationCache();
