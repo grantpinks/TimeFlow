@@ -11,6 +11,7 @@
     "start": "bash start.sh",
     "start:direct": "node dist/index.js",
     "lint": "eslint src --ext .ts",
+    "pretest": "pnpm -C ../../packages/scheduling build",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "prisma:generate": "prisma generate",
