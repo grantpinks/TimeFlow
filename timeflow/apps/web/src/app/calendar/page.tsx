@@ -527,26 +527,6 @@ export default function CalendarPage() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-            {/* Category Legend */}
-            <div className="flex items-center gap-3 text-xs">
-              {categories.slice(0, 4).map((cat) => (
-                <div key={cat.id} className="flex items-center gap-1.5">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: cat.color }}
-                  ></span>
-                  <span className="text-slate-600 font-medium">{cat.name}</span>
-                </div>
-              ))}
-              {categories.length > 4 && (
-                <span className="text-slate-400">+{categories.length - 4}</span>
-              )}
-              <div className="w-px h-4 bg-slate-300 mx-1"></div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded bg-slate-500"></span>
-                <span className="text-slate-600 font-medium">Events</span>
-              </div>
-            </div>
             <a
               href="/categories"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs font-medium text-slate-700 hover:border-primary-200 hover:text-primary-700"
@@ -653,6 +633,27 @@ export default function CalendarPage() {
                 )}
               </button>
             </div>
+            </div>
+
+            {/* Category Legend */}
+            <div className="flex items-center gap-3 text-xs px-6 pb-4">
+              {categories.slice(0, 4).map((cat) => (
+                <div key={cat.id} className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: cat.color }}
+                  ></span>
+                  <span className="text-slate-600 font-medium">{cat.name}</span>
+                </div>
+              ))}
+              {categories.length > 4 && (
+                <span className="text-slate-400">+{categories.length - 4}</span>
+              )}
+              <div className="w-px h-4 bg-slate-300 mx-1"></div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded bg-slate-500"></span>
+                <span className="text-slate-600 font-medium">Events</span>
+              </div>
             </div>
           </div>
         </div>
