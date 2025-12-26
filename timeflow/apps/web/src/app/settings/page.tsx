@@ -351,6 +351,29 @@ export default function SettingsPage() {
             )}
           </div>
 
+          {/* Categories */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800 mb-1">
+                  Categories
+                </h2>
+                <p className="text-slate-600 text-sm">
+                  Create custom categories and train AI to auto-sort new events.
+                </p>
+              </div>
+              <a
+                href="/categories"
+                className="inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100"
+              >
+                Manage Categories
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
           {/* Save button */}
           <div className="flex justify-end">
             <button

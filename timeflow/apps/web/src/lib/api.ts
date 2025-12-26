@@ -626,6 +626,25 @@ export async function addMessagesToConversation(
 // Event Categorization
 // ========================================
 
+export interface CategoryTrainingExampleSnapshot {
+  eventId: string;
+  summary: string;
+  description?: string;
+  start: string;
+  end: string;
+  attendeeDomains?: string[];
+  calendarId?: string;
+  provider?: string;
+}
+
+export interface UpdateCategoryTrainingRequest {
+  description?: string;
+  includeKeywords: string[];
+  excludeKeywords?: string[];
+  exampleEventIds?: string[];
+  exampleEventsSnapshot?: CategoryTrainingExampleSnapshot[];
+}
+
 export interface EventCategorization {
   categoryId: string;
   categoryName: string;
@@ -644,6 +663,20 @@ export async function getEventCategorizations(
   return request<Record<string, EventCategorization>>('/events/categorizations', {
     method: 'POST',
     body: JSON.stringify({ eventIds, provider }),
+  });
+}
+
+export async function getCategoryTraining(categoryId: string) {
+  return request(`/categories/${categoryId}/training`);
+}
+
+export async function upsertCategoryTraining(
+  categoryId: string,
+  data: UpdateCategoryTrainingRequest
+) {
+  return request(`/categories/${categoryId}/training`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
   });
 }
 
@@ -670,11 +703,16 @@ export async function categorizeAllEvents(): Promise<{
 export async function updateEventCategorization(
   eventId: string,
   categoryId: string,
-  provider: string = 'google'
+  provider: string = 'google',
+  training?: { useForTraining: boolean; example?: CategoryTrainingExampleSnapshot }
 ): Promise<void> {
   return request<void>(`/events/${eventId}/categorization?provider=${provider}`, {
     method: 'PUT',
-    body: JSON.stringify({ categoryId }),
+    body: JSON.stringify({
+      categoryId,
+      train: training?.useForTraining,
+      example: training?.example,
+    }),
   });
 }
 

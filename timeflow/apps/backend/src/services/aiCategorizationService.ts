@@ -13,10 +13,61 @@ interface Category {
   color: string;
 }
 
+interface CategoryTrainingContext {
+  categoryId: string;
+  name: string;
+  includeKeywords: string[];
+  excludeKeywords: string[];
+  description?: string;
+  examples?: { summary: string; description?: string }[];
+}
+
 interface CategorizationResult {
   categoryId: string;
   confidence: number;
   reasoning: string;
+}
+
+export function scoreEventForCategory(
+  event: CalendarEvent,
+  category: CategoryTrainingContext
+) {
+  const text = `${event.summary} ${event.description || ''}`.toLowerCase();
+  const includeHits = category.includeKeywords.filter((word) =>
+    text.includes(word)
+  ).length;
+  const excludeHits = category.excludeKeywords.filter((word) =>
+    text.includes(word)
+  ).length;
+  const nameHit = text.includes(category.name.toLowerCase()) ? 1 : 0;
+
+  if (excludeHits > 0) return -999;
+  return includeHits + nameHit;
+}
+
+export function chooseCategoryByRules(
+  event: CalendarEvent,
+  categories: CategoryTrainingContext[]
+) {
+  const scored = categories
+    .map((category) => ({
+      categoryId: category.categoryId,
+      score: scoreEventForCategory(event, category),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) return null;
+  const top = scored[0];
+  const runnerUp = scored[1];
+
+  if (top.score >= 2 && (!runnerUp || top.score - runnerUp.score >= 1)) {
+    return {
+      categoryId: top.categoryId,
+      confidence: Math.min(0.85, 0.6 + top.score * 0.1),
+    };
+  }
+  return null;
 }
 
 /**
@@ -24,11 +75,36 @@ interface CategorizationResult {
  */
 export async function categorizeEventWithAI(
   event: CalendarEvent,
-  userCategories: Category[]
+  userCategories: Category[],
+  trainingContexts: Record<string, CategoryTrainingContext>
 ): Promise<CategorizationResult> {
   // Build category options string
   const categoryOptions = userCategories
-    .map((cat) => `- ${cat.name} (ID: ${cat.id})`)
+    .map((cat) => {
+      const training = trainingContexts[cat.id];
+      const include = training?.includeKeywords?.length
+        ? training.includeKeywords.join(', ')
+        : 'None';
+      const exclude = training?.excludeKeywords?.length
+        ? training.excludeKeywords.join(', ')
+        : 'None';
+      const description = training?.description || 'No description';
+      const examples = training?.examples?.length
+        ? training.examples
+            .map(
+              (example) =>
+                `- ${example.summary}: ${example.description || 'No description'}`
+            )
+            .join('\n')
+        : 'None';
+
+      return `- ${cat.name} (ID: ${cat.id})
+  Description: ${description}
+  Include: ${include}
+  Exclude: ${exclude}
+  Examples:
+${examples}`;
+    })
     .join('\n');
 
   // Extract attendee domains
@@ -149,13 +225,40 @@ Respond in JSON format ONLY:
  */
 export async function batchCategorizeEvents(
   events: CalendarEvent[],
-  userCategories: Category[]
+  userCategories: Category[],
+  trainingContexts: Record<string, CategoryTrainingContext>
 ): Promise<Map<string, CategorizationResult>> {
   const results = new Map<string, CategorizationResult>();
+  const categoryContexts: CategoryTrainingContext[] = userCategories.map(
+    (category) => ({
+      categoryId: category.id,
+      name: category.name,
+      includeKeywords: trainingContexts[category.id]?.includeKeywords || [
+        category.name.toLowerCase(),
+      ],
+      excludeKeywords: trainingContexts[category.id]?.excludeKeywords || [],
+      description: trainingContexts[category.id]?.description,
+      examples: trainingContexts[category.id]?.examples,
+    })
+  );
 
   for (const event of events) {
     try {
-      const result = await categorizeEventWithAI(event, userCategories);
+      const ruleResult = chooseCategoryByRules(event, categoryContexts);
+      if (ruleResult) {
+        results.set(event.id, {
+          categoryId: ruleResult.categoryId,
+          confidence: ruleResult.confidence,
+          reasoning: 'Keyword match',
+        });
+        continue;
+      }
+
+      const result = await categorizeEventWithAI(
+        event,
+        userCategories,
+        trainingContexts
+      );
       results.set(event.id, result);
 
       // Small delay to avoid rate limits
@@ -176,16 +279,42 @@ export async function batchCategorizeEvents(
 export async function batchCategorizeEventsWithProgress(
   events: CalendarEvent[],
   userCategories: Category[],
+  trainingContexts: Record<string, CategoryTrainingContext>,
   onProgress?: (completed: number, total: number) => void
 ): Promise<Map<string, CategorizationResult>> {
   const results = new Map<string, CategorizationResult>();
+  const categoryContexts: CategoryTrainingContext[] = userCategories.map(
+    (category) => ({
+      categoryId: category.id,
+      name: category.name,
+      includeKeywords: trainingContexts[category.id]?.includeKeywords || [
+        category.name.toLowerCase(),
+      ],
+      excludeKeywords: trainingContexts[category.id]?.excludeKeywords || [],
+      description: trainingContexts[category.id]?.description,
+      examples: trainingContexts[category.id]?.examples,
+    })
+  );
   const total = events.length;
   let completed = 0;
 
   for (const event of events) {
     try {
-      const result = await categorizeEventWithAI(event, userCategories);
-      results.set(event.id, result);
+      const ruleResult = chooseCategoryByRules(event, categoryContexts);
+      if (ruleResult) {
+        results.set(event.id, {
+          categoryId: ruleResult.categoryId,
+          confidence: ruleResult.confidence,
+          reasoning: 'Keyword match',
+        });
+      } else {
+        const result = await categorizeEventWithAI(
+          event,
+          userCategories,
+          trainingContexts
+        );
+        results.set(event.id, result);
+      }
 
       completed++;
       onProgress?.(completed, total);

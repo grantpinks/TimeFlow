@@ -6,7 +6,7 @@ import { DndContext, DragOverlay, useDroppable, useDraggable, useSensors, useSen
 import { DateTime } from 'luxon';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import type { Task, CalendarEvent } from '@timeflow/shared';
+import type { Task, CalendarEvent, CategoryTrainingExampleSnapshot } from '@timeflow/shared';
 import { EventDetailPopover } from './EventDetailPopover';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -41,7 +41,11 @@ interface CalendarViewProps {
   onEditTask?: (taskId: string) => void;
   onUnscheduleTask?: (taskId: string) => Promise<void>;
   onDeleteTask?: (taskId: string) => Promise<void>;
-  onCategoryChange?: (eventId: string, categoryId: string) => Promise<void>;
+  onCategoryChange?: (
+    eventId: string,
+    categoryId: string,
+    training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot }
+  ) => Promise<void>;
 }
 
 export interface CalendarEventItem {

@@ -26,6 +26,7 @@ model User {
   appliedSchedules           AppliedSchedule[]
   AssistantMetric            AssistantMetric[]
   categories                 Category[]
+  categoryTrainingProfiles   CategoryTrainingProfile[]
   conversations              Conversation[]
   emailCategoryConfigs       EmailCategoryConfig[]
   eventCategorizations       EventCategorization[]
@@ -76,8 +77,26 @@ model Category {
   user                 User                  @relation(fields: [userId], references: [id])
   tasks                Task[]
   eventCategorizations EventCategorization[]
+  trainingProfile      CategoryTrainingProfile?
 
   @@unique([userId, name])
+  @@index([userId])
+}
+
+model CategoryTrainingProfile {
+  id                    String   @id @default(cuid())
+  userId                String
+  categoryId            String   @unique
+  description           String?
+  includeKeywords       String[]
+  excludeKeywords       String[]
+  exampleEventIds       String[]
+  exampleEventsSnapshot Json?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category              Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 

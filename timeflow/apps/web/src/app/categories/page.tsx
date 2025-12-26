@@ -10,6 +10,7 @@ import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useCategories } from '@/hooks/useCategories';
 import ColorPicker from '@/components/ColorPicker';
+import { CategoryTrainingPanel } from '@/components/CategoryTrainingPanel';
 import type { Category } from '@timeflow/shared';
 
 export default function CategoriesPage() {
@@ -23,6 +24,11 @@ export default function CategoriesPage() {
   const [newColor, setNewColor] = useState('#3B82F6');
   const [addError, setAddError] = useState('');
   const [editError, setEditError] = useState('');
+  const [trainingCategoryId, setTrainingCategoryId] = useState<string | null>(null);
+
+  const activeTrainingCategory = trainingCategoryId
+    ? categories.find((category) => category.id === trainingCategoryId)
+    : null;
 
   const handleEdit = (category: Category) => {
     setEditing(category.id);
@@ -160,6 +166,12 @@ export default function CategoriesPage() {
                     >
                       Edit
                     </button>
+                    <button
+                      onClick={() => setTrainingCategoryId(category.id)}
+                      className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                    >
+                      Train
+                    </button>
                     {!category.isDefault && (
                       <button
                         onClick={() => handleDelete(category.id)}
@@ -211,6 +223,16 @@ export default function CategoriesPage() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTrainingCategory && (
+          <div className="mt-6">
+            <CategoryTrainingPanel
+              categoryId={activeTrainingCategory.id}
+              categoryName={activeTrainingCategory.name}
+              onClose={() => setTrainingCategoryId(null)}
+            />
           </div>
         )}
 
