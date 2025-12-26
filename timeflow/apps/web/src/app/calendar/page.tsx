@@ -13,7 +13,7 @@ import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { PlanMeetingsPlaceholderPanel } from '@/components/PlanMeetingsPlaceholderPanel';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
-import type { CalendarEvent } from '@timeflow/shared';
+import type { CalendarEvent, Task } from '@timeflow/shared';
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
@@ -29,6 +29,10 @@ export default function CalendarPage() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [activeDragTask, setActiveDragTask] = useState<any | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
+
+  // Preview state for drag-and-drop scheduling
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
+  const [previewSlot, setPreviewSlot] = useState<{ start: Date; end: Date } | null>(null);
 
   // Fetch calendar events for the current month
   const fetchExternalEvents = async () => {
@@ -412,8 +416,8 @@ export default function CalendarPage() {
       return;
     }
 
-    // Check if dropping onto a calendar slot
     const slotData = over.data?.current;
+
     if (slotData?.slotStart) {
       const taskId = active.id.replace('task-', '');
       const task = activeDragTask || tasks.find((t) => t.id === taskId);
@@ -423,11 +427,9 @@ export default function CalendarPage() {
         const slotStart = slotData.slotStart;
         const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
 
-        try {
-          await handleRescheduleTask(taskId, slotStart, slotEnd);
-        } catch (error) {
-          console.error('Failed to reschedule task:', error);
-        }
+        // Set preview state instead of immediately scheduling
+        setPreviewTask(task);
+        setPreviewSlot({ start: slotStart, end: slotEnd });
       }
     }
 
