@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import type { Task } from '@timeflow/shared';
+import type { Task, CategoryTrainingExampleSnapshot } from '@timeflow/shared';
 
 interface Category {
   id: string;
@@ -39,7 +39,11 @@ interface EventDetailPopoverProps {
   onEdit?: (taskId: string) => void;
   onUnschedule?: (taskId: string) => void;
   onDelete?: (taskId: string) => void;
-  onCategoryChange?: (eventId: string, categoryId: string) => Promise<void>;
+  onCategoryChange?: (
+    eventId: string,
+    categoryId: string,
+    training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot }
+  ) => Promise<void>;
 }
 
 export function EventDetailPopover({
@@ -57,6 +61,8 @@ export function EventDetailPopover({
   const popoverRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const [changingCategory, setChangingCategory] = useState(false);
+  const [useTraining, setUseTraining] = useState(false);
+  const [showTrainingInfo, setShowTrainingInfo] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -85,6 +91,13 @@ export function EventDetailPopover({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUseTraining(false);
+      setShowTrainingInfo(false);
+    }
+  }, [isOpen, event?.id]);
 
   if (!event) return null;
 
@@ -126,7 +139,7 @@ export function EventDetailPopover({
   // Intelligent positioning (avoid overflow)
   const getPopoverStyle = () => {
     const popoverWidth = 320;
-    const popoverHeight = 300;
+    const popoverHeight = 360;
     const padding = 16;
 
     let x = position.x;
@@ -156,9 +169,26 @@ export function EventDetailPopover({
   const handleCategoryChange = async (newCategoryId: string) => {
     if (!onCategoryChange || !event) return;
 
+    const shouldTrain = useTraining && !event.isTask && Boolean(newCategoryId);
+    const trainingPayload = shouldTrain
+      ? {
+          useForTraining: true,
+          example: {
+            eventId: event.id,
+            summary: event.title,
+            description: event.description,
+            start: event.start.toISOString(),
+            end: event.end.toISOString(),
+          },
+        }
+      : undefined;
+
     setChangingCategory(true);
     try {
-      await onCategoryChange(event.id, newCategoryId);
+      await onCategoryChange(event.id, newCategoryId, trainingPayload);
+      if (shouldTrain) {
+        setUseTraining(false);
+      }
     } catch (error) {
       console.error('Failed to change category:', error);
     } finally {
@@ -272,6 +302,31 @@ export function EventDetailPopover({
                     </option>
                   ))}
                 </select>
+                <div className="mt-2 flex items-start justify-between gap-2">
+                  <label className="flex items-start gap-2 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={useTraining}
+                      onChange={(e) => setUseTraining(e.target.checked)}
+                      className="mt-0.5"
+                    />
+                    <span>Use this change to train AI for similar events</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowTrainingInfo((prev) => !prev)}
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-500 hover:bg-slate-100"
+                    aria-label="What does training do?"
+                    aria-expanded={showTrainingInfo}
+                  >
+                    ?
+                  </button>
+                </div>
+                {showTrainingInfo && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    When enabled, we save this event as a training example so similar events auto-categorize.
+                  </p>
+                )}
                 {changingCategory && (
                   <p className="text-xs text-slate-500 mt-1">Updating category...</p>
                 )}

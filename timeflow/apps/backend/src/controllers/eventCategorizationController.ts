@@ -192,8 +192,21 @@ export async function categorizeAllEvents(
   }
 }
 
+const trainingExampleSchema = z.object({
+  eventId: z.string(),
+  summary: z.string(),
+  description: z.string().optional(),
+  start: z.string(),
+  end: z.string(),
+  attendeeDomains: z.array(z.string()).optional(),
+  calendarId: z.string().optional(),
+  provider: z.string().optional(),
+});
+
 const updateCategorizationSchema = z.object({
   categoryId: z.string(),
+  train: z.boolean().optional(),
+  example: trainingExampleSchema.optional(),
 });
 
 /**
@@ -203,7 +216,7 @@ const updateCategorizationSchema = z.object({
 export async function updateEventCategorization(
   request: FastifyRequest<{
     Params: { eventId: string };
-    Body: { categoryId: string };
+    Body: { categoryId: string; train?: boolean; example?: z.infer<typeof trainingExampleSchema> };
     Querystring: { provider?: string };
   }>,
   reply: FastifyReply
@@ -219,7 +232,7 @@ export async function updateEventCategorization(
   }
 
   const { eventId } = request.params;
-  const { categoryId } = parsed.data;
+  const { categoryId, train, example } = parsed.data;
   const provider = request.query.provider || 'google';
 
   try {
@@ -229,6 +242,14 @@ export async function updateEventCategorization(
       provider,
       categoryId
     );
+
+    if (train && example) {
+      try {
+        await categoryTrainingService.addTrainingExample(user.id, categoryId, example);
+      } catch (error) {
+        request.log.error(error, 'Failed to save training example');
+      }
+    }
 
     return updated;
   } catch (error) {
