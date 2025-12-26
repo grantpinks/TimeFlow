@@ -9,6 +9,7 @@ import { TaskCard } from '@/components/ui/TaskCard';
 import { Button, Input, Select, Textarea, Label, TemplateModal } from '@/components/ui';
 import { saveTaskTemplate } from '@/utils/taskTemplates';
 import type { TaskTemplate } from '@/utils/taskTemplates';
+import { CategoryTrainingModal } from '@/components/CategoryTrainingModal';
 
 interface TaskListProps {
   tasks: Task[];
@@ -49,7 +50,7 @@ export function TaskList({
   selectedTasks = new Set(),
   onToggleSelect,
 }: TaskListProps) {
-  const { categories } = useCategories();
+  const { categories, createCategory } = useCategories();
   const prefersReducedMotion = useReducedMotion();
   const { setNodeRef, isOver } = useDroppable({
     id: droppableId || 'default',
@@ -80,6 +81,8 @@ export function TaskList({
   } | null>(null);
   const [editingSubmitting, setEditingSubmitting] = useState(false);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
+  const [customCategoryTarget, setCustomCategoryTarget] = useState<'create' | 'edit' | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +198,16 @@ export function TaskList({
     alert('Template saved successfully!');
   };
 
+  const handleCustomCategoryComplete = (newCategoryId: string) => {
+    if (customCategoryTarget === 'create') {
+      setCategoryId(newCategoryId);
+    } else if (customCategoryTarget === 'edit') {
+      setEditingState((prev) => prev && { ...prev, categoryId: newCategoryId });
+    }
+    setShowCustomCategoryModal(false);
+    setCustomCategoryTarget(null);
+  };
+
   return (
     <div className="space-y-4">
       {/* Add task button/form */}
@@ -251,7 +264,15 @@ export function TaskList({
               <Label>Category</Label>
               <Select
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === '__custom__') {
+                    setCustomCategoryTarget('create');
+                    setShowCustomCategoryModal(true);
+                    return;
+                  }
+                  setCategoryId(value);
+                }}
               >
                 <option value="">No category</option>
                 {categories.map((cat) => (
@@ -259,7 +280,11 @@ export function TaskList({
                     {cat.name}
                   </option>
                 ))}
+                <option value="__custom__">Custom...</option>
               </Select>
+              <a href="/categories" className="text-xs text-primary-600 hover:text-primary-700 mt-1 inline-block">
+                Manage categories
+              </a>
             </div>
 
             <div>
@@ -451,9 +476,15 @@ export function TaskList({
                     <Label>Category</Label>
                     <Select
                       value={editingState.categoryId}
-                      onChange={(e) =>
-                        setEditingState((prev) => prev && { ...prev, categoryId: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '__custom__') {
+                          setCustomCategoryTarget('edit');
+                          setShowCustomCategoryModal(true);
+                          return;
+                        }
+                        setEditingState((prev) => prev && { ...prev, categoryId: value });
+                      }}
                     >
                       <option value="">No category</option>
                       {categories.map((cat) => (
@@ -461,7 +492,11 @@ export function TaskList({
                           {cat.name}
                         </option>
                       ))}
+                      <option value="__custom__">Custom...</option>
                     </Select>
+                    <a href="/categories" className="text-xs text-primary-600 hover:text-primary-700 mt-1 inline-block">
+                      Manage categories
+                    </a>
                   </div>
 
                   <div>
@@ -541,6 +576,16 @@ export function TaskList({
         onClose={() => setShowTemplateModal(false)}
         onSelectTemplate={handleSelectTemplate}
         categories={categories}
+      />
+
+      <CategoryTrainingModal
+        isOpen={showCustomCategoryModal}
+        onClose={() => {
+          setShowCustomCategoryModal(false);
+          setCustomCategoryTarget(null);
+        }}
+        onComplete={handleCustomCategoryComplete}
+        createCategory={createCategory}
       />
     </div>
   );
