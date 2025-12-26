@@ -652,15 +652,36 @@
 
 #### Tasks
 
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 14.1 | Refactor `/calendar` layout into a dashboard shell (left rail + main calendar) while preserving `CalendarView` behavior. | Codex | 6-8h | P0 |
-| 14.2 | Add **Upcoming Events** panel (from existing `externalEvents`): color-coded cards + quick “view details” affordance. | Codex | 4-6h | P0 |
-| 14.3 | Add **Unscheduled Tasks** panel (tasks where `status=unscheduled`) with quick actions and drag-to-schedule into the calendar grid. | Codex | 6-8h | P0 |
-| 14.4 | Improve calendar visuals: category-color tasks; better external event styling; keep legend; ensure contrast/consistency across themes. | Codex | 4-6h | P0 |
-| 14.5 | Add “Plan Meetings (Coming Soon)” placeholder panel matching the dashboard layout (ties into future meeting scheduling sprint). | Codex | 2-3h | P2 |
-| 14.6 | QA checklist + regression verification: reschedule, unschedule/delete, Smart Schedule, and event popovers still work. | Codex | 3-4h | P0 |
-| 14.G1 | Document the Calendar Dashboard design, component map, and “no regressions” QA checklist. | Gemini | 3-4h | P1 |
+**Dashboard Layout & Visual Refinement** (Completed 2025-12-26)
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 14.1 | DONE - Refactor `/calendar` layout into a dashboard shell (left rail + main calendar) while preserving `CalendarView` behavior. | Codex | 6-8h | P0 | ✅ |
+| 14.2 | DONE - Add **Upcoming Events** panel (from existing `externalEvents`): color-coded cards + quick "view details" affordance. | Codex | 4-6h | P0 | ✅ |
+| 14.3 | DONE - Add **Unscheduled Tasks** panel (tasks where `status=unscheduled`) with quick actions and drag-to-schedule into the calendar grid. | Codex | 6-8h | P0 | ✅ |
+| 14.4 | DONE - Improve calendar visuals: category-color tasks; better external event styling; keep legend; ensure contrast/consistency across themes. | Codex | 4-6h | P0 | ✅ |
+| 14.5 | DONE - Add "Plan Meetings (Coming Soon)" placeholder panel matching the dashboard layout (ties into future meeting scheduling sprint). | Codex | 2-3h | P2 | ✅ |
+| 14.6 | DONE - QA checklist + regression verification: reschedule, unschedule/delete, Smart Schedule, and event popovers still work. | Codex | 3-4h | P0 | ✅ |
+
+**AI Event Categorization** (Core Feature - In Progress)
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 14.7 | Create `EventCategorization` Prisma model and run migration to support AI categorization of external events. | Codex | 2-3h | P0 | 📋 |
+| 14.8 | Implement `eventCategorizationService.ts`: CRUD operations for event categorizations (get, create, update, bulk operations). | Codex | 4-5h | P0 | 📋 |
+| 14.9 | Create AI categorization logic using Claude API: analyze event title, description, attendees, timing to suggest category. | Claude | 4-6h | P0 | 📋 |
+| 14.10 | Add API endpoints for event categorization: categorize all, get categorization, update category (manual override). | Codex | 3-4h | P0 | 📋 |
+| 14.11 | Frontend: Fetch event categorizations and pass to CalendarView; update event color logic to use category colors for external events. | Codex | 3-4h | P0 | 📋 |
+| 14.12 | Add category selection UI to EventDetailPopover for manual override of AI categorization. | Codex | 2-3h | P0 | 📋 |
+| 14.13 | Implement initial bulk categorization flow: "Categorize Events" button with loading state and success messaging. | Codex | 2-3h | P1 | 📋 |
+| 14.14 | Background sync: Auto-categorize new external events as they're fetched from Google Calendar. | Codex | 2-3h | P1 | 📋 |
+
+**Documentation**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 14.G1 | DONE - Document the Calendar Dashboard design, component map, and "no regressions" QA checklist. | Gemini | 3-4h | P1 | ✅ |
+| 14.G2 | Document AI Event Categorization architecture, categorization logic, and user override workflow. | Gemini | 2-3h | P1 | 📋 |
 
 ---
 

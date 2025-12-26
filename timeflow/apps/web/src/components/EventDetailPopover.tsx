@@ -7,9 +7,15 @@
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import type { Task } from '@timeflow/shared';
+
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface EventDetailPopoverProps {
   isOpen: boolean;
@@ -24,13 +30,16 @@ interface EventDetailPopoverProps {
     task?: Task;
     categoryColor?: string;
     categoryName?: string;
+    categoryId?: string;
     overflowed?: boolean;
   } | null;
   position: { x: number; y: number };
+  categories?: Category[];
   onComplete?: (taskId: string) => void;
   onEdit?: (taskId: string) => void;
   onUnschedule?: (taskId: string) => void;
   onDelete?: (taskId: string) => void;
+  onCategoryChange?: (eventId: string, categoryId: string) => Promise<void>;
 }
 
 export function EventDetailPopover({
@@ -38,13 +47,16 @@ export function EventDetailPopover({
   onClose,
   event,
   position,
+  categories,
   onComplete,
   onEdit,
   onUnschedule,
   onDelete,
+  onCategoryChange,
 }: EventDetailPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
+  const [changingCategory, setChangingCategory] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -141,6 +153,19 @@ export function EventDetailPopover({
 
   const priority = event.task ? getPriorityLabel(event.task.priority) : null;
 
+  const handleCategoryChange = async (newCategoryId: string) => {
+    if (!onCategoryChange || !event) return;
+
+    setChangingCategory(true);
+    try {
+      await onCategoryChange(event.id, newCategoryId);
+    } catch (error) {
+      console.error('Failed to change category:', error);
+    } finally {
+      setChangingCategory(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -225,6 +250,31 @@ export function EventDetailPopover({
             {event.description && (
               <div className="pt-2 border-t border-slate-100">
                 <p className="text-xs text-slate-600 leading-relaxed">{event.description}</p>
+              </div>
+            )}
+
+            {/* Category Override (for external events) */}
+            {!event.isTask && categories && categories.length > 0 && onCategoryChange && (
+              <div className="pt-2 border-t border-slate-100">
+                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                  Category
+                </label>
+                <select
+                  value={event.categoryId || ''}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  disabled={changingCategory}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Uncategorized</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                {changingCategory && (
+                  <p className="text-xs text-slate-500 mt-1">Updating category...</p>
+                )}
               </div>
             )}
           </div>

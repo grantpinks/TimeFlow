@@ -400,6 +400,34 @@ body {
   padding: var(--spacing-4);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-border-light);
+  height: 100% !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.rbc-time-view {
+  flex: 1 1 0%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.rbc-time-header {
+  flex-shrink: 0;
+}
+
+.rbc-time-content {
+  flex: 1 1 0%;
+  overflow-y: scroll !important;
+  overflow-x: hidden;
+}
+
+.rbc-day-slot {
+  position: relative;
+}
+
+.rbc-time-slot {
+  min-height: 40px;
 }
 
 .rbc-header {

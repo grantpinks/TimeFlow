@@ -618,3 +618,76 @@ export async function addMessagesToConversation(
     body: JSON.stringify({ messages }),
   });
 }
+
+// ========================================
+// Event Categorization
+// ========================================
+
+export interface EventCategorization {
+  categoryId: string;
+  categoryName: string;
+  categoryColor: string;
+  confidence: number;
+  isManual: boolean;
+}
+
+/**
+ * Get categorizations for multiple events
+ */
+export async function getEventCategorizations(
+  eventIds: string[],
+  provider: string = 'google'
+): Promise<Record<string, EventCategorization>> {
+  return request<Record<string, EventCategorization>>('/events/categorizations', {
+    method: 'POST',
+    body: JSON.stringify({ eventIds, provider }),
+  });
+}
+
+/**
+ * Categorize all uncategorized events using AI
+ */
+export async function categorizeAllEvents(): Promise<{
+  categorized: number;
+  total: number;
+  message: string;
+}> {
+  return request<{
+    categorized: number;
+    total: number;
+    message: string;
+  }>('/events/categorize-all', {
+    method: 'POST',
+  });
+}
+
+/**
+ * Update event categorization (manual override)
+ */
+export async function updateEventCategorization(
+  eventId: string,
+  categoryId: string,
+  provider: string = 'google'
+): Promise<void> {
+  return request<void>(`/events/${eventId}/categorization?provider=${provider}`, {
+    method: 'PUT',
+    body: JSON.stringify({ categoryId }),
+  });
+}
+
+/**
+ * Get categorization statistics
+ */
+export async function getCategorizationStats(): Promise<{
+  total: number;
+  manual: number;
+  automatic: number;
+  lowConfidence: number;
+}> {
+  return request<{
+    total: number;
+    manual: number;
+    automatic: number;
+    lowConfidence: number;
+  }>('/events/categorization-stats');
+}

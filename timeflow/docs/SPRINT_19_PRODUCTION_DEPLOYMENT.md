@@ -49,6 +49,20 @@ OPENAI_MODEL=gpt-4o-mini
 
 **Note**: PORT is NOT set (intentionally removed to let Render auto-assign)
 
+**⚠️ CRITICAL DATABASE ISSUE (Discovered 2025-12-26)**:
+The DATABASE_URL above is **INCORRECT** for persistent server applications like Fastify. It uses:
+- **Transaction pooler** (port 6543) - only for serverless/short-lived connections
+- **Wrong username format** - Missing project reference prefix
+
+**Correct format for Render deployment:**
+```bash
+DATABASE_URL=postgresql://postgres.yjlzufkxlksqmqdszxrs:PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+```
+Key changes:
+- Use **Session pooler** port `5432` (not Transaction pooler port `6543`)
+- Username must include project ref: `postgres.PROJECT_REF` (not just `postgres`)
+- This is required for IPv4 networks and persistent connections
+
 ---
 
 ## Troubleshooting History
@@ -98,6 +112,32 @@ OPENAI_MODEL=gpt-4o-mini
   - Script logs: working dir, env vars, file existence, Node version
 - **Commit**: `fb21b0f` - "Add diagnostic startup script"
 - **Result**: TBD (deployment abandoned before completion)
+
+### Attempts Made (2025-12-26)
+
+#### 6. Database Connection Configuration ✅ IDENTIFIED (Not Yet Applied to Render)
+- **Issue**: Discovered incorrect DATABASE_URL configuration during local development OAuth testing
+- **Problem**: Using Transaction pooler (port 6543) instead of Session pooler (port 5432)
+- **Symptoms**:
+  - Prisma commands timeout indefinitely
+  - Runtime error: `Can't reach database server at db.yjlzufkxlksqmqdszxrs.supabase.co:5432`
+  - OAuth callback fails with `PrismaClientInitializationError`
+- **Root Cause**:
+  - Supabase has two pooler types: **Transaction** (port 6543) vs **Session** (port 5432)
+  - Transaction pooler is for serverless/short-lived connections (Lambda, Edge Functions)
+  - Session pooler is for persistent server applications (Fastify, Express)
+  - IPv4 networks (like Render) require Session pooler
+  - Username format must include project ref: `postgres.PROJECT_REF` not `postgres`
+- **Fix Applied Locally**:
+  ```bash
+  # Wrong (current Render config):
+  postgresql://postgres:PASSWORD@aws-1-us-east-1.pooler.supabase.com:6543/postgres
+
+  # Correct (verified working locally):
+  postgresql://postgres.yjlzufkxlksqmqdszxrs:PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+  ```
+- **Result**: ✅ Local OAuth flow now works, database queries successful
+- **Action Required**: Update DATABASE_URL in Render environment variables (pending Sprint 19)
 
 ---
 
@@ -149,24 +189,32 @@ await server.listen({ port: env.PORT, host: '0.0.0.0' });
 
 ## Hypotheses for Root Cause
 
-### 1. ESM Import Resolution Issue (Most Likely)
+### 1. ESM Import Resolution Issue (Most Likely for Startup Crash)
 - The bundled ESM format may have incompatibilities with Render's Node.js environment
 - Dynamic imports or module resolution might fail silently
 - **Test**: Try switching to CommonJS (`format: 'cjs'`) in esbuild config
 
-### 2. Missing System Dependencies
+### 2. Database Connection Misconfiguration ✅ CONFIRMED (Secondary Issue)
+- **Status**: Identified and documented, not yet applied to Render
+- Using Transaction pooler (port 6543) instead of Session pooler (port 5432)
+- Wrong username format (missing project reference prefix)
+- **Impact**: Even if startup succeeds, first database query will fail
+- **Fix**: Update DATABASE_URL to use Session pooler with correct username format
+- See "Attempts Made (2025-12-26) #6" for full details
+
+### 3. Missing System Dependencies
 - Render might be missing a native dependency required by bundled packages
 - **Test**: Check if googleapis or other packages need system libs
 
-### 3. Memory/Resource Limits
+### 4. Memory/Resource Limits
 - 26.9MB bundle might exceed Render free tier limits during initialization
 - **Test**: Try Render Starter ($7/mo) tier with more resources
 
-### 4. Prisma Client Issue
+### 5. Prisma Client Issue
 - Even though @prisma/client is externalized, the bundle might reference it incorrectly
 - **Test**: Verify Prisma client is generated and accessible at runtime
 
-### 5. Stdout/Stderr Buffering
+### 6. Stdout/Stderr Buffering
 - Logs might be buffered and not flushing before crash
 - **Test**: Add `--force-exit` or explicit stdout flushes
 
@@ -176,12 +224,20 @@ await server.listen({ port: env.PORT, host: '0.0.0.0' });
 
 ### Phase 1: Diagnostic Deep Dive (2-3 hours)
 
-1. **Enable Render Shell Access**
+1. **Fix Database Connection (Critical - Do This First!)**
+   - Update Render environment variable `DATABASE_URL` to:
+     ```
+     postgresql://postgres.yjlzufkxlksqmqdszxrs:PASSWORD@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+     ```
+   - Key changes: Session pooler (port 5432), proper username format
+   - This won't fix the startup crash, but prevents secondary database errors
+
+2. **Enable Render Shell Access**
    - Use Render Dashboard → Shell tab
    - Manually run: `cd /opt/render/project/src/timeflow/apps/backend && node dist/index.js`
    - Capture the ACTUAL error message that's being hidden
 
-2. **Test ESM → CJS Conversion**
+3. **Test ESM → CJS Conversion**
    ```javascript
    // esbuild.config.js
    format: 'cjs',  // Change from 'esm'
@@ -189,7 +245,7 @@ await server.listen({ port: env.PORT, host: '0.0.0.0' });
    - CommonJS has better compatibility
    - Might resolve module loading issues
 
-3. **Add Explicit Error Handlers**
+4. **Add Explicit Error Handlers**
    ```javascript
    process.on('uncaughtException', (err) => {
      console.error('UNCAUGHT EXCEPTION:', err);
@@ -267,6 +323,9 @@ Once deployment works:
 - [Render Web Services Port Binding](https://render.com/docs/web-services#port-binding)
 - [ESBuild Bundling Guide](https://esbuild.github.io/api/#bundle)
 - [Node.js ESM Modules](https://nodejs.org/api/esm.html)
+- [Supabase Connection Pooling](https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooler)
+  - Transaction pooler (port 6543) vs Session pooler (port 5432)
+  - IPv4 compatibility requirements
 
 ### Related Files
 - `apps/backend/esbuild.config.js` - Build configuration
@@ -279,5 +338,9 @@ Once deployment works:
 
 ---
 
-**Last Updated**: 2025-12-25
+**Last Updated**: 2025-12-26
 **Next Review**: Sprint 19 Planning
+
+**Recent Updates**:
+- 2025-12-26: Identified database connection misconfiguration (Transaction vs Session pooler)
+- 2025-12-25: Initial troubleshooting attempts, documented ESM bundling issues

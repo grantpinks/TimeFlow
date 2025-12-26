@@ -16,6 +16,7 @@ import { registerUserRoutes } from './routes/userRoutes.js';
 import { registerTaskRoutes } from './routes/tasksRoutes.js';
 import { registerCategoryRoutes } from './routes/categoryRoutes.js';
 import { registerCalendarRoutes } from './routes/calendarRoutes.js';
+import { registerEventCategorizationRoutes } from './routes/eventCategorizationRoutes.js';
 import { registerScheduleRoutes } from './routes/scheduleRoutes.js';
 import { registerAssistantRoutes } from './routes/assistantRoutes.js';
 import { registerHabitRoutes } from './routes/habitRoutes.js';
@@ -61,6 +62,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerTaskRoutes(api);
       await registerCategoryRoutes(api);
       await registerCalendarRoutes(api);
+      await registerEventCategorizationRoutes(api);
       await registerScheduleRoutes(api);
       await registerAssistantRoutes(api);
       await registerHabitRoutes(api);

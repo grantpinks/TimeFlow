@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { Calendar, luxonLocalizer, Views } from 'react-big-calendar';
 import { DndContext, DragOverlay, useDroppable, useDraggable, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { DateTime } from 'luxon';
@@ -12,9 +12,26 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 // Setup luxon localizer
 const localizer = luxonLocalizer(DateTime);
 
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface EventCategorization {
+  categoryId: string;
+  categoryName: string;
+  categoryColor: string;
+  confidence: number;
+  isManual: boolean;
+}
+
 interface CalendarViewProps {
   tasks: Task[];
   externalEvents: CalendarEvent[];
+  eventCategorizations?: Record<string, EventCategorization>;
+  categories?: Category[];
+  selectedDate?: Date;
   onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void;
   onSelectEvent?: (event: CalendarEventItem) => void;
   onRescheduleTask?: (taskId: string, start: Date, end: Date) => Promise<void>;
@@ -23,6 +40,7 @@ interface CalendarViewProps {
   onEditTask?: (taskId: string) => void;
   onUnscheduleTask?: (taskId: string) => Promise<void>;
   onDeleteTask?: (taskId: string) => Promise<void>;
+  onCategoryChange?: (eventId: string, categoryId: string) => Promise<void>;
 }
 
 export interface CalendarEventItem {
@@ -39,6 +57,9 @@ export interface CalendarEventItem {
 export function CalendarView({
   tasks,
   externalEvents,
+  eventCategorizations,
+  categories,
+  selectedDate,
   onSelectSlot,
   onSelectEvent,
   onRescheduleTask,
@@ -47,11 +68,18 @@ export function CalendarView({
   onEditTask,
   onUnscheduleTask,
   onDeleteTask,
+  onCategoryChange,
 }: CalendarViewProps) {
   const [view, setView] = useState<'week' | 'day' | 'month'>(Views.WEEK);
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(selectedDate || new Date());
+
+  // Update internal date when selectedDate prop changes
+  useEffect(() => {
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  }, [selectedDate]);
   const [isRescheduling, setIsRescheduling] = useState(false);
-  const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
   const [selectedEventForPopover, setSelectedEventForPopover] = useState<{
@@ -64,15 +92,11 @@ export function CalendarView({
     task?: Task;
     categoryColor?: string;
     categoryName?: string;
+    categoryId?: string;
     overflowed?: boolean;
   } | null>(null);
 
   const prefersReducedMotion = useReducedMotion();
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
-    })
-  );
 
   // Convert tasks and events to calendar format
   const events = useMemo(() => {
@@ -94,19 +118,22 @@ export function CalendarView({
       }
     }
 
-    // Add external events
+    // Add external events with categorization
     for (const event of externalEvents) {
+      const categorization = eventCategorizations?.[event.id];
+
       calendarEvents.push({
         id: `event-${event.id || Math.random().toString()}`,
         title: event.summary,
         start: new Date(event.start),
         end: new Date(event.end),
         isTask: false,
+        categoryColor: categorization?.categoryColor, // Use AI-assigned category color
       });
     }
 
     return calendarEvents;
-  }, [tasks, externalEvents]);
+  }, [tasks, externalEvents, eventCategorizations]);
 
   const eventStyleGetter = useCallback((event: CalendarEventItem) => {
     if (event.isTask) {
@@ -123,22 +150,26 @@ export function CalendarView({
         className: event.overflowed ? 'task-event overflowed' : 'task-event',
         style: {
           backgroundColor,
-          borderRadius: '6px',
+          borderRadius: '4px',
           border,
           color: 'white',
           fontWeight: '500',
         },
       };
     }
-    // External Google events: gray with better opacity
+
+    // External events: Use category color if available, otherwise gray
+    const backgroundColor = event.categoryColor || '#64748B'; // Use category color or fallback to gray
+
     return {
       className: 'external-event',
       style: {
-        backgroundColor: '#64748b',
-        borderRadius: '6px',
-        border: 'none',
+        backgroundColor,
+        borderRadius: '4px',
+        border: `1px solid ${event.categoryColor ? event.categoryColor : '#475569'}`,
         color: 'white',
-        opacity: 0.6,
+        fontWeight: '500',
+        opacity: event.categoryColor ? 0.95 : 0.75, // Higher opacity if categorized
       },
     };
   }, []);
@@ -151,44 +182,6 @@ export function CalendarView({
     setView(newView);
   }, []);
 
-  const handleDragStart = useCallback((active: { id: string; data?: { current?: { task: Task } } }) => {
-    const task = active.data?.current?.task || tasks.find((t) => t.id === active.id.replace('task-', ''));
-    if (task) {
-      setActiveDragTask(task);
-    }
-  }, [tasks]);
-
-  const handleDragEnd = useCallback(
-    async (event: { active: { id: string }; over: { data: { current?: { slotStart?: Date } } } | null }) => {
-      const slotData = event.over?.data.current;
-      if (!slotData?.slotStart) {
-        setActiveDragTask(null);
-        return;
-      }
-
-      const taskId = event.active.id.replace('task-', '');
-      if (!onRescheduleTask) {
-        setActiveDragTask(null);
-        return;
-      }
-
-      const durationMinutes = activeDragTask?.durationMinutes ?? 15;
-      const slotStart = slotData.slotStart;
-      const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-
-      setIsRescheduling(true);
-      try {
-        await onRescheduleTask(taskId, slotStart, slotEnd);
-      } catch (error) {
-        console.error('Failed to reschedule task:', error);
-      } finally {
-        setIsRescheduling(false);
-        setActiveDragTask(null);
-      }
-    },
-    [activeDragTask, onRescheduleTask]
-  );
-
   const handleEventClick = useCallback(
     (event: CalendarEventItem, e: React.SyntheticEvent) => {
       // Get click position for popover placement
@@ -199,8 +192,12 @@ export function CalendarView({
       const taskId = event.taskId;
       const task = taskId ? tasks.find((t) => t.id === taskId) : undefined;
 
+      // For external events, get categorization
+      const eventIdForCategorization = event.id.replace('event-', '');
+      const categorization = !event.isTask ? eventCategorizations?.[eventIdForCategorization] : undefined;
+
       setSelectedEventForPopover({
-        id: taskId || event.id,
+        id: taskId || eventIdForCategorization,
         title: event.title,
         start: event.start,
         end: event.end,
@@ -208,7 +205,8 @@ export function CalendarView({
         isTask: event.isTask,
         task,
         categoryColor: event.categoryColor,
-        categoryName: task?.category?.name,
+        categoryName: event.isTask ? task?.category?.name : categorization?.categoryName,
+        categoryId: event.isTask ? task?.category?.id : categorization?.categoryId,
         overflowed: event.overflowed,
       });
       setPopoverOpen(true);
@@ -218,18 +216,18 @@ export function CalendarView({
         onSelectEvent(event);
       }
     },
-    [tasks, onSelectEvent]
+    [tasks, eventCategorizations, onSelectEvent]
   );
 
   return (
-    <div className="h-[700px] bg-white rounded-lg shadow-sm border border-slate-200 p-4 relative overflow-hidden">
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        {isRescheduling && (
-          <div className="absolute top-4 right-4 bg-primary-600 text-white px-4 py-2 rounded-lg shadow-lg z-10">
-            Rescheduling...
-          </div>
-        )}
+    <div className="h-full bg-white p-3 relative" style={{ display: 'flex', flexDirection: 'column' }}>
+      {isRescheduling && (
+        <div className="absolute top-4 right-4 bg-primary-600 text-white px-4 py-2 rounded-lg shadow-lg z-10">
+          Rescheduling...
+        </div>
+      )}
 
+      <div style={{ flex: '1 1 0%', minHeight: 0, overflow: 'hidden' }}>
         <Calendar
           localizer={localizer}
           events={events}
@@ -245,33 +243,27 @@ export function CalendarView({
           onSelectEvent={handleEventClick}
           eventPropGetter={eventStyleGetter}
           min={new Date(0, 0, 0, 6, 0, 0)} // 6 AM
-          max={new Date(0, 0, 0, 23, 0, 0)} // 11 PM
+          max={new Date(0, 0, 0, 23, 59, 59)} // End of day
           step={15}
           timeslots={4}
-          components={{
-            event: (props) => <DraggableEvent event={props.event as CalendarEventItem} prefersReducedMotion={prefersReducedMotion} onResize={onResizeEvent} />,
-            timeSlotWrapper: (slotProps) => {
-              const start = slotProps.value as Date;
-              return (
-                <DroppableSlot start={start} durationMinutes={15}>
-                  {slotProps.children}
-                </DroppableSlot>
-              );
-            },
+          scrollToTime={new Date(0, 0, 0, 8, 0, 0)}
+          style={{ height: '100%' }}
+          formats={{
+            timeGutterFormat: 'h a',
           }}
+          components={{
+          event: (props) => <DraggableEvent event={props.event as CalendarEventItem} prefersReducedMotion={prefersReducedMotion} onResize={onResizeEvent} />,
+          timeSlotWrapper: (slotProps) => {
+            const start = slotProps.value as Date;
+            return (
+              <DroppableSlot start={start} durationMinutes={15}>
+                {slotProps.children}
+              </DroppableSlot>
+            );
+          },
+        }}
         />
-
-        <DragOverlay dropAnimation={null}>
-          {activeDragTask ? (
-            <div className="rounded-lg border border-primary-200 bg-white shadow-xl px-4 py-3 w-64">
-              <p className="text-sm font-semibold text-slate-800">{activeDragTask.title}</p>
-              <p className="text-xs text-slate-600 mt-1">
-                {activeDragTask.durationMinutes} min {activeDragTask.category ? `• ${activeDragTask.category.name}` : ''}
-              </p>
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+      </div>
 
       {/* Event Detail Popover */}
       <EventDetailPopover
@@ -392,6 +384,22 @@ function DraggableEvent({
         whileTap: { scale: 0.98 },
       };
 
+  // Format time for display
+  const startTime = new Date(event.start).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+  const endTime = new Date(event.end).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+
+  const duration = (event.end.getTime() - event.start.getTime()) / (1000 * 60); // minutes
+  const isShortEvent = duration <= 30;
+  const isVeryShortEvent = duration <= 15;
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -401,15 +409,23 @@ function DraggableEvent({
       {...motionProps}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      className="overflow-hidden h-full flex flex-col justify-center px-2 py-1"
     >
-      {event.title}
+      <div className={`font-semibold leading-tight truncate ${isVeryShortEvent ? 'text-[11px]' : 'text-xs'}`}>
+        {event.title}
+      </div>
+      {!isShortEvent && (
+        <div className="text-[10px] opacity-90 mt-0.5 leading-tight truncate">
+          {startTime}
+        </div>
+      )}
       {event.isTask && onResize && (isHovered || isResizing) && (
         <div
-          className="absolute bottom-0 left-0 right-0 h-1.5 bg-primary-500/50 hover:bg-primary-500 cursor-ns-resize flex items-center justify-center"
+          className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/30 hover:bg-white/50 cursor-ns-resize flex items-center justify-center"
           onMouseDown={handleResizeStart}
           style={{ touchAction: 'none' }}
         >
-          <div className="w-12 h-0.5 bg-white rounded-full"></div>
+          <div className="w-8 h-0.5 bg-white/80 rounded-full"></div>
         </div>
       )}
     </motion.div>
