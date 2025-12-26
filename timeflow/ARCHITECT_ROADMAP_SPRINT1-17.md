@@ -871,19 +871,32 @@
 
 ### Sprint 19: Pre-Launch Hardening & Scalability
 **Duration**: Week 37-38
-**Focus**: Address critical security vulnerabilities, scalability bottlenecks, and future-proof the architecture for a safe and successful public launch.
+**Focus**: Address critical security vulnerabilities, scalability bottlenecks, production deployment, and future-proof the architecture for a safe and successful public launch.
 
 #### Goals
-- [ ] Eliminate all critical security vulnerabilities.
-- [ ] Implement foundational scalability patterns for the backend and database.
-- [ ] Solidify the architecture to safely support upcoming premium features.
-- [ ] Ensure the application is robust, resilient, and ready for its first wave of public users.
+- [ ] **Resolve production deployment issues and deploy backend successfully**
+- [ ] Eliminate all critical security vulnerabilities
+- [ ] Implement foundational scalability patterns for the backend and database
+- [ ] Solidify the architecture to safely support upcoming premium features
+- [ ] Ensure the application is robust, resilient, and ready for its first wave of public users
 
-#### Tasks
-This sprint focuses on hardening the existing application. For a detailed breakdown of tasks, priorities, and implementation plans, see the full sprint plan:
+#### Critical Tasks
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 19.0 | **Resolve Render deployment blocking issue** | Claude/Codex | 8-12h | **P0** | 🔴 BLOCKED |
+| 19.1 | Production deployment testing & verification | Codex | 2-4h | P0 | Pending |
+| 19.2 | Frontend deployment to Vercel | Codex | 2-3h | P0 | Pending |
+
+**Deployment Blocker Details**: See **[Sprint 19 Production Deployment Task](./docs/SPRINT_19_PRODUCTION_DEPLOYMENT.md)** for complete troubleshooting history, hypotheses, and recommended next steps.
+
+#### Additional Tasks
+This sprint focuses on hardening the existing application. For a detailed breakdown of security, scalability tasks, priorities, and implementation plans, see the full sprint plan:
 - **[View Full Plan: Sprint 19 Pre-Launch Plan](./docs/SPRINT_19_PRELAUNCH_PLAN.md)**
 
 #### Decision Gate
+- [ ] **Is the backend successfully deployed and accessible in production?**
+- [ ] **Is the frontend deployed and can communicate with the backend?**
 - [ ] Have all P0 security tasks been implemented and reviewed?
 - [ ] Is the backend application containerized and ready for scalable deployment?
 - [ ] Is the production database connection strategy confirmed to be stable?
