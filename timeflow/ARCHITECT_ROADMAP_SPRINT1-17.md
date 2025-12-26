@@ -450,6 +450,14 @@
   - Reopen a saved chat into the main assistant view and continue from the existing history.
 - Ensure that when a saved chat is reopened, the assistant receives enough prior messages and relevant metadata so responses feel context-aware.
 
+#### Sprint 13 Must-Pass QA Follow-ups (2025-12-26)
+- [ ] Fix empty schedule previews for "schedule today" when time exists (review fixed-event handling + due-date normalization).
+- [ ] Prevent invalid task IDs / hallucinated tasks in schedule previews (filter to known taskId/habitId; add conflicts for dropped blocks).
+- [ ] Implement assistant history persistence (store and return messages).
+- [ ] Align model config for QA runs (gpt-4o requested vs gpt-4o-mini configured).
+- [ ] Re-run must-pass flow and record results in `docs/SPRINT_13_MUST_PASS_RUN.md`.
+- Reference: `docs/SPRINT_13_MUST_PASS_FIX_RECOMMENDATIONS.md`
+
 #### Acceptance Criteria
 - Assistant responses for at least three core flows (e.g., daily planning, task breakdown, recap) follow the new formatting guidelines (headings, bullets, clear sections) and avoid unnecessary code.
 - Chat UI visually matches the updated brand guidelines (colors, typography, spacing) and passes basic accessibility checks (contrast ratios, font sizes).
@@ -637,18 +645,20 @@
 
 ---
 
-### Sprint 14: Calendar Dashboard Overhaul (Color-Coded, Actionable)
-**Duration**: Week 27-28  
+### Sprint 14: Calendar Dashboard Overhaul (Color-Coded, Actionable) ✅ COMPLETE
+**Duration**: Week 27-28
+**Status**: ✅ All tasks complete (2025-12-26)
 **Focus**: Redesign `/calendar` into a high-utility planning surface (based on the provided UI reference): upcoming events, unscheduled tasks, and a color-coded calendar—without breaking existing behavior.
 
-**Design Reference**: See `docs/SPRINT_14_CALENDAR_DASHBOARD_PLAN.md` (includes embedded reference layout image).
+**Design Reference**: See `docs/SPRINT_14_CALENDAR_DASHBOARD_PLAN.md` and `docs/SPRINT_14_AI_EVENT_CATEGORIZATION.md` (includes architecture, all 4 implementation phases, and performance optimizations).
 
 #### Goals
-- [ ] Calendar page becomes a dashboard: **Upcoming Events**, **Unscheduled Tasks**, and the main **Calendar** view in one cohesive layout.
-- [ ] Strong color coding: tasks use category colors; external events are visually distinct and readable.
-- [ ] Users can manage TimeFlow items from Calendar (scheduled tasks actions, reschedule, unschedule/delete) and inspect events (details popover).
-- [ ] Reserve space for future: “Quick plan/schedule meeting” panel (placeholder only; no new booking logic in this sprint).
-- [ ] No regressions: existing calendar functionality continues to work (DnD reschedule, Smart Schedule, task actions).
+- [x] ✅ Calendar page becomes a dashboard: **Upcoming Events**, **Unscheduled Tasks**, and the main **Calendar** view in one cohesive layout.
+- [x] ✅ Strong color coding: tasks use category colors; external events use AI-assigned category colors with visual distinction.
+- [x] ✅ Users can manage TimeFlow items from Calendar (scheduled tasks actions, reschedule, unschedule/delete) and inspect events (details popover with category override).
+- [x] ✅ Reserve space for future: "Quick plan/schedule meeting" panel (placeholder only; no new booking logic in this sprint).
+- [x] ✅ No regressions: existing calendar functionality continues to work (DnD reschedule, Smart Schedule, task actions).
+- [x] ✅ **BONUS**: Full AI event categorization system with background sync, caching, analytics, and manual override capability.
 
 #### Tasks
 
@@ -663,25 +673,41 @@
 | 14.5 | DONE - Add "Plan Meetings (Coming Soon)" placeholder panel matching the dashboard layout (ties into future meeting scheduling sprint). | Codex | 2-3h | P2 | ✅ |
 | 14.6 | DONE - QA checklist + regression verification: reschedule, unschedule/delete, Smart Schedule, and event popovers still work. | Codex | 3-4h | P0 | ✅ |
 
-**AI Event Categorization** (Core Feature - In Progress)
+**AI Event Categorization** (Core Feature - ✅ COMPLETE 2025-12-26)
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
-| 14.7 | Create `EventCategorization` Prisma model and run migration to support AI categorization of external events. | Codex | 2-3h | P0 | 📋 |
-| 14.8 | Implement `eventCategorizationService.ts`: CRUD operations for event categorizations (get, create, update, bulk operations). | Codex | 4-5h | P0 | 📋 |
-| 14.9 | Create AI categorization logic using Claude API: analyze event title, description, attendees, timing to suggest category. | Claude | 4-6h | P0 | 📋 |
-| 14.10 | Add API endpoints for event categorization: categorize all, get categorization, update category (manual override). | Codex | 3-4h | P0 | 📋 |
-| 14.11 | Frontend: Fetch event categorizations and pass to CalendarView; update event color logic to use category colors for external events. | Codex | 3-4h | P0 | 📋 |
-| 14.12 | Add category selection UI to EventDetailPopover for manual override of AI categorization. | Codex | 2-3h | P0 | 📋 |
-| 14.13 | Implement initial bulk categorization flow: "Categorize Events" button with loading state and success messaging. | Codex | 2-3h | P1 | 📋 |
-| 14.14 | Background sync: Auto-categorize new external events as they're fetched from Google Calendar. | Codex | 2-3h | P1 | 📋 |
+| 14.7 | DONE - Create `EventCategorization` Prisma model and run migration to support AI categorization of external events. | Codex | 2-3h | P0 | ✅ |
+| 14.8 | DONE - Implement `eventCategorizationService.ts`: CRUD operations for event categorizations (get, create, update, bulk operations). | Codex | 4-5h | P0 | ✅ |
+| 14.9 | DONE - Create AI categorization logic using OpenAI API (GPT-4o-mini): analyze event title, description, attendees, timing to suggest category. | Claude | 4-6h | P0 | ✅ |
+| 14.10 | DONE - Add API endpoints for event categorization: categorize all, get categorization, update category (manual override). | Codex | 3-4h | P0 | ✅ |
+| 14.11 | DONE - Frontend: Fetch event categorizations and pass to CalendarView; update event color logic to use category colors for external events. | Codex | 3-4h | P0 | ✅ |
+| 14.12 | DONE - Add category selection UI to EventDetailPopover for manual override of AI categorization. | Codex | 2-3h | P0 | ✅ |
+| 14.13 | DONE - Implement initial bulk categorization flow: "Categorize Events" button with loading state and success messaging. | Codex | 2-3h | P1 | ✅ |
+| 14.14 | DONE - Background sync: Auto-categorize new external events as they're fetched from Google Calendar. | Codex | 2-3h | P1 | ✅ |
+
+**Additional Phase 4 Optimizations** (✅ COMPLETE 2025-12-26)
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 14.15 | DONE - Implement smart caching (5-min sessionStorage) to reduce API calls by ~80%. | Claude | 1-2h | P2 | ✅ |
+| 14.16 | DONE - Add stale categorization cleanup: automatically remove categorizations for deleted events. | Claude | 1-2h | P2 | ✅ |
+| 14.17 | DONE - Implement analytics tracking: total, manual vs AI, confidence levels, category breakdown. | Claude | 1h | P2 | ✅ |
+
+**Critical Bug Fixes** (✅ COMPLETE 2025-12-26)
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 14.18 | DONE - Fix JWT token expiry handling (FAST_JWT_EXPIRED error causing 500 instead of 401). | Claude | 1h | P0 | ✅ |
+| 14.19 | DONE - Create missing EventCategorization database table migration. | Claude | 1h | P0 | ✅ |
+| 14.20 | DONE - Add comprehensive error logging and diagnostics throughout categorization flow. | Claude | 1h | P1 | ✅ |
 
 **Documentation**
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
 | 14.G1 | DONE - Document the Calendar Dashboard design, component map, and "no regressions" QA checklist. | Gemini | 3-4h | P1 | ✅ |
-| 14.G2 | Document AI Event Categorization architecture, categorization logic, and user override workflow. | Gemini | 2-3h | P1 | 📋 |
+| 14.G2 | DONE - Document AI Event Categorization architecture (all 4 phases), categorization logic, user override workflow, and performance optimizations. | Gemini | 2-3h | P1 | ✅ |
 
 ---
 

@@ -66,8 +66,12 @@ export async function categorizeAllEvents(
   }
 
   try {
+    console.log('[categorizeAllEvents] Starting categorization for user:', user.id);
+
     // Get user's categories
     const userCategories = await categoryService.getCategories(user.id);
+    console.log('[categorizeAllEvents] Found categories:', userCategories.length);
+
     if (userCategories.length === 0) {
       return reply.status(400).send({
         error: 'No categories found. Please create categories first.'
@@ -78,20 +82,35 @@ export async function categorizeAllEvents(
     const now = new Date();
     const startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
     const endDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+    console.log('[categorizeAllEvents] Date range:', { startDate, endDate });
 
     const calendarId = user.defaultCalendarId || 'primary';
+    console.log('[categorizeAllEvents] Fetching events from calendar:', calendarId);
+
     const allEvents = await calendarService.getEvents(
       user.id,
       calendarId,
       startDate.toISOString(),
       endDate.toISOString()
     );
+    console.log('[categorizeAllEvents] Found events:', allEvents.length);
+
+    // Clean up stale categorizations (events deleted from Google Calendar)
+    const currentEventIds = allEvents.map(e => e.id);
+    const deletedCount = await eventCategorizationService.cleanupStaleCategorizations(
+      user.id,
+      currentEventIds
+    );
+    if (deletedCount > 0) {
+      console.log('[categorizeAllEvents] Cleaned up', deletedCount, 'stale categorizations');
+    }
 
     // Filter to uncategorized events only
     const uncategorized = await eventCategorizationService.getUncategorizedEvents(
       user.id,
       allEvents
     );
+    console.log('[categorizeAllEvents] Uncategorized events:', uncategorized.length);
 
     if (uncategorized.length === 0) {
       return {
@@ -102,10 +121,12 @@ export async function categorizeAllEvents(
     }
 
     // Categorize with AI
+    console.log('[categorizeAllEvents] Starting AI categorization...');
     const aiResults = await aiCategorizationService.batchCategorizeEvents(
       uncategorized,
       userCategories
     );
+    console.log('[categorizeAllEvents] AI categorization complete:', aiResults.size);
 
     // Save categorizations to database
     const categorizationsToSave = [];
@@ -124,11 +145,13 @@ export async function categorizeAllEvents(
       }
     }
 
+    console.log('[categorizeAllEvents] Saving categorizations:', categorizationsToSave.length);
     await eventCategorizationService.batchUpsertCategorizations(
       user.id,
       categorizationsToSave
     );
 
+    console.log('[categorizeAllEvents] Categorization complete!');
     return {
       categorized: categorizationsToSave.length,
       total: allEvents.length,
@@ -136,6 +159,7 @@ export async function categorizeAllEvents(
       message: `Successfully categorized ${categorizationsToSave.length} events`,
     };
   } catch (error) {
+    console.error('[categorizeAllEvents] ERROR:', error);
     request.log.error(error, 'Failed to categorize events');
     return reply.status(500).send({ error: 'Failed to categorize events' });
   }

@@ -299,3 +299,34 @@ export async function batchUpsertCategorizations(
     )
   );
 }
+
+/**
+ * Clean up stale event categorizations
+ * Removes categorizations for events that no longer exist in the calendar
+ *
+ * @param userId - User ID
+ * @param currentEventIds - Array of event IDs that currently exist in the calendar
+ * @param provider - Calendar provider (default: 'google')
+ * @returns Number of stale categorizations deleted
+ */
+export async function cleanupStaleCategorizations(
+  userId: string,
+  currentEventIds: string[],
+  provider: string = 'google'
+): Promise<number> {
+  const result = await prisma.eventCategorization.deleteMany({
+    where: {
+      userId,
+      provider,
+      eventId: {
+        notIn: currentEventIds, // Delete categorizations not in current event list
+      },
+    },
+  });
+
+  if (result.count > 0) {
+    console.log(`[Cleanup] Removed ${result.count} stale categorizations for user ${userId}`);
+  }
+
+  return result.count;
+}

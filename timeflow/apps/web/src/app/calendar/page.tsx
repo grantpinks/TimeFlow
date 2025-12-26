@@ -21,6 +21,7 @@ export default function CalendarPage() {
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventCategorizations, setEventCategorizations] = useState<Record<string, api.EventCategorization>>({});
+  const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
   const [scheduling, setScheduling] = useState(false);
   const [categorizingEvents, setCategorizingEvents] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -49,19 +50,101 @@ export default function CalendarPage() {
     }
   };
 
+  // Fetch categories on mount
   useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const cats = await api.getCategories();
+        setCategories(cats);
+      } catch (err) {
+        console.error('Failed to fetch categories:', err);
+      }
+    }
+
+    fetchCategories();
     fetchExternalEvents();
   }, []);
 
-  // Fetch event categorizations when external events change
+  // Fetch event categorizations with caching and background auto-categorization
   useEffect(() => {
     async function fetchCategorizations() {
       if (externalEvents.length === 0) return;
 
+      const eventIds = externalEvents.map(e => e.id).filter(Boolean);
+      if (eventIds.length === 0) return;
+
+      // Check cache
+      const cacheKey = 'categorizations_cache';
+      const cacheTimestampKey = 'categorizations_timestamp';
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
       try {
-        const eventIds = externalEvents.map(e => e.id).filter(Boolean);
+        const cachedData = sessionStorage.getItem(cacheKey);
+        const cachedTimestamp = sessionStorage.getItem(cacheTimestampKey);
+
+        if (cachedData && cachedTimestamp) {
+          const age = Date.now() - parseInt(cachedTimestamp, 10);
+
+          if (age < CACHE_DURATION) {
+            const cached = JSON.parse(cachedData);
+            // Check if cached data covers all current event IDs
+            const cachedIds = Object.keys(cached);
+            const allCovered = eventIds.every(id => cachedIds.includes(id));
+
+            if (allCovered) {
+              console.log('[Cache] Using cached categorizations');
+              setEventCategorizations(cached);
+
+              // Background auto-categorize: Check for new uncategorized events
+              const uncategorizedIds = eventIds.filter(id => !cachedIds.includes(id));
+              if (uncategorizedIds.length > 0) {
+                console.log('[Background] Auto-categorizing', uncategorizedIds.length, 'new events');
+                // Don't await - run in background
+                api.categorizeAllEvents().then(() => {
+                  // Refresh categorizations after background categorization
+                  api.getEventCategorizations(eventIds).then(freshCats => {
+                    setEventCategorizations(freshCats);
+                    sessionStorage.setItem(cacheKey, JSON.stringify(freshCats));
+                    sessionStorage.setItem(cacheTimestampKey, Date.now().toString());
+                    console.log('[Background] Auto-categorization complete');
+                  });
+                }).catch(err => {
+                  console.error('[Background] Auto-categorization failed:', err);
+                });
+              }
+
+              return;
+            }
+          }
+        }
+
+        // Cache miss or stale - fetch from API
+        console.log('[Cache] Fetching fresh categorizations');
         const cats = await api.getEventCategorizations(eventIds);
         setEventCategorizations(cats);
+
+        // Update cache
+        sessionStorage.setItem(cacheKey, JSON.stringify(cats));
+        sessionStorage.setItem(cacheTimestampKey, Date.now().toString());
+
+        // Background auto-categorize: Check if there are uncategorized events
+        const categorizedIds = Object.keys(cats);
+        const uncategorizedIds = eventIds.filter(id => !categorizedIds.includes(id));
+        if (uncategorizedIds.length > 0) {
+          console.log('[Background] Auto-categorizing', uncategorizedIds.length, 'new events');
+          // Don't await - run in background
+          api.categorizeAllEvents().then(() => {
+            // Refresh categorizations after background categorization
+            api.getEventCategorizations(eventIds).then(freshCats => {
+              setEventCategorizations(freshCats);
+              sessionStorage.setItem(cacheKey, JSON.stringify(freshCats));
+              sessionStorage.setItem(cacheTimestampKey, Date.now().toString());
+              console.log('[Background] Auto-categorization complete');
+            });
+          }).catch(err => {
+            console.error('[Background] Auto-categorization failed:', err);
+          });
+        }
       } catch (err) {
         console.error('Failed to fetch event categorizations:', err);
       }
@@ -71,17 +154,6 @@ export default function CalendarPage() {
   }, [externalEvents]);
 
   const unscheduledTasks = tasks.filter((t) => t.status === 'unscheduled');
-
-  // Get unique categories from tasks
-  const categories = useMemo(() => {
-    const catMap = new Map();
-    tasks.forEach((task) => {
-      if (task.category && !catMap.has(task.category.id)) {
-        catMap.set(task.category.id, task.category);
-      }
-    });
-    return Array.from(catMap.values()).sort((a, b) => a.order - b.order);
-  }, [tasks]);
 
   const handleSmartSchedule = async () => {
     const taskIds = unscheduledTasks.map((t) => t.id);
@@ -119,6 +191,12 @@ export default function CalendarPage() {
     }
   };
 
+  // Helper to clear categorization cache
+  const clearCategorizationCache = () => {
+    sessionStorage.removeItem('categorizations_cache');
+    sessionStorage.removeItem('categorizations_timestamp');
+  };
+
   const handleCategorizeEvents = async () => {
     if (externalEvents.length === 0) {
       setMessage({ type: 'error', text: 'No events to categorize' });
@@ -136,10 +214,15 @@ export default function CalendarPage() {
         text: result.message,
       });
 
-      // Refresh categorizations
+      // Clear cache and refresh categorizations
+      clearCategorizationCache();
       const eventIds = externalEvents.map(e => e.id).filter(Boolean);
       const cats = await api.getEventCategorizations(eventIds);
       setEventCategorizations(cats);
+
+      // Update cache with fresh data
+      sessionStorage.setItem('categorizations_cache', JSON.stringify(cats));
+      sessionStorage.setItem('categorizations_timestamp', Date.now().toString());
     } catch (err) {
       setMessage({
         type: 'error',
@@ -154,10 +237,15 @@ export default function CalendarPage() {
     try {
       await api.updateEventCategorization(eventId, categoryId);
 
-      // Refresh categorizations to get updated data
+      // Clear cache and refresh categorizations to get updated data
+      clearCategorizationCache();
       const eventIds = externalEvents.map(e => e.id).filter(Boolean);
       const cats = await api.getEventCategorizations(eventIds);
       setEventCategorizations(cats);
+
+      // Update cache with fresh data
+      sessionStorage.setItem('categorizations_cache', JSON.stringify(cats));
+      sessionStorage.setItem('categorizations_timestamp', Date.now().toString());
 
       setMessage({
         type: 'success',
@@ -403,6 +491,7 @@ export default function CalendarPage() {
               <button
                 onClick={handleCategorizeEvents}
                 disabled={categorizingEvents || externalEvents.length === 0}
+                title="Use AI to categorize all calendar events. Re-runs categorization for all events."
                 className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center gap-2"
               >
                 {categorizingEvents ? (

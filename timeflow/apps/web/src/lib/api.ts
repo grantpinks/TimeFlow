@@ -105,8 +105,11 @@ async function request<T>(
     ...((options.headers as Record<string, string>) || {}),
   };
 
-  // Only set Content-Type for requests with a body
-  if (options.method !== 'GET' && options.method !== 'DELETE') {
+  // Only set Content-Type for requests with a JSON body
+  const hasBody = options.body !== undefined && options.body !== null;
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData;
+  if (hasBody && !isFormData) {
     headers['Content-Type'] = 'application/json';
   }
 

@@ -58,7 +58,7 @@ export async function requireAuth(
     request.user = authenticatedUser;
   } catch (error) {
     const code = (error as { code?: string })?.code;
-    if (code && code.startsWith('FST_JWT')) {
+    if (code && (code.startsWith('FST_JWT') || code.startsWith('FAST_JWT'))) {
       return reply.status(401).send({ error: 'Unauthorized: Invalid or expired token' });
     }
 

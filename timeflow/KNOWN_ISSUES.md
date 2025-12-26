@@ -44,6 +44,14 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
 - **Explicit Action Triggers**: AI should say "I've prepared a schedule. Click 'Apply Schedule' below to add these to your calendar."  
   - [ ] Sprint 13 – Tasks 13.10–13.13 (apply-schedule action, safeguards, and assistant messaging) — Status: TODO
 
+### Sprint 13 Must-Pass QA Follow-ups (2025-12-26)
+- [ ] Schedule preview empty for "schedule today" despite available time; review fixed-event handling and due-date normalization (YYYY-MM-DD should not auto-mark overdue at midnight). Status: TODO
+- [ ] LLM emits invalid task IDs / hallucinated tasks in schedule previews; restrict to known taskId/habitId and drop invalid blocks with conflicts. Status: TODO
+- [ ] Must-pass flow Ask -> Schedule -> Preview -> Apply still fails (see `docs/SPRINT_13_MUST_PASS_RUN.md`). Status: TODO
+- [ ] Assistant history persistence missing (`/api/assistant/history` returns empty). Status: TODO
+- [ ] Model config mismatch for QA runs (gpt-4o requested vs gpt-4o-mini configured). Status: TODO
+- Reference: `docs/SPRINT_13_MUST_PASS_FIX_RECOMMENDATIONS.md`
+
 ### Files Affected
 - `apps/backend/src/services/assistantService.ts` - Prompt engineering
 - `apps/web/src/app/assistant/page.tsx` - UI state management
@@ -97,4 +105,4 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
 
 ---
 
-*Last Updated: 2025-12-21*
+*Last Updated: 2025-12-26*

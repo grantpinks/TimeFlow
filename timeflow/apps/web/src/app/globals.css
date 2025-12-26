@@ -460,6 +460,8 @@ body {
   font-weight: var(--font-weight-medium);
   transition: all var(--transition-base) var(--transition-ease);
   cursor: pointer;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .rbc-event:hover {

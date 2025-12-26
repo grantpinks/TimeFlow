@@ -4,7 +4,8 @@ import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { Calendar, luxonLocalizer, Views } from 'react-big-calendar';
 import { DndContext, DragOverlay, useDroppable, useDraggable, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { DateTime } from 'luxon';
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import type { Task, CalendarEvent } from '@timeflow/shared';
 import { EventDetailPopover } from './EventDetailPopover';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -50,6 +51,7 @@ export interface CalendarEventItem {
   end: Date;
   isTask: boolean;
   taskId?: string;
+  description?: string;
   overflowed?: boolean;
   categoryColor?: string;
 }
@@ -82,6 +84,7 @@ export function CalendarView({
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
+  const [hoverCard, setHoverCard] = useState<{ event: CalendarEventItem; rect: DOMRect } | null>(null);
   const [selectedEventForPopover, setSelectedEventForPopover] = useState<{
     id: string;
     title: string;
@@ -112,6 +115,7 @@ export function CalendarView({
           end: new Date(task.scheduledTask.endDateTime),
           isTask: true,
           taskId: task.id,
+          description: task.description,
           overflowed: task.scheduledTask.overflowedDeadline,
           categoryColor: task.category?.color,
         });
@@ -128,6 +132,7 @@ export function CalendarView({
         start: new Date(event.start),
         end: new Date(event.end),
         isTask: false,
+        description: event.description,
         categoryColor: categorization?.categoryColor, // Use AI-assigned category color
       });
     }
@@ -196,12 +201,13 @@ export function CalendarView({
       const eventIdForCategorization = event.id.replace('event-', '');
       const categorization = !event.isTask ? eventCategorizations?.[eventIdForCategorization] : undefined;
 
+      setHoverCard(null);
       setSelectedEventForPopover({
         id: taskId || eventIdForCategorization,
         title: event.title,
         start: event.start,
         end: event.end,
-        description: task?.description,
+        description: event.isTask ? task?.description : event.description,
         isTask: event.isTask,
         task,
         categoryColor: event.categoryColor,
@@ -218,6 +224,28 @@ export function CalendarView({
     },
     [tasks, eventCategorizations, onSelectEvent]
   );
+
+  const handleEventHover = useCallback((event: CalendarEventItem, anchor: HTMLElement | null) => {
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    setHoverCard({ event, rect });
+  }, []);
+
+  const handleEventHoverEnd = useCallback(() => {
+    setHoverCard(null);
+  }, []);
+
+  useEffect(() => {
+    if (!hoverCard) return;
+    const handleScroll = () => setHoverCard(null);
+    const handleResize = () => setHoverCard(null);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [hoverCard]);
 
   return (
     <div className="h-full bg-white p-3 relative" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -252,7 +280,15 @@ export function CalendarView({
             timeGutterFormat: 'h a',
           }}
           components={{
-          event: (props) => <DraggableEvent event={props.event as CalendarEventItem} prefersReducedMotion={prefersReducedMotion} onResize={onResizeEvent} />,
+          event: (props) => (
+            <DraggableEvent
+              event={props.event as CalendarEventItem}
+              prefersReducedMotion={prefersReducedMotion}
+              onResize={onResizeEvent}
+              onHover={handleEventHover}
+              onHoverEnd={handleEventHoverEnd}
+            />
+          ),
           timeSlotWrapper: (slotProps) => {
             const start = slotProps.value as Date;
             return (
@@ -265,16 +301,29 @@ export function CalendarView({
         />
       </div>
 
+      <AnimatePresence>
+        {hoverCard && !popoverOpen && (
+          <EventHoverCard
+            key={hoverCard.event.id}
+            event={hoverCard.event}
+            anchorRect={hoverCard.rect}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Event Detail Popover */}
       <EventDetailPopover
         isOpen={popoverOpen}
         onClose={() => setPopoverOpen(false)}
         event={selectedEventForPopover}
         position={popoverPosition}
+        categories={categories}
         onComplete={onCompleteTask}
         onEdit={onEditTask}
         onUnschedule={onUnscheduleTask}
         onDelete={onDeleteTask}
+        onCategoryChange={onCategoryChange}
       />
     </div>
   );
@@ -312,15 +361,20 @@ function DraggableEvent({
   event,
   prefersReducedMotion,
   onResize,
+  onHover,
+  onHoverEnd,
 }: {
   event: CalendarEventItem;
   prefersReducedMotion: boolean;
   onResize?: (taskId: string, start: Date, end: Date) => Promise<void>;
+  onHover?: (event: CalendarEventItem, anchor: HTMLElement | null) => void;
+  onHoverEnd?: () => void;
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const resizeStartY = useRef<number>(0);
   const initialEnd = useRef<Date>(event.end);
+  const eventRef = useRef<HTMLDivElement | null>(null);
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: event.id,
@@ -400,23 +454,42 @@ function DraggableEvent({
   const isShortEvent = duration <= 30;
   const isVeryShortEvent = duration <= 15;
 
+  const setRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      eventRef.current = node;
+      setNodeRef(node);
+    },
+    [setNodeRef]
+  );
+
+  const titleClampClass = isVeryShortEvent ? 'line-clamp-1' : isShortEvent ? 'line-clamp-2' : 'line-clamp-3';
+  const titleSizeClass = isVeryShortEvent ? 'text-[11px]' : 'text-xs';
+
   return (
     <motion.div
-      ref={setNodeRef}
+      ref={setRefs}
       style={style}
       {...listeners}
       {...attributes}
       {...motionProps}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="overflow-hidden h-full flex flex-col justify-center px-2 py-1"
+      onMouseEnter={() => {
+        setIsHovered(true);
+        if (!isDragging && !isResizing) {
+          onHover?.(event, eventRef.current);
+        }
+      }}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        onHoverEnd?.();
+      }}
+      className="overflow-hidden h-full flex flex-col justify-start px-2 py-1.5 gap-0.5"
     >
-      <div className={`font-semibold leading-tight truncate ${isVeryShortEvent ? 'text-[11px]' : 'text-xs'}`}>
+      <div className={`font-semibold leading-snug ${titleClampClass} ${titleSizeClass}`}>
         {event.title}
       </div>
       {!isShortEvent && (
-        <div className="text-[10px] opacity-90 mt-0.5 leading-tight truncate">
-          {startTime}
+        <div className="text-[10px] opacity-90 leading-tight">
+          {startTime} - {endTime}
         </div>
       )}
       {event.isTask && onResize && (isHovered || isResizing) && (
@@ -429,5 +502,73 @@ function DraggableEvent({
         </div>
       )}
     </motion.div>
+  );
+}
+
+function EventHoverCard({
+  event,
+  anchorRect,
+  prefersReducedMotion,
+}: {
+  event: CalendarEventItem;
+  anchorRect: DOMRect;
+  prefersReducedMotion: boolean;
+}) {
+  if (typeof document === 'undefined') return null;
+
+  const cardWidth = 280;
+  const cardMaxHeight = 200;
+  const offset = 12;
+  const padding = 12;
+
+  let left = anchorRect.right + offset;
+  if (left + cardWidth > window.innerWidth - padding) {
+    left = anchorRect.left - cardWidth - offset;
+  }
+  if (left < padding) {
+    left = padding;
+  }
+
+  let top = anchorRect.top + 6;
+  const maxTop = window.innerHeight - cardMaxHeight - padding;
+  if (top > maxTop) {
+    top = maxTop;
+  }
+  if (top < padding) {
+    top = padding;
+  }
+
+  const startLabel = DateTime.fromJSDate(event.start).toFormat('h:mm a');
+  const endLabel = DateTime.fromJSDate(event.end).toFormat('h:mm a');
+  const dateLabel = DateTime.fromJSDate(event.start).toFormat('ccc, LLL d');
+  const description = event.description?.trim();
+  const accentColor = event.categoryColor || (event.isTask ? '#0BAF9A' : '#64748B');
+
+  return createPortal(
+    <motion.div
+      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 8, scale: 0.98 }}
+      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.98 }}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
+      style={{ left, top, width: cardWidth, maxHeight: cardMaxHeight }}
+      className="fixed z-[60] rounded-xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-sm px-4 py-3 text-slate-900"
+    >
+      <div className="flex items-center gap-2 text-[11px] text-slate-600">
+        <span className="inline-flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
+          {event.isTask ? 'Task' : 'Event'}
+        </span>
+        <span className="text-slate-300">|</span>
+        <span>{dateLabel}</span>
+      </div>
+      <div className="mt-2 text-sm font-semibold leading-snug line-clamp-2">{event.title}</div>
+      <div className="mt-1 text-xs text-slate-600">
+        {startLabel} - {endLabel}
+      </div>
+      <div className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-5">
+        {description || 'No description provided.'}
+      </div>
+    </motion.div>,
+    document.body
   );
 }
