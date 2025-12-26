@@ -22,6 +22,12 @@ export async function getTrainingProfile(userId: string, categoryId: string) {
   });
 }
 
+export async function getTrainingProfiles(userId: string) {
+  return prisma.categoryTrainingProfile.findMany({
+    where: { userId },
+  });
+}
+
 export async function upsertTrainingProfile(
   userId: string,
   categoryId: string,

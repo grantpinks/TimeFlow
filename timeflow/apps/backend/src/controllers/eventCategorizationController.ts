@@ -11,6 +11,7 @@ import * as eventCategorizationService from '../services/eventCategorizationServ
 import * as aiCategorizationService from '../services/aiCategorizationService.js';
 import * as calendarService from '../services/googleCalendarService.js';
 import * as categoryService from '../services/categoryService.js';
+import * as categoryTrainingService from '../services/categoryTrainingService.js';
 
 const getCategorizationsSchema = z.object({
   eventIds: z.array(z.string()),
@@ -120,11 +121,37 @@ export async function categorizeAllEvents(
       };
     }
 
+    const trainingProfiles = await categoryTrainingService.getTrainingProfiles(user.id);
+    const trainingContexts = Object.fromEntries(
+      trainingProfiles.map((profile) => {
+        const categoryName =
+          userCategories.find((cat) => cat.id === profile.categoryId)?.name || '';
+        const snapshots = Array.isArray(profile.exampleEventsSnapshot)
+          ? profile.exampleEventsSnapshot
+          : [];
+        return [
+          profile.categoryId,
+          {
+            categoryId: profile.categoryId,
+            name: categoryName,
+            includeKeywords: profile.includeKeywords || [],
+            excludeKeywords: profile.excludeKeywords || [],
+            description: profile.description || undefined,
+            examples: snapshots.map((example) => ({
+              summary: example.summary,
+              description: example.description,
+            })),
+          },
+        ];
+      })
+    );
+
     // Categorize with AI
     console.log('[categorizeAllEvents] Starting AI categorization...');
     const aiResults = await aiCategorizationService.batchCategorizeEvents(
       uncategorized,
-      userCategories
+      userCategories,
+      trainingContexts
     );
     console.log('[categorizeAllEvents] AI categorization complete:', aiResults.size);
 
