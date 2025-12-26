@@ -1,5 +1,16 @@
 'use client';
 
+/**
+ * TaskSchedulePreview component for drag-and-drop scheduling workflow
+ *
+ * Z-index hierarchy (highest to lowest):
+ * - z-50: TaskSchedulePreview (this component)
+ * - z-40: Other modals (future)
+ * - z-30: EventDetailPopover
+ * - z-20: Dropdowns, tooltips
+ * - z-10: Sticky headers
+ */
+
 import React from 'react';
 import type { Task } from '@timeflow/shared';
 

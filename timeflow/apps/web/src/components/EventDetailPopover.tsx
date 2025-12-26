@@ -171,7 +171,7 @@ export function EventDetailPopover({
       {isOpen && (
         <motion.div
           ref={popoverRef}
-          className="fixed z-50 w-80 bg-white rounded-lg shadow-2xl border border-slate-200 overflow-hidden"
+          className="fixed z-30 w-80 bg-white rounded-lg shadow-2xl border border-slate-200 overflow-hidden"
           style={getPopoverStyle()}
           initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.95, y: -10 }}
           animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
