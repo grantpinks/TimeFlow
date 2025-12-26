@@ -17,7 +17,19 @@
       "Bash(git add:*)",
       "Bash(dir:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Skill(superpowers:systematic-debugging)",
+      "Bash(cat:*)",
+      "Bash(pnpm prisma db execute:*)",
+      "Skill(superpowers:writing-plans)",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(pkill:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(timeout 20 cmd:*)",
+      "Bash(pnpm -C apps/web type-check:*)"
     ],
     "deny": [],
     "ask": []
