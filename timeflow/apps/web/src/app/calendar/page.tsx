@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { Layout } from '@/components/Layout';
@@ -76,7 +76,7 @@ export default function CalendarPage() {
     async function fetchCategorizations() {
       if (externalEvents.length === 0) return;
 
-      const eventIds = externalEvents.map(e => e.id).filter(Boolean);
+      const eventIds = externalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
       if (eventIds.length === 0) return;
 
       // Check cache
@@ -222,7 +222,7 @@ export default function CalendarPage() {
 
       // Clear cache and refresh categorizations
       clearCategorizationCache();
-      const eventIds = externalEvents.map(e => e.id).filter(Boolean);
+      const eventIds = externalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
       const cats = await api.getEventCategorizations(eventIds);
       setEventCategorizations(cats);
 
@@ -245,7 +245,7 @@ export default function CalendarPage() {
 
       // Clear cache and refresh categorizations to get updated data
       clearCategorizationCache();
-      const eventIds = externalEvents.map(e => e.id).filter(Boolean);
+      const eventIds = externalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
       const cats = await api.getEventCategorizations(eventIds);
       setEventCategorizations(cats);
 
