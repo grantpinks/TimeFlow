@@ -11,6 +11,7 @@ import { TimeBreakdown } from '@/components/TimeBreakdown';
 import { UpcomingEventsPanel } from '@/components/UpcomingEventsPanel';
 import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { PlanMeetingsPlaceholderPanel } from '@/components/PlanMeetingsPlaceholderPanel';
+import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
 import type { CalendarEvent, Task } from '@timeflow/shared';
@@ -33,6 +34,7 @@ export default function CalendarPage() {
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const [previewSlot, setPreviewSlot] = useState<{ start: Date; end: Date } | null>(null);
+  const [isSchedulingFromPreview, setIsSchedulingFromPreview] = useState(false);
 
   // Fetch calendar events for the current month
   const fetchExternalEvents = async () => {
@@ -408,6 +410,34 @@ export default function CalendarPage() {
     }
   };
 
+  const handleConfirmSchedule = async () => {
+    if (!previewTask || !previewSlot) return;
+
+    setIsSchedulingFromPreview(true);
+
+    try {
+      await handleRescheduleTask(
+        previewTask.id,
+        previewSlot.start,
+        previewSlot.end
+      );
+
+      // Clear preview on success
+      setPreviewTask(null);
+      setPreviewSlot(null);
+    } catch (error) {
+      console.error('Failed to schedule task:', error);
+      // Keep preview open on error so user can retry
+    } finally {
+      setIsSchedulingFromPreview(false);
+    }
+  };
+
+  const handleCancelPreview = () => {
+    setPreviewTask(null);
+    setPreviewSlot(null);
+  };
+
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
 
@@ -724,6 +754,17 @@ export default function CalendarPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Task Schedule Preview Modal */}
+      {previewTask && previewSlot && (
+        <TaskSchedulePreview
+          task={previewTask}
+          slot={previewSlot}
+          onConfirm={handleConfirmSchedule}
+          onCancel={handleCancelPreview}
+          isScheduling={isSchedulingFromPreview}
+        />
       )}
 
       <FloatingAssistantButton />
