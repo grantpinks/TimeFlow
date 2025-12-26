@@ -159,6 +159,18 @@ export default function CalendarPage() {
     fetchCategorizations();
   }, [externalEvents]);
 
+  // Handle Escape key to cancel preview
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewTask) {
+        handleCancelPreview();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewTask]);
+
   const unscheduledTasks = tasks.filter((t) => t.status === 'unscheduled');
 
   const handleSmartSchedule = async () => {
@@ -337,6 +349,12 @@ export default function CalendarPage() {
   };
 
   const handleCompleteTaskById = async (taskId: string) => {
+    // Clear preview if this task is being previewed
+    if (previewTask?.id === taskId) {
+      setPreviewTask(null);
+      setPreviewSlot(null);
+    }
+
     try {
       await api.completeTask(taskId);
       await refreshTasks();
@@ -379,6 +397,12 @@ export default function CalendarPage() {
   };
 
   const handleDeleteTaskById = async (taskId: string) => {
+    // Clear preview if this task is being previewed
+    if (previewTask?.id === taskId) {
+      setPreviewTask(null);
+      setPreviewSlot(null);
+    }
+
     try {
       await api.deleteTask(taskId);
       await refreshTasks();
