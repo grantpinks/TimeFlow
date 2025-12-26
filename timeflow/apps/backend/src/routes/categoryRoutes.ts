@@ -6,6 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as categoryController from '../controllers/categoryController.js';
+import * as categoryTrainingController from '../controllers/categoryTrainingController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerCategoryRoutes(server: FastifyInstance) {
@@ -35,5 +36,17 @@ export async function registerCategoryRoutes(server: FastifyInstance) {
     '/categories/:id',
     { preHandler: requireAuth },
     categoryController.deleteCategory
+  );
+
+  server.get(
+    '/categories/:id/training',
+    { preHandler: requireAuth },
+    categoryTrainingController.getCategoryTraining
+  );
+
+  server.put(
+    '/categories/:id/training',
+    { preHandler: requireAuth },
+    categoryTrainingController.upsertCategoryTraining
   );
 }
