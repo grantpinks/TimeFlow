@@ -73,8 +73,14 @@ Instructions:
 1. Analyze the event title, description, and context
 2. Consider email domains (e.g., @company.com suggests professional)
 3. Consider timing (weekday 9-5 often means professional)
-4. Choose the BEST matching category
-5. Assign a confidence score (0.0 to 1.0)
+4. **PRIORITY: Identify time-sensitive events that require timely appearance**
+   - Flights, travel, airport pickups/dropoffs → "Event" category
+   - Coffee chats, 1-on-1 meetings, networking → "Event" category
+   - Appointments (doctor, dentist, salon, etc.) → "Event" category
+   - Interviews, important meetings with specific time requirements → "Event" category
+   - Any event where being late would cause significant problems → "Event" category
+5. Choose the BEST matching category
+6. Assign a confidence score (0.0 to 1.0)
    - 1.0 = Very confident (clear keywords, work emails, etc.)
    - 0.7-0.9 = Confident (good signals)
    - 0.5-0.6 = Moderate (some ambiguity)
