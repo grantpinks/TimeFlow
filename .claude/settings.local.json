@@ -29,7 +29,10 @@
       "Bash(pkill:*)",
       "Bash(pnpm tsc:*)",
       "Bash(timeout 20 cmd:*)",
-      "Bash(pnpm -C apps/web type-check:*)"
+      "Bash(pnpm -C apps/web type-check:*)",
+      "Skill(superpowers:executing-plans)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm dev)"
     ],
     "deny": [],
     "ask": []

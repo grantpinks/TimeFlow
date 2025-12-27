@@ -717,10 +717,10 @@
 
 #### Goals
 - [ ] Users can create and share personal scheduling links.
-- [ ] External users can book meetings based on the user's real availability across Google and Apple calendars.
+- [ ] External users can **book + reschedule + cancel** meetings based on the user's real availability across connected calendars.
 - [ ] Booking respects **meeting constraints**: work hours, max booking horizon, buffers, and a per-day meeting cap.
 - [ ] Scheduling + availability support **Fixed vs Flexible time**: meetings are non-reschedulable and block time; deep work blocks can move and may not block meeting availability.
-- [ ] **In-context scheduling** exists inside TimeFlow surfaces (email/task views) so users can start scheduling without leaving their workflow.
+- [ ] Booked meetings can include **Google Meet** conferencing (MVP). **Zoom integration is deferred** (documented as future enhancement).
 - [ ] **Inbox Foundations**: Gmail inbox experience is trustworthy (filters + accuracy improvements) to set up Sprint 16 Gmail label sync success.
 
 #### Tasks
@@ -732,7 +732,10 @@
 | 15.3 | Create public `/book/[urlSlug]` page for booking meetings (time zone aware, responsive) | Codex | 6-8h | P0 |
 | 15.4 | Build `GET /api/availability/[urlSlug]` endpoint to aggregate availability from Google + Apple calendars and existing tasks/habits | Codex | 5-7h | P0 |
 | 15.5 | Integrate with Google & Apple Calendar APIs to create and update events when bookings are confirmed or rescheduled | Codex | 5-7h | P0 |
+| 15.5b | Add public cancel flow + server-side cancellation handling (event delete/cancel semantics + user-friendly errors) | Codex | 4-6h | P0 |
+| 15.5c | Add **Google Meet** option for bookings (create conference data on event; ensure timezone-safe behavior) | Codex | 3-5h | P1 |
 | 15.6 | Implement "Scheduling Links" management UI in Settings (create, edit, pause/resume, delete, copy/share link) | Codex | 4-6h | P1 |
+| 15.6b | Add “Meeting Manager” UI in Settings: list bookings with filters (**scheduled / rescheduled / cancelled**) and cancellation action | Codex | 4-6h | P1 |
 | 15.7 | Add meeting booking constraints to Scheduling Links: **work hours**, **max future date range**, **buffer times**, **max meetings/day** (model + API + UI). | Codex | 6-8h | P0 |
 | 15.8 | Update availability computation to enforce constraints (clamp date range; apply buffers around busy blocks; enforce daily cap; timezone safe). | Codex | 6-8h | P0 |
 | 15.9 | Enforce constraints at booking time (server-side) to prevent race conditions/double booking; return user-friendly errors. | Codex | 4-6h | P0 |

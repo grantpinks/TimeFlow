@@ -6,6 +6,39 @@ This document provides an overview of features that are currently planned or in 
 
 ## Sprint 15 Features
 
+### 1. Smart Meeting Scheduling Links (Standalone)
+
+**Status**: Planned (Documentation)
+
+**Overview**:
+TimeFlow will ship reliable, standalone booking links (Calendly-style) so others can book time based on the user’s real availability, with strong constraints and safe concurrency handling.
+
+**How It Will Work**:
+
+1. **Create Scheduling Links**: Users configure links in Settings (work hours, buffers, horizon, daily cap).
+2. **Public Booking Page**: External users book via `/book/[urlSlug]` (timezone-safe).
+3. **Book + Reschedule + Cancel**: Public token-based reschedule/cancel flows are supported.
+4. **Video Conferencing**: **Google Meet (MVP)** is supported on booked events. **Zoom** is documented as a future enhancement (OAuth + per-booking meeting creation).
+
+**Docs**:
+- Sprint plan: `docs/SPRINT_15_MEETING_SCHEDULING_PLAN.md`
+
+---
+
+### 2. Inbox Foundations (Prep for Sprint 16)
+
+**Status**: Planned (Documentation)
+
+**Overview**:
+Inbox will get a dedicated home and trust-building controls (filters, corrections, and transparency) so Sprint 16 Gmail label sync feels valuable and user-controlled.
+
+**Docs**:
+- Addendum: `docs/SPRINT_15_INBOX_FOUNDATIONS.md`
+
+---
+
+## Sprint 16 Features
+
 ### 1. Gmail Label Sync (Thread-Level)
 
 **Status**: Planned (Documentation)

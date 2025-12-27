@@ -20,6 +20,7 @@ export interface CalendarEvent {
   end: string; // ISO datetime
   description?: string;
   attendees?: { email: string }[];
+  transparency?: 'opaque' | 'transparent';
 }
 
 /**
@@ -32,6 +33,7 @@ export function buildGoogleEventRequest(event: {
   end: string;
   attendees?: { email: string }[];
   enableMeet?: boolean;
+  transparency?: 'opaque' | 'transparent';
 }): calendar_v3.Schema$Event {
   const requestBody: calendar_v3.Schema$Event = {
     summary: event.summary,
@@ -39,6 +41,11 @@ export function buildGoogleEventRequest(event: {
     start: { dateTime: event.start },
     end: { dateTime: event.end },
   };
+
+  // Add transparency if provided (defaults to 'opaque' if not specified)
+  if (event.transparency) {
+    requestBody.transparency = event.transparency;
+  }
 
   // Add attendees if provided
   if (event.attendees && event.attendees.length > 0) {
@@ -192,6 +199,7 @@ export async function getEvents(
       start: event.start!.dateTime!,
       end: event.end!.dateTime!,
       description: event.description ?? undefined,
+      transparency: (event.transparency as 'opaque' | 'transparent') ?? undefined,
     }));
 }
 
@@ -208,6 +216,7 @@ export async function createEvent(
     start: string;
     end: string;
     attendees?: { email: string }[];
+    transparency?: 'opaque' | 'transparent';
   },
   enableMeet = false,
   skipConflictCheck = false
@@ -246,6 +255,7 @@ export async function createEvent(
     start: event.start,
     end: event.end,
     attendees: event.attendees,
+    transparency: event.transparency,
     enableMeet,
   });
 
@@ -283,6 +293,7 @@ export async function updateEvent(
     description?: string;
     start?: string;
     end?: string;
+    transparency?: 'opaque' | 'transparent';
   },
   skipConflictCheck = false
 ): Promise<void> {
@@ -323,6 +334,7 @@ export async function updateEvent(
           description: event.description,
           start: event.start ? { dateTime: event.start } : undefined,
           end: event.end ? { dateTime: event.end } : undefined,
+          transparency: event.transparency,
         },
       }),
     `updateEvent(${eventId}, ${event.start || 'no time change'} - ${event.end || 'no time change'})`

@@ -20,6 +20,7 @@ import {
   type UserPreferences,
 } from '../utils/scheduleValidator.js';
 import { buildAvailabilitySummary } from '../utils/availability.js';
+import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
 
 /**
  * Get the PromptManager singleton instance
@@ -764,8 +765,11 @@ async function buildContextPrompt(
     unscheduledTasks.forEach((task, index) => {
       const priorityLabel =
         task.priority === 1 ? 'HIGH' : task.priority === 2 ? 'MEDIUM' : 'LOW';
-      const dueInfo = task.dueDate
-        ? `due: ${new Date(task.dueDate).toLocaleString('en-US', {
+      const effectiveDueDate = task.dueDate
+        ? normalizeDateOnlyToEndOfDay(task.dueDate, user.timeZone)
+        : null;
+      const dueInfo = effectiveDueDate
+        ? `due: ${effectiveDueDate.toLocaleString('en-US', {
             timeZone: user.timeZone,
             month: 'short',
             day: 'numeric',
@@ -774,7 +778,7 @@ async function buildContextPrompt(
           })}`
         : 'no due date';
 
-      const urgent = task.dueDate && new Date(task.dueDate).getTime() < now.getTime() + 24 * 60 * 60 * 1000
+      const urgent = effectiveDueDate && effectiveDueDate.getTime() < now.getTime() + 24 * 60 * 60 * 1000
         ? ' URGENT'
         : '';
 

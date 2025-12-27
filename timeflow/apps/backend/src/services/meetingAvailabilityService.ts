@@ -4,6 +4,7 @@ import type { AvailabilitySlot } from '@timeflow/shared';
 interface BusyInterval {
   start: string;
   end: string;
+  transparency?: 'opaque' | 'transparent';
 }
 
 interface BuildAvailabilitySlotsParams {
@@ -17,6 +18,16 @@ interface BuildAvailabilitySlotsParams {
   wakeTime: string; // HH:mm
   sleepTime: string; // HH:mm
   dailySchedule: any; // User's daily schedule
+}
+
+/**
+ * Filter out transparent events (events that don't block availability)
+ */
+export function filterBusyEvents(events: BusyInterval[]): BusyInterval[] {
+  return events.filter((event) => {
+    // Keep events that are explicitly opaque or have no transparency field (default to opaque)
+    return !event.transparency || event.transparency === 'opaque';
+  });
 }
 
 /**
