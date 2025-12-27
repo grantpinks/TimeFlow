@@ -19,6 +19,43 @@ export interface CalendarEvent {
   start: string; // ISO datetime
   end: string; // ISO datetime
   description?: string;
+  attendees?: { email: string }[];
+}
+
+/**
+ * Build Google Calendar event request body
+ */
+export function buildGoogleEventRequest(event: {
+  summary: string;
+  description?: string;
+  start: string;
+  end: string;
+  attendees?: { email: string }[];
+  enableMeet?: boolean;
+}): calendar_v3.Schema$Event {
+  const requestBody: calendar_v3.Schema$Event = {
+    summary: event.summary,
+    description: event.description,
+    start: { dateTime: event.start },
+    end: { dateTime: event.end },
+  };
+
+  // Add attendees if provided
+  if (event.attendees && event.attendees.length > 0) {
+    requestBody.attendees = event.attendees.map((a) => ({ email: a.email }));
+  }
+
+  // Add Google Meet conference data if enabled
+  if (event.enableMeet) {
+    requestBody.conferenceData = {
+      createRequest: {
+        requestId: `meet-${Date.now()}`,
+        conferenceSolutionKey: { type: 'hangoutsMeet' },
+      },
+    };
+  }
+
+  return requestBody;
 }
 
 /**
@@ -170,7 +207,9 @@ export async function createEvent(
     description?: string;
     start: string;
     end: string;
+    attendees?: { email: string }[];
   },
+  enableMeet = false,
   skipConflictCheck = false
 ): Promise<string> {
   const calendar = await getCalendarClient(userId);
@@ -201,16 +240,21 @@ export async function createEvent(
     }
   }
 
+  const requestBody = buildGoogleEventRequest({
+    summary: event.summary,
+    description: event.description,
+    start: event.start,
+    end: event.end,
+    attendees: event.attendees,
+    enableMeet,
+  });
+
   const response = await withRetry(
     () =>
       calendar.events.insert({
         calendarId: calendarId || 'primary',
-        requestBody: {
-          summary: event.summary,
-          description: event.description,
-          start: { dateTime: event.start },
-          end: { dateTime: event.end },
-        },
+        requestBody,
+        conferenceDataVersion: enableMeet ? 1 : undefined,
       }),
     `createEvent("${event.summary}", ${event.start} - ${event.end})`
   );
