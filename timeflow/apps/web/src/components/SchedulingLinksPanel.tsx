@@ -86,7 +86,7 @@ export function SchedulingLinksPanel() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <div id="scheduling-links" className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-800">Scheduling Links</h2>

@@ -66,7 +66,7 @@ export function MeetingManagerPanel() {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+    <div id="meeting-manager" className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-slate-800 mb-2">Meeting Manager</h2>
         <p className="text-slate-600 text-sm">

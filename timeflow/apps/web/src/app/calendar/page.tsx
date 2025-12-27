@@ -10,7 +10,7 @@ import { MiniCalendar } from '@/components/MiniCalendar';
 import { TimeBreakdown } from '@/components/TimeBreakdown';
 import { UpcomingEventsPanel } from '@/components/UpcomingEventsPanel';
 import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
-import { PlanMeetingsPlaceholderPanel } from '@/components/PlanMeetingsPlaceholderPanel';
+import { PlanMeetingsPanel } from '@/components/PlanMeetingsPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
@@ -691,7 +691,7 @@ export default function CalendarPage() {
                 onCompleteTask={handleCompleteTaskById}
                 onDeleteTask={handleDeleteTaskById}
               />
-              <PlanMeetingsPlaceholderPanel />
+              <PlanMeetingsPanel />
             </div>
 
             {/* Main Panel - Calendar */}
