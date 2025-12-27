@@ -32,6 +32,7 @@ import type {
   SendEmailRequest,
   SendEmailResponse,
   EmailCategory,
+  SchedulingLink,
 } from '@timeflow/shared';
 
 /**
@@ -731,4 +732,81 @@ export async function getCategorizationStats(): Promise<{
     automatic: number;
     lowConfidence: number;
   }>('/events/categorization-stats');
+}
+
+/**
+ * Get all scheduling links
+ */
+export async function getSchedulingLinks(): Promise<SchedulingLink[]> {
+  return request<SchedulingLink[]>('/scheduling-links');
+}
+
+/**
+ * Create a new scheduling link
+ */
+export async function createSchedulingLink(data: {
+  name: string;
+  durationsMinutes: number[];
+  bufferBeforeMinutes?: number;
+  bufferAfterMinutes?: number;
+  maxBookingHorizonDays?: number;
+  dailyCap?: number;
+  calendarProvider: 'google' | 'apple';
+  calendarId: string;
+  googleMeetEnabled?: boolean;
+}): Promise<SchedulingLink> {
+  return request<SchedulingLink>('/scheduling-links', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Update a scheduling link
+ */
+export async function updateSchedulingLink(
+  id: string,
+  data: Partial<{
+    name: string;
+    durationsMinutes: number[];
+    bufferBeforeMinutes: number;
+    bufferAfterMinutes: number;
+    maxBookingHorizonDays: number;
+    dailyCap: number;
+    calendarProvider: 'google' | 'apple';
+    calendarId: string;
+    googleMeetEnabled: boolean;
+  }>
+): Promise<SchedulingLink> {
+  return request<SchedulingLink>(`/scheduling-links/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Pause a scheduling link
+ */
+export async function pauseSchedulingLink(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/scheduling-links/${id}/pause`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Resume a scheduling link
+ */
+export async function resumeSchedulingLink(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/scheduling-links/${id}/resume`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Delete a scheduling link
+ */
+export async function deleteSchedulingLink(id: string): Promise<void> {
+  return request<void>(`/scheduling-links/${id}`, {
+    method: 'DELETE',
+  });
 }

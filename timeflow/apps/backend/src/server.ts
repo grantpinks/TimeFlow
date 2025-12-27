@@ -22,6 +22,7 @@ import { registerAssistantRoutes } from './routes/assistantRoutes.js';
 import { registerHabitRoutes } from './routes/habitRoutes.js';
 import { registerEmailRoutes } from './routes/emailRoutes.js';
 import { registerConversationRoutes } from './routes/conversationRoutes.js';
+import { registerSchedulingLinkRoutes } from './routes/schedulingLinkRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -68,6 +69,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerHabitRoutes(api);
       await registerEmailRoutes(api);
       await registerConversationRoutes(api);
+      await registerSchedulingLinkRoutes(api);
     },
     { prefix: '/api' }
   );
