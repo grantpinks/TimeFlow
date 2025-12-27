@@ -138,3 +138,164 @@ export async function getAccount(userId: string) {
     where: { userId },
   });
 }
+
+/**
+ * Parse a single ICS event string
+ */
+export function parseIcsEvent(ics: string): {
+  start: string;
+  end: string;
+  summary?: string;
+  transparency?: 'opaque' | 'transparent';
+} {
+  const lines = ics.split('\n').map(l => l.trim());
+
+  let dtstart = '';
+  let dtend = '';
+  let summary = '';
+  let transp = 'OPAQUE';
+
+  for (const line of lines) {
+    if (line.startsWith('DTSTART:')) {
+      dtstart = line.substring('DTSTART:'.length);
+    } else if (line.startsWith('DTEND:')) {
+      dtend = line.substring('DTEND:'.length);
+    } else if (line.startsWith('SUMMARY:')) {
+      summary = line.substring('SUMMARY:'.length);
+    } else if (line.startsWith('TRANSP:')) {
+      transp = line.substring('TRANSP:'.length);
+    }
+  }
+
+  // Convert iCal datetime to ISO 8601
+  const parseIcalDate = (icalDate: string): string => {
+    // Format: 20260110T160000Z
+    const year = icalDate.substring(0, 4);
+    const month = icalDate.substring(4, 6);
+    const day = icalDate.substring(6, 8);
+    const hour = icalDate.substring(9, 11);
+    const minute = icalDate.substring(11, 13);
+    const second = icalDate.substring(13, 15);
+
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
+  };
+
+  return {
+    start: parseIcalDate(dtstart),
+    end: parseIcalDate(dtend),
+    summary,
+    transparency: transp === 'TRANSPARENT' ? 'transparent' : 'opaque',
+  };
+}
+
+/**
+ * Parse multiple ICS events from CalDAV response
+ */
+export function parseIcsEvents(icsData: string): Array<{
+  start: string;
+  end: string;
+  summary?: string;
+  transparency?: 'opaque' | 'transparent';
+}> {
+  const events: Array<{
+    start: string;
+    end: string;
+    summary?: string;
+    transparency?: 'opaque' | 'transparent';
+  }> = [];
+
+  // Split by VEVENT blocks
+  const eventBlocks = icsData.split('BEGIN:VEVENT');
+
+  for (let i = 1; i < eventBlocks.length; i++) {
+    const eventEnd = eventBlocks[i].indexOf('END:VEVENT');
+    if (eventEnd !== -1) {
+      const eventStr = 'BEGIN:VEVENT\n' + eventBlocks[i].substring(0, eventEnd + 'END:VEVENT'.length);
+      try {
+        events.push(parseIcsEvent(eventStr));
+      } catch (error) {
+        // Skip malformed events
+      }
+    }
+  }
+
+  return events;
+}
+
+/**
+ * List calendars for user (stub for now)
+ */
+export async function listCalendars(userId: string): Promise<Array<{ displayName: string; url: string }>> {
+  // In full implementation, make CalDAV PROPFIND request
+  // For now, return empty array
+  return [];
+}
+
+/**
+ * Get events from Apple Calendar via CalDAV (stub for now)
+ */
+export async function getEvents(
+  userId: string,
+  calendarUrl: string,
+  timeMin: string,
+  timeMax: string
+): Promise<Array<{
+  start: string;
+  end: string;
+  summary?: string;
+  transparency?: 'opaque' | 'transparent';
+}>> {
+  // In full implementation, make CalDAV REPORT request with time range
+  // For now, return empty array
+  return [];
+}
+
+/**
+ * Create event in Apple Calendar via CalDAV (stub for now)
+ */
+export async function createEvent(
+  userId: string,
+  calendarUrl: string,
+  event: {
+    summary: string;
+    start: string;
+    end: string;
+    description?: string;
+    transparency?: 'opaque' | 'transparent';
+  }
+): Promise<string> {
+  // In full implementation, PUT iCalendar data to CalDAV server
+  // For now, return placeholder URL
+  return `${calendarUrl}/event-${Date.now()}.ics`;
+}
+
+/**
+ * Update event in Apple Calendar via CalDAV (stub for now)
+ */
+export async function updateEvent(
+  userId: string,
+  calendarUrl: string,
+  eventUrl: string,
+  event: {
+    summary?: string;
+    start?: string;
+    end?: string;
+    description?: string;
+    transparency?: 'opaque' | 'transparent';
+  }
+): Promise<void> {
+  // In full implementation, GET existing event, modify, PUT back
+  // For now, no-op
+}
+
+/**
+ * Cancel event in Apple Calendar via CalDAV (stub for now)
+ */
+export async function cancelEvent(
+  userId: string,
+  calendarUrl: string,
+  eventUrl: string
+): Promise<void> {
+  // In full implementation, GET event, set STATUS:CANCELLED, PUT back
+  // For now, no-op
+}
