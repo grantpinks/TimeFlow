@@ -8,6 +8,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../config/prisma.js';
 import * as googleCalendarService from '../services/googleCalendarService.js';
 import * as appleCalendarService from '../services/appleCalendarService.js';
+import * as gmailService from '../services/gmailService.js';
 
 /**
  * GET /api/meetings
@@ -112,6 +113,19 @@ export async function cancelMeeting(
         await appleCalendarService.cancelEvent(user.id, link.calendarId, meeting.appleEventUrl);
       } catch (error) {
         console.error('Failed to cancel Apple event:', error);
+      }
+    }
+
+    // Send cancellation email to invitee
+    if (user.googleAccessToken) {
+      try {
+        await gmailService.sendEmail(user.id, {
+          to: meeting.inviteeEmail,
+          subject: `Meeting Cancelled: ${link.name}`,
+          body: `Hi ${meeting.inviteeName},\n\nYour meeting has been cancelled by the host.\n\nIf you'd like to reschedule, please visit the original booking link.\n\nBest regards`,
+        });
+      } catch (error) {
+        console.error('Failed to send cancellation email:', error);
       }
     }
 

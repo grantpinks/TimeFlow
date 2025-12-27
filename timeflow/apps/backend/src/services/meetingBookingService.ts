@@ -353,6 +353,19 @@ export async function rescheduleMeeting(
     }
   }
 
+  // Send reschedule confirmation email
+  if (user.googleAccessToken) {
+    try {
+      await gmailService.sendEmail(user.id, {
+        to: meeting.inviteeEmail,
+        subject: `Meeting Rescheduled: ${link.name}`,
+        body: `Hi ${meeting.inviteeName},\n\nYour meeting has been rescheduled.\n\nNew Time: ${startDateTime.toLocaleString()}\nDuration: ${data.durationMinutes} minutes\n\nBest regards`,
+      });
+    } catch (error) {
+      // Continue without email on error
+    }
+  }
+
   return {
     meeting: {
       id: updatedMeeting.id,
@@ -425,7 +438,7 @@ export async function cancelMeeting(
 
   if (link.calendarProvider === 'google' && meeting.googleEventId && user.googleAccessToken) {
     try {
-      await googleCalendarService.cancelEvent(user.id, link.calendarId, meeting.googleEventId);
+      await googleCalendarService.deleteEvent(user.id, link.calendarId, meeting.googleEventId);
     } catch (error) {
       // Continue without Google event cancel on error
     }
@@ -434,6 +447,19 @@ export async function cancelMeeting(
       await appleCalendarService.cancelEvent(user.id, link.calendarId, meeting.appleEventUrl);
     } catch (error) {
       // Continue without Apple event cancel on error
+    }
+  }
+
+  // Send cancellation email
+  if (user.googleAccessToken) {
+    try {
+      await gmailService.sendEmail(user.id, {
+        to: meeting.inviteeEmail,
+        subject: `Meeting Cancelled: ${link.name}`,
+        body: `Hi ${meeting.inviteeName},\n\nYour meeting has been cancelled.\n\nIf you'd like to reschedule, please visit the original booking link.\n\nBest regards`,
+      });
+    } catch (error) {
+      // Continue without email on error
     }
   }
 
