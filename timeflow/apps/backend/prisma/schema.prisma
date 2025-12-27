@@ -33,6 +33,9 @@ model User {
   habits                     Habit[]
   scheduledHabits            ScheduledHabit[]
   tasks                      Task[]
+  schedulingLinks            SchedulingLink[]
+  meetings                   Meeting[]
+  appleCalendarAccount       AppleCalendarAccount?
 }
 
 model Task {
@@ -62,6 +65,7 @@ model ScheduledTask {
   endDateTime        DateTime
   overflowedDeadline Boolean  @default(false)
   lastSyncedAt       DateTime @default(now())
+  blocksAvailability Boolean  @default(true)
   task               Task     @relation(fields: [taskId], references: [id])
 }
 
@@ -138,20 +142,21 @@ model Habit {
 }
 
 model ScheduledHabit {
-  id            String   @id @default(cuid())
-  habitId       String
-  userId        String
-  provider      String
-  calendarId    String
-  eventId       String
-  startDateTime DateTime
-  endDateTime   DateTime
-  status        String   @default("scheduled")
-  lastSyncedAt  DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  habit         Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  user          User     @relation(fields: [userId], references: [id])
+  id                 String   @id @default(cuid())
+  habitId            String
+  userId             String
+  provider           String
+  calendarId         String
+  eventId            String
+  startDateTime      DateTime
+  endDateTime        DateTime
+  status             String   @default("scheduled")
+  lastSyncedAt       DateTime @default(now())
+  blocksAvailability Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  habit              Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user               User     @relation(fields: [userId], references: [id])
 
   @@index([habitId])
   @@index([userId])
@@ -227,4 +232,82 @@ model AssistantMetric {
   @@index([createdAt])
   @@index([type])
   @@index([userId])
+}
+
+model SchedulingLink {
+  id                   String   @id @default(cuid())
+  userId               String
+  name                 String
+  slug                 String   @unique
+  isActive             Boolean  @default(true)
+  durationsMinutes     Int[]
+  bufferBeforeMinutes  Int      @default(10)
+  bufferAfterMinutes   Int      @default(10)
+  maxBookingHorizonDays Int     @default(60)
+  dailyCap             Int      @default(6)
+  calendarProvider     String
+  calendarId           String
+  googleMeetEnabled    Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id])
+  meetings  Meeting[]
+
+  @@index([userId])
+}
+
+model Meeting {
+  id               String   @id @default(cuid())
+  schedulingLinkId String
+  userId           String
+  inviteeName      String
+  inviteeEmail     String
+  notes            String?
+  startDateTime    DateTime
+  endDateTime      DateTime
+  status           String   @default("scheduled")
+  googleEventId    String?
+  appleEventUrl    String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  rescheduledAt    DateTime?
+  cancelledAt      DateTime?
+
+  schedulingLink SchedulingLink        @relation(fields: [schedulingLinkId], references: [id], onDelete: Cascade)
+  user           User                  @relation(fields: [userId], references: [id])
+  tokens         MeetingActionToken[]
+
+  @@index([userId])
+  @@index([schedulingLinkId])
+}
+
+model MeetingActionToken {
+  id         String   @id @default(cuid())
+  meetingId  String
+  type       String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+}
+
+model AppleCalendarAccount {
+  id                 String   @id @default(cuid())
+  userId             String
+  email              String
+  appPasswordEncrypted String
+  baseUrl            String   @default("https://caldav.icloud.com")
+  principalUrl       String?
+  calendarHomeUrl    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
 }
