@@ -827,3 +827,112 @@ export async function hostCancelMeeting(meetingId: string): Promise<{ success: b
     method: 'POST',
   });
 }
+
+// ===== Public Booking APIs (no auth required) =====
+
+/**
+ * Get availability for a public scheduling link
+ */
+export async function getPublicAvailability(
+  slug: string,
+  from: string,
+  to: string
+): Promise<{
+  link: { name: string; durationsMinutes: number[] };
+  slots: Record<number, Array<{ start: string; end: string }>>;
+}> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const response = await fetch(
+    `${API_BASE}/api/availability/${slug}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch availability');
+  }
+  return response.json();
+}
+
+/**
+ * Book a meeting (public, no auth)
+ */
+export async function bookPublicMeeting(
+  slug: string,
+  data: {
+    inviteeName: string;
+    inviteeEmail: string;
+    notes?: string;
+    startDateTime: string;
+    durationMinutes: number;
+  }
+): Promise<{
+  meeting: {
+    id: string;
+    startDateTime: string;
+    endDateTime: string;
+    inviteeName: string;
+    inviteeEmail: string;
+  };
+  rescheduleToken: string;
+  cancelToken: string;
+}> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const response = await fetch(`${API_BASE}/api/book/${slug}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to book meeting');
+  }
+  return response.json();
+}
+
+/**
+ * Reschedule a meeting (public, token-based)
+ */
+export async function reschedulePublicMeeting(
+  slug: string,
+  token: string,
+  data: {
+    startDateTime: string;
+    durationMinutes: number;
+  }
+): Promise<{
+  meeting: {
+    id: string;
+    startDateTime: string;
+    endDateTime: string;
+  };
+}> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const response = await fetch(`${API_BASE}/api/book/${slug}/reschedule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, ...data }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to reschedule meeting');
+  }
+  return response.json();
+}
+
+/**
+ * Cancel a meeting (public, token-based)
+ */
+export async function cancelPublicMeeting(
+  slug: string,
+  token: string
+): Promise<{ success: boolean }> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const response = await fetch(`${API_BASE}/api/book/${slug}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to cancel meeting');
+  }
+  return response.json();
+}
