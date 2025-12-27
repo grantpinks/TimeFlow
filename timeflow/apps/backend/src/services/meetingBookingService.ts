@@ -45,6 +45,28 @@ function generateToken(): { token: string; hash: string } {
 }
 
 /**
+ * Hash a token for comparison
+ */
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Check if a token is valid (not expired and not used)
+ */
+export function isTokenValid(token: { expiresAt: Date; usedAt: Date | null }): boolean {
+  if (token.usedAt) {
+    return false; // Token already used
+  }
+
+  if (token.expiresAt < new Date()) {
+    return false; // Token expired
+  }
+
+  return true;
+}
+
+/**
  * Book a meeting on a scheduling link
  */
 export async function bookMeeting(
@@ -217,5 +239,205 @@ export async function bookMeeting(
     },
     rescheduleToken: rescheduleTokenData.token,
     cancelToken: cancelTokenData.token,
+  };
+}
+
+/**
+ * Reschedule a meeting using a token
+ */
+export async function rescheduleMeeting(
+  slug: string,
+  token: string,
+  data: {
+    startDateTime: string;
+    durationMinutes: number;
+  }
+): Promise<{
+  meeting: {
+    id: string;
+    startDateTime: string;
+    endDateTime: string;
+  };
+}> {
+  const tokenHash = hashToken(token);
+
+  // Find and validate token
+  const actionToken = await prisma.meetingActionToken.findUnique({
+    where: { tokenHash },
+    include: {
+      meeting: {
+        include: {
+          schedulingLink: {
+            include: { user: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!actionToken || actionToken.type !== 'reschedule') {
+    throw new Error('Invalid reschedule token');
+  }
+
+  if (!isTokenValid(actionToken)) {
+    throw new Error('Token expired or already used');
+  }
+
+  const meeting = actionToken.meeting;
+  const link = meeting.schedulingLink;
+
+  if (link.slug !== slug) {
+    throw new Error('Token does not match scheduling link');
+  }
+
+  // Validate duration
+  if (!link.durationsMinutes.includes(data.durationMinutes)) {
+    throw new Error('Invalid duration');
+  }
+
+  const startDateTime = new Date(data.startDateTime);
+  const endDateTime = DateTime.fromJSDate(startDateTime)
+    .plus({ minutes: data.durationMinutes })
+    .toJSDate();
+
+  // Update meeting and mark token as used
+  const updatedMeeting = await prisma.$transaction(async (tx) => {
+    // Mark token as used
+    await tx.meetingActionToken.update({
+      where: { id: actionToken.id },
+      data: { usedAt: new Date() },
+    });
+
+    // Update meeting
+    return await tx.meeting.update({
+      where: { id: meeting.id },
+      data: {
+        startDateTime,
+        endDateTime,
+        status: 'rescheduled',
+        rescheduledAt: new Date(),
+      },
+    });
+  });
+
+  // Update calendar event
+  const user = link.user;
+
+  if (link.calendarProvider === 'google' && meeting.googleEventId && user.googleAccessToken) {
+    try {
+      await googleCalendarService.updateEvent(
+        user.id,
+        link.calendarId,
+        meeting.googleEventId,
+        {
+          start: startDateTime.toISOString(),
+          end: endDateTime.toISOString(),
+        }
+      );
+    } catch (error) {
+      // Continue without Google event update on error
+    }
+  } else if (link.calendarProvider === 'apple' && meeting.appleEventUrl) {
+    try {
+      await appleCalendarService.updateEvent(
+        user.id,
+        link.calendarId,
+        meeting.appleEventUrl,
+        {
+          start: startDateTime.toISOString(),
+          end: endDateTime.toISOString(),
+        }
+      );
+    } catch (error) {
+      // Continue without Apple event update on error
+    }
+  }
+
+  return {
+    meeting: {
+      id: updatedMeeting.id,
+      startDateTime: updatedMeeting.startDateTime.toISOString(),
+      endDateTime: updatedMeeting.endDateTime.toISOString(),
+    },
+  };
+}
+
+/**
+ * Cancel a meeting using a token
+ */
+export async function cancelMeeting(
+  slug: string,
+  token: string
+): Promise<{
+  success: boolean;
+}> {
+  const tokenHash = hashToken(token);
+
+  // Find and validate token
+  const actionToken = await prisma.meetingActionToken.findUnique({
+    where: { tokenHash },
+    include: {
+      meeting: {
+        include: {
+          schedulingLink: {
+            include: { user: true },
+          },
+        },
+      },
+    },
+  });
+
+  if (!actionToken || actionToken.type !== 'cancel') {
+    throw new Error('Invalid cancel token');
+  }
+
+  if (!isTokenValid(actionToken)) {
+    throw new Error('Token expired or already used');
+  }
+
+  const meeting = actionToken.meeting;
+  const link = meeting.schedulingLink;
+
+  if (link.slug !== slug) {
+    throw new Error('Token does not match scheduling link');
+  }
+
+  // Update meeting and mark token as used
+  await prisma.$transaction(async (tx) => {
+    // Mark token as used
+    await tx.meetingActionToken.update({
+      where: { id: actionToken.id },
+      data: { usedAt: new Date() },
+    });
+
+    // Update meeting status
+    await tx.meeting.update({
+      where: { id: meeting.id },
+      data: {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+      },
+    });
+  });
+
+  // Cancel calendar event (keep record but mark as cancelled)
+  const user = link.user;
+
+  if (link.calendarProvider === 'google' && meeting.googleEventId && user.googleAccessToken) {
+    try {
+      await googleCalendarService.cancelEvent(user.id, link.calendarId, meeting.googleEventId);
+    } catch (error) {
+      // Continue without Google event cancel on error
+    }
+  } else if (link.calendarProvider === 'apple' && meeting.appleEventUrl) {
+    try {
+      await appleCalendarService.cancelEvent(user.id, link.calendarId, meeting.appleEventUrl);
+    } catch (error) {
+      // Continue without Apple event cancel on error
+    }
+  }
+
+  return {
+    success: true,
   };
 }

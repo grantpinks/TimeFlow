@@ -32,6 +32,16 @@ const bookMeetingSchema = z.object({
   durationMinutes: z.number().positive(),
 });
 
+const rescheduleMeetingSchema = z.object({
+  token: z.string().min(1),
+  startDateTime: z.string().datetime(),
+  durationMinutes: z.number().positive(),
+});
+
+const cancelMeetingSchema = z.object({
+  token: z.string().min(1),
+});
+
 /**
  * POST /api/book/:slug
  */
@@ -55,6 +65,73 @@ export async function bookMeeting(
         reply.status(404).send({ error: error.message });
       } else if (error.message.includes('Invalid duration') || error.message.includes('no longer available')) {
         reply.status(400).send({ error: error.message });
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
+}
+
+/**
+ * POST /api/book/:slug/reschedule
+ */
+export async function rescheduleMeeting(
+  request: FastifyRequest<{ Params: { slug: string } }>,
+  reply: FastifyReply
+) {
+  const { slug } = request.params;
+
+  try {
+    const data = rescheduleMeetingSchema.parse(request.body);
+
+    const result = await meetingBookingService.rescheduleMeeting(slug, data.token, {
+      startDateTime: data.startDateTime,
+      durationMinutes: data.durationMinutes,
+    });
+
+    reply.send(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      reply.status(400).send({ error: formatZodError(error) });
+    } else if (error instanceof Error) {
+      if (error.message.includes('Invalid') || error.message.includes('expired') || error.message.includes('used')) {
+        reply.status(400).send({ error: error.message });
+      } else if (error.message.includes('not match')) {
+        reply.status(403).send({ error: error.message });
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
+}
+
+/**
+ * POST /api/book/:slug/cancel
+ */
+export async function cancelMeeting(
+  request: FastifyRequest<{ Params: { slug: string } }>,
+  reply: FastifyReply
+) {
+  const { slug } = request.params;
+
+  try {
+    const data = cancelMeetingSchema.parse(request.body);
+
+    const result = await meetingBookingService.cancelMeeting(slug, data.token);
+
+    reply.send(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      reply.status(400).send({ error: formatZodError(error) });
+    } else if (error instanceof Error) {
+      if (error.message.includes('Invalid') || error.message.includes('expired') || error.message.includes('used')) {
+        reply.status(400).send({ error: error.message });
+      } else if (error.message.includes('not match')) {
+        reply.status(403).send({ error: error.message });
       } else {
         throw error;
       }
