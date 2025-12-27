@@ -677,21 +677,23 @@ export default function CalendarPage() {
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-12 flex-1 overflow-hidden bg-white">
             {/* Left Rail - Panels */}
-            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full border-r border-slate-200 overflow-y-auto">
-              <MiniCalendar
-                events={externalEvents}
-                tasks={tasks}
-                selectedDate={calendarDate}
-                onDateClick={setCalendarDate}
-              />
-              <TimeBreakdown tasks={tasks.filter((t) => t.status === 'scheduled')} />
-              <UpcomingEventsPanel events={externalEvents} />
-              <UnscheduledTasksPanel
-                tasks={unscheduledTasks}
-                onCompleteTask={handleCompleteTaskById}
-                onDeleteTask={handleDeleteTaskById}
-              />
-              <PlanMeetingsPanel />
+            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full border-r border-slate-200 overflow-y-auto" style={{ direction: 'rtl' }}>
+              <div style={{ direction: 'ltr' }} className="flex flex-col">
+                <MiniCalendar
+                  events={externalEvents}
+                  tasks={tasks}
+                  selectedDate={calendarDate}
+                  onDateClick={setCalendarDate}
+                />
+                <TimeBreakdown tasks={tasks.filter((t) => t.status === 'scheduled')} />
+                <UpcomingEventsPanel events={externalEvents} />
+                <UnscheduledTasksPanel
+                  tasks={unscheduledTasks}
+                  onCompleteTask={handleCompleteTaskById}
+                  onDeleteTask={handleDeleteTaskById}
+                />
+                <PlanMeetingsPanel />
+              </div>
             </div>
 
             {/* Main Panel - Calendar */}
