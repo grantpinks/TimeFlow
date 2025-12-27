@@ -11,3 +11,4 @@ export * from './calendar.js';
 export * from './schedule.js';
 export * from './assistant.js';
 export * from './email.js';
+export * from './meeting.js';
