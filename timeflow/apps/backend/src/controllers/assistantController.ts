@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import * as assistantService from '../services/assistantService.js';
+import * as conversationService from '../services/conversationService.js';
 import type { AssistantChatRequest, ChatMessage } from '@timeflow/shared';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
@@ -71,7 +72,11 @@ export async function getHistory(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  // Optional: Return persisted conversation history from DB
-  // For MVP: Client manages state, so return empty array
-  return reply.status(200).send({ messages: [] });
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const messages = await conversationService.getLatestConversationHistory(user.id);
+  return reply.status(200).send({ messages });
 }

@@ -8,6 +8,7 @@ const {
   detectRescheduleIntent,
   detectDailyPlanIntent,
   parseResponse,
+  sanitizeSchedulePreview,
   sanitizeAssistantContent,
 } = __test__;
 
@@ -213,6 +214,40 @@ describe('assistantService helpers', () => {
       expect(sanitized).toBe(
         "I've prepared a schedule. Review it below and click Apply to add it to your calendar."
       );
+    });
+  });
+
+  describe('sanitizeSchedulePreview', () => {
+    it('drops blocks with unknown taskId and records conflicts', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { taskId: 'task-valid', start: '2025-01-01T08:00:00.000Z', end: '2025-01-01T09:00:00.000Z' },
+          { taskId: 'task-unknown', start: '2025-01-01T10:00:00.000Z', end: '2025-01-01T11:00:00.000Z' },
+        ],
+        summary: 'Test',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const sanitized = sanitizeSchedulePreview(preview, ['task-valid'], []);
+      expect(sanitized.blocks).toHaveLength(1);
+      expect(sanitized.blocks[0].taskId).toBe('task-valid');
+      expect(sanitized.conflicts.some((msg) => msg.includes('unknown taskId'))).toBe(true);
+    });
+
+    it('returns empty blocks with a warning when all blocks are invalid', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { taskId: 'task-unknown', start: '2025-01-01T10:00:00.000Z', end: '2025-01-01T11:00:00.000Z' },
+        ],
+        summary: 'Test',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const sanitized = sanitizeSchedulePreview(preview, [], []);
+      expect(sanitized.blocks).toHaveLength(0);
+      expect(sanitized.conflicts.some((msg) => msg.includes('No valid blocks'))).toBe(true);
     });
   });
 });

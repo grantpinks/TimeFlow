@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
+import { SchedulingLinksPanel } from '@/components/SchedulingLinksPanel';
+import { MeetingManagerPanel } from '@/components/MeetingManagerPanel';
 import * as api from '@/lib/api';
 import type { Calendar, DailyScheduleConfig, DaySchedule } from '@timeflow/shared';
 
@@ -350,6 +352,12 @@ export default function SettingsPage() {
               </select>
             )}
           </div>
+
+          {/* Scheduling Links */}
+          <SchedulingLinksPanel />
+
+          {/* Meeting Manager */}
+          <MeetingManagerPanel />
 
           {/* Categories */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">

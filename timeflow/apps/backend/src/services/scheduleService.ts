@@ -23,6 +23,7 @@ import {
   validateSchedulePreview,
   type UserPreferences as ValidationPreferences,
 } from '../utils/scheduleValidator.js';
+import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
 
 /**
  * Run smart scheduling for the given tasks.
@@ -65,12 +66,18 @@ export async function scheduleTasksForUser(
   );
 
   // 4. Prepare inputs for scheduling engine
-  const taskInputs: TaskInput[] = tasks.map((t) => ({
-    id: t.id,
-    durationMinutes: t.durationMinutes,
-    priority: t.priority as 1 | 2 | 3,
-    dueDate: t.dueDate?.toISOString(),
-  }));
+  const taskInputs: TaskInput[] = tasks.map((t) => {
+    const normalizedDueDate = t.dueDate
+      ? normalizeDateOnlyToEndOfDay(t.dueDate, user.timeZone || 'UTC')
+      : null;
+
+    return {
+      id: t.id,
+      durationMinutes: t.durationMinutes,
+      priority: t.priority as 1 | 2 | 3,
+      dueDate: normalizedDueDate?.toISOString(),
+    };
+  });
 
   const schedulerEvents: SchedulerEvent[] = existingEvents.map((e) => ({
     id: e.id,

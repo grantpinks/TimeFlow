@@ -493,7 +493,7 @@ export async function processMessage(
     const systemPrompt = promptManager.getPrompt(mode);
 
     // Build the context prompt with user data and classified events
-    const { contextPrompt, calendarEvents, taskIds } = await buildContextPrompt(
+    const { contextPrompt, calendarEvents, taskIds, habitIds } = await buildContextPrompt(
       userId,
       message,
       mode,
@@ -545,6 +545,10 @@ export async function processMessage(
         naturalLanguage = retryParsed.naturalLanguage;
         schedulePreview = retryParsed.schedulePreview;
       }
+    }
+
+    if (mode === 'scheduling' && schedulePreview) {
+      schedulePreview = sanitizeSchedulePreview(schedulePreview, taskIds, habitIds);
     }
 
     // Validate schedule preview if in scheduling mode (Sprint 13.7)
@@ -640,6 +644,7 @@ async function buildContextPrompt(
   contextPrompt: string;
   calendarEvents: any[];
   taskIds: string[];
+  habitIds: string[];
 }> {
   // Fetch user with preferences
   const user = await prisma.user.findUnique({
@@ -923,11 +928,13 @@ async function buildContextPrompt(
   const taskIds = shouldIncludeScheduledIds
     ? [...unscheduledTasks, ...scheduledTasks].map((task) => task.id)
     : unscheduledTasks.map((task) => task.id);
+  const habitIds = habits.map((habit) => habit.id);
 
   return {
     contextPrompt: prompt,
     calendarEvents,
     taskIds,
+    habitIds,
   };
 }
 
@@ -1148,6 +1155,43 @@ function parseResponse(llmResponse: string): {
   }
 }
 
+function sanitizeSchedulePreview(
+  preview: SchedulePreview,
+  validTaskIds: string[],
+  validHabitIds: string[]
+): SchedulePreview {
+  const conflicts = [...preview.conflicts];
+  const blocks = preview.blocks.filter((block) => {
+    if (block.taskId) {
+      if (!validTaskIds.includes(block.taskId)) {
+        conflicts.push(`Dropped block with unknown taskId: ${block.taskId}`);
+        return false;
+      }
+      return true;
+    }
+    if (block.habitId) {
+      if (!validHabitIds.includes(block.habitId)) {
+        conflicts.push(`Dropped block with unknown habitId: ${block.habitId}`);
+        return false;
+      }
+      return true;
+    }
+    conflicts.push('Dropped block missing taskId/habitId');
+    return false;
+  });
+
+  if (preview.blocks.length > 0 && blocks.length === 0) {
+    conflicts.push('No valid blocks remain after sanitization.');
+  }
+
+  return {
+    ...preview,
+    blocks,
+    conflicts,
+    confidence: conflicts.length > 0 && preview.confidence === 'high' ? 'medium' : preview.confidence,
+  };
+}
+
 /**
  * Strip technical markers and IDs from the user-facing response.
  */
@@ -1269,5 +1313,6 @@ export const __test__ = {
   detectRescheduleIntent,
   detectDailyPlanIntent,
   parseResponse,
+  sanitizeSchedulePreview,
   sanitizeAssistantContent,
 };

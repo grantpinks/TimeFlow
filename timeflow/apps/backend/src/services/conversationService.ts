@@ -59,6 +59,27 @@ export async function getConversation(conversationId: string, userId: string) {
 }
 
 /**
+ * Get the most recent conversation history for a user.
+ */
+export async function getLatestConversationHistory(userId: string): Promise<ChatMessage[]> {
+  const conversation = await prisma.conversation.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  });
+
+  if (!conversation) {
+    return [];
+  }
+
+  return convertToChatMessages(conversation.messages);
+}
+
+/**
  * Update conversation title or pinned status
  */
 export async function updateConversation(

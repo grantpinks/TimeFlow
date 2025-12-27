@@ -810,3 +810,20 @@ export async function deleteSchedulingLink(id: string): Promise<void> {
     method: 'DELETE',
   });
 }
+
+/**
+ * Get all meetings (host view)
+ */
+export async function getMeetings(status?: 'scheduled' | 'rescheduled' | 'cancelled'): Promise<Meeting[]> {
+  const query = status ? `?status=${status}` : '';
+  return request<Meeting[]>(`/meetings${query}`);
+}
+
+/**
+ * Cancel a meeting (host action)
+ */
+export async function hostCancelMeeting(meetingId: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/meetings/${meetingId}/cancel`, {
+    method: 'POST',
+  });
+}
