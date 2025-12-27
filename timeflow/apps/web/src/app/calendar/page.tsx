@@ -677,7 +677,7 @@ export default function CalendarPage() {
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-12 flex-1 overflow-hidden bg-white">
             {/* Left Rail - Panels */}
-            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full border-r border-slate-200">
+            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full border-r border-slate-200 overflow-y-auto">
               <MiniCalendar
                 events={externalEvents}
                 tasks={tasks}
