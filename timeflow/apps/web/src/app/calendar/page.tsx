@@ -526,17 +526,18 @@ export default function CalendarPage() {
                 AI-powered calendar with smart scheduling and intelligent time management
               </p>
             </div>
-            <div className="flex items-center gap-4">
-            <a
-              href="/categories"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs font-medium text-slate-700 hover:border-primary-200 hover:text-primary-700"
-            >
-              Train categories
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-4">
+                <a
+                  href="/categories"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs font-medium text-slate-700 hover:border-primary-200 hover:text-primary-700"
+                >
+                  Train categories
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+                <div className="flex items-center gap-3">
               <button
                 onClick={handleCategorizeEvents}
                 disabled={categorizingEvents || externalEvents.length === 0}
@@ -633,26 +634,27 @@ export default function CalendarPage() {
                 )}
               </button>
             </div>
-            </div>
+              </div>
 
-            {/* Category Legend */}
-            <div className="flex items-center gap-3 text-xs px-6 pb-4">
-              {categories.slice(0, 4).map((cat) => (
-                <div key={cat.id} className="flex items-center gap-1.5">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: cat.color }}
-                  ></span>
-                  <span className="text-slate-600 font-medium">{cat.name}</span>
+              {/* Category Legend */}
+              <div className="flex items-center gap-3 text-xs">
+                {categories.slice(0, 4).map((cat) => (
+                  <div key={cat.id} className="flex items-center gap-1.5">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: cat.color }}
+                    ></span>
+                    <span className="text-slate-600 font-medium">{cat.name}</span>
+                  </div>
+                ))}
+                {categories.length > 4 && (
+                  <span className="text-slate-400">+{categories.length - 4}</span>
+                )}
+                <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-slate-500"></span>
+                  <span className="text-slate-600 font-medium">Events</span>
                 </div>
-              ))}
-              {categories.length > 4 && (
-                <span className="text-slate-400">+{categories.length - 4}</span>
-              )}
-              <div className="w-px h-4 bg-slate-300 mx-1"></div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded bg-slate-500"></span>
-                <span className="text-slate-600 font-medium">Events</span>
               </div>
             </div>
           </div>
