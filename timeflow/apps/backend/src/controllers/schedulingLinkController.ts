@@ -7,6 +7,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as schedulingLinkService from '../services/schedulingLinkService.js';
 import { z } from 'zod';
+import type {} from '../types/context.js';
 
 /**
  * Format Zod validation errors
@@ -52,8 +53,12 @@ const updateSchedulingLinkSchema = z.object({
  * GET /api/scheduling-links
  */
 export async function getSchedulingLinks(request: FastifyRequest, reply: FastifyReply) {
-  const userId = (request as any).userId;
-  const links = await schedulingLinkService.getSchedulingLinks(userId);
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const links = await schedulingLinkService.getSchedulingLinks(user.id);
   reply.send(links);
 }
 
@@ -61,11 +66,14 @@ export async function getSchedulingLinks(request: FastifyRequest, reply: Fastify
  * POST /api/scheduling-links
  */
 export async function createSchedulingLink(request: FastifyRequest, reply: FastifyReply) {
-  const userId = (request as any).userId;
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
 
   try {
     const data = createSchedulingLinkSchema.parse(request.body);
-    const link = await schedulingLinkService.createSchedulingLink(userId, data);
+    const link = await schedulingLinkService.createSchedulingLink(user.id, data);
     reply.status(201).send(link);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -80,12 +88,16 @@ export async function createSchedulingLink(request: FastifyRequest, reply: Fasti
  * PATCH /api/scheduling-links/:id
  */
 export async function updateSchedulingLink(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-  const userId = (request as any).userId;
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
   const { id } = request.params;
 
   try {
     const data = updateSchedulingLinkSchema.parse(request.body);
-    const link = await schedulingLinkService.updateSchedulingLink(id, userId, data);
+    const link = await schedulingLinkService.updateSchedulingLink(id, user.id, data);
 
     if (!link) {
       reply.status(404).send({ error: 'Scheduling link not found' });
@@ -106,10 +118,14 @@ export async function updateSchedulingLink(request: FastifyRequest<{ Params: { i
  * POST /api/scheduling-links/:id/pause
  */
 export async function pauseSchedulingLink(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-  const userId = (request as any).userId;
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
   const { id } = request.params;
 
-  const success = await schedulingLinkService.pauseSchedulingLink(id, userId);
+  const success = await schedulingLinkService.pauseSchedulingLink(id, user.id);
 
   if (!success) {
     reply.status(404).send({ error: 'Scheduling link not found' });
@@ -123,10 +139,14 @@ export async function pauseSchedulingLink(request: FastifyRequest<{ Params: { id
  * POST /api/scheduling-links/:id/resume
  */
 export async function resumeSchedulingLink(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-  const userId = (request as any).userId;
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
   const { id } = request.params;
 
-  const success = await schedulingLinkService.resumeSchedulingLink(id, userId);
+  const success = await schedulingLinkService.resumeSchedulingLink(id, user.id);
 
   if (!success) {
     reply.status(404).send({ error: 'Scheduling link not found' });
@@ -140,10 +160,14 @@ export async function resumeSchedulingLink(request: FastifyRequest<{ Params: { i
  * DELETE /api/scheduling-links/:id
  */
 export async function deleteSchedulingLink(request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {
-  const userId = (request as any).userId;
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
   const { id } = request.params;
 
-  const success = await schedulingLinkService.deleteSchedulingLink(id, userId);
+  const success = await schedulingLinkService.deleteSchedulingLink(id, user.id);
 
   if (!success) {
     reply.status(404).send({ error: 'Scheduling link not found' });
