@@ -97,6 +97,11 @@ export function ShareLinkModal({
       return;
     }
 
+    if (!selectedLinkData) {
+      setError('Selected link not found. Please refresh and try again.');
+      return;
+    }
+
     if (!recipients.trim()) {
       setError('Please enter at least one recipient');
       return;
@@ -141,7 +146,7 @@ export function ShareLinkModal({
 
     try {
       const baseUrl = window.location.origin;
-      const bookingUrl = `${baseUrl}/book/${selectedLinkData!.slug}`;
+      const bookingUrl = `${baseUrl}/book/${selectedLinkData.slug}`;
 
       const result = await api.sendMeetingLinkEmail({
         recipients: recipientList,

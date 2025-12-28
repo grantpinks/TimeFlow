@@ -35,15 +35,24 @@ export function MeetingManagementPanel() {
   async function fetchData() {
     try {
       setLoading(true);
-      const [linksData, meetingsData] = await Promise.all([
-        api.getSchedulingLinks(),
-        api.getMeetings(),
-      ]);
+
+      // Fetch links (required)
+      const linksData = await api.getSchedulingLinks();
       setLinks(linksData.filter((l) => l.isActive));
-      setMeetings(meetingsData.filter((m) => m.status === 'scheduled'));
+
+      // Fetch meetings (optional, don't fail if this errors)
+      try {
+        const meetingsData = await api.getMeetings();
+        setMeetings(meetingsData.filter((m) => m.status === 'scheduled'));
+      } catch (meetingsError) {
+        console.log('Meetings not available yet:', meetingsError);
+        // Silently fail - meetings panel will show 0 upcoming
+        setMeetings([]);
+      }
     } catch (error) {
-      console.error('Failed to fetch meeting data:', error);
-      showToast('Failed to load meeting data', 'error');
+      console.error('Failed to fetch scheduling links:', error);
+      // Only show error if critical data (links) fails
+      showToast('Failed to load scheduling links', 'error');
     } finally {
       setLoading(false);
     }
@@ -59,9 +68,11 @@ export function MeetingManagementPanel() {
     showToast('Link copied to clipboard!', 'success');
   }
 
-  function handleCreateSuccess(linkId: string) {
+  async function handleCreateSuccess(linkId: string) {
     showToast('Link created successfully!', 'success');
-    fetchData();
+
+    // Wait for data to refresh before opening share modal
+    await fetchData();
 
     // Auto-transition to share modal
     setSelectedLinkForShare(linkId);
