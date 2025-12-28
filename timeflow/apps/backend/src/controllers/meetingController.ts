@@ -5,10 +5,24 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
 import { prisma } from '../config/prisma.js';
 import * as googleCalendarService from '../services/googleCalendarService.js';
 import * as appleCalendarService from '../services/appleCalendarService.js';
 import * as gmailService from '../services/gmailService.js';
+import * as emailTemplateService from '../services/emailTemplateService.js';
+import { formatZodError } from '../utils/errorFormatter.js';
+import type {} from '../types/context.js';
+
+const sendLinkEmailSchema = z.object({
+  recipients: z
+    .array(z.string().email())
+    .min(1, 'At least one recipient is required')
+    .max(50, 'Maximum 50 recipients allowed'),
+  subject: z.string().min(1).max(200, 'Subject must be 200 characters or less'),
+  message: z.string().min(1).max(5000, 'Message must be 5000 characters or less'),
+  bookingUrl: z.string().url(),
+});
 
 /**
  * GET /api/meetings
@@ -17,7 +31,12 @@ export async function getMeetings(
   request: FastifyRequest<{ Querystring: { status?: string } }>,
   reply: FastifyReply
 ) {
-  const userId = request.userId!;
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const userId = user.id;
   const { status } = request.query;
 
   try {
@@ -66,7 +85,12 @@ export async function cancelMeeting(
   request: FastifyRequest<{ Params: { meetingId: string } }>,
   reply: FastifyReply
 ) {
-  const userId = request.userId!;
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const userId = user.id;
   const { meetingId } = request.params;
 
   try {
@@ -130,6 +154,99 @@ export async function cancelMeeting(
     }
 
     reply.send({ success: true });
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * POST /api/meetings/send-link-email
+ */
+export async function sendMeetingLinkEmail(
+  request: FastifyRequest<{ Body: unknown }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const userId = user.id;
+
+  // Validate request body
+  const parsed = sendLinkEmailSchema.safeParse(request.body);
+  if (!parsed.success) {
+    reply.status(400).send({ error: formatZodError(parsed.error) });
+    return;
+  }
+
+  const { recipients, subject, message, bookingUrl } = parsed.data;
+
+  try {
+    // Verify user has Gmail access
+    const userWithGmail = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { googleAccessToken: true, name: true },
+    });
+
+    if (!userWithGmail || !userWithGmail.googleAccessToken) {
+      reply.status(400).send({ error: 'Google account not connected' });
+      return;
+    }
+
+    // Validate booking URL belongs to user's scheduling links
+    const schedulingLinks = await prisma.schedulingLink.findMany({
+      where: { userId, isActive: true },
+      select: { slug: true },
+    });
+
+    const validSlugs = schedulingLinks.map((link) => link.slug);
+    const urlMatch = bookingUrl.match(/\/book\/([^/?#]+)/);
+    const urlSlug = urlMatch ? urlMatch[1] : null;
+
+    if (!urlSlug || !validSlugs.includes(urlSlug)) {
+      reply.status(400).send({
+        error: 'Invalid booking URL. URL must match one of your active scheduling links.'
+      });
+      return;
+    }
+
+    // Generate email template
+    const emailContent = emailTemplateService.generateMeetingLinkEmail(message, bookingUrl);
+
+    // Send emails to all recipients
+    let sentCount = 0;
+    const errors: string[] = [];
+
+    for (const recipient of recipients) {
+      try {
+        await gmailService.sendEmail(userId, {
+          to: recipient,
+          subject,
+          html: emailContent.html,
+          text: emailContent.text,
+        });
+        sentCount++;
+      } catch (error) {
+        console.error(`Failed to send email to ${recipient}:`, error);
+        errors.push(recipient);
+      }
+    }
+
+    // Return success if at least one email was sent
+    if (sentCount > 0) {
+      reply.send({
+        success: true,
+        sentCount,
+        totalRecipients: recipients.length,
+        ...(errors.length > 0 && { failedRecipients: errors }),
+      });
+    } else {
+      reply.status(500).send({
+        error: 'Failed to send emails to any recipients',
+        failedRecipients: errors,
+      });
+    }
   } catch (error) {
     throw error;
   }

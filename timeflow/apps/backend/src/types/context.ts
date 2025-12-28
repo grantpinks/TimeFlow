@@ -22,3 +22,12 @@ declare module '@fastify/jwt' {
   }
 }
 
+/**
+ * Extend FastifyRequest to include user property
+ */
+declare module 'fastify' {
+  interface FastifyRequest {
+    user?: AuthenticatedUser;
+  }
+}
+
