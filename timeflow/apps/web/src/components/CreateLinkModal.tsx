@@ -6,7 +6,7 @@
  * Modal for quickly creating scheduling links with smart defaults.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as api from '@/lib/api';
 
 interface CreateLinkModalProps {
@@ -19,7 +19,40 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
   const [name, setName] = useState('');
   const [durations, setDurations] = useState<number[]>([30]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
   const [error, setError] = useState('');
+  const [calendarId, setCalendarId] = useState<string | null>(null);
+
+  // Fetch user's default calendar when modal opens
+  useEffect(() => {
+    async function fetchCalendarId() {
+      setIsLoadingCalendar(true);
+      setError('');
+      try {
+        const profile = await api.getMe();
+        if (profile.defaultCalendarId) {
+          setCalendarId(profile.defaultCalendarId);
+        } else {
+          // Fetch user's calendars and use the first one
+          const calendars = await api.listCalendars();
+          if (calendars.length > 0) {
+            setCalendarId(calendars[0].id);
+          } else {
+            setError('No Google Calendar found. Please connect your Google account.');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch calendar:', err);
+        setError('Failed to load calendar. Please try again.');
+      } finally {
+        setIsLoadingCalendar(false);
+      }
+    }
+
+    if (isOpen) {
+      fetchCalendarId();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -45,6 +78,11 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
       return;
     }
 
+    if (!calendarId) {
+      setError('No calendar available. Please connect your Google account.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -53,6 +91,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
         durationsMinutes: durations.sort((a, b) => a - b),
         // Smart defaults
         calendarProvider: 'google',
+        calendarId: calendarId,
         googleMeetEnabled: true,
         bufferBeforeMinutes: 5,
         bufferAfterMinutes: 5,
@@ -78,6 +117,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
       setName('');
       setDurations([30]);
       setError('');
+      setCalendarId(null);
       onClose();
     }
   };
@@ -113,7 +153,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Quick Chat"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoadingCalendar}
               autoFocus
             />
           </div>
@@ -127,7 +167,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                   key={duration}
                   type="button"
                   onClick={() => handleDurationToggle(duration)}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isLoadingCalendar}
                   className={`
                     flex-1 px-4 py-2 rounded-lg border-2 font-medium text-sm
                     transition-colors disabled:opacity-50
@@ -164,17 +204,17 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
             <button
               type="button"
               onClick={handleClose}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoadingCalendar}
               className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isLoadingCalendar}
               className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium"
             >
-              {isSubmitting ? 'Creating...' : 'Create Link'}
+              {isLoadingCalendar ? 'Loading...' : isSubmitting ? 'Creating...' : 'Create Link'}
             </button>
           </div>
         </form>
