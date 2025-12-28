@@ -33,6 +33,7 @@ import type {
   SendEmailResponse,
   EmailCategory,
   SchedulingLink,
+  Meeting,
 } from '@timeflow/shared';
 
 /**
@@ -825,6 +826,26 @@ export async function getMeetings(status?: 'scheduled' | 'rescheduled' | 'cancel
 export async function hostCancelMeeting(meetingId: string): Promise<{ success: boolean }> {
   return request<{ success: boolean }>(`/meetings/${meetingId}/cancel`, {
     method: 'POST',
+  });
+}
+
+/**
+ * Send meeting link email to recipients
+ */
+export async function sendMeetingLinkEmail(data: {
+  recipients: string[];
+  subject: string;
+  message: string;
+  bookingUrl: string;
+}): Promise<{
+  success: boolean;
+  sentCount: number;
+  totalRecipients: number;
+  failedRecipients?: string[];
+}> {
+  return request(`/meetings/send-link-email`, {
+    method: 'POST',
+    body: JSON.stringify(data),
   });
 }
 
