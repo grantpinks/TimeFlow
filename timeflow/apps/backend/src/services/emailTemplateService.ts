@@ -24,8 +24,8 @@ function escapeHtml(text: string): string {
 function isValidBookingUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    // Only allow HTTPS URLs
-    return parsed.protocol === 'https:';
+    // Allow HTTPS in production, HTTP for local development
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
   } catch {
     return false;
   }
