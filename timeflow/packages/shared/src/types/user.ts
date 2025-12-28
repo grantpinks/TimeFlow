@@ -32,6 +32,7 @@ export interface DailyScheduleConfig {
 export interface UserProfile {
   id: string;
   email: string;
+  name?: string | null;
   timeZone: string;
   wakeTime: string;
   sleepTime: string;

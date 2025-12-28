@@ -56,6 +56,7 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
   return {
     id: record.id,
     email: record.email,
+    name: record.name,
     timeZone: record.timeZone,
     wakeTime: record.wakeTime,
     sleepTime: record.sleepTime,
@@ -142,6 +143,7 @@ export async function updatePreferences(
   return {
     id: updated.id,
     email: updated.email,
+    name: updated.name,
     timeZone: updated.timeZone,
     wakeTime: updated.wakeTime,
     sleepTime: updated.sleepTime,
