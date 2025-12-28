@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { Layout } from '@/components/Layout';
-import { CalendarView, CalendarEventItem } from '@/components/CalendarView';
+import { CalendarView } from '@/components/CalendarView';
 import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
 import { MiniCalendar } from '@/components/MiniCalendar';
 import { TimeBreakdown } from '@/components/TimeBreakdown';
 import { UpcomingEventsPanel } from '@/components/UpcomingEventsPanel';
 import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
-import { PlanMeetingsPanel } from '@/components/PlanMeetingsPanel';
+import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
@@ -26,10 +26,9 @@ export default function CalendarPage() {
   const [scheduling, setScheduling] = useState(false);
   const [categorizingEvents, setCategorizingEvents] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [selectedTask, setSelectedTask] = useState<{ id: string; title: string } | null>(null);
-  const [showTaskModal, setShowTaskModal] = useState(false);
   const [activeDragTask, setActiveDragTask] = useState<any | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [recentlyCompletedTaskIds, setRecentlyCompletedTaskIds] = useState<Set<string>>(new Set());
 
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
@@ -71,12 +70,48 @@ export default function CalendarPage() {
     fetchExternalEvents();
   }, []);
 
+  // Handle Escape key to cancel preview
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewTask) {
+        handleCancelPreview();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewTask]);
+
+  const unscheduledTasks = tasks.filter((t) => t.status === 'unscheduled');
+  const timeflowEventIds = useMemo(() => {
+    const ids = new Set<string>();
+    tasks.forEach((task) => {
+      if (task.scheduledTask?.eventId) {
+        ids.add(task.scheduledTask.eventId);
+      }
+    });
+    return ids;
+  }, [tasks]);
+  const displayExternalEvents = useMemo(() => {
+    if (externalEvents.length === 0) return externalEvents;
+    return externalEvents.filter((event) => {
+      if (event.id && timeflowEventIds.has(event.id)) {
+        return false;
+      }
+      const summary = event.summary?.trim().toLowerCase();
+      if (summary?.startsWith('[timeflow')) {
+        return false;
+      }
+      return true;
+    });
+  }, [externalEvents, timeflowEventIds]);
+
   // Fetch event categorizations with caching and background auto-categorization
   useEffect(() => {
     async function fetchCategorizations() {
-      if (externalEvents.length === 0) return;
+      if (displayExternalEvents.length === 0) return;
 
-      const eventIds = externalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
+      const eventIds = displayExternalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
       if (eventIds.length === 0) return;
 
       // Check cache
@@ -157,21 +192,7 @@ export default function CalendarPage() {
     }
 
     fetchCategorizations();
-  }, [externalEvents]);
-
-  // Handle Escape key to cancel preview
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && previewTask) {
-        handleCancelPreview();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [previewTask]);
-
-  const unscheduledTasks = tasks.filter((t) => t.status === 'unscheduled');
+  }, [displayExternalEvents]);
 
   const handleSmartSchedule = async () => {
     const taskIds = unscheduledTasks.map((t) => t.id);
@@ -216,7 +237,7 @@ export default function CalendarPage() {
   };
 
   const handleCategorizeEvents = async () => {
-    if (externalEvents.length === 0) {
+    if (displayExternalEvents.length === 0) {
       setMessage({ type: 'error', text: 'No events to categorize' });
       return;
     }
@@ -234,7 +255,7 @@ export default function CalendarPage() {
 
       // Clear cache and refresh categorizations
       clearCategorizationCache();
-      const eventIds = externalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
+      const eventIds = displayExternalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
       const cats = await api.getEventCategorizations(eventIds);
       setEventCategorizations(cats);
 
@@ -261,7 +282,7 @@ export default function CalendarPage() {
 
       // Clear cache and refresh categorizations to get updated data
       clearCategorizationCache();
-      const eventIds = externalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
+      const eventIds = displayExternalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
       const cats = await api.getEventCategorizations(eventIds);
       setEventCategorizations(cats);
 
@@ -278,56 +299,6 @@ export default function CalendarPage() {
         type: 'error',
         text: err instanceof Error ? err.message : 'Failed to update category',
       });
-    }
-  };
-
-  const handleEventSelect = (event: CalendarEventItem) => {
-    if (event.isTask && event.taskId) {
-      setSelectedTask({ id: event.taskId, title: event.title });
-      setShowTaskModal(true);
-    }
-  };
-
-  const handleDeleteTask = async () => {
-    if (!selectedTask) return;
-
-    try {
-      await api.deleteTask(selectedTask.id);
-      await refreshTasks();
-      setMessage({
-        type: 'success',
-        text: 'Task deleted successfully!',
-      });
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: 'Failed to delete task',
-      });
-    } finally {
-      setShowTaskModal(false);
-      setSelectedTask(null);
-    }
-  };
-
-  const handleUnscheduleTask = async () => {
-    if (!selectedTask) return;
-
-    try {
-      // Update task status to unscheduled
-      await api.updateTask(selectedTask.id, { status: 'unscheduled' });
-      await refreshTasks();
-      setMessage({
-        type: 'success',
-        text: 'Task unscheduled successfully!',
-      });
-    } catch (error) {
-      setMessage({
-        type: 'error',
-        text: 'Failed to unschedule task',
-      });
-    } finally {
-      setShowTaskModal(false);
-      setSelectedTask(null);
     }
   };
 
@@ -362,6 +333,19 @@ export default function CalendarPage() {
     try {
       await api.completeTask(taskId);
       await refreshTasks();
+      setRecentlyCompletedTaskIds((prev) => {
+        const next = new Set(prev);
+        next.add(taskId);
+        return next;
+      });
+      window.setTimeout(() => {
+        setRecentlyCompletedTaskIds((prev) => {
+          if (!prev.has(taskId)) return prev;
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+      }, 1200);
       setMessage({
         type: 'success',
         text: 'Task completed!',
@@ -540,7 +524,7 @@ export default function CalendarPage() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={handleCategorizeEvents}
-                    disabled={categorizingEvents || externalEvents.length === 0}
+                    disabled={categorizingEvents || displayExternalEvents.length === 0}
                     title="Use AI to categorize all calendar events. Re-runs categorization for all events."
                     className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center gap-2"
                   >
@@ -680,19 +664,19 @@ export default function CalendarPage() {
             <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full border-r border-slate-200 overflow-y-auto" style={{ direction: 'rtl' }}>
               <div style={{ direction: 'ltr' }} className="flex flex-col">
                 <MiniCalendar
-                  events={externalEvents}
+                  events={displayExternalEvents}
                   tasks={tasks}
                   selectedDate={calendarDate}
                   onDateClick={setCalendarDate}
                 />
                 <TimeBreakdown tasks={tasks.filter((t) => t.status === 'scheduled')} />
-                <UpcomingEventsPanel events={externalEvents} />
+                <UpcomingEventsPanel events={displayExternalEvents} />
                 <UnscheduledTasksPanel
                   tasks={unscheduledTasks}
                   onCompleteTask={handleCompleteTaskById}
                   onDeleteTask={handleDeleteTaskById}
                 />
-                <PlanMeetingsPanel />
+                <MeetingManagementPanel />
               </div>
             </div>
 
@@ -705,11 +689,11 @@ export default function CalendarPage() {
               ) : (
                 <CalendarView
                   tasks={tasks}
-                  externalEvents={externalEvents}
+                  externalEvents={displayExternalEvents}
                   eventCategorizations={eventCategorizations}
                   categories={categories}
                   selectedDate={calendarDate}
-                  onSelectEvent={handleEventSelect}
+                  recentlyCompletedTaskIds={recentlyCompletedTaskIds}
                   onRescheduleTask={handleRescheduleTask}
                   onCompleteTask={handleCompleteTaskById}
                   onEditTask={handleEditTaskById}
@@ -735,68 +719,6 @@ export default function CalendarPage() {
           </DragOverlay>
         </DndContext>
       </div>
-
-      {/* Task Action Modal */}
-      {showTaskModal && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Task Actions</h3>
-            <p className="text-slate-600 mb-6">{selectedTask.title}</p>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleUnscheduleTask}
-                className="w-full bg-amber-500 text-white px-4 py-3 rounded-lg hover:bg-amber-600 font-medium flex items-center justify-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                Unschedule Task
-              </button>
-
-              <button
-                onClick={handleDeleteTask}
-                className="w-full bg-red-500 text-white px-4 py-3 rounded-lg hover:bg-red-600 font-medium flex items-center justify-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                Delete Task Permanently
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowTaskModal(false);
-                  setSelectedTask(null);
-                }}
-                className="w-full bg-slate-200 text-slate-700 px-4 py-3 rounded-lg hover:bg-slate-300 font-medium"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Task Schedule Preview Modal */}
       {previewTask && previewSlot && (
