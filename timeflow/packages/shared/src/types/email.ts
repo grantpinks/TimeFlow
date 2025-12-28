@@ -63,7 +63,9 @@ export interface EmailAttachment {
 export interface SendEmailRequest {
   to: string;
   subject: string;
-  body: string;
+  body?: string;           // HTML body (backwards compatible)
+  html?: string;           // Explicit HTML body
+  text?: string;           // Plain text body
   inReplyTo?: string; // Message ID to reply to
   threadId?: string; // Thread ID to reply to
 }

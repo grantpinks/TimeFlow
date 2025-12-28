@@ -226,24 +226,66 @@ export async function sendEmail(userId: string, request: SendEmailRequest): Prom
   assertWithinGmailRateLimit(userId);
   const gmail = await getGmailClient(userId);
 
-  // Build the email message in RFC 2822 format
-  const messageParts = [
-    `To: ${request.to}`,
-    `Subject: ${request.subject}`,
-    'Content-Type: text/html; charset=utf-8',
-    'MIME-Version: 1.0',
-  ];
+  // Determine if multipart or single-part email
+  const hasMultipart = request.html && request.text;
+  const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
-  if (request.inReplyTo) {
-    messageParts.push(`In-Reply-To: ${request.inReplyTo}`);
-    messageParts.push(`References: ${request.inReplyTo}`);
+  let message: string;
+
+  if (hasMultipart) {
+    // Build multipart/alternative email
+    const messageParts = [
+      `To: ${request.to}`,
+      `Subject: ${request.subject}`,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      'MIME-Version: 1.0',
+    ];
+
+    if (request.inReplyTo) {
+      messageParts.push(`In-Reply-To: ${request.inReplyTo}`);
+      messageParts.push(`References: ${request.inReplyTo}`);
+    }
+
+    messageParts.push('');
+    messageParts.push(`--${boundary}`);
+    messageParts.push('Content-Type: text/plain; charset=utf-8');
+    messageParts.push('');
+    messageParts.push(request.text!);
+    messageParts.push('');
+    messageParts.push(`--${boundary}`);
+    messageParts.push('Content-Type: text/html; charset=utf-8');
+    messageParts.push('');
+    messageParts.push(request.html!);
+    messageParts.push('');
+    messageParts.push(`--${boundary}--`);
+
+    message = messageParts.join('\r\n');
+  } else {
+    // Single-part email (backwards compatible)
+    const htmlBody = request.html || request.body || '';
+    const messageParts = [
+      `To: ${request.to}`,
+      `Subject: ${request.subject}`,
+      'Content-Type: text/html; charset=utf-8',
+      'MIME-Version: 1.0',
+    ];
+
+    if (request.inReplyTo) {
+      messageParts.push(`In-Reply-To: ${request.inReplyTo}`);
+      messageParts.push(`References: ${request.inReplyTo}`);
+    }
+
+    messageParts.push('');
+    messageParts.push(htmlBody);
+
+    message = messageParts.join('\r\n');
   }
 
-  messageParts.push('');
-  messageParts.push(request.body);
-
-  const message = messageParts.join('\r\n');
-  const encodedMessage = Buffer.from(message).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const encodedMessage = Buffer.from(message)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 
   const sendOptions: any = {
     userId: 'me',
