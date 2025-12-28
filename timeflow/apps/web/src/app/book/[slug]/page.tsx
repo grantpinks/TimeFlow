@@ -39,8 +39,6 @@ export default function BookingPage() {
   }, [selectedDate, selectedDuration]);
 
   async function fetchAvailability() {
-    if (!selectedDuration) return;
-
     try {
       setLoading(true);
       setError(null);
