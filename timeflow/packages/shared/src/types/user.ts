@@ -27,6 +27,29 @@ export interface DailyScheduleConfig {
 }
 
 /**
+ * Meeting availability for a specific day
+ */
+export interface MeetingDayConfig {
+  isAvailable: boolean;           // Whether meetings are allowed on this day
+  startTime?: string;              // HH:mm - earliest meeting time (if different from wakeTime)
+  endTime?: string;                // HH:mm - latest meeting time (if different from sleepTime)
+  maxMeetings?: number;            // Max meetings allowed on this day
+}
+
+/**
+ * Per-day meeting availability configuration
+ */
+export interface DailyMeetingConfig {
+  monday?: MeetingDayConfig;
+  tuesday?: MeetingDayConfig;
+  wednesday?: MeetingDayConfig;
+  thursday?: MeetingDayConfig;
+  friday?: MeetingDayConfig;
+  saturday?: MeetingDayConfig;
+  sunday?: MeetingDayConfig;
+}
+
+/**
  * User profile as returned by the API.
  */
 export interface UserProfile {
@@ -40,6 +63,12 @@ export interface UserProfile {
   dailyScheduleConstraints?: DailyScheduleConfig | null;
   defaultTaskDurationMinutes: number;
   defaultCalendarId?: string | null;
+
+  // Meeting-specific preferences
+  meetingStartTime?: string | null;        // Default earliest meeting time
+  meetingEndTime?: string | null;          // Default latest meeting time
+  blockedDaysOfWeek?: string[];            // Days where NO meetings allowed (e.g., ["saturday", "sunday"])
+  dailyMeetingSchedule?: DailyMeetingConfig | null;  // Per-day meeting config
 }
 
 /**
@@ -53,6 +82,12 @@ export interface UserPreferencesUpdate {
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;
+
+  // Meeting-specific preferences
+  meetingStartTime?: string | null;
+  meetingEndTime?: string | null;
+  blockedDaysOfWeek?: string[];
+  dailyMeetingSchedule?: DailyMeetingConfig | null;
 }
 
 /**
