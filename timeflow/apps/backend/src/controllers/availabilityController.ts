@@ -154,6 +154,12 @@ export async function getAvailability(
       wakeTime: user.wakeTime,
       sleepTime: user.sleepTime,
       dailySchedule: user.dailySchedule,
+
+      // Pass meeting preferences
+      meetingStartTime: user.meetingStartTime,
+      meetingEndTime: user.meetingEndTime,
+      blockedDaysOfWeek: user.blockedDaysOfWeek,
+      dailyMeetingSchedule: user.dailyMeetingSchedule,
     });
 
     // Group slots by duration

@@ -18,6 +18,12 @@ interface BuildAvailabilitySlotsParams {
   wakeTime: string; // HH:mm
   sleepTime: string; // HH:mm
   dailySchedule: any; // User's daily schedule
+
+  // Meeting-specific preferences
+  meetingStartTime?: string | null;
+  meetingEndTime?: string | null;
+  blockedDaysOfWeek?: string[];
+  dailyMeetingSchedule?: any;
 }
 
 /**
@@ -44,25 +50,74 @@ export function buildAvailabilitySlots(params: BuildAvailabilitySlotsParams): Av
     timeZone,
     wakeTime,
     sleepTime,
+    meetingStartTime,
+    meetingEndTime,
+    blockedDaysOfWeek,
+    dailyMeetingSchedule,
   } = params;
 
   const start = DateTime.fromISO(rangeStart, { zone: timeZone });
   const end = DateTime.fromISO(rangeEnd, { zone: timeZone });
 
-  // Build free time blocks based on wake/sleep times
+  // Map day of week numbers to day names (1=monday, 7=sunday)
+  const dayNames: Record<number, string> = {
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
+    7: 'sunday',
+  };
+
+  // Build free time blocks based on meeting preferences or wake/sleep times
   const freeBlocks: Array<{ start: DateTime; end: DateTime }> = [];
 
   let current = start;
   while (current < end) {
     const dayStart = current.startOf('day');
-    const [wakeHour, wakeMinute] = wakeTime.split(':').map(Number);
-    const [sleepHour, sleepMinute] = sleepTime.split(':').map(Number);
+    const dayOfWeek = current.weekday; // Luxon: 1=Monday, 7=Sunday
+    const dayName = dayNames[dayOfWeek];
 
-    const wakeDateTime = dayStart.set({ hour: wakeHour, minute: wakeMinute });
-    const sleepDateTime = dayStart.set({ hour: sleepHour, minute: sleepMinute });
+    // Check if this day is blocked for meetings
+    if (blockedDaysOfWeek && blockedDaysOfWeek.includes(dayName)) {
+      current = current.plus({ days: 1 }).startOf('day');
+      continue;
+    }
 
-    const blockStart = current < wakeDateTime ? wakeDateTime : current;
-    const blockEnd = end < sleepDateTime ? end : sleepDateTime;
+    // Check if this day is marked as unavailable in dailyMeetingSchedule
+    if (dailyMeetingSchedule?.[dayName]?.isAvailable === false) {
+      current = current.plus({ days: 1 }).startOf('day');
+      continue;
+    }
+
+    // Determine start/end times for this day
+    // Priority: per-day schedule > global meeting times > wake/sleep times
+    let dayStartTime: string;
+    let dayEndTime: string;
+
+    if (dailyMeetingSchedule?.[dayName]?.startTime && dailyMeetingSchedule?.[dayName]?.endTime) {
+      // Use per-day meeting schedule
+      dayStartTime = dailyMeetingSchedule[dayName].startTime;
+      dayEndTime = dailyMeetingSchedule[dayName].endTime;
+    } else if (meetingStartTime && meetingEndTime) {
+      // Use global meeting times
+      dayStartTime = meetingStartTime;
+      dayEndTime = meetingEndTime;
+    } else {
+      // Fall back to wake/sleep times
+      dayStartTime = wakeTime;
+      dayEndTime = sleepTime;
+    }
+
+    const [startHour, startMinute] = dayStartTime.split(':').map(Number);
+    const [endHour, endMinute] = dayEndTime.split(':').map(Number);
+
+    const startDateTime = dayStart.set({ hour: startHour, minute: startMinute });
+    const endDateTime = dayStart.set({ hour: endHour, minute: endMinute });
+
+    const blockStart = current < startDateTime ? startDateTime : current;
+    const blockEnd = end < endDateTime ? end : endDateTime;
 
     if (blockStart < blockEnd) {
       freeBlocks.push({ start: blockStart, end: blockEnd });
