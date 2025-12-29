@@ -24,6 +24,13 @@ model User {
   defaultCalendarId          String?
   dailySchedule              Json?
   dailyScheduleConstraints   Json?
+
+  // Meeting-specific availability preferences
+  meetingStartTime           String?             // HH:mm - default earliest meeting time
+  meetingEndTime             String?             // HH:mm - default latest meeting time
+  blockedDaysOfWeek          String[]            @default([])  // Days blocked for meetings
+  dailyMeetingSchedule       Json?               // Per-day meeting config
+
   appliedSchedules           AppliedSchedule[]
   AssistantMetric            AssistantMetric[]
   categories                 Category[]
