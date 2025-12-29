@@ -8,6 +8,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../config/prisma.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
+import type { DailyMeetingConfig } from '@timeflow/shared';
 
 const dayScheduleSchema = z.object({
   wakeTime: z.string().regex(/^\d{2}:\d{2}$/, 'wakeTime must be HH:mm'),
@@ -24,6 +25,26 @@ const dailyScheduleSchema = z.object({
   sunday: dayScheduleSchema.optional(),
 }).optional().nullable();
 
+const meetingDayConfigSchema = z.object({
+  isAvailable: z.boolean(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'startTime must be HH:mm').optional(),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'endTime must be HH:mm').optional(),
+  maxMeetings: z.number().int().positive().max(20).optional(),
+});
+
+const dailyMeetingScheduleSchema = z
+  .object({
+    monday: meetingDayConfigSchema.optional(),
+    tuesday: meetingDayConfigSchema.optional(),
+    wednesday: meetingDayConfigSchema.optional(),
+    thursday: meetingDayConfigSchema.optional(),
+    friday: meetingDayConfigSchema.optional(),
+    saturday: meetingDayConfigSchema.optional(),
+    sunday: meetingDayConfigSchema.optional(),
+  })
+  .optional()
+  .nullable();
+
 const preferencesSchema = z.object({
   wakeTime: z.string().regex(/^\d{2}:\d{2}$/, 'wakeTime must be HH:mm').optional(),
   sleepTime: z.string().regex(/^\d{2}:\d{2}$/, 'sleepTime must be HH:mm').optional(),
@@ -32,6 +53,12 @@ const preferencesSchema = z.object({
   timeZone: z.string().min(1, 'timeZone is required').optional(),
   defaultTaskDurationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
   defaultCalendarId: z.string().min(1).optional(),
+
+  // Meeting-specific preferences
+  meetingStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'meetingStartTime must be HH:mm').optional().nullable(),
+  meetingEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'meetingEndTime must be HH:mm').optional().nullable(),
+  blockedDaysOfWeek: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
+  dailyMeetingSchedule: dailyMeetingScheduleSchema,
 });
 
 /**
@@ -64,6 +91,10 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     dailyScheduleConstraints: record.dailyScheduleConstraints || null,
     defaultTaskDurationMinutes: record.defaultTaskDurationMinutes,
     defaultCalendarId: record.defaultCalendarId,
+    meetingStartTime: record.meetingStartTime,
+    meetingEndTime: record.meetingEndTime,
+    blockedDaysOfWeek: record.blockedDaysOfWeek || [],
+    dailyMeetingSchedule: record.dailyMeetingSchedule || null,
   };
 }
 
@@ -82,6 +113,23 @@ interface DailyScheduleConfig {
   sunday?: DaySchedule;
 }
 
+interface MeetingDayConfig {
+  isAvailable: boolean;
+  startTime?: string;
+  endTime?: string;
+  maxMeetings?: number;
+}
+
+interface DailyMeetingScheduleConfig {
+  monday?: MeetingDayConfig;
+  tuesday?: MeetingDayConfig;
+  wednesday?: MeetingDayConfig;
+  thursday?: MeetingDayConfig;
+  friday?: MeetingDayConfig;
+  saturday?: MeetingDayConfig;
+  sunday?: MeetingDayConfig;
+}
+
 interface UpdatePreferencesBody {
   wakeTime?: string;
   sleepTime?: string;
@@ -90,6 +138,10 @@ interface UpdatePreferencesBody {
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;
+  meetingStartTime?: string | null;
+  meetingEndTime?: string | null;
+  blockedDaysOfWeek?: string[];
+  dailyMeetingSchedule?: DailyMeetingScheduleConfig | null;
 }
 
 /**
@@ -119,6 +171,10 @@ export async function updatePreferences(
     timeZone,
     defaultTaskDurationMinutes,
     defaultCalendarId,
+    meetingStartTime,
+    meetingEndTime,
+    blockedDaysOfWeek,
+    dailyMeetingSchedule,
   } =
     parsed.data;
 
@@ -130,13 +186,19 @@ export async function updatePreferences(
   const updated = await prisma.user.update({
     where: { id: user.id },
     data: {
-      wakeTime,
-      sleepTime,
-      dailySchedule: scheduleProvided ? mergedSchedule : undefined,
-      dailyScheduleConstraints: scheduleProvided ? mergedSchedule : undefined,
-      timeZone,
-      defaultTaskDurationMinutes,
-      defaultCalendarId,
+      ...(wakeTime && { wakeTime }),
+      ...(sleepTime && { sleepTime }),
+      ...(scheduleProvided && { dailySchedule: mergedSchedule }),
+      ...(scheduleProvided && { dailyScheduleConstraints: mergedSchedule }),
+      ...(timeZone && { timeZone }),
+      ...(defaultTaskDurationMinutes && { defaultTaskDurationMinutes }),
+      ...(defaultCalendarId && { defaultCalendarId }),
+
+      // Meeting preferences
+      ...(meetingStartTime !== undefined && { meetingStartTime }),
+      ...(meetingEndTime !== undefined && { meetingEndTime }),
+      ...(blockedDaysOfWeek && { blockedDaysOfWeek }),
+      ...(dailyMeetingSchedule !== undefined && { dailyMeetingSchedule }),
     },
   });
 
@@ -151,6 +213,10 @@ export async function updatePreferences(
     dailyScheduleConstraints: updated.dailyScheduleConstraints || null,
     defaultTaskDurationMinutes: updated.defaultTaskDurationMinutes,
     defaultCalendarId: updated.defaultCalendarId,
+    meetingStartTime: updated.meetingStartTime,
+    meetingEndTime: updated.meetingEndTime,
+    blockedDaysOfWeek: updated.blockedDaysOfWeek || [],
+    dailyMeetingSchedule: updated.dailyMeetingSchedule || null,
   };
 }
 
