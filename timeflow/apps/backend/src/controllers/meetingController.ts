@@ -12,6 +12,7 @@ import * as appleCalendarService from '../services/appleCalendarService.js';
 import * as gmailService from '../services/gmailService.js';
 import * as emailTemplateService from '../services/emailTemplateService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
+import { generateICS } from '../utils/icsGenerator.js';
 import type {} from '../types/context.js';
 
 const sendLinkEmailSchema = z.object({
@@ -128,7 +129,7 @@ export async function cancelMeeting(
 
     if (link.calendarProvider === 'google' && meeting.googleEventId && user.googleAccessToken) {
       try {
-        await googleCalendarService.deleteEvent(user.id, link.calendarId, meeting.googleEventId);
+        await googleCalendarService.cancelEvent(user.id, link.calendarId, meeting.googleEventId);
       } catch (error) {
         console.error('Failed to cancel Google event:', error);
       }
@@ -247,6 +248,94 @@ export async function sendMeetingLinkEmail(
         failedRecipients: errors,
       });
     }
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * GET /api/meetings/:id (Public)
+ * Get meeting details (public endpoint, no auth required)
+ */
+export async function getMeetingDetails(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const { id } = request.params;
+
+  try {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id },
+      include: {
+        schedulingLink: {
+          include: { user: { select: { email: true, name: true } } },
+        },
+      },
+    });
+
+    if (!meeting) {
+      reply.status(404).send({ error: 'Meeting not found' });
+      return;
+    }
+
+    reply.send({
+      id: meeting.id,
+      inviteeName: meeting.inviteeName,
+      inviteeEmail: meeting.inviteeEmail,
+      startDateTime: meeting.startDateTime.toISOString(),
+      endDateTime: meeting.endDateTime.toISOString(),
+      notes: meeting.notes,
+      googleMeetLink: meeting.googleMeetLink,
+      linkName: meeting.schedulingLink.name,
+      organizerEmail: meeting.schedulingLink.user.email,
+      organizerName: meeting.schedulingLink.user.name,
+    });
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * GET /api/meetings/:id/calendar (Public)
+ * Download ICS calendar file for the meeting
+ */
+export async function downloadMeetingCalendar(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const { id } = request.params;
+
+  try {
+    const meeting = await prisma.meeting.findUnique({
+      where: { id },
+      include: {
+        schedulingLink: {
+          include: { user: { select: { email: true, name: true } } },
+        },
+      },
+    });
+
+    if (!meeting) {
+      reply.status(404).send({ error: 'Meeting not found' });
+      return;
+    }
+
+    const icsContent = generateICS({
+      summary: meeting.schedulingLink.name,
+      description: meeting.notes ?? undefined,
+      location: meeting.googleMeetLink ?? undefined,
+      startDateTime: meeting.startDateTime,
+      endDateTime: meeting.endDateTime,
+      organizerEmail: meeting.schedulingLink.user.email,
+      organizerName: meeting.schedulingLink.user.name ?? undefined,
+      attendeeEmail: meeting.inviteeEmail,
+      attendeeName: meeting.inviteeName,
+    });
+
+    reply
+      .header('Content-Type', 'text/calendar; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="meeting-${meeting.id}.ics"`)
+      .send(icsContent);
   } catch (error) {
     throw error;
   }

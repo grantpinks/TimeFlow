@@ -17,4 +17,8 @@ export async function registerMeetingRoutes(server: FastifyInstance) {
 
   // Send meeting link email to recipients
   server.post('/meetings/send-link-email', { preHandler: requireAuth }, meetingController.sendMeetingLinkEmail);
+
+  // Public meeting endpoints (no auth required)
+  server.get('/meetings/:id', meetingController.getMeetingDetails);
+  server.get('/meetings/:id/calendar', meetingController.downloadMeetingCalendar);
 }
