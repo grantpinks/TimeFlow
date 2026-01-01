@@ -27,6 +27,7 @@ import { registerSchedulingLinkRoutes } from './routes/schedulingLinkRoutes.js';
 import { registerAvailabilityRoutes } from './routes/availabilityRoutes.js';
 import { registerBookingRoutes } from './routes/bookingRoutes.js';
 import { registerMeetingRoutes } from './routes/meetingRoutes.js';
+import { registerGmailSyncRoutes } from './routes/gmailSyncRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -73,6 +74,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerHabitRoutes(api);
       await registerEmailRoutes(api);
       await registerEmailOverrideRoutes(api);
+      await registerGmailSyncRoutes(api);
       await registerConversationRoutes(api);
       await registerSchedulingLinkRoutes(api);
       await registerAvailabilityRoutes(api);
