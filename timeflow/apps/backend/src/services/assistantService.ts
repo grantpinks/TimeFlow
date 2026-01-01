@@ -320,6 +320,10 @@ function getLatestPlanningState(history?: ChatMessage[]): PlanningState | null {
   return null;
 }
 
+function formatPlanningStateBlock(state: PlanningState): string {
+  return `**Planning State**:\n\`\`\`json\n${JSON.stringify(state, null, 2)}\n\`\`\`\n\n`;
+}
+
 /**
  * Task 13.18: Intelligent conversation memory selection
  *
@@ -1805,6 +1809,7 @@ export const __test__ = {
   resolvePlanningMode,
   getNextPlanningState,
   getLatestPlanningState,
+  formatPlanningStateBlock,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,

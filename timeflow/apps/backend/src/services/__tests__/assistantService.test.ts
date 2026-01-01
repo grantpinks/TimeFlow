@@ -13,6 +13,7 @@ const {
   resolvePlanningMode,
   getNextPlanningState,
   getLatestPlanningState,
+  formatPlanningStateBlock,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
@@ -264,6 +265,23 @@ describe('assistantService helpers', () => {
     it('returns null when no planning state exists', () => {
       const state = getLatestPlanningState([]);
       expect(state).toBeNull();
+    });
+  });
+
+  describe('formatPlanningStateBlock', () => {
+    it('renders a planning state JSON block', () => {
+      const block = formatPlanningStateBlock({
+        missingInfo: true,
+        missingTime: true,
+        missingPriority: false,
+        questionRound: 1,
+        allowSecondRound: true,
+        assumptions: ['Assumed priorities from metadata.'],
+      });
+
+      expect(block).toContain('**Planning State**');
+      expect(block).toContain('"missingInfo": true');
+      expect(block).toContain('"questionRound": 1');
     });
   });
 
