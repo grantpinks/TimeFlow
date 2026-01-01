@@ -569,6 +569,28 @@ export async function updateEmailCategory(
   });
 }
 
+/**
+ * Email categorization explanation interface.
+ */
+export interface EmailCategoryExplanation {
+  category: string;
+  source: 'override' | 'domain' | 'keywords' | 'gmailLabel' | 'default';
+  reason: string;
+  details: {
+    matchedValue?: string;
+    overrideType?: 'sender' | 'domain' | 'threadId';
+    matchedKeywords?: string[];
+    gmailLabel?: string;
+  };
+}
+
+/**
+ * Get explanation for email categorization.
+ */
+export async function getEmailExplanation(emailId: string): Promise<{ explanation: EmailCategoryExplanation }> {
+  return request(`/email/${emailId}/explanation`);
+}
+
 // ===== Conversations (Saved Chats) =====
 
 export interface Conversation {

@@ -11,6 +11,7 @@ import * as emailCategorizationService from '../services/emailCategorizationServ
 import { GmailRateLimitError } from '../utils/gmailRateLimiter.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import * as categoryService from '../services/categoryService.js';
+import * as emailExplanationService from '../services/emailExplanationService.js';
 
 const inboxQuerySchema = z.object({
   maxResults: z.coerce.number().int().min(1).max(50).optional(),
@@ -239,5 +240,41 @@ export async function updateEmailCategory(
   } catch (error) {
     request.log.error(error, 'Failed to update category');
     return reply.status(500).send({ error: 'Failed to update category' });
+  }
+}
+
+/**
+ * Get explanation for email categorization
+ */
+export async function explainEmailCategory(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  try {
+    const emailId = request.params.id;
+
+    // Get the email first
+    const email = await gmailService.getFullEmail(user.id, emailId);
+
+    // Get explanation
+    const explanation = await emailExplanationService.explainCategorization(user.id, {
+      id: email.id,
+      threadId: email.threadId,
+      from: email.from,
+      subject: email.subject,
+      snippet: email.snippet,
+      labels: email.labels,
+      category: (email as any).category || 'other',
+    });
+
+    return reply.send({ explanation });
+  } catch (error) {
+    request.log.error(error, 'Failed to explain email category');
+    return reply.status(500).send({ error: 'Failed to explain categorization' });
   }
 }

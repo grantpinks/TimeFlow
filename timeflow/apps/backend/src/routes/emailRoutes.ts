@@ -15,6 +15,7 @@ import {
   archiveEmail,
   getEmailCategories,
   updateEmailCategory,
+  explainEmailCategory,
 } from '../controllers/emailController.js';
 
 export async function registerEmailRoutes(server: FastifyInstance) {
@@ -41,4 +42,7 @@ export async function registerEmailRoutes(server: FastifyInstance) {
 
   // Update email category configuration
   server.patch('/email/categories/:id', { preHandler: requireAuth }, updateEmailCategory);
+
+  // Get explanation for email categorization
+  server.get('/email/:id/explanation', { preHandler: requireAuth }, explainEmailCategory);
 }

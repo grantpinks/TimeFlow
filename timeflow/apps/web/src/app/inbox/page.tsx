@@ -33,6 +33,9 @@ export default function InboxPage() {
   const [loadingThread, setLoadingThread] = useState(false);
   const [threadError, setThreadError] = useState<string | null>(null);
 
+  // Explanation state
+  const [explanations, setExplanations] = useState<Record<string, api.EmailCategoryExplanation>>({});
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchInbox();
@@ -178,6 +181,17 @@ export default function InboxPage() {
       setThreadError('Failed to load thread');
     } finally {
       setLoadingThread(false);
+    }
+  }
+
+  async function fetchExplanation(emailId: string) {
+    if (explanations[emailId]) return; // Already fetched
+
+    try {
+      const result = await api.getEmailExplanation(emailId);
+      setExplanations(prev => ({ ...prev, [emailId]: result.explanation }));
+    } catch (error) {
+      console.error('Failed to fetch explanation:', error);
     }
   }
 
@@ -463,6 +477,8 @@ export default function InboxPage() {
                     onOpenThread={fetchThread}
                     onToggleRead={handleToggleRead}
                     onArchive={handleArchive}
+                    explanation={explanations[email.id]}
+                    onFetchExplanation={fetchExplanation}
                   />
                 ))}
               </AnimatePresence>
@@ -620,6 +636,8 @@ interface EmailThreadProps {
   onOpenThread: (threadId: string) => void;
   onToggleRead?: (emailId: string, currentIsRead: boolean) => void;
   onArchive?: (emailId: string) => void;
+  explanation?: api.EmailCategoryExplanation;
+  onFetchExplanation?: (emailId: string) => void;
 }
 
 function EmailThread({
@@ -636,7 +654,9 @@ function EmailThread({
   onCorrect,
   onOpenThread,
   onToggleRead,
-  onArchive
+  onArchive,
+  explanation,
+  onFetchExplanation
 }: EmailThreadProps) {
   const [selectedCategory, setSelectedCategory] = useState(email.category || '');
 
@@ -770,14 +790,46 @@ function EmailThread({
                     <h4 className="text-xs font-semibold text-[#1a1a1a] mb-1 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       Why &ldquo;{email.category}&rdquo;?
                     </h4>
-                    <p className="text-sm text-[#666]" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                      Based on sender domain and keywords in subject line.
-                      {email.from.includes('@') && (
-                        <span className="block mt-1 text-xs text-[#999]">
-                          From: {email.from.split('@')[1]?.split('>')[0]}
-                        </span>
-                      )}
-                    </p>
+
+                    {!explanation ? (
+                      <button
+                        onClick={() => onFetchExplanation && onFetchExplanation(email.id)}
+                        className="text-sm text-blue-600 hover:underline"
+                        style={{ fontFamily: "'Manrope', sans-serif" }}
+                      >
+                        Show explanation →
+                      </button>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-[#666] mb-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                          {explanation.reason}
+                        </p>
+
+                        {explanation.source === 'override' && (
+                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            ✓ Your manual correction
+                          </div>
+                        )}
+
+                        {explanation.source === 'keywords' && explanation.details.matchedKeywords && (
+                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            Keywords: {explanation.details.matchedKeywords.join(', ')}
+                          </div>
+                        )}
+
+                        {explanation.source === 'domain' && explanation.details.matchedValue && (
+                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            Domain: {explanation.details.matchedValue}
+                          </div>
+                        )}
+
+                        {explanation.source === 'gmailLabel' && explanation.details.gmailLabel && (
+                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            Gmail label: {explanation.details.gmailLabel}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
