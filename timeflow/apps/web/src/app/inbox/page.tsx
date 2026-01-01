@@ -25,6 +25,7 @@ export default function InboxPage() {
   const [serverSearchResults, setServerSearchResults] = useState<EmailMessage[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const searchRequestId = useRef(0);
 
   // Thread detail state
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -38,6 +39,15 @@ export default function InboxPage() {
       fetchCategories();
     }
   }, [isAuthenticated, selectedFilter, selectedCategoryId]);
+
+  // Cleanup function to clear timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceTimer.current) {
+        clearTimeout(searchDebounceTimer.current);
+      }
+    };
+  }, []);
 
   async function fetchInbox() {
     try {
@@ -91,22 +101,36 @@ export default function InboxPage() {
       return;
     }
 
+    // Increment request ID for this search
+    const requestId = ++searchRequestId.current;
+
     setSearchLoading(true);
     setSearchMode('server');
 
     try {
       const result = await api.searchEmails(query);
-      setServerSearchResults(result.messages);
+
+      // Only update state if this is still the latest request
+      if (requestId === searchRequestId.current) {
+        setServerSearchResults(result.messages);
+      }
     } catch (error: any) {
       console.error('Server search failed, falling back to client search:', error);
-      setSearchMode('client');
-      setServerSearchResults([]);
 
-      if (error.message.includes('rate limit') || error.message.includes('429')) {
-        toast.error('Rate limit exceeded. Falling back to client-side search.');
+      // Only update state if this is still the latest request
+      if (requestId === searchRequestId.current) {
+        setSearchMode('client');
+        setServerSearchResults([]);
+
+        if (error.message.includes('rate limit') || error.message.includes('429')) {
+          toast.error('Rate limit exceeded. Falling back to client-side search.');
+        }
       }
     } finally {
-      setSearchLoading(false);
+      // Only clear loading if this is still the latest request
+      if (requestId === searchRequestId.current) {
+        setSearchLoading(false);
+      }
     }
   }
 
@@ -122,6 +146,7 @@ export default function InboxPage() {
     if (!newQuery) {
       setSearchMode('client');
       setServerSearchResults([]);
+      setSearchLoading(false);
       return;
     }
 
