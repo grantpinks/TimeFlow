@@ -50,6 +50,7 @@ export interface EmailCategoryConfig {
   enabled?: boolean;
   description?: string;
   emoji?: string;
+  gmailSyncEnabled?: boolean;
 }
 
 const API_BASE = '/api';
@@ -566,6 +567,75 @@ export async function updateEmailCategory(
   return request<{ category: EmailCategoryConfig }>(`/email/categories/${categoryId}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
+  });
+}
+
+// ===== Gmail Sync (Sprint 16 Phase A) =====
+
+export interface GmailSyncStatus {
+  lastSyncedAt: string | null;
+  lastSyncThreadCount: number;
+  lastSyncError: string | null;
+  backfillDays: number;
+  backfillMaxThreads: number;
+}
+
+export interface GmailSyncResult {
+  message: string;
+  syncedCategories: number;
+  syncedThreads?: number;
+  removedCategories?: number;
+  errors?: string[];
+}
+
+/**
+ * Get Gmail sync status for current user.
+ */
+export async function getGmailSyncStatus(): Promise<GmailSyncStatus> {
+  return request<GmailSyncStatus>('/gmail-sync/status');
+}
+
+/**
+ * Trigger manual Gmail label sync.
+ */
+export async function triggerGmailSync(): Promise<GmailSyncResult> {
+  return request<GmailSyncResult>('/gmail-sync/sync', {
+    method: 'POST',
+  });
+}
+
+/**
+ * Remove all TimeFlow labels from Gmail.
+ */
+export async function removeAllGmailLabels(): Promise<GmailSyncResult> {
+  return request<GmailSyncResult>('/gmail-sync/labels', {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Update Gmail sync settings.
+ */
+export async function updateGmailSyncSettings(settings: {
+  backfillDays?: number;
+  backfillMaxThreads?: number;
+}): Promise<GmailSyncStatus> {
+  return request<GmailSyncStatus>('/gmail-sync/settings', {
+    method: 'PATCH',
+    body: JSON.stringify(settings),
+  });
+}
+
+/**
+ * Update email category with Gmail sync enabled flag.
+ */
+export async function updateCategoryGmailSync(
+  categoryId: string,
+  gmailSyncEnabled: boolean
+): Promise<{ category: EmailCategoryConfig }> {
+  return request<{ category: EmailCategoryConfig }>(`/email/categories/${categoryId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ gmailSyncEnabled }),
   });
 }
 
