@@ -323,4 +323,125 @@ async function syncThreadsForCategory(
   }
 }
 
-// Continue to Part 2...
+/**
+ * Remove all TimeFlow labels from Gmail
+ *
+ * Escape hatch: Allows user to restore pre-TimeFlow state
+ */
+export async function removeAllTimeFlowLabels(userId: string): Promise<SyncResult> {
+  const result: SyncResult = {
+    success: false,
+    syncedCategories: 0,
+    syncedThreads: 0,
+    errors: [],
+  };
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        emailCategoryConfigs: {
+          where: {
+            gmailLabelId: { not: null },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      result.errors.push('User not found');
+      return result;
+    }
+
+    if (!user.googleRefreshToken || !user.googleAccessToken) {
+      result.errors.push('Google account not connected');
+      return result;
+    }
+
+    const gmail = await getGmailClient(userId);
+
+    for (const category of user.emailCategoryConfigs) {
+      if (!category.gmailLabelId) continue;
+
+      try {
+        await gmail.users.labels.delete({
+          userId: 'me',
+          id: category.gmailLabelId,
+        });
+
+        await prisma.emailCategoryConfig.update({
+          where: { id: category.id },
+          data: {
+            gmailLabelId: null,
+            gmailSyncEnabled: false,
+          },
+        });
+
+        result.syncedCategories++;
+      } catch (error: any) {
+        if (error.code === 404) {
+          await prisma.emailCategoryConfig.update({
+            where: { id: category.id },
+            data: {
+              gmailLabelId: null,
+              gmailSyncEnabled: false,
+            },
+          });
+          result.syncedCategories++;
+        } else {
+          result.errors.push(
+            `Error deleting label \"${category.name ?? category.categoryId}\": ${error.message}`
+          );
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    const syncState = await getOrCreateSyncState(userId);
+    await prisma.gmailLabelSyncState.update({
+      where: { id: syncState.id },
+      data: {
+        lastSyncedAt: null,
+        lastSyncThreadCount: 0,
+        lastSyncError: null,
+      },
+    });
+
+    result.success = result.errors.length === 0;
+    return result;
+  } catch (error: any) {
+    result.errors.push(`Failed to remove labels: ${error.message}`);
+    return result;
+  }
+}
+
+/**
+ * Update sync settings for a user
+ */
+export async function updateSyncSettings(
+  userId: string,
+  settings: {
+    backfillDays?: number;
+    backfillMaxThreads?: number;
+  }
+): Promise<GmailLabelSyncState> {
+  const syncState = await getOrCreateSyncState(userId);
+
+  return prisma.gmailLabelSyncState.update({
+    where: { id: syncState.id },
+    data: {
+      backfillDays: settings.backfillDays ?? syncState.backfillDays,
+      backfillMaxThreads: settings.backfillMaxThreads ?? syncState.backfillMaxThreads,
+    },
+  });
+}
+
+/**
+ * Get sync status for a user
+ */
+export async function getSyncStatus(userId: string): Promise<GmailLabelSyncState | null> {
+  return prisma.gmailLabelSyncState.findUnique({
+    where: { userId },
+  });
+}
