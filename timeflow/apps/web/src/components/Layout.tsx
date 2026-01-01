@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { id: 'habits', href: '/habits', label: 'Habits', icon: HabitIcon },
   { id: 'assistant', href: '/assistant', label: 'Flow AI', icon: SparkIcon },
   { id: 'calendar', href: '/calendar', label: 'Calendar', icon: CalendarIcon },
+  { id: 'meetings', href: '/meetings', label: 'Meetings', icon: CalendarIcon },
   { id: 'inbox', href: '/inbox', label: 'Inbox', icon: InboxIcon, children: [{ href: '/settings/email-categories', label: 'Email Categories' }] },
 ];
 
