@@ -3,9 +3,82 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import ColorPicker from '@/components/ColorPicker';
+import GmailColorPicker, { type GmailColor } from '@/components/GmailColorPicker';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { track } from '@/lib/analytics';
+
+const GMAIL_COLORS: GmailColor[] = [
+  { backgroundColor: '#cfe2f3', textColor: '#0b5394' },
+  { backgroundColor: '#d9ead3', textColor: '#38761d' },
+  { backgroundColor: '#fff2cc', textColor: '#7f6000' },
+  { backgroundColor: '#fce5cd', textColor: '#b45f06' },
+  { backgroundColor: '#f4cccc', textColor: '#990000' },
+  { backgroundColor: '#d9d2e9', textColor: '#674ea7' },
+  { backgroundColor: '#d0e0e3', textColor: '#0c343d' },
+  { backgroundColor: '#ead1dc', textColor: '#783f04' },
+  { backgroundColor: '#c9daf8', textColor: '#1155cc' },
+  { backgroundColor: '#b6d7a8', textColor: '#274e13' },
+  { backgroundColor: '#ffe599', textColor: '#bf9000' },
+  { backgroundColor: '#f9cb9c', textColor: '#b45f06' },
+  { backgroundColor: '#ea9999', textColor: '#990000' },
+  { backgroundColor: '#b4a7d6', textColor: '#351c75' },
+  { backgroundColor: '#a2c4c9', textColor: '#0c343d' },
+  { backgroundColor: '#d5a6bd', textColor: '#783f04' },
+  { backgroundColor: '#9fc5e8', textColor: '#0b5394' },
+  { backgroundColor: '#93c47d', textColor: '#38761d' },
+  { backgroundColor: '#ffd966', textColor: '#7f6000' },
+  { backgroundColor: '#f6b26b', textColor: '#b45f06' },
+  { backgroundColor: '#e06666', textColor: '#990000' },
+  { backgroundColor: '#8e7cc3', textColor: '#351c75' },
+  { backgroundColor: '#76a5af', textColor: '#0c343d' },
+  { backgroundColor: '#c27ba0', textColor: '#783f04' },
+  { backgroundColor: '#a4c2f4', textColor: '#0b5394' },
+];
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+}
+
+function colorDistance(
+  rgb1: { r: number; g: number; b: number },
+  rgb2: { r: number; g: number; b: number }
+): number {
+  return Math.sqrt(
+    Math.pow(rgb1.r - rgb2.r, 2) +
+      Math.pow(rgb1.g - rgb2.g, 2) +
+      Math.pow(rgb1.b - rgb2.b, 2)
+  );
+}
+
+function findClosestGmailColor(hexColor: string): GmailColor {
+  const inputRgb = hexToRgb(hexColor);
+  if (!inputRgb) {
+    return GMAIL_COLORS[0];
+  }
+
+  let closest = GMAIL_COLORS[0];
+  let minDistance = Infinity;
+
+  for (const gmailColor of GMAIL_COLORS) {
+    const gmailRgb = hexToRgb(gmailColor.backgroundColor);
+    if (!gmailRgb) continue;
+    const distance = colorDistance(inputRgb, gmailRgb);
+    if (distance < minDistance) {
+      minDistance = distance;
+      closest = gmailColor;
+    }
+  }
+
+  return closest;
+}
 
 export default function EmailCategoriesSettingsPage() {
   const [categories, setCategories] = useState<EmailCategoryConfig[]>([]);
@@ -14,10 +87,27 @@ export default function EmailCategoriesSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [gmailColorOverride, setGmailColorOverride] = useState<string | null>(null);
+  const [autoMappedGmailColor, setAutoMappedGmailColor] = useState<GmailColor | null>(null);
 
   useEffect(() => {
     loadCategories();
   }, []);
+
+  useEffect(() => {
+    if (!editingCategory) {
+      setGmailColorOverride(null);
+      setAutoMappedGmailColor(null);
+      return;
+    }
+
+    const category = categories.find((cat) => cat.id === editingCategory);
+    if (category?.color) {
+      const mapped = findClosestGmailColor(category.color);
+      setAutoMappedGmailColor(mapped);
+      setGmailColorOverride(category.color);
+    }
+  }, [editingCategory, categories]);
 
   async function loadCategories() {
     try {
@@ -58,6 +148,26 @@ export default function EmailCategoriesSettingsPage() {
 
   async function handleToggleEnabled(categoryId: string, enabled: boolean) {
     await handleUpdateCategory(categoryId, { enabled });
+  }
+
+  async function handleToggleGmailSync(categoryId: string, enabled: boolean) {
+    setSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.updateCategoryGmailSync(categoryId, enabled);
+      setCategories((prev) =>
+        prev.map((cat) => (cat.id === categoryId ? { ...cat, gmailSyncEnabled: enabled } : cat))
+      );
+      setSuccessMessage('Gmail sync updated');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      console.error('Failed to update Gmail sync:', err);
+      setError('Failed to update Gmail sync');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleResetToDefaults() {
@@ -181,17 +291,35 @@ export default function EmailCategoriesSettingsPage() {
 
                       {/* Color customization */}
                       {editingCategory === category.id && (
-                        <div className="mt-4 flex items-center gap-3">
-                          <ColorPicker
-                            value={category.color}
-                            onChange={(color) => handleUpdateCategory(category.id, { color })}
-                          />
-                          <button
-                            onClick={() => setEditingCategory(null)}
-                            className="text-sm text-slate-600 hover:text-slate-900"
-                          >
-                            Done
-                          </button>
+                        <div className="mt-4 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <ColorPicker
+                              value={category.color}
+                              onChange={(color) => handleUpdateCategory(category.id, { color })}
+                            />
+                            <button
+                              onClick={() => setEditingCategory(null)}
+                              className="text-sm text-slate-600 hover:text-slate-900"
+                            >
+                              Done
+                            </button>
+                          </div>
+
+                          {category.gmailSyncEnabled && (
+                            <div>
+                              <h4 className="text-sm font-semibold text-slate-700 mb-3">
+                                Gmail Label Color
+                              </h4>
+                              <GmailColorPicker
+                                selectedColor={gmailColorOverride}
+                                autoMappedColor={autoMappedGmailColor ?? undefined}
+                                onColorSelect={(color) => {
+                                  setGmailColorOverride(color.backgroundColor);
+                                  handleUpdateCategory(category.id, { color: color.backgroundColor });
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -199,6 +327,17 @@ export default function EmailCategoriesSettingsPage() {
 
                   {/* Actions */}
                   <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm text-slate-600">
+                      <input
+                        type="checkbox"
+                        checked={category.gmailSyncEnabled ?? false}
+                        onChange={(e) => handleToggleGmailSync(category.id, e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        disabled={saving}
+                      />
+                      Sync to Gmail
+                    </label>
+
                     {editingCategory !== category.id && (
                       <button
                         onClick={() => setEditingCategory(category.id)}
