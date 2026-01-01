@@ -875,6 +875,8 @@
 | 16.B1 | Fix AI regression harness failures for planning/meetings flows; make prompts pass expectation checks. | Codex | 2-4h | P1 |
 | 16.B2 | Add CI gate for AI regression content-quality checks (question/CTA/no scheduling language). | Codex | 2-3h | P2 |
 | 16.B3 | Add production-safe AI debug toggle + logging for prompt failures (off by default). | Codex | 2-3h | P2 |
+| 16.B4 | Add Inbox prompts for email→task, label sync, and “Why this label?” flows with always-draft + confirm. | Codex | 3-5h | P1 |
+| 16.B5 | Extend AI regression harness with Inbox scenarios and expectations (draft required, confirmation CTA, no auto-apply language). | Codex | 2-4h | P1 |
 
 #### Acceptance Criteria
 - `/inbox` is a real triage surface (list + detail + read/unread + archive + search) and is performant/reliable for daily use.
@@ -885,6 +887,7 @@
 - Label operations are safe under rate limits and are idempotent (retries do not produce duplicates or thrash colors).
 - Clear docs exist for OAuth scopes, verification requirements, and operational monitoring (and Pub/Sub setup if Phase B ships).
 - AI regression harness passes content-quality checks for planning/meetings prompts when Phase B+ tasks ship.
+- Inbox AI prompts always draft + confirm; regression harness validates no auto-apply language.
 
 **Plan doc**: See **[`docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md`](./docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md)**.
 
