@@ -6,10 +6,12 @@ import type {
   SchedulePreview,
   DailyScheduleConfig,
   PlanningState,
+  MeetingWorkflowState,
 } from '@timeflow/shared';
 import { env } from '../config/env.js';
 import { getPromptManager } from './promptManager.js';
 import { convertToChatMessages } from './conversationService.js';
+import * as schedulingLinkService from './schedulingLinkService.js';
 import {
   separateFixedAndMovable,
   buildFixedEventsContext,
@@ -198,6 +200,14 @@ type PlanningTask = {
   dueDate?: string | Date | null;
 };
 
+type MeetingLinkSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  durationsMinutes: number[];
+};
+
 function getPlanningState({
   message,
   tasks,
@@ -376,6 +386,180 @@ function ensurePlanningCta(content: string): string {
     return content;
   }
   return `${content.trim()}\n\n${cta}`;
+}
+
+function detectMeetingIntent(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  const meetingKeywords = [
+    'schedule a meeting',
+    'meeting request',
+    'send a meeting',
+    'send meeting',
+    'meeting link',
+    'scheduling link',
+    'book time',
+    'book a meeting',
+    'book a call',
+    'set up a meeting',
+    'set up a call',
+    'create a meeting',
+    'create meeting',
+  ];
+
+  return meetingKeywords.some((kw) => lower.includes(kw));
+}
+
+function parseDurationMinutes(message: string): number | null {
+  const lower = message.toLowerCase();
+  const minutesMatch = lower.match(/(\d+)\s*(min|mins|minute|minutes)\b/);
+  if (minutesMatch) {
+    return parseInt(minutesMatch[1], 10);
+  }
+  const hoursMatch = lower.match(/(\d+)\s*(hour|hours|hr|hrs)\b/);
+  if (hoursMatch) {
+    const hours = parseInt(hoursMatch[1], 10);
+    return hours * 60;
+  }
+  return null;
+}
+
+function parseLinkName(message: string): string | null {
+  const quoted = message.match(/\"([^\"]+)\"/);
+  if (quoted) {
+    return quoted[1].trim();
+  }
+
+  const called = message.match(/called\s+([a-z0-9\s-]+)/i);
+  if (called) {
+    return called[1].trim();
+  }
+
+  const named = message.match(/named\s+([a-z0-9\s-]+)/i);
+  if (named) {
+    return named[1].trim();
+  }
+
+  const forMatch = message.match(/link\s+for\s+([a-z0-9\s-]+)/i);
+  if (forMatch) {
+    return forMatch[1].trim();
+  }
+
+  return null;
+}
+
+function parseRecipientEmail(message: string): string | null {
+  const match = message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  return match ? match[0] : null;
+}
+
+function selectLinkFromMessage(message: string, links: MeetingLinkSummary[]): MeetingLinkSummary | null {
+  const lower = message.toLowerCase();
+  for (const link of links) {
+    if (lower.includes(link.name.toLowerCase()) || lower.includes(link.slug.toLowerCase())) {
+      return link;
+    }
+  }
+  return null;
+}
+
+function getMeetingContext({
+  message,
+  links,
+  previousState,
+}: {
+  message: string;
+  links: MeetingLinkSummary[];
+  previousState?: MeetingWorkflowState | null;
+}) {
+  const lower = message.toLowerCase();
+  const creationRequested = lower.includes('create') || lower.includes('new link');
+  const sendRequested = lower.includes('send') || Boolean(parseRecipientEmail(message));
+
+  const durationMinutes = parseDurationMinutes(message);
+  const linkName = parseLinkName(message);
+  const recipientEmail = parseRecipientEmail(message);
+  const selectedLink = selectLinkFromMessage(message, links);
+
+  const missingLinkSelection = !creationRequested && !selectedLink;
+  const missingLinkName = creationRequested && !linkName;
+  const missingLinkDuration = creationRequested && !durationMinutes;
+  const missingRecipient = sendRequested && !recipientEmail;
+
+  const state: MeetingWorkflowState = {
+    missingLinkSelection,
+    missingLinkName,
+    missingLinkDuration,
+    missingRecipient,
+    creationRequested,
+    sendRequested,
+    questionRound: previousState?.questionRound ?? 0,
+    assumptions: [],
+  };
+
+  return {
+    state,
+    selectedLink,
+    durationMinutes,
+    linkName,
+    recipientEmail,
+  };
+}
+
+function getMeetingState({
+  message,
+  links,
+  previousState,
+}: {
+  message: string;
+  links: MeetingLinkSummary[];
+  previousState?: MeetingWorkflowState | null;
+}): MeetingWorkflowState {
+  return getMeetingContext({ message, links, previousState }).state;
+}
+
+function buildMeetingClarifyingQuestion(state: MeetingWorkflowState): string {
+  if (state.missingLinkSelection) {
+    return 'Which scheduling link should I use, or would you like me to create one?';
+  }
+  if (state.missingLinkName && state.missingLinkDuration) {
+    return 'What should I call the link (name), and what duration should it be?';
+  }
+  if (state.missingLinkName) {
+    return 'What should I call the link?';
+  }
+  if (state.missingLinkDuration) {
+    return 'How long should the meeting be?';
+  }
+  if (state.missingRecipient) {
+    return 'Who should I send the meeting request to?';
+  }
+  return 'Want me to draft the invite?';
+}
+
+function shouldAskMeetingQuestion(state: MeetingWorkflowState): boolean {
+  if (!state.missingLinkSelection && !state.missingLinkName && !state.missingLinkDuration && !state.missingRecipient) {
+    return false;
+  }
+  return state.questionRound < 2;
+}
+
+function getLatestMeetingState(history?: ChatMessage[]): MeetingWorkflowState | null {
+  if (!history || history.length === 0) {
+    return null;
+  }
+
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const state = history[i].metadata?.meetingState;
+    if (state) {
+      return state;
+    }
+  }
+
+  return null;
+}
+
+function formatMeetingStateBlock(state: MeetingWorkflowState): string {
+  return `**Meeting State**:\n\`\`\`json\n${JSON.stringify(state, null, 2)}\n\`\`\`\n\n`;
 }
 
 /**
@@ -710,8 +894,62 @@ export async function processMessage(
       mode = 'conversation';
     }
 
-    const effectiveMode = resolvePlanningMode(mode, message);
+    let effectiveMode = resolvePlanningMode(mode, message);
     const previousPlanningState = getLatestPlanningState(resolvedHistory);
+    const previousMeetingState = getLatestMeetingState(resolvedHistory);
+    if (effectiveMode === 'conversation' && detectMeetingIntent(message)) {
+      effectiveMode = 'meetings';
+    }
+
+    let meetingLinksOverride: MeetingLinkSummary[] | undefined;
+    let meetingContextOverride: ReturnType<typeof getMeetingContext> | undefined;
+    if (effectiveMode === 'meetings') {
+      meetingLinksOverride = await schedulingLinkService.getSchedulingLinks(user.id);
+      meetingContextOverride = getMeetingContext({
+        message,
+        links: meetingLinksOverride,
+        previousState: previousMeetingState,
+      });
+
+      if (
+        meetingContextOverride.state.creationRequested &&
+        !meetingContextOverride.state.missingLinkName &&
+        !meetingContextOverride.state.missingLinkDuration
+      ) {
+        if (!user.defaultCalendarId) {
+          return {
+            message: {
+              id: generateMessageId(),
+              role: 'assistant',
+              content:
+                "I can create a scheduling link once you connect a calendar. Open Settings → Calendar to finish setup.",
+              timestamp: new Date().toISOString(),
+              metadata: {
+                mascotState: 'guiding',
+                meetingState: meetingContextOverride.state,
+              },
+            },
+          };
+        }
+
+        const createdLink = await schedulingLinkService.createSchedulingLink(user.id, {
+          name: meetingContextOverride.linkName || 'Meeting link',
+          durationsMinutes: [meetingContextOverride.durationMinutes || user.defaultTaskDurationMinutes],
+          calendarProvider: 'google',
+          calendarId: user.defaultCalendarId,
+        });
+
+        meetingLinksOverride = [createdLink, ...meetingLinksOverride];
+        meetingContextOverride = {
+          ...getMeetingContext({
+            message,
+            links: meetingLinksOverride,
+            previousState: previousMeetingState,
+          }),
+          selectedLink: createdLink,
+        };
+      }
+    }
 
     // Get mode-specific system prompt
     const systemPrompt = promptManager.getPrompt(effectiveMode);
@@ -732,7 +970,10 @@ export async function processMessage(
       isPlanAdjustment,
       wantsReschedule,
       wantsDailyPlan,
-      previousPlanningState
+      previousPlanningState,
+      previousMeetingState,
+      meetingLinksOverride,
+      meetingContextOverride
     );
 
     const userPrefs: UserPreferences = {
@@ -777,6 +1018,25 @@ export async function processMessage(
           metadata: {
             mascotState,
             planningState,
+          },
+        },
+      };
+    }
+
+    if (effectiveMode === 'meetings' && meetingState && meetingWillAsk) {
+      const question = buildMeetingClarifyingQuestion(meetingState);
+      const cleanedResponse = sanitizeAssistantContent(question, effectiveMode, false);
+      const mascotState = detectMascotState(cleanedResponse);
+
+      return {
+        message: {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: cleanedResponse,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            mascotState,
+            meetingState,
           },
         },
       };
@@ -874,6 +1134,7 @@ export async function processMessage(
         ...(schedulePreview ? { schedulePreview } : {}),
         mascotState,
         ...(planningState ? { planningState } : {}),
+        ...(meetingState ? { meetingState } : {}),
       },
     };
 
@@ -925,11 +1186,14 @@ export async function processMessage(
 async function buildContextPrompt(
   userId: string,
   userMessage: string,
-  mode: 'conversation' | 'scheduling' | 'availability' | 'planning',
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings',
   isPlanAdjustment: boolean = false,
   includeScheduledTaskIds: boolean = false,
   dailyPlanRequest: boolean = false,
-  previousPlanningState: PlanningState | null = null
+  previousPlanningState: PlanningState | null = null,
+  previousMeetingState: MeetingWorkflowState | null = null,
+  meetingLinksOverride?: MeetingLinkSummary[],
+  meetingContextOverride?: ReturnType<typeof getMeetingContext>
 ): Promise<{
   contextPrompt: string;
   calendarEvents: any[];
@@ -937,6 +1201,9 @@ async function buildContextPrompt(
   habitIds: string[];
   planningState?: PlanningState;
   planningWillAsk?: boolean;
+  meetingState?: MeetingWorkflowState;
+  meetingWillAsk?: boolean;
+  meetingContext?: ReturnType<typeof getMeetingContext>;
   habits: {
     id: string;
     title: string;
@@ -1239,6 +1506,45 @@ async function buildContextPrompt(
     prompt += formatPlanningStateBlock(planningState);
   }
 
+  let meetingState: MeetingWorkflowState | undefined;
+  let meetingWillAsk: boolean | undefined;
+  let meetingContext: ReturnType<typeof getMeetingContext> | undefined;
+  if (mode === 'meetings') {
+    const links = meetingLinksOverride ?? (await schedulingLinkService.getSchedulingLinks(userId));
+    meetingContext = meetingContextOverride ?? getMeetingContext({
+      message: userMessage,
+      links,
+      previousState: previousMeetingState,
+    });
+    const willAsk = shouldAskMeetingQuestion(meetingContext.state);
+    meetingState = {
+      ...meetingContext.state,
+      questionRound: willAsk ? meetingContext.state.questionRound + 1 : meetingContext.state.questionRound,
+    };
+    meetingWillAsk = willAsk;
+
+    const baseUrl = env.APP_BASE_URL || '';
+    if (links.length > 0) {
+      prompt += '**Scheduling Links**:\n';
+      links.forEach((link) => {
+        const durationLabel = link.durationsMinutes?.length
+          ? `${link.durationsMinutes.join(', ')} min`
+          : 'default duration';
+        const bookingUrl = baseUrl ? `${baseUrl}/book/${link.slug}` : `/book/${link.slug}`;
+        prompt += `- ${link.name} (${durationLabel})${link.isActive ? '' : ' [INACTIVE]'}: ${bookingUrl}\n`;
+      });
+      prompt += '\n';
+    } else {
+      prompt += '**Scheduling Links**: None available.\n\n';
+    }
+
+    if (user.meetingStartTime && user.meetingEndTime) {
+      prompt += `**Meeting Hours**: ${formatUserTime(user.meetingStartTime)} - ${formatUserTime(user.meetingEndTime)} (${user.timeZone})\n\n`;
+    }
+
+    prompt += formatMeetingStateBlock(meetingState);
+  }
+
   // Add user's message
   prompt += `**User's Question**: "${userMessage}"\n\n`;
 
@@ -1259,6 +1565,8 @@ async function buildContextPrompt(
     prompt += `Based on this information, provide a clear availability summary and highlight open slots.`;
   } else if (mode === 'planning') {
     prompt += `Based on this information and the Planning State, ask a short clarifying question or draft a plan.`;
+  } else if (mode === 'meetings') {
+    prompt += `Based on this information and the Meeting State, ask a short clarifying question or draft the next step.`;
   } else {
     prompt += `Based on this information, provide a helpful, conversational response.`;
   }
@@ -1276,6 +1584,9 @@ async function buildContextPrompt(
     habitIds: activeHabits.map((habit) => habit.id),
     planningState,
     planningWillAsk,
+    meetingState,
+    meetingWillAsk,
+    meetingContext,
     habits: activeHabits,
     skippedHabitIds,
   };
@@ -1291,7 +1602,7 @@ async function callLocalLLM(
   contextPrompt: string,
   conversationHistory: ChatMessage[] | undefined,
   systemPrompt: string,
-  mode: 'conversation' | 'scheduling' | 'availability' | 'planning'
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings'
 ): Promise<string> {
   const provider = (env.LLM_PROVIDER || 'local').toLowerCase();
   const isOpenAI = provider === 'openai';
@@ -1805,7 +2116,7 @@ function fillMissingHabitBlocks(
  */
 function sanitizeAssistantContent(
   content: string,
-  mode: 'conversation' | 'scheduling' | 'availability' | 'planning',
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings',
   hasSchedulePreview: boolean
 ): string {
   let sanitized = content;
@@ -1931,6 +2242,9 @@ export const __test__ = {
   getPlanningQuestionIfNeeded,
   sanitizePlanningResponse,
   ensurePlanningCta,
+  detectMeetingIntent,
+  getMeetingState,
+  buildMeetingClarifyingQuestion,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,

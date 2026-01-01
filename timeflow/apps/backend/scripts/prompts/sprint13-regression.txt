@@ -67,3 +67,12 @@ EXPECT: status=200 preview=false question=true cta=false no_schedule_language=tr
 ---
 Help me plan. I need to focus on urgent items.
 EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true
+---
+Schedule a meeting with Alex.
+EXPECT: status=200 preview=false question=true
+---
+Create a meeting link for 30 min calls.
+EXPECT: status=200 preview=false
+---
+Send a meeting request to alex@company.com
+EXPECT: status=200 preview=false question=true

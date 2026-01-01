@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 /**
  * AI Assistant mode types
  */
-export type AssistantMode = 'conversation' | 'scheduling' | 'availability' | 'planning';
+export type AssistantMode = 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings';
 
 /**
  * Manages AI Assistant prompts across different modes
@@ -101,7 +101,7 @@ export class PromptManager {
    * Get all available modes
    */
   getAvailableModes(): AssistantMode[] {
-    return ['conversation', 'scheduling', 'availability', 'planning'];
+    return ['conversation', 'scheduling', 'availability', 'planning', 'meetings'];
   }
 
   /**

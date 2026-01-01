@@ -108,6 +108,7 @@ USER: Schedule my tasks for tomorrow.
 Help me plan today.
 EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true
 ```
+7. Add meeting prompts with expectations (question for link selection, no auto-send).
 
 ---
 

@@ -18,6 +18,9 @@ const {
   getPlanningQuestionIfNeeded,
   sanitizePlanningResponse,
   ensurePlanningCta,
+  detectMeetingIntent,
+  getMeetingState,
+  buildMeetingClarifyingQuestion,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
@@ -392,6 +395,73 @@ describe('assistantService helpers', () => {
       const withCta = ensurePlanningCta(content);
       const matches = withCta.match(/want me to schedule this\\?/gi) || [];
       expect(matches.length).toBe(1);
+    });
+  });
+
+  describe('detectMeetingIntent', () => {
+    it('detects meeting workflow language', () => {
+      expect(detectMeetingIntent('Schedule a meeting with Alex.')).toBe(true);
+      expect(detectMeetingIntent('Create a meeting link.')).toBe(true);
+      expect(detectMeetingIntent('Send a meeting request to alex@company.com')).toBe(true);
+    });
+
+    it('returns false for unrelated language', () => {
+      expect(detectMeetingIntent('What tasks do I have?')).toBe(false);
+    });
+  });
+
+  describe('getMeetingState', () => {
+    it('marks missing link selection when no links exist', () => {
+      const state = getMeetingState({
+        message: 'Schedule a meeting with Alex.',
+        links: [],
+      });
+
+      expect(state.missingLinkSelection).toBe(true);
+    });
+
+    it('marks missing link name and duration when creation requested', () => {
+      const state = getMeetingState({
+        message: 'Create a meeting link.',
+        links: [],
+      });
+
+      expect(state.creationRequested).toBe(true);
+      expect(state.missingLinkName).toBe(true);
+      expect(state.missingLinkDuration).toBe(true);
+    });
+  });
+
+  describe('buildMeetingClarifyingQuestion', () => {
+    it('asks for link selection when missing', () => {
+      const question = buildMeetingClarifyingQuestion({
+        missingLinkSelection: true,
+        missingLinkName: false,
+        missingLinkDuration: false,
+        missingRecipient: false,
+        creationRequested: false,
+        sendRequested: true,
+        questionRound: 0,
+        assumptions: [],
+      });
+
+      expect(question.toLowerCase()).toContain('link');
+    });
+
+    it('asks for name and duration when creating a link', () => {
+      const question = buildMeetingClarifyingQuestion({
+        missingLinkSelection: false,
+        missingLinkName: true,
+        missingLinkDuration: true,
+        missingRecipient: false,
+        creationRequested: true,
+        sendRequested: false,
+        questionRound: 0,
+        assumptions: [],
+      });
+
+      expect(question.toLowerCase()).toContain('name');
+      expect(question.toLowerCase()).toContain('duration');
     });
   });
 

@@ -12,6 +12,7 @@ export interface ChatMessage {
     action?: AssistantAction;
     mascotState?: string;
     planningState?: PlanningState;
+    meetingState?: MeetingWorkflowState;
   };
 }
 
@@ -48,5 +49,16 @@ export interface PlanningState {
   missingPriority: boolean;
   questionRound: number;
   allowSecondRound: boolean;
+  assumptions: string[];
+}
+
+export interface MeetingWorkflowState {
+  missingLinkSelection: boolean;
+  missingLinkName: boolean;
+  missingLinkDuration: boolean;
+  missingRecipient: boolean;
+  creationRequested: boolean;
+  sendRequested: boolean;
+  questionRound: number;
   assumptions: string[];
 }
