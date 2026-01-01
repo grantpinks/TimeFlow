@@ -3,8 +3,10 @@ import { EmailCategoryConfig, GmailLabelSyncState } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { getUserOAuth2Client } from '../config/google.js';
 import { decrypt, encrypt } from '../utils/crypto.js';
-import { findClosestGmailColor, GmailColor } from '../utils/gmailColors.js';
-import { categorizeEmail } from './emailCategorizationService.js';
+import { env } from '../config/env.js';
+import { findClosestGmailColor, getGmailColorByBackground, GmailColor } from '../utils/gmailColors.js';
+import { categorizeEmail, normalizeEmailCategoryId } from './emailCategorizationService.js';
+import { applyCategoryOverride } from './emailOverrideService.js';
 
 /**
  * Gmail Label Sync Service
@@ -79,7 +81,7 @@ async function createOrUpdateGmailLabel(
   gmailColor: GmailColor
 ): Promise<string | null> {
   try {
-    const labelName = `TimeFlow/${category.name ?? category.categoryId}`;
+    const labelName = `TimeFlow/${category.gmailLabelName ?? category.name ?? category.categoryId}`;
 
     if (category.gmailLabelId) {
       try {
@@ -126,8 +128,11 @@ async function createOrUpdateGmailLabel(
 
     return response.data.id ?? null;
   } catch (error: any) {
+    if (error?.code === 404) {
+      return null;
+    }
     console.error(`Error creating/updating label for category ${category.name ?? category.categoryId}:`, error);
-    return null;
+    throw error;
   }
 }
 
@@ -159,7 +164,14 @@ async function applyLabelToThread(
  *
  * Main entry point for manual sync trigger
  */
-export async function syncGmailLabels(userId: string): Promise<SyncResult> {
+export async function syncGmailLabels(
+  userId: string,
+  options?: {
+    backfillDays?: number;
+    backfillMaxThreads?: number;
+    minIntervalMinutes?: number;
+  }
+): Promise<SyncResult> {
   const result: SyncResult = {
     success: false,
     syncedCategories: 0,
@@ -190,9 +202,22 @@ export async function syncGmailLabels(userId: string): Promise<SyncResult> {
     const gmail = await getGmailClient(userId);
     const syncState = await getOrCreateSyncState(userId);
 
+    if (options?.minIntervalMinutes && syncState.lastSyncedAt) {
+      const elapsedMs = Date.now() - syncState.lastSyncedAt.getTime();
+      const minIntervalMs = options.minIntervalMinutes * 60 * 1000;
+      if (elapsedMs < minIntervalMs) {
+        result.success = true;
+        return result;
+      }
+    }
+
     for (const category of user.emailCategoryConfigs) {
       try {
-        const gmailColor = findClosestGmailColor(category.color ?? '#cfe2f3');
+        const overrideColor = category.gmailLabelColor;
+        const gmailColor =
+          overrideColor
+            ? getGmailColorByBackground(overrideColor) ?? findClosestGmailColor(overrideColor)
+            : findClosestGmailColor(category.color ?? '#cfe2f3');
 
         const gmailLabelId = await createOrUpdateGmailLabel(gmail, category, gmailColor);
 
@@ -222,7 +247,8 @@ export async function syncGmailLabels(userId: string): Promise<SyncResult> {
           userId,
           category.categoryId,
           gmailLabelId,
-          syncState
+          syncState,
+          options
         );
         result.syncedThreads += threadsSynced;
       } catch (error: any) {
@@ -255,14 +281,20 @@ async function syncThreadsForCategory(
   userId: string,
   categoryId: string,
   gmailLabelId: string,
-  syncState: GmailLabelSyncState
+  syncState: GmailLabelSyncState,
+  options?: {
+    backfillDays?: number;
+    backfillMaxThreads?: number;
+  }
 ): Promise<number> {
   try {
-    const query = `newer_than:${syncState.backfillDays}d -in:spam -in:trash`;
+    const backfillDays = options?.backfillDays ?? syncState.backfillDays;
+    const backfillMaxThreads = options?.backfillMaxThreads ?? syncState.backfillMaxThreads;
+    const query = `newer_than:${backfillDays}d -in:spam -in:trash`;
     const listResponse = await gmail.users.messages.list({
       userId: 'me',
       q: query,
-      maxResults: Math.min(syncState.backfillMaxThreads, 500),
+      maxResults: Math.min(backfillMaxThreads, 500),
     });
 
     const messageRefs = listResponse.data.messages || [];
@@ -274,7 +306,7 @@ async function syncThreadsForCategory(
     let syncedCount = 0;
 
     for (const ref of messageRefs) {
-      if (!ref.id || syncedCount >= syncState.backfillMaxThreads) {
+      if (!ref.id || syncedCount >= backfillMaxThreads) {
         continue;
       }
 
@@ -296,12 +328,17 @@ async function syncThreadsForCategory(
       const subject = message.payload?.headers?.find((h) => h.name?.toLowerCase() === 'subject')?.value ?? '';
       const snippet = message.snippet ?? '';
 
-      const categorized = categorizeEmail({
-        from,
-        subject,
-        snippet,
-        labels,
-      });
+      const senderEmail = from.match(/<(.+)>/)?.[1] ?? from;
+      const overrideCategory = await applyCategoryOverride(userId, senderEmail, threadId);
+      const normalizedOverride = normalizeEmailCategoryId(overrideCategory);
+      const categorized = normalizedOverride
+        ? normalizedOverride
+        : categorizeEmail({
+          from,
+          subject,
+          snippet,
+          labels,
+        });
 
       if (categorized !== categoryId) {
         continue;
@@ -320,6 +357,23 @@ async function syncThreadsForCategory(
   } catch (error: any) {
     console.error(`Error syncing threads for category ${categoryId}:`, error);
     return 0;
+  }
+}
+
+/**
+ * Sync Gmail labels on inbox fetch (optional, bounded)
+ */
+export async function syncGmailLabelsOnInboxFetch(userId: string): Promise<void> {
+  if (env.GMAIL_SYNC_ON_INBOX_FETCH !== 'true') return;
+
+  try {
+    await syncGmailLabels(userId, {
+      backfillDays: 1,
+      backfillMaxThreads: 25,
+      minIntervalMinutes: 10,
+    });
+  } catch (error) {
+    console.error('Inbox fetch Gmail sync failed:', error);
   }
 }
 

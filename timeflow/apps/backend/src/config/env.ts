@@ -24,6 +24,7 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().optional(),
   AI_DEBUG_ERRORS: z.string().optional(),
+  GMAIL_SYNC_ON_INBOX_FETCH: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -40,4 +41,3 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
-

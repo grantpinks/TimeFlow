@@ -36,6 +36,8 @@ export async function explainCategorization(
   const fromAddress = extractEmailAddress(email.from.toLowerCase());
   const domain = extractDomain(fromAddress);
 
+  const categoryName = EMAIL_CATEGORIES[email.category]?.name ?? email.category;
+
   // 1. Check for thread-specific override
   if (email.threadId) {
     const threadOverride = await findOverrideForThread(userId, email.threadId);
@@ -43,7 +45,7 @@ export async function explainCategorization(
       return {
         category: email.category,
         source: 'override',
-        reason: `You manually set this conversation to "${email.category}"`,
+        reason: `You manually set this conversation to "${categoryName}"`,
         details: {
           overrideType: 'threadId',
           matchedValue: email.threadId,
@@ -61,8 +63,8 @@ export async function explainCategorization(
       category: email.category,
       source: 'override',
       reason: isEmailMatch
-        ? `You set all emails from ${fromAddress} to "${email.category}"`
-        : `You set all emails from @${domain} to "${email.category}"`,
+        ? `You set all emails from ${fromAddress} to "${categoryName}"`
+        : `You set all emails from @${domain} to "${categoryName}"`,
       details: {
         overrideType: senderOverride.overrideType as 'sender' | 'domain',
         matchedValue: senderOverride.overrideValue,

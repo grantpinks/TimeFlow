@@ -10,7 +10,8 @@ import { decrypt, encrypt } from '../utils/crypto.js';
 import { getUserOAuth2Client } from '../config/google.js';
 import { analyzeEmailImportance } from '../utils/emailImportance.js';
 import { assertWithinGmailRateLimit } from '../utils/gmailRateLimiter.js';
-import { categorizeEmail } from './emailCategorizationService.js';
+import { categorizeEmail, normalizeEmailCategoryId } from './emailCategorizationService.js';
+import { applyCategoryOverride } from './emailOverrideService.js';
 import type { EmailInboxResponse, EmailMessage, FullEmailMessage, SendEmailRequest, SendEmailResponse, EmailAttachment } from '@timeflow/shared';
 
 async function getGmailClient(userId: string): Promise<gmail_v1.Gmail> {
@@ -45,7 +46,7 @@ function parseHeader(headers: gmail_v1.Schema$MessagePartHeader[] | undefined, n
   return headers?.find((h) => h.name?.toLowerCase() === name.toLowerCase())?.value;
 }
 
-function mapMessage(message: gmail_v1.Schema$Message): EmailMessage | null {
+async function mapMessage(userId: string, message: gmail_v1.Schema$Message): Promise<EmailMessage | null> {
   if (!message.id) return null;
 
   const headers = message.payload?.headers;
@@ -66,12 +67,17 @@ function mapMessage(message: gmail_v1.Schema$Message): EmailMessage | null {
   });
 
   // Categorize email using AI-powered categorization service
-  const category = categorizeEmail({
-    from,
-    subject,
-    snippet: message.snippet ?? undefined,
-    labels,
-  });
+  const senderEmail = from.match(/<(.+)>/)?.[1] ?? from;
+  const overrideCategory = await applyCategoryOverride(userId, senderEmail, message.threadId ?? undefined);
+  const normalizedOverride = normalizeEmailCategoryId(overrideCategory);
+  const category = normalizedOverride
+    ? normalizedOverride
+    : categorizeEmail({
+        from,
+        subject,
+        snippet: message.snippet ?? undefined,
+        labels,
+      });
 
   return {
     id: message.id,
@@ -119,7 +125,7 @@ export async function getInboxMessages(
       metadataHeaders: ['From', 'Subject', 'Importance'],
     });
 
-    const mapped = mapMessage(full.data);
+    const mapped = await mapMessage(userId, full.data);
     if (mapped) {
       messages.push(mapped);
     }
@@ -169,6 +175,18 @@ export async function getFullEmail(userId: string, emailId: string): Promise<Ful
     isUnread,
   });
 
+  const senderEmail = from.match(/<(.+)>/)?.[1] ?? from;
+  const overrideCategory = await applyCategoryOverride(userId, senderEmail, message.threadId ?? undefined);
+  const normalizedOverride = normalizeEmailCategoryId(overrideCategory);
+  const category = normalizedOverride
+    ? normalizedOverride
+    : categorizeEmail({
+        from,
+        subject,
+        snippet: message.snippet ?? undefined,
+        labels,
+      });
+
   // Extract body
   let body = '';
   const parts = message.payload?.parts || [message.payload];
@@ -216,6 +234,7 @@ export async function getFullEmail(userId: string, emailId: string): Promise<Ful
     labels,
     isRead: !isUnread,
     isPromotional: labels.includes('CATEGORY_PROMOTIONS'),
+    category,
     attachments: attachments.length > 0 ? attachments : undefined,
   };
 }

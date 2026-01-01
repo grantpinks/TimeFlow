@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '../config/prisma.js';
+import { normalizeEmailCategoryId } from './emailCategorizationService.js';
 
 export interface EmailCategoryOverride {
   id: string;
@@ -131,12 +132,16 @@ export async function applyCategoryOverride(
   // Check thread override first (most specific)
   if (threadId) {
     const threadOverride = await findOverrideForThread(userId, threadId);
-    if (threadOverride) return threadOverride.categoryName;
+    if (threadOverride) {
+      return normalizeEmailCategoryId(threadOverride.categoryName) ?? threadOverride.categoryName;
+    }
   }
 
   // Check sender/domain override
   const senderOverride = await findOverrideForSender(userId, senderEmail);
-  if (senderOverride) return senderOverride.categoryName;
+  if (senderOverride) {
+    return normalizeEmailCategoryId(senderOverride.categoryName) ?? senderOverride.categoryName;
+  }
 
   return null;
 }

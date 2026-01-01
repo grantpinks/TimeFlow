@@ -24,6 +24,8 @@ export interface EmailCategoryConfig {
   description?: string;
   emoji?: string;
   gmailSyncEnabled?: boolean; // Whether Gmail label sync is enabled for this category
+  gmailLabelName?: string;
+  gmailLabelColor?: string;
 }
 
 /**
@@ -131,6 +133,18 @@ export const EMAIL_CATEGORIES: Record<EmailCategory, EmailCategoryConfig> = {
     gmailLabels: [],
   },
 };
+
+/**
+ * Normalize a category identifier from name or id to EmailCategory.
+ */
+export function normalizeEmailCategoryId(value?: string | null): EmailCategory | null {
+  if (!value) return null;
+  const needle = value.toLowerCase();
+  const entry = Object.values(EMAIL_CATEGORIES).find(
+    (category) => category.id === needle || category.name.toLowerCase() === needle
+  );
+  return entry ? entry.id : null;
+}
 
 /**
  * Categorize an email based on Gmail labels, keywords, and patterns

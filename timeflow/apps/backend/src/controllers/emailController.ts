@@ -12,6 +12,7 @@ import { GmailRateLimitError } from '../utils/gmailRateLimiter.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import * as categoryService from '../services/categoryService.js';
 import * as emailExplanationService from '../services/emailExplanationService.js';
+import { syncGmailLabelsOnInboxFetch } from '../services/gmailLabelSyncService.js';
 
 const inboxQuerySchema = z.object({
   maxResults: z.coerce.number().int().min(1).max(100).optional(),
@@ -56,6 +57,7 @@ export async function getInboxEmails(
   try {
     const { maxResults, pageToken } = parsed.data;
     const inbox = await gmailService.getInboxMessages(user.id, { maxResults, pageToken });
+    void syncGmailLabelsOnInboxFetch(user.id);
     return reply.send(inbox);
   } catch (error) {
     if (error instanceof GmailRateLimitError) {

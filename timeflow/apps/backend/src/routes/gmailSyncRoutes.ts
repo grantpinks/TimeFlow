@@ -89,10 +89,18 @@ export async function registerGmailSyncRoutes(server: FastifyInstance) {
   server.patch('/gmail-sync/settings', { preHandler: requireAuth }, async (request, reply) => {
     try {
       const userId = request.user!.id;
-      const { backfillDays, backfillMaxThreads } = request.body as {
-        backfillDays?: number;
-        backfillMaxThreads?: number;
-      };
+      const body =
+        request.body && typeof request.body === 'object'
+          ? (request.body as {
+              backfillDays?: number;
+              backfillMaxThreads?: number;
+            })
+          : {};
+      const { backfillDays, backfillMaxThreads } = body;
+
+      if (backfillDays === undefined && backfillMaxThreads === undefined) {
+        return reply.status(400).send({ message: 'No settings provided' });
+      }
 
       if (backfillDays !== undefined && (backfillDays < 1 || backfillDays > 30)) {
         return reply.status(400).send({ message: 'backfillDays must be between 1 and 30' });
