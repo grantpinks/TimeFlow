@@ -25,6 +25,7 @@ export default function InboxPage() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [threadMessages, setThreadMessages] = useState<FullEmailMessage[]>([]);
   const [loadingThread, setLoadingThread] = useState(false);
+  const [threadError, setThreadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -80,7 +81,11 @@ export default function InboxPage() {
 
   async function fetchThread(threadId: string) {
     setLoadingThread(true);
+    setThreadError(null);
     try {
+      // TODO: This creates N+1 queries. Backend should provide /threads/:id endpoint
+      // that returns all messages in one call for better performance.
+
       // Get all messages in the thread
       const messagesInThread = emails.filter(e => e.threadId === threadId || e.id === threadId);
 
@@ -93,6 +98,7 @@ export default function InboxPage() {
       setSelectedThreadId(threadId);
     } catch (error) {
       console.error('Failed to fetch thread:', error);
+      setThreadError('Failed to load thread');
     } finally {
       setLoadingThread(false);
     }
@@ -305,77 +311,98 @@ export default function InboxPage() {
         </div>
 
         {/* Thread Detail Panel */}
-        {selectedThreadId && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="fixed right-0 top-0 h-screen w-1/2 bg-white border-l border-gray-200 shadow-2xl overflow-y-auto z-50"
-          >
-            {/* Header with Open in Gmail button */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-              <h2 className="font-serif text-xl font-bold">Thread Details</h2>
-              <div className="flex gap-2">
-                <a
-                  href={`https://mail.google.com/mail/u/0/#inbox/${selectedThreadId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                >
-                  <ExternalLink size={16} />
-                  Open in Gmail
-                </a>
-                <button
-                  onClick={() => setSelectedThreadId(null)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            {/* Thread messages */}
-            <div className="p-6 space-y-6">
-              {loadingThread ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <AnimatePresence>
+          {selectedThreadId && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="fixed right-0 top-0 h-screen w-1/2 bg-white border-l border-gray-200 shadow-2xl overflow-y-auto z-50"
+              role="dialog"
+              aria-label="Email thread details"
+            >
+              {/* Header with Open in Gmail button */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <h2 className="font-serif text-xl font-bold">Thread Details</h2>
+                <div className="flex gap-2">
+                  <a
+                    href={`https://mail.google.com/mail/u/0/#inbox/${selectedThreadId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <ExternalLink size={16} />
+                    Open in Gmail
+                  </a>
+                  <button
+                    onClick={() => {
+                      setSelectedThreadId(null);
+                      setThreadMessages([]);
+                      setThreadError(null);
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                    aria-label="Close thread details"
+                  >
+                    Close
+                  </button>
                 </div>
-              ) : (
-                threadMessages.map((message) => (
-                  <div key={message.id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <div className="font-semibold text-gray-900">{message.from}</div>
-                        <div className="text-sm text-gray-500">
-                          To: {message.to} {message.cc && `• Cc: ${message.cc}`}
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(message.receivedAt).toLocaleString()}
-                      </div>
+              </div>
+
+              {/* Thread messages */}
+              <div className="p-6 space-y-6">
+                {threadError ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="text-red-600 font-semibold mb-2">{threadError}</div>
+                      <button
+                        onClick={() => selectedThreadId && fetchThread(selectedThreadId)}
+                        className="text-sm text-blue-600 hover:text-blue-800"
+                      >
+                        Try again
+                      </button>
                     </div>
-
-                    <EmailBody html={message.body} plainText={message.snippet} />
-
-                    {message.attachments && message.attachments.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-300">
-                        <div className="text-sm font-semibold text-gray-700 mb-2">Attachments:</div>
-                        <div className="space-y-2">
-                          {message.attachments.map((att, i) => (
-                            <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                              <Paperclip size={14} />
-                              {att.filename} ({Math.round(att.size / 1024)}KB)
-                            </div>
-                          ))}
+                  </div>
+                ) : loadingThread ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : (
+                  threadMessages.map((message) => (
+                    <div key={message.id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <div className="font-semibold text-gray-900">{message.from}</div>
+                          <div className="text-sm text-gray-500">
+                            To: {message.to} {message.cc && `• Cc: ${message.cc}`}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(message.receivedAt).toLocaleString()}
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </motion.div>
-        )}
+
+                      <EmailBody html={message.body} plainText={message.snippet} />
+
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-300">
+                          <div className="text-sm font-semibold text-gray-700 mb-2">Attachments:</div>
+                          <div className="space-y-2">
+                            {message.attachments.map((att, i) => (
+                              <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                                <Paperclip size={14} />
+                                {att.filename} ({Math.round(att.size / 1024)}KB)
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Web Fonts */}
@@ -394,7 +421,7 @@ function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
     if (!html) return null;
     return DOMPurify.sanitize(html, {
       ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'blockquote', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
     });
   }, [html]);
 
