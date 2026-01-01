@@ -1,0 +1,373 @@
+
+> timeflow@0.1.0 dev:backend /Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow
+> pnpm -C apps/backend dev
+
+
+> @timeflow/backend@0.1.0 dev /Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/backend
+> tsx watch src/index.ts
+
+🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767305471973,"pid":93001,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:46:29 PM [tsx] change in ./src/services/tasksService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":30,"time":1767307591199,"pid":10168,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://127.0.0.1:3001"}
+✅ Server ready at http://127.0.0.1:3001
+{"level":30,"time":1767307591199,"pid":10168,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://10.0.0.132:3001"}
+{"level":30,"time":1767307591199,"pid":10168,"hostname":"Grants-MacBook-Air.local","msg":"TimeFlow backend listening at http://127.0.0.1:3001"}
+5:46:37 PM [tsx] change in ./src/controllers/tasksController.ts Restarting...
+{"level":30,"time":1767307597504,"pid":10168,"hostname":"Grants-MacBook-Air.local","msg":"Received SIGTERM, shutting down..."}
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767307598290,"pid":10289,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:46:53 PM [tsx] change in ./src/controllers/tasksController.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767307614261,"pid":10471,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:47:02 PM [tsx] change in ./src/services/emailCategorizationService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":30,"time":1767307623609,"pid":10591,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://127.0.0.1:3001"}
+✅ Server ready at http://127.0.0.1:3001
+{"level":30,"time":1767307623610,"pid":10591,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://10.0.0.132:3001"}
+{"level":30,"time":1767307623610,"pid":10591,"hostname":"Grants-MacBook-Air.local","msg":"TimeFlow backend listening at http://127.0.0.1:3001"}
+5:47:12 PM [tsx] change in ./src/services/emailOverrideService.ts Restarting...
+{"level":30,"time":1767307632916,"pid":10591,"hostname":"Grants-MacBook-Air.local","msg":"Received SIGTERM, shutting down..."}
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767307633690,"pid":10843,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:47:31 PM [tsx] change in ./src/services/gmailService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767307652047,"pid":11051,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:47:56 PM [tsx] change in ./src/services/gmailLabelSyncService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767307677134,"pid":11338,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:48:02 PM [tsx] change in ./src/services/gmailLabelSyncService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":30,"time":1767307683376,"pid":11449,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://127.0.0.1:3001"}
+✅ Server ready at http://127.0.0.1:3001
+{"level":30,"time":1767307683376,"pid":11449,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://10.0.0.132:3001"}
+{"level":30,"time":1767307683376,"pid":11449,"hostname":"Grants-MacBook-Air.local","msg":"TimeFlow backend listening at http://127.0.0.1:3001"}
+5:48:10 PM [tsx] change in ./src/controllers/emailController.ts Restarting...
+{"level":30,"time":1767307690163,"pid":11449,"hostname":"Grants-MacBook-Air.local","msg":"Received SIGTERM, shutting down..."}
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":30,"time":1767307690949,"pid":11587,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://127.0.0.1:3001"}
+✅ Server ready at http://127.0.0.1:3001
+{"level":30,"time":1767307690949,"pid":11587,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://10.0.0.132:3001"}
+{"level":30,"time":1767307690949,"pid":11587,"hostname":"Grants-MacBook-Air.local","msg":"TimeFlow backend listening at http://127.0.0.1:3001"}
+5:48:15 PM [tsx] change in ./src/config/env.ts Restarting...
+{"level":30,"time":1767307695533,"pid":11587,"hostname":"Grants-MacBook-Air.local","msg":"Received SIGTERM, shutting down..."}
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767307696314,"pid":11715,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:48:24 PM [tsx] change in ./src/services/emailExplanationService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":30,"time":1767307705584,"pid":11886,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://127.0.0.1:3001"}
+✅ Server ready at http://127.0.0.1:3001
+{"level":30,"time":1767307705584,"pid":11886,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://10.0.0.132:3001"}
+{"level":30,"time":1767307705584,"pid":11886,"hostname":"Grants-MacBook-Air.local","msg":"TimeFlow backend listening at http://127.0.0.1:3001"}
+{"level":30,"time":1767307765983,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-1","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64791},"msg":"incoming request"}
+{"level":30,"time":1767307765989,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-1","res":{"statusCode":401},"responseTime":6.24616602063179,"msg":"request completed"}
+{"level":30,"time":1767307765992,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-2","req":{"method":"POST","url":"/api/auth/refresh","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64793},"msg":"incoming request"}
+{"level":30,"time":1767307765994,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-2","res":{"statusCode":200},"responseTime":1.5730420053005219,"msg":"request completed"}
+{"level":30,"time":1767307766002,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-3","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64795},"msg":"incoming request"}
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307766724,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-3","res":{"statusCode":200},"responseTime":721.9382089972496,"msg":"request completed"}
+{"level":30,"time":1767307773719,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-4","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64804},"msg":"incoming request"}
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307773828,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-4","res":{"statusCode":200},"responseTime":108.93174999952316,"msg":"request completed"}
+{"level":30,"time":1767307788237,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-5","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64816},"msg":"incoming request"}
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307788390,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-5","res":{"statusCode":200},"responseTime":152.83337497711182,"msg":"request completed"}
+{"level":30,"time":1767307802298,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-6","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64827},"msg":"incoming request"}
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307802411,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-6","res":{"statusCode":200},"responseTime":112.5153340101242,"msg":"request completed"}
+{"level":30,"time":1767307817627,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-7","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64834},"msg":"incoming request"}
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307817785,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-7","res":{"statusCode":200},"responseTime":158.52600002288818,"msg":"request completed"}
+{"level":30,"time":1767307850111,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-8","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64852},"msg":"incoming request"}
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307850259,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-8","res":{"statusCode":200},"responseTime":147.78054201602936,"msg":"request completed"}
+{"level":30,"time":1767307864933,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-9","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64863},"msg":"incoming request"}
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307865032,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-9","res":{"statusCode":200},"responseTime":99.00450000166893,"msg":"request completed"}
+{"level":30,"time":1767307879570,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-a","req":{"method":"GET","url":"/api/user/me","host":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":64872},"msg":"incoming request"}
+prisma:query SELECT 1
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+prisma:query SELECT "public"."User"."id", "public"."User"."email", "public"."User"."name", "public"."User"."createdAt", "public"."User"."updatedAt", "public"."User"."googleId", "public"."User"."googleRefreshToken", "public"."User"."googleAccessToken", "public"."User"."googleAccessTokenExpiry", "public"."User"."timeZone", "public"."User"."wakeTime", "public"."User"."sleepTime", "public"."User"."defaultTaskDurationMinutes", "public"."User"."defaultCalendarId", "public"."User"."dailySchedule", "public"."User"."dailyScheduleConstraints", "public"."User"."sidebarNavOrder", "public"."User"."meetingStartTime", "public"."User"."meetingEndTime", "public"."User"."blockedDaysOfWeek", "public"."User"."dailyMeetingSchedule" FROM "public"."User" WHERE ("public"."User"."id" = $1 AND 1=1) LIMIT $2 OFFSET $3
+{"level":30,"time":1767307879754,"pid":11886,"hostname":"Grants-MacBook-Air.local","reqId":"req-a","res":{"statusCode":200},"responseTime":183.94566598534584,"msg":"request completed"}
+5:51:33 PM [tsx] change in ./src/services/gmailLabelSyncService.ts Restarting...
+{"level":30,"time":1767307893682,"pid":11886,"hostname":"Grants-MacBook-Air.local","msg":"Received SIGTERM, shutting down..."}
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767307895016,"pid":14892,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:57:13 PM [tsx] change in ./src/services/categoryService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767308234678,"pid":18882,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}
+5:57:18 PM [tsx] change in ./src/services/emailCategorizationService.ts Rerunning...
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":30,"time":1767308239059,"pid":18953,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://127.0.0.1:3001"}
+✅ Server ready at http://127.0.0.1:3001
+{"level":30,"time":1767308239059,"pid":18953,"hostname":"Grants-MacBook-Air.local","msg":"Server listening at http://10.0.0.132:3001"}
+{"level":30,"time":1767308239059,"pid":18953,"hostname":"Grants-MacBook-Air.local","msg":"TimeFlow backend listening at http://127.0.0.1:3001"}
+5:57:27 PM [tsx] change in ./src/services/gmailLabelSyncService.ts Restarting...
+{"level":30,"time":1767308247594,"pid":18953,"hostname":"Grants-MacBook-Air.local","msg":"Received SIGTERM, shutting down..."}
+c🚀 TimeFlow backend starting...
+📋 Environment check:
+  NODE_ENV: development
+  PORT: 3001
+  DATABASE_URL: ✓ Set
+  SESSION_SECRET: ✓ Set
+  ENCRYPTION_KEY: ✓ Set
+✅ Imports loaded successfully
+🔧 Building Fastify server...
+🌐 Listening on port 3001...
+{"level":50,"time":1767308248381,"pid":19063,"hostname":"Grants-MacBook-Air.local","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+❌ Failed to start server: Error: listen EADDRINUSE: address already in use 0.0.0.0:3001
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at node:net:2206:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 3001
+}

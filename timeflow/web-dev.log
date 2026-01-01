@@ -1,0 +1,43 @@
+
+> timeflow@0.1.0 dev:web /Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow
+> pnpm -C apps/web dev
+
+
+> @timeflow/web@0.1.0 dev /Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web
+> next dev --port 3000
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1290ms
+ ○ Compiling /inbox ...
+ ✓ Compiled /inbox in 2s (1191 modules)
+ GET /inbox 200 in 2203ms
+ ✓ Compiled in 120ms (601 modules)
+(node:93076) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ✓ Compiled /today in 299ms (1227 modules)
+ ✓ Compiled /tasks in 180ms (1266 modules)
+ ✓ Compiled /habits in 132ms (1260 modules)
+ ✓ Compiled /settings in 137ms (1270 modules)
+ ○ Compiling /calendar ...
+ ✓ Compiled /calendar in 864ms (2028 modules)
+ ✓ Compiled /_not-found in 381ms (2017 modules)
+ GET /_next/static/css/app/calendar/react-big-calendar.css.map 404 in 432ms
+ ✓ Compiled in 547ms (2029 modules)
+ ✓ Compiled in 182ms (2029 modules)
+ ✓ Compiled in 237ms (2029 modules)
+ ✓ Compiled in 178ms (2029 modules)
+ ✓ Compiled in 239ms (2029 modules)
+ ✓ Compiled in 97ms (1027 modules)
+ ✓ Compiled in 231ms (2029 modules)
+ ✓ Compiled in 240ms (2029 modules)
+ ✓ Compiled in 192ms (2029 modules)
+ ✓ Compiled in 374ms (2029 modules)
+ ✓ Compiled in 265ms (2031 modules)
+ ✓ Compiled in 410ms (2016 modules)
+ ✓ Compiled in 89ms (1028 modules)
+ ✓ Compiled in 85ms (1028 modules)
+ ✓ Compiled in 102ms (1028 modules)
