@@ -795,6 +795,28 @@
 
 ---
 
+### Sprint 15.5: AI Assistant Workflow Hardening (Planning + Meetings)
+**Status**: DONE ✅
+**Duration**: 1-2 days (parallel to sidebar sprint)  
+**Focus**: Make the AI assistant more conversational and robust for planning and meetings workflows.
+
+#### Goals
+- [x] Add planning sub-mode with minimal clarifying questions and draft plans.
+- [x] Add meetings sub-mode for scheduling links, invite drafting, and safe email send confirmations.
+- [x] Extend regression harness with expectations (question/CTA/no scheduling language).
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 15.5.AI1 | Add planning workflow (intent detection, clarifying questions, response sanitization) | Codex | 3-4h | P0 | ✅ |
+| 15.5.AI2 | Add meetings workflow mode + prompt + meeting state | Codex | 4-6h | P0 | ✅ |
+| 15.5.AI3 | Upgrade AI regression harness with expectation checks and planning/meeting prompts | Codex | 2-3h | P1 | ✅ |
+
+**Plan docs**: See **[`docs/plans/2026-01-02-ai-planning-workflow.md`](./docs/plans/2026-01-02-ai-planning-workflow.md)**, **[`docs/plans/2026-01-02-ai-planning-workflow-implementation-plan.md`](./docs/plans/2026-01-02-ai-planning-workflow-implementation-plan.md)**, and **[`docs/plans/2026-01-02-ai-meetings-workflow-design.md`](./docs/plans/2026-01-02-ai-meetings-workflow-design.md)**.
+
+---
+
 ### Sprint 16: Inbox MVP (Email Triage) + Gmail Label Sync (Thread-Level)
 **Status**: 🟡 In Progress
 **Duration**: Week 31-32  
@@ -846,6 +868,14 @@
 | 16.6 | Implement watch renewal job and operational safeguards (retry, dead-letter strategy, alerting hooks). | Codex | 4-6h | P1 |
 | 16.10 | Add optional **action-oriented labels** in TimeFlow (`NeedsReply`, `ToRead`, `NeedsAction`) and map them to Gmail labels (namespaced) if enabled. | Codex | 6-8h | P2 |
 
+**Phase B+ (carryover): AI Assistant Hardening**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 16.B1 | Fix AI regression harness failures for planning/meetings flows; make prompts pass expectation checks. | Codex | 2-4h | P1 |
+| 16.B2 | Add CI gate for AI regression content-quality checks (question/CTA/no scheduling language). | Codex | 2-3h | P2 |
+| 16.B3 | Add production-safe AI debug toggle + logging for prompt failures (off by default). | Codex | 2-3h | P2 |
+
 #### Acceptance Criteria
 - `/inbox` is a real triage surface (list + detail + read/unread + archive + search) and is performant/reliable for daily use.
 - Users can convert an email into a task and (optionally) schedule it from the Inbox without losing context.
@@ -854,6 +884,7 @@
 - Phase B (if shipped): background sync labels new mail within minutes when watch is enabled.
 - Label operations are safe under rate limits and are idempotent (retries do not produce duplicates or thrash colors).
 - Clear docs exist for OAuth scopes, verification requirements, and operational monitoring (and Pub/Sub setup if Phase B ships).
+- AI regression harness passes content-quality checks for planning/meetings prompts when Phase B+ tasks ship.
 
 **Plan doc**: See **[`docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md`](./docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md)**.
 
