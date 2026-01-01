@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
-import type { EmailMessage, EmailCategoryConfig } from '@/lib/api';
+import type { EmailCategoryConfig } from '@/lib/api';
+import type { EmailMessage, FullEmailMessage } from '@timeflow/shared';
+import { ExternalLink, Paperclip } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 export default function InboxPage() {
   const { user, isAuthenticated } = useUser();
@@ -17,6 +20,11 @@ export default function InboxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
   const [correctingEmailId, setCorrectingEmailId] = useState<string | null>(null);
+
+  // Thread detail state
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [threadMessages, setThreadMessages] = useState<FullEmailMessage[]>([]);
+  const [loadingThread, setLoadingThread] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -70,6 +78,26 @@ export default function InboxPage() {
     }
   }
 
+  async function fetchThread(threadId: string) {
+    setLoadingThread(true);
+    try {
+      // Get all messages in the thread
+      const messagesInThread = emails.filter(e => e.threadId === threadId || e.id === threadId);
+
+      // Fetch full content for each message
+      const fullMessages = await Promise.all(
+        messagesInThread.map(msg => api.getFullEmail(msg.id))
+      );
+
+      setThreadMessages(fullMessages);
+      setSelectedThreadId(threadId);
+    } catch (error) {
+      console.error('Failed to fetch thread:', error);
+    } finally {
+      setLoadingThread(false);
+    }
+  }
+
   function getCategoryColor(categoryName: string): string {
     if (!Array.isArray(categories) || categories.length === 0) {
       return '#6B7280'; // Default gray
@@ -95,7 +123,7 @@ export default function InboxPage() {
     ? emails.filter(e =>
         e.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
         e.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.snippet.toLowerCase().includes(searchQuery.toLowerCase())
+        (e.snippet?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
       )
     : emails;
 
@@ -268,12 +296,86 @@ export default function InboxPage() {
                         alert('Failed to save category correction. Please try again.');
                       }
                     }}
+                    onOpenThread={fetchThread}
                   />
                 ))}
               </AnimatePresence>
             </div>
           )}
         </div>
+
+        {/* Thread Detail Panel */}
+        {selectedThreadId && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="fixed right-0 top-0 h-screen w-1/2 bg-white border-l border-gray-200 shadow-2xl overflow-y-auto z-50"
+          >
+            {/* Header with Open in Gmail button */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <h2 className="font-serif text-xl font-bold">Thread Details</h2>
+              <div className="flex gap-2">
+                <a
+                  href={`https://mail.google.com/mail/u/0/#inbox/${selectedThreadId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <ExternalLink size={16} />
+                  Open in Gmail
+                </a>
+                <button
+                  onClick={() => setSelectedThreadId(null)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            {/* Thread messages */}
+            <div className="p-6 space-y-6">
+              {loadingThread ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                threadMessages.map((message) => (
+                  <div key={message.id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <div className="font-semibold text-gray-900">{message.from}</div>
+                        <div className="text-sm text-gray-500">
+                          To: {message.to} {message.cc && `• Cc: ${message.cc}`}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(message.receivedAt).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <EmailBody html={message.body} plainText={message.snippet} />
+
+                    {message.attachments && message.attachments.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-300">
+                        <div className="text-sm font-semibold text-gray-700 mb-2">Attachments:</div>
+                        <div className="space-y-2">
+                          {message.attachments.map((att, i) => (
+                            <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                              <Paperclip size={14} />
+                              {att.filename} ({Math.round(att.size / 1024)}KB)
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Web Fonts */}
@@ -282,6 +384,38 @@ export default function InboxPage() {
       `}</style>
     </Layout>
   );
+}
+
+/**
+ * EmailBody Component - Safely renders HTML email content with XSS protection
+ */
+function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
+  const sanitizedHtml = useMemo(() => {
+    if (!html) return null;
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'blockquote', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'style'],
+    });
+  }, [html]);
+
+  if (sanitizedHtml) {
+    return (
+      <div
+        className="prose max-w-none text-gray-800"
+        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      />
+    );
+  }
+
+  if (plainText) {
+    return (
+      <div className="prose max-w-none whitespace-pre-wrap text-gray-800">
+        {plainText}
+      </div>
+    );
+  }
+
+  return <div className="text-gray-400 italic">No content available</div>;
 }
 
 interface EmailThreadProps {
@@ -296,6 +430,7 @@ interface EmailThreadProps {
   onCancelCorrect: () => void;
   categories: EmailCategoryConfig[];
   onCorrect: (categoryName: string, reason?: string) => Promise<void>;
+  onOpenThread: (threadId: string) => void;
 }
 
 function EmailThread({
@@ -309,7 +444,8 @@ function EmailThread({
   onStartCorrect,
   onCancelCorrect,
   categories,
-  onCorrect
+  onCorrect,
+  onOpenThread
 }: EmailThreadProps) {
   const [selectedCategory, setSelectedCategory] = useState(email.category || '');
 
@@ -335,7 +471,7 @@ function EmailThread({
                 {email.from.split('<')[0].trim() || email.from}
               </span>
               <span className="text-xs text-[#999] tracking-wide" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                {formatTimestamp(email.date)}
+                {formatTimestamp(email.receivedAt)}
               </span>
             </div>
 
@@ -366,16 +502,28 @@ function EmailThread({
               </span>
             )}
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onStartCorrect();
-              }}
-              className="text-xs text-[#999] hover:text-[#1a1a1a] opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            >
-              Correct →
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenThread(email.threadId || email.id);
+                }}
+                className="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity font-medium"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              >
+                View Thread →
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartCorrect();
+                }}
+                className="text-xs text-[#999] hover:text-[#1a1a1a] opacity-0 group-hover:opacity-100 transition-opacity"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              >
+                Correct →
+              </button>
+            </div>
           </div>
         </div>
       </div>
