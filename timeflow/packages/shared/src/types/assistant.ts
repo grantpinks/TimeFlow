@@ -11,6 +11,7 @@ export interface ChatMessage {
     schedulePreview?: SchedulePreview;
     action?: AssistantAction;
     mascotState?: string;
+    planningState?: PlanningState;
   };
 }
 
@@ -39,4 +40,13 @@ export interface AssistantChatRequest {
 export interface AssistantChatResponse {
   message: ChatMessage; // AI's response
   suggestions?: SchedulePreview; // If AI generated schedule suggestions
+}
+
+export interface PlanningState {
+  missingInfo: boolean;
+  missingTime: boolean;
+  missingPriority: boolean;
+  questionRound: number;
+  allowSecondRound: boolean;
+  assumptions: string[];
 }
