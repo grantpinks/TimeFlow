@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
   { id: 'habits', href: '/habits', label: 'Habits', icon: HabitIcon },
   { id: 'assistant', href: '/assistant', label: 'Flow AI', icon: SparkIcon },
   { id: 'calendar', href: '/calendar', label: 'Calendar', icon: CalendarIcon },
-  { id: 'inbox', href: '/inbox', label: 'Inbox', icon: InboxIcon },
+  { id: 'inbox', href: '/inbox', label: 'Inbox', icon: InboxIcon, children: [{ href: '/settings/email-categories', label: 'Email Categories' }] },
 ];
 
 const navItemIds = navItems.map((item) => item.id);
@@ -52,6 +52,7 @@ export function Layout({ children }: LayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isTasksExpanded, setIsTasksExpanded] = useState(false);
+  const [isInboxExpanded, setIsInboxExpanded] = useState(false);
   const [navOrder, setNavOrder] = useState<string[]>(() => normalizeNavOrder());
   const [draggingNavId, setDraggingNavId] = useState<string | null>(null);
   const [dragOverNavId, setDragOverNavId] = useState<string | null>(null);
@@ -72,6 +73,9 @@ export function Layout({ children }: LayoutProps) {
   useEffect(() => {
     if (pathname.startsWith('/tasks') || pathname.startsWith('/categories')) {
       setIsTasksExpanded(true);
+    }
+    if (pathname.startsWith('/inbox') || pathname.startsWith('/settings/email-categories')) {
+      setIsInboxExpanded(true);
     }
   }, [pathname]);
 
@@ -139,6 +143,22 @@ export function Layout({ children }: LayoutProps) {
       window.localStorage.setItem(sidebarStorageKey, next ? '1' : '0');
       return next;
     });
+  }
+
+  function isNavExpanded(id: string) {
+    if (id === 'tasks') return isTasksExpanded;
+    if (id === 'inbox') return isInboxExpanded;
+    return false;
+  }
+
+  function toggleNavExpanded(id: string) {
+    if (id === 'tasks') {
+      setIsTasksExpanded((prev) => !prev);
+      return;
+    }
+    if (id === 'inbox') {
+      setIsInboxExpanded((prev) => !prev);
+    }
   }
 
   if (!isAuthenticated) {
@@ -222,6 +242,7 @@ export function Layout({ children }: LayoutProps) {
               item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`));
             const Icon = item.icon;
             const hasChildren = Boolean(item.children?.length);
+            const isExpanded = isNavExpanded(item.id);
             const isDropTarget = dragOverNavId === item.id && draggingNavId !== item.id;
 
             if (hasChildren) {
@@ -250,15 +271,15 @@ export function Layout({ children }: LayoutProps) {
                     {isSidebarExpanded ? (
                       <button
                         type="button"
-                        onClick={() => setIsTasksExpanded((prev) => !prev)}
+                        onClick={() => toggleNavExpanded(item.id)}
                         className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-400 hover:text-primary-600 transition-colors"
-                        aria-label={isTasksExpanded ? 'Collapse Tasks subpages' : 'Expand Tasks subpages'}
+                        aria-label={isExpanded ? `Collapse ${item.label} subpages` : `Expand ${item.label} subpages`}
                       >
-                        <ChevronIcon className={`h-4 w-4 transition-transform ${isTasksExpanded ? 'rotate-90' : ''}`} />
+                        <ChevronIcon className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                       </button>
                     ) : null}
                   </div>
-                  {isSidebarExpanded && isTasksExpanded ? (
+                  {isSidebarExpanded && isExpanded ? (
                     <div className="ml-8 space-y-1">
                       {item.children?.map((child) => {
                         const isChildActive =
