@@ -645,8 +645,11 @@ export async function processMessage(
       mode = 'conversation';
     }
 
+    const effectiveMode = resolvePlanningMode(mode, message);
+    const previousPlanningState = getLatestPlanningState(resolvedHistory);
+
     // Get mode-specific system prompt
-    const systemPrompt = promptManager.getPrompt(mode);
+    const systemPrompt = promptManager.getPrompt(effectiveMode);
 
     // Build the context prompt with user data and classified events
     const {
@@ -655,13 +658,15 @@ export async function processMessage(
       taskIds,
       habitIds,
       habits: contextHabits,
+      planningState,
     } = await buildContextPrompt(
       userId,
       message,
-      mode,
+      effectiveMode,
       isPlanAdjustment,
       wantsReschedule,
-      wantsDailyPlan
+      wantsDailyPlan,
+      previousPlanningState
     );
 
     const userPrefs: UserPreferences = {
@@ -672,13 +677,13 @@ export async function processMessage(
       dailyScheduleConstraints: user.dailyScheduleConstraints as DailyScheduleConfig | null,
     };
 
-    if (mode === 'availability') {
+    if (effectiveMode === 'availability') {
       const availabilitySummary = buildAvailabilitySummary({
         message,
         calendarEvents,
         userPrefs,
       });
-      const cleanedResponse = sanitizeAssistantContent(availabilitySummary, mode, false);
+      const cleanedResponse = sanitizeAssistantContent(availabilitySummary, effectiveMode, false);
       const mascotState = detectMascotState(cleanedResponse);
 
       return {
@@ -695,7 +700,7 @@ export async function processMessage(
     // Call the LLM API with mode-specific system prompt
     let llmResponse: string;
     try {
-      llmResponse = await callLocalLLM(contextPrompt, resolvedHistory, systemPrompt, mode);
+      llmResponse = await callLocalLLM(contextPrompt, resolvedHistory, systemPrompt, effectiveMode);
     } catch (error) {
       console.error('LLM call failed', error);
       const fallbackContent =
@@ -714,10 +719,10 @@ export async function processMessage(
     // Parse the response to extract structured data
     let { naturalLanguage, schedulePreview } = parseResponse(llmResponse);
 
-    if (mode === 'scheduling' && !schedulePreview) {
+    if (effectiveMode === 'scheduling' && !schedulePreview) {
       logDebug('[AssistantService][Debug] Missing structured output in scheduling response.');
       const retryPrompt = `${contextPrompt}\n\nIMPORTANT: The previous response omitted the required [STRUCTURED_OUTPUT]. Reformat your response to include BOTH the natural language summary and the [STRUCTURED_OUTPUT] JSON. End with the JSON code block and add no text after it.`;
-      const retryResponse = await callLocalLLM(retryPrompt, resolvedHistory, systemPrompt, mode);
+      const retryResponse = await callLocalLLM(retryPrompt, resolvedHistory, systemPrompt, effectiveMode);
       const retryParsed = parseResponse(retryResponse);
       if (retryParsed.schedulePreview) {
         naturalLanguage = retryParsed.naturalLanguage;
@@ -725,12 +730,12 @@ export async function processMessage(
       }
     }
 
-    if (mode === 'scheduling' && schedulePreview) {
+    if (effectiveMode === 'scheduling' && schedulePreview) {
       schedulePreview = sanitizeSchedulePreview(schedulePreview, taskIds, habitIds);
     }
 
     // Validate schedule preview if in scheduling mode (Sprint 13.7)
-    if (mode === 'scheduling' && schedulePreview) {
+    if (effectiveMode === 'scheduling' && schedulePreview) {
       const validation = validateSchedulePreview(
         schedulePreview,
         calendarEvents,
@@ -763,7 +768,7 @@ export async function processMessage(
     // Detect appropriate mascot state
     const cleanedResponse = sanitizeAssistantContent(
       naturalLanguage,
-      mode,
+      effectiveMode,
       Boolean(schedulePreview)
     );
     const mascotState = detectMascotState(cleanedResponse, schedulePreview);
@@ -777,10 +782,11 @@ export async function processMessage(
       metadata: {
         ...(schedulePreview ? { schedulePreview } : {}),
         mascotState,
+        ...(planningState ? { planningState } : {}),
       },
     };
 
-    logDebug(`[AssistantService][Debug] Mode: ${mode}, Mascot: ${mascotState}, Preview: ${schedulePreview ? 'YES' : 'NO'}`);
+    logDebug(`[AssistantService][Debug] Mode: ${effectiveMode}, Mascot: ${mascotState}, Preview: ${schedulePreview ? 'YES' : 'NO'}`);
 
     return {
       message: assistantMessage,
@@ -828,15 +834,17 @@ export async function processMessage(
 async function buildContextPrompt(
   userId: string,
   userMessage: string,
-  mode: 'conversation' | 'scheduling' | 'availability',
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning',
   isPlanAdjustment: boolean = false,
   includeScheduledTaskIds: boolean = false,
-  dailyPlanRequest: boolean = false
+  dailyPlanRequest: boolean = false,
+  previousPlanningState: PlanningState | null = null
 ): Promise<{
   contextPrompt: string;
   calendarEvents: any[];
   taskIds: string[];
   habitIds: string[];
+  planningState?: PlanningState;
   habits: {
     id: string;
     title: string;
@@ -955,7 +963,7 @@ async function buildContextPrompt(
     prompt += `\n`;
   }
 
-  if (mode === 'scheduling' || mode === 'availability') {
+  if (mode === 'scheduling' || mode === 'availability' || mode === 'planning') {
     // Fix #5: Make wake/sleep constraints extremely prominent and clear
     prompt += `\n**CRITICAL SCHEDULING CONSTRAINTS**\n`;
     prompt += `================================\n`;
@@ -1081,7 +1089,7 @@ async function buildContextPrompt(
   const { fixed: fixedEvents, movable: movableEvents } = separateFixedAndMovable(calendarEvents);
 
   // Add calendar events based on mode
-  if (mode === 'scheduling' || mode === 'availability') {
+  if (mode === 'scheduling' || mode === 'availability' || mode === 'planning') {
     // In scheduling/availability modes, distinguish between fixed and movable events
     if (fixedEvents.length > 0 || movableEvents.length > 0) {
       prompt += buildFixedEventsContext(fixedEvents, user.timeZone);
@@ -1126,6 +1134,17 @@ async function buildContextPrompt(
     prompt += '**Reschedule Request**: The user is asking to move existing scheduled tasks. Only output blocks for tasks listed under "Already Scheduled Tasks".\n\n';
   }
 
+  let planningState: PlanningState | undefined;
+  if (mode === 'planning') {
+    const nextPlanning = getNextPlanningState({
+      message: userMessage,
+      tasks: unscheduledTasks,
+      previousState: previousPlanningState,
+    });
+    planningState = nextPlanning.state;
+    prompt += formatPlanningStateBlock(planningState);
+  }
+
   // Add user's message
   prompt += `**User's Question**: "${userMessage}"\n\n`;
 
@@ -1144,6 +1163,8 @@ async function buildContextPrompt(
     prompt += `Do not add any text after the closing backticks.\n`;
   } else if (mode === 'availability') {
     prompt += `Based on this information, provide a clear availability summary and highlight open slots.`;
+  } else if (mode === 'planning') {
+    prompt += `Based on this information and the Planning State, ask a short clarifying question or draft a plan.`;
   } else {
     prompt += `Based on this information, provide a helpful, conversational response.`;
   }
@@ -1159,6 +1180,7 @@ async function buildContextPrompt(
     calendarEvents,
     taskIds,
     habitIds: activeHabits.map((habit) => habit.id),
+    planningState,
     habits: activeHabits,
     skippedHabitIds,
   };
@@ -1174,7 +1196,7 @@ async function callLocalLLM(
   contextPrompt: string,
   conversationHistory: ChatMessage[] | undefined,
   systemPrompt: string,
-  mode: 'conversation' | 'scheduling' | 'availability'
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning'
 ): Promise<string> {
   const provider = (env.LLM_PROVIDER || 'local').toLowerCase();
   const isOpenAI = provider === 'openai';
@@ -1688,7 +1710,7 @@ function fillMissingHabitBlocks(
  */
 function sanitizeAssistantContent(
   content: string,
-  mode: 'conversation' | 'scheduling' | 'availability',
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning',
   hasSchedulePreview: boolean
 ): string {
   let sanitized = content;
