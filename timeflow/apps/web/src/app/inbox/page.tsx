@@ -11,6 +11,7 @@ import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search } from 'lucide
 import Image from 'next/image';
 import DOMPurify from 'dompurify';
 import toast, { Toaster } from 'react-hot-toast';
+import { filterInboxEmails } from '@/lib/inboxFilters';
 
 export default function InboxPage() {
   const { isAuthenticated } = useUser();
@@ -58,26 +59,10 @@ export default function InboxPage() {
       setLoading(true);
       const result = await api.getInboxEmails({ maxResults: 100 });
 
-      // Apply client-side filtering
-      let filteredEmails = result.messages;
-
-      if (selectedFilter === 'professional') {
-        filteredEmails = filteredEmails.filter(e =>
-          ['Work', 'Professional', 'Business'].includes(e.category || '')
-        );
-      } else if (selectedFilter === 'personal') {
-        filteredEmails = filteredEmails.filter(e =>
-          ['Personal', 'Family', 'Friends'].includes(e.category || '')
-        );
-      }
-
-      if (selectedCategoryId) {
-        const category = categories.find(c => c.id === selectedCategoryId);
-        if (category) {
-          filteredEmails = filteredEmails.filter(e => e.category === category.name);
-        }
-      }
-
+      const filteredEmails = filterInboxEmails(result.messages, {
+        selectedFilter,
+        selectedCategoryId,
+      });
       setEmails(filteredEmails);
     } catch (error) {
       console.error('Failed to fetch inbox:', error);
@@ -256,12 +241,82 @@ export default function InboxPage() {
     }
   }
 
-  function getCategoryColor(categoryName: string): string {
+  async function handleCreateTaskFromEmail(
+    email: EmailMessage,
+    options: { schedule?: boolean } = {}
+  ) {
+    const threadId = email.threadId || email.id;
+    const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${threadId}`;
+    const description = [
+      `From: ${email.from}`,
+      `Subject: ${email.subject}`,
+      `Source: ${gmailUrl}`,
+      '',
+      email.snippet || '',
+    ].join('\n');
+
+    try {
+      const task = await api.createTask({
+        title: email.subject || 'Email follow-up',
+        description,
+        sourceEmailId: email.id,
+        sourceThreadId: email.threadId,
+        sourceEmailProvider: 'gmail',
+        sourceEmailUrl: gmailUrl,
+      });
+
+      track('email_converted_to_task', { email_id: email.id });
+
+      if (options.schedule) {
+        const now = new Date();
+        const end = new Date();
+        end.setDate(end.getDate() + 14);
+
+        const result = await api.runSchedule({
+          taskIds: [task.id],
+          dateRangeStart: now.toISOString(),
+          dateRangeEnd: end.toISOString(),
+        });
+
+        toast.success(
+          result.scheduled > 0
+            ? 'Task created and scheduled!'
+            : 'Task created (no available slots found)'
+        );
+      } else {
+        toast.success('Task created from email');
+      }
+    } catch (error) {
+      console.error('Failed to create task from email:', error);
+      toast.error('Failed to create task. Please try again.');
+    }
+  }
+
+  function getCategoryConfig(categoryValue?: string | null) {
+    if (!categoryValue || !Array.isArray(categories)) return null;
+    return categories.find(
+      (category) =>
+        category.id.toLowerCase() === categoryValue.toLowerCase() ||
+        category.name.toLowerCase() === categoryValue.toLowerCase()
+    );
+  }
+
+  function getCategoryColor(categoryValue: string): string {
     if (!Array.isArray(categories) || categories.length === 0) {
       return '#6B7280'; // Default gray
     }
-    const category = categories.find(c => c.name === categoryName);
+    const category = getCategoryConfig(categoryValue);
     return category?.color || '#6B7280';
+  }
+
+  function getCategoryLabel(categoryValue?: string | null): string {
+    const category = getCategoryConfig(categoryValue);
+    return category?.name || categoryValue || 'Uncategorized';
+  }
+
+  function getCategoryId(categoryValue?: string | null): string | null {
+    const category = getCategoryConfig(categoryValue);
+    return category?.id || null;
   }
 
   function formatTimestamp(dateString: string): string {
@@ -498,6 +553,8 @@ export default function InboxPage() {
                     email={email}
                     index={index}
                     categoryColor={getCategoryColor(email.category || '')}
+                    categoryLabel={getCategoryLabel(email.category)}
+                    categoryId={getCategoryId(email.category)}
                     formatTimestamp={formatTimestamp}
                     isExpanded={expandedThreadId === email.id}
                     onToggleExpand={() => setExpandedThreadId(expandedThreadId === email.id ? null : email.id)}
@@ -505,17 +562,26 @@ export default function InboxPage() {
                     onStartCorrect={() => setCorrectingEmailId(email.id)}
                     onCancelCorrect={() => setCorrectingEmailId(null)}
                     categories={categories}
-                    onCorrect={async (categoryName: string, reason?: string) => {
+                    onCorrect={async (categoryId: string, scope: 'sender' | 'domain' | 'thread', reason?: string) => {
                       try {
                         // Extract sender email from the email
                         const senderMatch = email.from.match(/<(.+)>/);
                         const senderEmail = senderMatch ? senderMatch[1] : email.from;
+                        const domain = senderEmail.split('@')[1];
+                        const overrideType =
+                          scope === 'thread' ? 'threadId' : scope === 'domain' ? 'domain' : 'sender';
+                        const overrideValue =
+                          scope === 'thread'
+                            ? email.threadId || email.id
+                            : scope === 'domain'
+                              ? (domain || senderEmail).toLowerCase()
+                              : senderEmail.toLowerCase();
 
                         // Create override for this sender
                         await api.createEmailOverride({
-                          overrideType: 'sender',
-                          overrideValue: senderEmail.toLowerCase(),
-                          categoryName,
+                          overrideType,
+                          overrideValue,
+                          categoryName: categoryId,
                           reason,
                         });
 
@@ -529,6 +595,7 @@ export default function InboxPage() {
                     onOpenThread={fetchThread}
                     onToggleRead={handleToggleRead}
                     onArchive={handleArchive}
+                    onCreateTask={handleCreateTaskFromEmail}
                     explanation={explanations[email.id]}
                     onFetchExplanation={fetchExplanation}
                   />
@@ -677,6 +744,8 @@ interface EmailThreadProps {
   email: EmailMessage;
   index: number;
   categoryColor: string;
+  categoryLabel: string;
+  categoryId: string | null;
   formatTimestamp: (date: string) => string;
   isExpanded: boolean;
   onToggleExpand: () => void;
@@ -684,10 +753,11 @@ interface EmailThreadProps {
   onStartCorrect: () => void;
   onCancelCorrect: () => void;
   categories: EmailCategoryConfig[];
-  onCorrect: (categoryName: string, reason?: string) => Promise<void>;
+  onCorrect: (categoryId: string, scope: 'sender' | 'domain' | 'thread', reason?: string) => Promise<void>;
   onOpenThread: (threadId: string) => void;
   onToggleRead?: (emailId: string, currentIsRead: boolean) => void;
   onArchive?: (emailId: string) => void;
+  onCreateTask?: (email: EmailMessage, options?: { schedule?: boolean }) => void;
   explanation?: api.EmailCategoryExplanation;
   onFetchExplanation?: (emailId: string) => void;
 }
@@ -696,6 +766,8 @@ function EmailThread({
   email,
   index,
   categoryColor,
+  categoryLabel,
+  categoryId,
   formatTimestamp,
   isExpanded,
   onToggleExpand,
@@ -707,10 +779,16 @@ function EmailThread({
   onOpenThread,
   onToggleRead,
   onArchive,
+  onCreateTask,
   explanation,
   onFetchExplanation
 }: EmailThreadProps) {
-  const [selectedCategory, setSelectedCategory] = useState(email.category || '');
+  const [selectedCategory, setSelectedCategory] = useState(categoryId || '');
+  const [correctionScope, setCorrectionScope] = useState<'sender' | 'domain' | 'thread'>('sender');
+
+  useEffect(() => {
+    setSelectedCategory(categoryId || '');
+  }, [categoryId]);
 
   return (
     <motion.div
@@ -755,7 +833,7 @@ function EmailThread({
 
           {/* Category Badge & Actions */}
           <div className="flex flex-col items-end gap-2">
-            {email.category && (
+            {categoryLabel && (
               <span
                 className="px-3 py-1 text-xs font-medium rounded-full border"
                 style={{
@@ -765,7 +843,7 @@ function EmailThread({
                   fontFamily: "'Manrope', sans-serif"
                 }}
               >
-                {email.category}
+                {categoryLabel}
               </span>
             )}
 
@@ -834,13 +912,36 @@ function EmailThread({
             className="overflow-hidden bg-[#fafafa]"
           >
             <div className="px-6 py-5 border-b border-[#e0e0e0]">
+              <div className="flex flex-wrap gap-3 mb-4">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateTask?.(email);
+                  }}
+                  className="px-4 py-2 text-sm font-medium bg-white border border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10 transition-colors"
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
+                >
+                  Create Task
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateTask?.(email, { schedule: true });
+                  }}
+                  className="px-4 py-2 text-sm font-medium bg-[#0BAF9A] text-white hover:bg-[#078c77] transition-colors"
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
+                >
+                  Create &amp; Schedule
+                </button>
+              </div>
+
               {/* Why This Label? */}
               <div className="bg-gradient-to-r from-[#0BAF9A]/5 to-white border-l-4 border-[#0BAF9A] p-4 mb-4">
                 <div className="flex items-start gap-3">
                   <span className="text-sm font-mono text-[#0BAF9A]">ℹ</span>
                   <div className="flex-1">
                     <h4 className="text-xs font-semibold text-[#1a1a1a] mb-1 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                      Why &ldquo;{email.category}&rdquo;?
+                      Why &ldquo;{categoryLabel}&rdquo;?
                     </h4>
 
                     {!explanation ? (
@@ -857,9 +958,9 @@ function EmailThread({
                           {explanation.reason}
                         </p>
 
-                        {explanation.source === 'override' && (
+                        {explanation.source === 'override' && explanation.details.overrideType && (
                           <div className="text-xs text-[#0BAF9A] mt-2 font-medium" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                            ✓ Your manual correction
+                            ✓ Rule: {explanation.details.overrideType} ({explanation.details.matchedValue})
                           </div>
                         )}
 
@@ -910,18 +1011,38 @@ function EmailThread({
                 Correct Category
               </h4>
               <div className="flex flex-wrap gap-2 mb-4">
+                {([
+                  { value: 'sender', label: 'This sender' },
+                  { value: 'domain', label: 'This domain' },
+                  { value: 'thread', label: 'This thread' },
+                ] as const).map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setCorrectionScope(option.value)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded border transition-all ${
+                      correctionScope === option.value
+                        ? 'border-[#0BAF9A] bg-[#0BAF9A]/10 text-[#0BAF9A]'
+                        : 'border-[#e0e0e0] text-[#666] hover:border-[#999]'
+                    }`}
+                    style={{ fontFamily: "'Manrope', sans-serif" }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4">
                 {Array.isArray(categories) && categories.filter(c => c.enabled).map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => setSelectedCategory(category.name)}
+                    onClick={() => setSelectedCategory(category.id)}
                     className={`px-4 py-2 text-sm font-medium rounded border-2 transition-all ${
-                      selectedCategory === category.name
+                      selectedCategory === category.id
                         ? 'border-[#1a1a1a]'
                         : 'border-[#e0e0e0] hover:border-[#999]'
                     }`}
                     style={{
-                      backgroundColor: selectedCategory === category.name ? category.color : 'white',
-                      color: selectedCategory === category.name ? '#1a1a1a' : category.color,
+                      backgroundColor: selectedCategory === category.id ? category.color : 'white',
+                      color: selectedCategory === category.id ? '#1a1a1a' : category.color,
                       fontFamily: "'Manrope', sans-serif"
                     }}
                   >
@@ -932,8 +1053,8 @@ function EmailThread({
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => onCorrect(selectedCategory)}
-                  disabled={!selectedCategory || selectedCategory === email.category}
+                  onClick={() => onCorrect(selectedCategory, correctionScope)}
+                  disabled={!selectedCategory || selectedCategory === categoryId}
                   className="px-6 py-2 bg-[#0BAF9A] text-white text-sm font-medium hover:bg-[#078c77] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#0BAF9A]/20"
                   style={{ fontFamily: "'Manrope', sans-serif" }}
                 >
