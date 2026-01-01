@@ -14,6 +14,10 @@ const {
   getNextPlanningState,
   getLatestPlanningState,
   formatPlanningStateBlock,
+  buildPlanningClarifyingQuestion,
+  getPlanningQuestionIfNeeded,
+  sanitizePlanningResponse,
+  ensurePlanningCta,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
@@ -37,6 +41,11 @@ describe('assistantService helpers', () => {
     it('prefers scheduling when both availability and scheduling cues exist', () => {
       const mode = detectMode('When can I schedule my tasks?', false);
       expect(mode).toBe('scheduling');
+    });
+
+    it('treats "plan my day" as conversation (planning intent)', () => {
+      const mode = detectMode('Plan my day today.', true);
+      expect(mode).toBe('conversation');
     });
   });
 
@@ -282,6 +291,107 @@ describe('assistantService helpers', () => {
       expect(block).toContain('**Planning State**');
       expect(block).toContain('"missingInfo": true');
       expect(block).toContain('"questionRound": 1');
+    });
+  });
+
+  describe('buildPlanningClarifyingQuestion', () => {
+    it('asks combined time + priority when both are missing', () => {
+      const question = buildPlanningClarifyingQuestion({
+        missingInfo: true,
+        missingTime: true,
+        missingPriority: true,
+        questionRound: 0,
+        allowSecondRound: true,
+        assumptions: [],
+      });
+
+      expect(question).toContain('?');
+      expect(question.toLowerCase()).toContain('time');
+      expect(question.toLowerCase()).toContain('priority');
+    });
+
+    it('asks only missing time when priority is known', () => {
+      const question = buildPlanningClarifyingQuestion({
+        missingInfo: true,
+        missingTime: true,
+        missingPriority: false,
+        questionRound: 0,
+        allowSecondRound: true,
+        assumptions: [],
+      });
+
+      expect(question.toLowerCase()).toContain('time');
+      expect(question.toLowerCase()).not.toContain('priority');
+    });
+
+    it('asks only missing priority when time is known', () => {
+      const question = buildPlanningClarifyingQuestion({
+        missingInfo: true,
+        missingTime: false,
+        missingPriority: true,
+        questionRound: 0,
+        allowSecondRound: true,
+        assumptions: [],
+      });
+
+      expect(question.toLowerCase()).toContain('priority');
+      expect(question.toLowerCase()).not.toContain('time');
+    });
+  });
+
+  describe('getPlanningQuestionIfNeeded', () => {
+    it('returns a clarifying question when info is missing', () => {
+      const question = getPlanningQuestionIfNeeded({
+        missingInfo: true,
+        missingTime: true,
+        missingPriority: true,
+        questionRound: 0,
+        allowSecondRound: true,
+        assumptions: [],
+      });
+
+      expect(question).toContain('?');
+    });
+
+    it('returns null when info is complete', () => {
+      const question = getPlanningQuestionIfNeeded({
+        missingInfo: false,
+        missingTime: false,
+        missingPriority: false,
+        questionRound: 0,
+        allowSecondRound: true,
+        assumptions: [],
+      });
+
+      expect(question).toBeNull();
+    });
+  });
+
+  describe('sanitizePlanningResponse', () => {
+    it('falls back when response includes explicit times', () => {
+      const sanitized = sanitizePlanningResponse('Plan: 9:00 AM - 10:00 AM work block.');
+      expect(sanitized.toLowerCase()).toContain('draft plan');
+      expect(sanitized.toLowerCase()).not.toContain('9:00');
+    });
+
+    it('passes through when response avoids scheduling language', () => {
+      const sanitized = sanitizePlanningResponse('## Draft Plan\\n\\n• Morning: Focus on top priorities.');
+      expect(sanitized).toContain('Draft Plan');
+    });
+  });
+
+  describe('ensurePlanningCta', () => {
+    it('appends CTA when missing', () => {
+      const content = '## Draft Plan\\n\\n• Morning: Focus on top priorities.';
+      const withCta = ensurePlanningCta(content);
+      expect(withCta.trim().toLowerCase()).toContain('want me to schedule this?');
+    });
+
+    it('does not duplicate CTA when present', () => {
+      const content = '## Draft Plan\\n\\nWant me to schedule this?';
+      const withCta = ensurePlanningCta(content);
+      const matches = withCta.match(/want me to schedule this\\?/gi) || [];
+      expect(matches.length).toBe(1);
     });
   });
 

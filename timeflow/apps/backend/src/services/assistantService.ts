@@ -228,26 +228,16 @@ function getPlanningState({
   ];
   const hasPriorityHint = priorityHintKeywords.some((kw) => lower.includes(kw));
 
-  const hasPrioritySignal = tasks.some((task) => {
-    const priority = task.priority ?? 3;
-    return priority <= 2 || Boolean(task.dueDate);
-  });
-
-  const hasDueDates = tasks.some((task) => Boolean(task.dueDate));
-
-  const missingTime = !hasTimeHint && !hasDueDates;
-  const missingPriority = !hasPriorityHint && !hasPrioritySignal;
+  const missingTime = !hasTimeHint;
+  const missingPriority = !hasPriorityHint;
   const missingInfo = missingTime || missingPriority;
 
   const questionRound = previousState?.questionRound ?? 0;
   const allowSecondRound = questionRound < 2;
   const assumptions: string[] = [];
 
-  if (!missingTime && !hasTimeHint && hasDueDates) {
-    assumptions.push('Assumed planning window based on upcoming due dates.');
-  }
-  if (!missingPriority && !hasPriorityHint && hasPrioritySignal) {
-    assumptions.push('Assumed task priorities from existing task metadata.');
+  if (!missingPriority && !hasPriorityHint) {
+    assumptions.push('Assumed task priorities from user intent.');
   }
 
   return {
@@ -322,6 +312,70 @@ function getLatestPlanningState(history?: ChatMessage[]): PlanningState | null {
 
 function formatPlanningStateBlock(state: PlanningState): string {
   return `**Planning State**:\n\`\`\`json\n${JSON.stringify(state, null, 2)}\n\`\`\`\n\n`;
+}
+
+function buildPlanningClarifyingQuestion(state: PlanningState): string {
+  if (state.missingTime && state.missingPriority) {
+    return 'What time window should I plan for, and which priority matters most?';
+  }
+  if (state.missingTime) {
+    return 'What time window should I plan for?';
+  }
+  if (state.missingPriority) {
+    return 'Which priority should I focus on first?';
+  }
+  return 'Want me to draft a plan for today?';
+}
+
+function getPlanningQuestionIfNeeded(state: PlanningState): string | null {
+  if (!state.missingInfo) {
+    return null;
+  }
+  if (!shouldAskPlanningQuestion(state)) {
+    return null;
+  }
+  return buildPlanningClarifyingQuestion(state);
+}
+
+function sanitizePlanningResponse(content: string): string {
+  const timePattern = /\b\d{1,2}(:\d{2})?\s?(am|pm)\b/i;
+  const schedulingKeywords = [
+    'schedule',
+    'scheduling',
+    'calendar',
+    'time block',
+    'time-block',
+    'blocks',
+    'apply',
+    'add to calendar',
+  ];
+  const stripped = content.replace(/want me to schedule this\?/gi, '');
+  const hasTime = timePattern.test(stripped);
+  const hasSchedulingLanguage = schedulingKeywords.some((kw) =>
+    stripped.toLowerCase().includes(kw)
+  );
+
+  if (hasTime || hasSchedulingLanguage) {
+    return [
+      '## Draft Plan',
+      '',
+      'Here’s a draft plan with broad focus windows:',
+      '',
+      '• **Morning**: Start with your top priorities',
+      '• **Afternoon**: Tackle remaining tasks and follow-ups',
+      '• **Wrap-up**: Review progress and prep for tomorrow',
+    ].join('\n');
+  }
+
+  return content;
+}
+
+function ensurePlanningCta(content: string): string {
+  const cta = 'Want me to schedule this?';
+  if (content.toLowerCase().includes(cta.toLowerCase())) {
+    return content;
+  }
+  return `${content.trim()}\n\n${cta}`;
 }
 
 /**
@@ -446,6 +500,18 @@ function detectMode(
 ): 'conversation' | 'scheduling' | 'availability' {
   const lower = userMessage.toLowerCase();
 
+  const planningDayPhrases = [
+    'plan my day',
+    'plan my day today',
+    'plan my day tomorrow',
+    'plan today',
+    'plan for today',
+    'plan for tomorrow',
+  ];
+  if (planningDayPhrases.some((phrase) => lower.includes(phrase))) {
+    return 'conversation';
+  }
+
   // Availability mode: "When am I free?" type queries
   // Task 13.9: Enhanced availability question templates
   const availabilityKeywords = [
@@ -485,10 +551,9 @@ function detectMode(
     'schedule tasks',
     'schedule task',
     'schedule everything',
-    'plan my',
+    'plan my tasks',
     'plan these',
     'plan it',
-    'plan my tasks',
     'block time',
     'time block',
     'time-block',
@@ -659,6 +724,7 @@ export async function processMessage(
       habitIds,
       habits: contextHabits,
       planningState,
+      planningWillAsk,
     } = await buildContextPrompt(
       userId,
       message,
@@ -693,6 +759,25 @@ export async function processMessage(
           content: cleanedResponse,
           timestamp: new Date().toISOString(),
           metadata: { mascotState },
+        },
+      };
+    }
+
+    if (effectiveMode === 'planning' && planningState && planningWillAsk) {
+      const question = buildPlanningClarifyingQuestion(planningState);
+      const cleanedResponse = sanitizeAssistantContent(question, effectiveMode, false);
+      const mascotState = detectMascotState(cleanedResponse);
+
+      return {
+        message: {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: cleanedResponse,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            mascotState,
+            planningState,
+          },
         },
       };
     }
@@ -766,11 +851,17 @@ export async function processMessage(
     }
 
     // Detect appropriate mascot state
-    const cleanedResponse = sanitizeAssistantContent(
+    let cleanedResponse = sanitizeAssistantContent(
       naturalLanguage,
       effectiveMode,
       Boolean(schedulePreview)
     );
+    if (effectiveMode === 'planning' && planningState) {
+      cleanedResponse = sanitizePlanningResponse(cleanedResponse);
+      if (!planningState.missingInfo) {
+        cleanedResponse = ensurePlanningCta(cleanedResponse);
+      }
+    }
     const mascotState = detectMascotState(cleanedResponse, schedulePreview);
 
     // Create the assistant message
@@ -845,6 +936,7 @@ async function buildContextPrompt(
   taskIds: string[];
   habitIds: string[];
   planningState?: PlanningState;
+  planningWillAsk?: boolean;
   habits: {
     id: string;
     title: string;
@@ -1135,6 +1227,7 @@ async function buildContextPrompt(
   }
 
   let planningState: PlanningState | undefined;
+  let planningWillAsk: boolean | undefined;
   if (mode === 'planning') {
     const nextPlanning = getNextPlanningState({
       message: userMessage,
@@ -1142,6 +1235,7 @@ async function buildContextPrompt(
       previousState: previousPlanningState,
     });
     planningState = nextPlanning.state;
+    planningWillAsk = nextPlanning.willAsk;
     prompt += formatPlanningStateBlock(planningState);
   }
 
@@ -1181,6 +1275,7 @@ async function buildContextPrompt(
     taskIds,
     habitIds: activeHabits.map((habit) => habit.id),
     planningState,
+    planningWillAsk,
     habits: activeHabits,
     skippedHabitIds,
   };
@@ -1832,6 +1927,10 @@ export const __test__ = {
   getNextPlanningState,
   getLatestPlanningState,
   formatPlanningStateBlock,
+  buildPlanningClarifyingQuestion,
+  getPlanningQuestionIfNeeded,
+  sanitizePlanningResponse,
+  ensurePlanningCta,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,

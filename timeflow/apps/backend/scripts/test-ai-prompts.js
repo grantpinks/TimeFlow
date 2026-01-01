@@ -53,6 +53,16 @@ async function delay(ms) {
   await new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function withHistoryMetadata(history) {
+  return history.map((entry, index) => ({
+    id: entry.id || `regression_${Date.now()}_${index}`,
+    role: entry.role,
+    content: entry.content,
+    timestamp: entry.timestamp || new Date().toISOString(),
+    ...(entry.metadata ? { metadata: entry.metadata } : {}),
+  }));
+}
+
 async function runPrompt(prompt, conversationHistory = []) {
   const start = Date.now();
   try {
@@ -64,7 +74,8 @@ async function runPrompt(prompt, conversationHistory = []) {
       },
       body: JSON.stringify({
         message: prompt,
-        conversationHistory: conversationHistory.length > 0 ? conversationHistory : undefined,
+        conversationHistory:
+          conversationHistory.length > 0 ? withHistoryMetadata(conversationHistory) : undefined,
       }),
     });
 
@@ -155,11 +166,16 @@ async function main() {
       for (const prompt of entry.prompts) {
         const result = await runPrompt(prompt, history);
         const { messageContent, ...record } = result;
+        const messagePreview =
+          typeof messageContent === 'string'
+            ? messageContent.trim().slice(0, 240)
+            : null;
         const expectation = entry.turnExpectations?.[turns.length + 1];
-        const expectationResult = evaluateExpectation(record, expectation);
+        const expectationResult = evaluateExpectation(record, expectation, messageContent);
         const turnOk = record.ok && expectationResult.ok;
         turns.push({
           ...record,
+          messagePreview,
           expectation,
           expectationOk: expectationResult.ok,
           expectationFailures: expectationResult.reasons,
@@ -193,11 +209,16 @@ async function main() {
     } else {
       const result = await runPrompt(entry.prompt);
       const { messageContent, ...record } = result;
-      const expectationResult = evaluateExpectation(record, entry.expect);
+      const messagePreview =
+        typeof messageContent === 'string'
+          ? messageContent.trim().slice(0, 240)
+          : null;
+      const expectationResult = evaluateExpectation(record, entry.expect, messageContent);
       const recordOk = record.ok && expectationResult.ok;
       results.push({
         ...record,
         ok: recordOk,
+        messagePreview,
         expectation: entry.expect,
         expectationOk: expectationResult.ok,
         expectationFailures: expectationResult.reasons,

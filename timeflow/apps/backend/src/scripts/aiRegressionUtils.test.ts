@@ -4,13 +4,19 @@ import { parsePrompts, evaluateExpectation } from '../../scripts/aiRegressionUti
 describe('ai regression utils', () => {
   it('parses single prompts with expectations', () => {
     const raw = `Do something
-EXPECT: status=200 preview=false`;
+EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true`;
     const parsed = parsePrompts(raw);
     expect(parsed).toHaveLength(1);
     expect(parsed[0]).toMatchObject({
       type: 'single',
       prompt: 'Do something',
-      expect: { status: 200, preview: false },
+      expect: {
+        status: 200,
+        preview: false,
+        question: true,
+        cta: false,
+        noScheduleLanguage: true,
+      },
     });
   });
 
@@ -36,7 +42,8 @@ USER: Schedule my tasks for tomorrow.`;
   it('evaluates expectations against prompt results', () => {
     const result = evaluateExpectation(
       { status: 200, preview: false, blocksCount: 0, ok: true },
-      { status: 200, preview: false, minBlocks: 0 }
+      { status: 200, preview: false, minBlocks: 0, question: true },
+      'Can you share your time window?'
     );
 
     expect(result.ok).toBe(true);
@@ -45,10 +52,31 @@ USER: Schedule my tasks for tomorrow.`;
   it('flags mismatched expectations', () => {
     const result = evaluateExpectation(
       { status: 400, preview: false, blocksCount: 0, ok: false },
-      { status: 200, preview: false }
+      { status: 200, preview: false, cta: true },
+      'Here is your plan.'
     );
 
     expect(result.ok).toBe(false);
     expect(result.reasons.length).toBeGreaterThan(0);
+  });
+
+  it('allows the scheduling CTA even when no schedule language is expected', () => {
+    const result = evaluateExpectation(
+      { status: 200, preview: false, blocksCount: 0, ok: true },
+      { status: 200, preview: false, cta: true, noScheduleLanguage: true },
+      '## Plan\n\nHere is a draft plan.\n\nWant me to schedule this?'
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
+  it('ignores CTA when checking for clarifying questions', () => {
+    const result = evaluateExpectation(
+      { status: 200, preview: false, blocksCount: 0, ok: true },
+      { status: 200, preview: false, question: false, cta: true },
+      'Want me to schedule this?'
+    );
+
+    expect(result.ok).toBe(true);
   });
 });

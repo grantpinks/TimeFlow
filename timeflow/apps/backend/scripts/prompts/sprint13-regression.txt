@@ -51,19 +51,19 @@ USER: When am I free this week?
 USER: Schedule my tasks for tomorrow.
 ---
 My day feels chaotic—can you help me plan today?
-EXPECT: status=200 preview=false
+EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true
 ---
 I'm not sure what to work on next. What's the best use of my time?
-EXPECT: status=200 preview=false
+EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true
 ---
 I have a deadline tomorrow and a bunch of small tasks. How should I prioritize?
-EXPECT: status=200 preview=false
+EXPECT: status=200 preview=false question=false cta=true no_schedule_language=true
 ---
 Plan my day today and focus on the most important tasks.
-EXPECT: status=200 preview=false
+EXPECT: status=200 preview=false question=false cta=true no_schedule_language=true
 ---
 Help me plan. I have about 3 hours this afternoon.
-EXPECT: status=200 preview=false
+EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true
 ---
 Help me plan. I need to focus on urgent items.
-EXPECT: status=200 preview=false
+EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true

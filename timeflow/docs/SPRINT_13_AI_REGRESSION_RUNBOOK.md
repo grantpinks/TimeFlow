@@ -106,7 +106,7 @@ USER: Schedule my tasks for tomorrow.
 
 ```text
 Help me plan today.
-EXPECT: status=200 preview=false
+EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true
 ```
 
 ---

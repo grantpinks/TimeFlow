@@ -31,6 +31,27 @@ function parseExpectationTokens(tokens) {
       if (!Number.isNaN(value)) expectation.maxBlocks = value;
       continue;
     }
+    if (token.startsWith('question=')) {
+      const value = token.replace('question=', '').toLowerCase();
+      if (value === 'true' || value === 'false') {
+        expectation.question = value === 'true';
+      }
+      continue;
+    }
+    if (token.startsWith('cta=')) {
+      const value = token.replace('cta=', '').toLowerCase();
+      if (value === 'true' || value === 'false') {
+        expectation.cta = value === 'true';
+      }
+      continue;
+    }
+    if (token.startsWith('no_schedule_language=')) {
+      const value = token.replace('no_schedule_language=', '').toLowerCase();
+      if (value === 'true' || value === 'false') {
+        expectation.noScheduleLanguage = value === 'true';
+      }
+      continue;
+    }
   }
   return expectation;
 }
@@ -106,7 +127,7 @@ export function parsePrompts(raw) {
     });
 }
 
-export function evaluateExpectation(record, expectation) {
+export function evaluateExpectation(record, expectation, messageContent = null) {
   if (!expectation) {
     return { ok: true, reasons: [] };
   }
@@ -126,6 +147,45 @@ export function evaluateExpectation(record, expectation) {
   }
   if (typeof expectation.maxBlocks === 'number' && record.blocksCount > expectation.maxBlocks) {
     reasons.push(`blocks ${record.blocksCount} > ${expectation.maxBlocks}`);
+  }
+
+  if (typeof expectation.question === 'boolean') {
+    const strippedQuestionContent = messageContent
+      ? messageContent.replace(/want me to schedule this\?/gi, '')
+      : '';
+    const hasQuestion = strippedQuestionContent.includes('?');
+    if (expectation.question !== hasQuestion) {
+      reasons.push(`question ${hasQuestion} != ${expectation.question}`);
+    }
+  }
+
+  if (typeof expectation.cta === 'boolean') {
+    const trimmed = messageContent ? messageContent.trim() : '';
+    const hasCta = /want me to schedule this\?\s*$/i.test(trimmed);
+    if (expectation.cta !== hasCta) {
+      reasons.push(`cta ${hasCta} != ${expectation.cta}`);
+    }
+  }
+
+  if (typeof expectation.noScheduleLanguage === 'boolean') {
+    const content = messageContent || '';
+    const stripped = content.replace(/want me to schedule this\?/gi, '');
+    const schedulingKeywords = [
+      'schedule',
+      'scheduling',
+      'calendar',
+      'time block',
+      'time-block',
+      'blocks',
+      'apply',
+      'add to calendar',
+    ];
+    const hasSchedulingLanguage = schedulingKeywords.some((kw) =>
+      stripped.toLowerCase().includes(kw)
+    );
+    if (expectation.noScheduleLanguage === hasSchedulingLanguage) {
+      reasons.push(`noScheduleLanguage ${!hasSchedulingLanguage} != ${expectation.noScheduleLanguage}`);
+    }
   }
 
   return { ok: reasons.length === 0, reasons };
