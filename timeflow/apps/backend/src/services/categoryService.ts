@@ -133,6 +133,7 @@ function mergeCategoryConfig(
     name?: string | null;
     description?: string | null;
     emoji?: string | null;
+    gmailSyncEnabled?: boolean | null;
   }
 ): EmailCategoryConfig {
   const base = EMAIL_CATEGORIES[categoryId as keyof typeof EMAIL_CATEGORIES];
@@ -147,6 +148,7 @@ function mergeCategoryConfig(
     name: overrides?.name ?? base.name,
     description: overrides?.description ?? base.description,
     emoji: overrides?.emoji ?? base.emoji,
+    gmailSyncEnabled: overrides?.gmailSyncEnabled ?? false,
   };
 }
 
@@ -170,6 +172,7 @@ export async function updateCategoryConfig(
     name: updates.name,
     description: updates.description,
     emoji: updates.emoji,
+    gmailSyncEnabled: updates.gmailSyncEnabled,
   };
 
   const record = await prisma.emailCategoryConfig.upsert({

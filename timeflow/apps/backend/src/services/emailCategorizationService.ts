@@ -23,6 +23,7 @@ export interface EmailCategoryConfig {
   enabled?: boolean; // Whether the category is visible/active for the user
   description?: string;
   emoji?: string;
+  gmailSyncEnabled?: boolean; // Whether Gmail label sync is enabled for this category
 }
 
 /**
