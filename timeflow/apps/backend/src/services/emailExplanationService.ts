@@ -70,8 +70,19 @@ export async function explainCategorization(
     };
   }
 
-  // 3. Check Gmail labels
+  // Guard clause: Check if category exists in EMAIL_CATEGORIES
   const categoryConfig = EMAIL_CATEGORIES[email.category];
+  if (!categoryConfig) {
+    // Invalid or unknown category - return default explanation
+    return {
+      category: email.category,
+      source: 'default',
+      reason: `Unknown category type`,
+      details: {},
+    };
+  }
+
+  // 3. Check Gmail labels
   if (categoryConfig.gmailLabels) {
     for (const label of categoryConfig.gmailLabels) {
       if (email.labels.includes(label)) {

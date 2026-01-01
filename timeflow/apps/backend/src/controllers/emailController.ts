@@ -35,6 +35,10 @@ const markAsReadSchema = z.object({
   isRead: z.boolean(),
 });
 
+const emailIdParamsSchema = z.object({
+  id: z.string().min(1, 'Email ID is required'),
+});
+
 export async function getInboxEmails(
   request: FastifyRequest<{ Querystring: { maxResults?: number; pageToken?: string } }>,
   reply: FastifyReply
@@ -255,11 +259,27 @@ export async function explainEmailCategory(
     return reply.status(401).send({ error: 'Not authenticated' });
   }
 
-  try {
-    const emailId = request.params.id;
+  // Validate params
+  const paramsResult = emailIdParamsSchema.safeParse(request.params);
+  if (!paramsResult.success) {
+    return reply.status(400).send({ error: formatZodError(paramsResult.error) });
+  }
 
-    // Get the email first
+  try {
+    const { id: emailId } = paramsResult.data;
+
+    // NOTE: gmailService.getFullEmail uses the authenticated user's Gmail credentials,
+    // so it's inherently scoped to their mailbox. No additional ownership check needed.
     const email = await gmailService.getFullEmail(user.id, emailId);
+
+    // Email might not have category if it hasn't been categorized yet
+    // Use the categorizeEmail function to ensure it has one
+    const emailCategory = (email as any).category || emailCategorizationService.categorizeEmail({
+      from: email.from,
+      subject: email.subject,
+      snippet: email.snippet,
+      labels: email.labels,
+    });
 
     // Get explanation
     const explanation = await emailExplanationService.explainCategorization(user.id, {
@@ -269,11 +289,19 @@ export async function explainEmailCategory(
       subject: email.subject,
       snippet: email.snippet,
       labels: email.labels,
-      category: (email as any).category || 'other',
+      category: emailCategory,
     });
 
     return reply.send({ explanation });
   } catch (error) {
+    if (error instanceof GmailRateLimitError) {
+      return reply
+        .status(429)
+        .send({
+          error: 'Gmail rate limit exceeded. Please try again shortly.',
+          retryAfterSeconds: error.retryAfterSeconds
+        });
+    }
     request.log.error(error, 'Failed to explain email category');
     return reply.status(500).send({ error: 'Failed to explain categorization' });
   }

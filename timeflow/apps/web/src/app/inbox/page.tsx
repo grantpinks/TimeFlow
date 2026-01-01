@@ -192,6 +192,7 @@ export default function InboxPage() {
       setExplanations(prev => ({ ...prev, [emailId]: result.explanation }));
     } catch (error) {
       console.error('Failed to fetch explanation:', error);
+      toast.error('Failed to load explanation. Please try again.');
     }
   }
 
