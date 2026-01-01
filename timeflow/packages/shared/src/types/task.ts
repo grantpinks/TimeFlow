@@ -30,6 +30,10 @@ export interface Task {
   categoryId?: string | null;
   category?: Category | null;
   dueDate?: string | null;
+  sourceEmailId?: string | null;
+  sourceThreadId?: string | null;
+  sourceEmailProvider?: string | null;
+  sourceEmailUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   scheduledTask?: ScheduledTaskInfo | null;
@@ -59,6 +63,10 @@ export interface CreateTaskRequest {
   priority?: TaskPriority;
   categoryId?: string;
   dueDate?: string;
+  sourceEmailId?: string;
+  sourceThreadId?: string;
+  sourceEmailProvider?: string;
+  sourceEmailUrl?: string;
 }
 
 /**
@@ -72,5 +80,8 @@ export interface UpdateTaskRequest {
   categoryId?: string;
   dueDate?: string;
   status?: TaskStatus;
+  sourceEmailId?: string;
+  sourceThreadId?: string;
+  sourceEmailProvider?: string;
+  sourceEmailUrl?: string;
 }
-

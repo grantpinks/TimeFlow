@@ -64,6 +64,10 @@ const createTaskSchema = z.object({
   priority: z.coerce.number().int().min(1).max(3).optional(),
   categoryId: z.string().cuid().optional(),
   dueDate: flexibleDateString.optional(),
+  sourceEmailId: z.string().optional(),
+  sourceThreadId: z.string().optional(),
+  sourceEmailProvider: z.string().optional(),
+  sourceEmailUrl: z.string().optional(),
 });
 
 const tasksQuerySchema = z.object({
@@ -79,6 +83,10 @@ const updateTaskSchema = z
     categoryId: z.string().cuid().optional(),
     dueDate: flexibleDateString.optional(),
     status: z.enum(TASK_STATUS_VALUES).optional(),
+    sourceEmailId: z.string().optional(),
+    sourceThreadId: z.string().optional(),
+    sourceEmailProvider: z.string().optional(),
+    sourceEmailUrl: z.string().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',
@@ -114,6 +122,10 @@ interface CreateTaskBody {
   durationMinutes?: number;
   priority?: number;
   dueDate?: string;
+  sourceEmailId?: string;
+  sourceThreadId?: string;
+  sourceEmailProvider?: string;
+  sourceEmailUrl?: string;
 }
 
 /**
@@ -134,7 +146,18 @@ export async function createTask(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const { title, description, durationMinutes, priority, dueDate, categoryId } = parsed.data;
+  const {
+    title,
+    description,
+    durationMinutes,
+    priority,
+    dueDate,
+    categoryId,
+    sourceEmailId,
+    sourceThreadId,
+    sourceEmailProvider,
+    sourceEmailUrl,
+  } = parsed.data;
 
   const task = await tasksService.createTask({
     userId: user.id,
@@ -144,6 +167,10 @@ export async function createTask(
     priority,
     categoryId,
     dueDate: dueDate ? new Date(dueDate) : undefined,
+    sourceEmailId,
+    sourceThreadId,
+    sourceEmailProvider,
+    sourceEmailUrl,
   });
 
   return reply.status(201).send(task);
@@ -157,6 +184,10 @@ interface UpdateTaskBody {
   categoryId?: string;
   dueDate?: string;
   status?: string;
+  sourceEmailId?: string;
+  sourceThreadId?: string;
+  sourceEmailProvider?: string;
+  sourceEmailUrl?: string;
 }
 
 /**
@@ -179,7 +210,19 @@ export async function updateTask(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const { title, description, durationMinutes, priority, categoryId, dueDate, status } = parsed.data;
+  const {
+    title,
+    description,
+    durationMinutes,
+    priority,
+    categoryId,
+    dueDate,
+    status,
+    sourceEmailId,
+    sourceThreadId,
+    sourceEmailProvider,
+    sourceEmailUrl,
+  } = parsed.data;
 
   const task = await tasksService.updateTask(id, user.id, {
     title,
@@ -189,6 +232,10 @@ export async function updateTask(
     categoryId,
     dueDate: dueDate ? new Date(dueDate) : undefined,
     status,
+    sourceEmailId,
+    sourceThreadId,
+    sourceEmailProvider,
+    sourceEmailUrl,
   });
 
   if (!task) {
@@ -243,4 +290,3 @@ export async function completeTask(
 
   return task;
 }
-

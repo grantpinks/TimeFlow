@@ -14,6 +14,10 @@ export interface CreateTaskInput {
   priority?: number;
   categoryId?: string;
   dueDate?: Date;
+  sourceEmailId?: string;
+  sourceThreadId?: string;
+  sourceEmailProvider?: string;
+  sourceEmailUrl?: string;
 }
 
 export interface UpdateTaskInput {
@@ -24,6 +28,10 @@ export interface UpdateTaskInput {
   categoryId?: string;
   dueDate?: Date;
   status?: string;
+  sourceEmailId?: string;
+  sourceThreadId?: string;
+  sourceEmailProvider?: string;
+  sourceEmailUrl?: string;
 }
 
 /**
@@ -72,6 +80,10 @@ export async function createTask(input: CreateTaskInput) {
       categoryId: input.categoryId,
       dueDate: input.dueDate,
       status: 'unscheduled',
+      sourceEmailId: input.sourceEmailId,
+      sourceThreadId: input.sourceThreadId,
+      sourceEmailProvider: input.sourceEmailProvider,
+      sourceEmailUrl: input.sourceEmailUrl,
     },
     include: {
       category: true,
@@ -245,4 +257,3 @@ export async function completeTask(taskId: string, userId: string) {
     data: { status: 'completed' },
   });
 }
-

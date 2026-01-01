@@ -58,6 +58,10 @@ model Task {
   priority        Int            @default(2)
   status          String         @default("unscheduled")
   dueDate         DateTime?
+  sourceEmailId   String?
+  sourceThreadId  String?
+  sourceEmailProvider String?
+  sourceEmailUrl  String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   categoryId      String?
@@ -224,6 +228,8 @@ model EmailCategoryConfig {
   emoji       String?
   gmailLabelId     String?
   gmailSyncEnabled Boolean  @default(false)
+  gmailLabelName   String?
+  gmailLabelColor  String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   user        User     @relation(fields: [userId], references: [id])
@@ -239,6 +245,8 @@ model GmailLabelSyncState {
   lastSyncedAt        DateTime?
   lastSyncThreadCount Int      @default(0)
   lastSyncError       String?
+  lastHistoryId       String?
+  watchExpiration     DateTime?
   backfillDays        Int      @default(7)
   backfillMaxThreads  Int      @default(100)
   createdAt           DateTime @default(now())
