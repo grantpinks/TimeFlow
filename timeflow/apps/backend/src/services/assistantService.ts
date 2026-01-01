@@ -305,6 +305,21 @@ function getNextPlanningState({
   };
 }
 
+function getLatestPlanningState(history?: ChatMessage[]): PlanningState | null {
+  if (!history || history.length === 0) {
+    return null;
+  }
+
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const state = history[i].metadata?.planningState;
+    if (state) {
+      return state;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Task 13.18: Intelligent conversation memory selection
  *
@@ -1789,6 +1804,7 @@ export const __test__ = {
   shouldAskPlanningQuestion,
   resolvePlanningMode,
   getNextPlanningState,
+  getLatestPlanningState,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,

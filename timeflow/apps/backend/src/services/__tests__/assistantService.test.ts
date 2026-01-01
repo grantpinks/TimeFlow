@@ -12,6 +12,7 @@ const {
   shouldAskPlanningQuestion,
   resolvePlanningMode,
   getNextPlanningState,
+  getLatestPlanningState,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
@@ -216,6 +217,53 @@ describe('assistantService helpers', () => {
 
       expect(result.willAsk).toBe(false);
       expect(result.state.questionRound).toBe(0);
+    });
+  });
+
+  describe('getLatestPlanningState', () => {
+    it('returns the most recent planning state from history', () => {
+      const history: ChatMessage[] = [
+        {
+          id: 'm1',
+          role: 'assistant',
+          content: 'Question 1',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            planningState: {
+              missingInfo: true,
+              missingTime: true,
+              missingPriority: true,
+              questionRound: 1,
+              allowSecondRound: true,
+              assumptions: [],
+            },
+          },
+        },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'Question 2',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            planningState: {
+              missingInfo: true,
+              missingTime: false,
+              missingPriority: true,
+              questionRound: 2,
+              allowSecondRound: false,
+              assumptions: [],
+            },
+          },
+        },
+      ];
+
+      const state = getLatestPlanningState(history);
+      expect(state?.questionRound).toBe(2);
+    });
+
+    it('returns null when no planning state exists', () => {
+      const state = getLatestPlanningState([]);
+      expect(state).toBeNull();
     });
   });
 
