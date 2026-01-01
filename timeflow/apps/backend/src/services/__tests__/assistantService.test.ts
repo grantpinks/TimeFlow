@@ -10,6 +10,8 @@ const {
   detectPlanningIntent,
   getPlanningState,
   shouldAskPlanningQuestion,
+  resolvePlanningMode,
+  getNextPlanningState,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
@@ -180,6 +182,40 @@ describe('assistantService helpers', () => {
           assumptions: [],
         })
       ).toBe(false);
+    });
+  });
+
+  describe('resolvePlanningMode', () => {
+    it('routes conversation planning intent to planning mode', () => {
+      const mode = resolvePlanningMode('conversation', 'Can you help me plan today?');
+      expect(mode).toBe('planning');
+    });
+
+    it('does not override non-conversation modes', () => {
+      const mode = resolvePlanningMode('scheduling', 'Can you help me plan today?');
+      expect(mode).toBe('scheduling');
+    });
+  });
+
+  describe('getNextPlanningState', () => {
+    it('increments question round when asking for missing info', () => {
+      const result = getNextPlanningState({
+        message: 'Help me plan.',
+        tasks: [{ priority: 3, dueDate: null }],
+      });
+
+      expect(result.willAsk).toBe(true);
+      expect(result.state.questionRound).toBe(1);
+    });
+
+    it('keeps question round when info is complete', () => {
+      const result = getNextPlanningState({
+        message: 'Plan my day today and focus on the most important tasks.',
+        tasks: [{ priority: 1, dueDate: null }],
+      });
+
+      expect(result.willAsk).toBe(false);
+      expect(result.state.questionRound).toBe(0);
     });
   });
 

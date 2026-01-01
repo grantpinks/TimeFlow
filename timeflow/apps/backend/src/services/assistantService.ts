@@ -272,6 +272,39 @@ function shouldAskPlanningQuestion(state: PlanningState): boolean {
   return state.questionRound === 1 && state.allowSecondRound;
 }
 
+function resolvePlanningMode(
+  baseMode: 'conversation' | 'scheduling' | 'availability',
+  message: string
+): 'conversation' | 'scheduling' | 'availability' | 'planning' {
+  if (baseMode === 'conversation' && detectPlanningIntent(message)) {
+    return 'planning';
+  }
+  return baseMode;
+}
+
+function getNextPlanningState({
+  message,
+  tasks,
+  previousState,
+}: {
+  message: string;
+  tasks: PlanningTask[];
+  previousState?: PlanningState | null;
+}): { state: PlanningState; willAsk: boolean } {
+  const state = getPlanningState({ message, tasks, previousState });
+  const willAsk = shouldAskPlanningQuestion(state);
+  const nextRound = willAsk ? state.questionRound + 1 : state.questionRound;
+
+  return {
+    state: {
+      ...state,
+      questionRound: nextRound,
+      allowSecondRound: nextRound < 2,
+    },
+    willAsk,
+  };
+}
+
 /**
  * Task 13.18: Intelligent conversation memory selection
  *
@@ -1754,6 +1787,8 @@ export const __test__ = {
   detectPlanningIntent,
   getPlanningState,
   shouldAskPlanningQuestion,
+  resolvePlanningMode,
+  getNextPlanningState,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
