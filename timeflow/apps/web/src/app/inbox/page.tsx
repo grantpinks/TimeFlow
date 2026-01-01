@@ -7,7 +7,7 @@ import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import type { EmailMessage, FullEmailMessage } from '@timeflow/shared';
-import { ExternalLink, Paperclip } from 'lucide-react';
+import { ExternalLink, Paperclip, Mail, MailOpen, Archive } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
 export default function InboxPage() {
@@ -101,6 +101,59 @@ export default function InboxPage() {
       setThreadError('Failed to load thread');
     } finally {
       setLoadingThread(false);
+    }
+  }
+
+  async function handleToggleRead(emailId: string, currentIsRead: boolean) {
+    const newIsRead = !currentIsRead;
+
+    // Optimistic update
+    setEmails(prev => prev.map(e =>
+      e.id === emailId ? { ...e, isRead: newIsRead } : e
+    ));
+
+    try {
+      await api.markEmailAsRead(emailId, newIsRead);
+    } catch (error: any) {
+      // Revert on error
+      setEmails(prev => prev.map(e =>
+        e.id === emailId ? { ...e, isRead: currentIsRead } : e
+      ));
+
+      if (error.response?.status === 429) {
+        alert(`Rate limit exceeded. ${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
+      } else {
+        alert('Failed to update read status. Please try again.');
+      }
+    }
+  }
+
+  async function handleArchive(emailId: string) {
+    // Optimistic removal
+    const emailToArchive = emails.find(e => e.id === emailId);
+    setEmails(prev => prev.filter(e => e.id !== emailId));
+
+    try {
+      await api.archiveEmail(emailId);
+
+      // If thread detail is open for this email, close it
+      if (selectedThreadId === emailToArchive?.threadId) {
+        setSelectedThreadId(null);
+        setThreadMessages([]);
+      }
+    } catch (error: any) {
+      // Revert on error
+      if (emailToArchive) {
+        setEmails(prev => [...prev, emailToArchive].sort((a, b) =>
+          new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+        ));
+      }
+
+      if (error.response?.status === 429) {
+        alert(`Rate limit exceeded. ${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
+      } else {
+        alert('Failed to archive email. Please try again.');
+      }
     }
   }
 
@@ -303,6 +356,8 @@ export default function InboxPage() {
                       }
                     }}
                     onOpenThread={fetchThread}
+                    onToggleRead={handleToggleRead}
+                    onArchive={handleArchive}
                   />
                 ))}
               </AnimatePresence>
@@ -458,6 +513,8 @@ interface EmailThreadProps {
   categories: EmailCategoryConfig[];
   onCorrect: (categoryName: string, reason?: string) => Promise<void>;
   onOpenThread: (threadId: string) => void;
+  onToggleRead?: (emailId: string, currentIsRead: boolean) => void;
+  onArchive?: (emailId: string) => void;
 }
 
 function EmailThread({
@@ -472,7 +529,9 @@ function EmailThread({
   onCancelCorrect,
   categories,
   onCorrect,
-  onOpenThread
+  onOpenThread,
+  onToggleRead,
+  onArchive
 }: EmailThreadProps) {
   const [selectedCategory, setSelectedCategory] = useState(email.category || '');
 
@@ -482,8 +541,10 @@ function EmailThread({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.3) }}
-      className="bg-white border-l-4 hover:shadow-lg transition-all duration-200 group"
-      style={{ borderLeftColor: categoryColor }}
+      className={`bg-white border-l-4 hover:shadow-lg transition-all duration-200 group ${
+        !email.isRead ? 'bg-blue-50' : ''
+      }`}
+      style={{ borderLeftColor: !email.isRead ? '#2563eb' : categoryColor }}
     >
       {/* Main Thread Row */}
       <div
@@ -503,7 +564,9 @@ function EmailThread({
             </div>
 
             {/* Subject */}
-            <h3 className="text-lg font-semibold text-[#1a1a1a] mb-2 line-clamp-1" style={{ fontFamily: "'Crimson Pro', serif" }}>
+            <h3 className={`text-lg text-[#1a1a1a] mb-2 line-clamp-1 ${
+              !email.isRead ? 'font-bold' : 'font-semibold'
+            }`} style={{ fontFamily: "'Crimson Pro', serif" }}>
               {email.subject}
             </h3>
 
@@ -530,6 +593,34 @@ function EmailThread({
             )}
 
             <div className="flex gap-2">
+              {/* Read/Unread Action Button */}
+              {onToggleRead && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleRead(email.id, email.isRead ?? false);
+                  }}
+                  className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-all"
+                  title={email.isRead ? 'Mark as unread' : 'Mark as read'}
+                >
+                  {email.isRead ? <MailOpen size={16} /> : <Mail size={16} />}
+                </button>
+              )}
+
+              {/* Archive Action Button */}
+              {onArchive && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onArchive(email.id);
+                  }}
+                  className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-all"
+                  title="Archive"
+                >
+                  <Archive size={16} />
+                </button>
+              )}
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();

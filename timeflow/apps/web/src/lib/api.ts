@@ -513,20 +513,40 @@ export async function searchEmails(query: string, maxResults?: number): Promise<
 /**
  * Mark an email as read or unread.
  */
-export async function markEmailAsRead(emailId: string, isRead: boolean): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/email/${emailId}/read`, {
+export async function markEmailAsRead(emailId: string, isRead: boolean): Promise<void> {
+  const response = await fetch(`${API_BASE}/email/${emailId}/read`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAuthToken()}`,
+    },
     body: JSON.stringify({ isRead }),
   });
+
+  if (!response.ok) {
+    const error: any = new Error('Failed to mark as read');
+    error.response = { status: response.status, data: await response.json().catch(() => ({})) };
+    throw error;
+  }
 }
 
 /**
  * Archive an email (remove from inbox).
  */
-export async function archiveEmail(emailId: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>(`/email/${emailId}/archive`, {
+export async function archiveEmail(emailId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/email/${emailId}/archive`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAuthToken()}`,
+    },
   });
+
+  if (!response.ok) {
+    const error: any = new Error('Failed to archive email');
+    error.response = { status: response.status, data: await response.json().catch(() => ({})) };
+    throw error;
+  }
 }
 
 /**
