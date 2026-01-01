@@ -5,6 +5,7 @@ import type {
   AssistantChatResponse,
   SchedulePreview,
   DailyScheduleConfig,
+  PlanningState,
 } from '@timeflow/shared';
 import { env } from '../config/env.js';
 import { getPromptManager } from './promptManager.js';
@@ -169,6 +170,106 @@ function detectDailyPlanIntent(userMessage: string): boolean {
   ];
 
   return dailyPlanKeywords.some((kw) => lower.includes(kw));
+}
+
+function detectPlanningIntent(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  const planningKeywords = [
+    'plan my day',
+    'plan today',
+    'help me plan',
+    'make a plan',
+    'realistic plan',
+    'what should i do next',
+    'best use of my time',
+    'prioritize',
+    'prioritise',
+    'prioritize my',
+    'prioritise my',
+    'organize my day',
+    'organise my day',
+  ];
+
+  return planningKeywords.some((kw) => lower.includes(kw));
+}
+
+type PlanningTask = {
+  priority?: number | null;
+  dueDate?: string | Date | null;
+};
+
+function getPlanningState({
+  message,
+  tasks,
+  previousState,
+}: {
+  message: string;
+  tasks: PlanningTask[];
+  previousState?: PlanningState | null;
+}): PlanningState {
+  const lower = message.toLowerCase();
+
+  const timeHintRegex = /\b(today|tomorrow|this week|next week|morning|afternoon|evening|tonight|weekend|weekday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/;
+  const explicitTimeRegex = /\b\d{1,2}(:\d{2})?\s?(am|pm)\b/;
+  const hasTimeHint = timeHintRegex.test(lower) || explicitTimeRegex.test(lower);
+
+  const priorityHintKeywords = [
+    'priority',
+    'prioritize',
+    'prioritise',
+    'most important',
+    'important',
+    'urgent',
+    'critical',
+    'top',
+    'focus on',
+    'must',
+    'deadline',
+  ];
+  const hasPriorityHint = priorityHintKeywords.some((kw) => lower.includes(kw));
+
+  const hasPrioritySignal = tasks.some((task) => {
+    const priority = task.priority ?? 3;
+    return priority <= 2 || Boolean(task.dueDate);
+  });
+
+  const hasDueDates = tasks.some((task) => Boolean(task.dueDate));
+
+  const missingTime = !hasTimeHint && !hasDueDates;
+  const missingPriority = !hasPriorityHint && !hasPrioritySignal;
+  const missingInfo = missingTime || missingPriority;
+
+  const questionRound = previousState?.questionRound ?? 0;
+  const allowSecondRound = questionRound < 2;
+  const assumptions: string[] = [];
+
+  if (!missingTime && !hasTimeHint && hasDueDates) {
+    assumptions.push('Assumed planning window based on upcoming due dates.');
+  }
+  if (!missingPriority && !hasPriorityHint && hasPrioritySignal) {
+    assumptions.push('Assumed task priorities from existing task metadata.');
+  }
+
+  return {
+    missingInfo,
+    missingTime,
+    missingPriority,
+    questionRound,
+    allowSecondRound,
+    assumptions,
+  };
+}
+
+function shouldAskPlanningQuestion(state: PlanningState): boolean {
+  if (!state.missingInfo) {
+    return false;
+  }
+
+  if (state.questionRound === 0) {
+    return true;
+  }
+
+  return state.questionRound === 1 && state.allowSecondRound;
 }
 
 /**
@@ -1650,6 +1751,9 @@ export const __test__ = {
   detectPlanAdjustment,
   detectRescheduleIntent,
   detectDailyPlanIntent,
+  detectPlanningIntent,
+  getPlanningState,
+  shouldAskPlanningQuestion,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,

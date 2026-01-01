@@ -7,6 +7,9 @@ const {
   detectPlanAdjustment,
   detectRescheduleIntent,
   detectDailyPlanIntent,
+  detectPlanningIntent,
+  getPlanningState,
+  shouldAskPlanningQuestion,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
@@ -111,6 +114,72 @@ describe('assistantService helpers', () => {
 
     it('returns false for unrelated language', () => {
       expect(detectDailyPlanIntent('Schedule my tasks')).toBe(false);
+    });
+  });
+
+  describe('detectPlanningIntent', () => {
+    it('detects planning language', () => {
+      expect(detectPlanningIntent('My day feels chaotic—can you help me plan today?')).toBe(true);
+      expect(detectPlanningIntent('I need to prioritize my tasks.')).toBe(true);
+    });
+
+    it('returns false for unrelated language', () => {
+      expect(detectPlanningIntent('What is the weather?')).toBe(false);
+    });
+  });
+
+  describe('getPlanningState', () => {
+    it('marks missing time and priority for ambiguous requests', () => {
+      const state = getPlanningState({
+        message: 'Help me plan.',
+        tasks: [
+          { priority: 3, dueDate: null },
+          { priority: 3, dueDate: null },
+        ],
+      });
+
+      expect(state.missingTime).toBe(true);
+      expect(state.missingPriority).toBe(true);
+      expect(state.missingInfo).toBe(true);
+    });
+
+    it('clears missing info when time and priority are provided', () => {
+      const state = getPlanningState({
+        message: 'Plan my day today and focus on the most important tasks.',
+        tasks: [{ priority: 2, dueDate: null }],
+      });
+
+      expect(state.missingTime).toBe(false);
+      expect(state.missingPriority).toBe(false);
+      expect(state.missingInfo).toBe(false);
+    });
+  });
+
+  describe('shouldAskPlanningQuestion', () => {
+    it('asks when missing info and within question budget', () => {
+      expect(
+        shouldAskPlanningQuestion({
+          missingInfo: true,
+          missingTime: true,
+          missingPriority: true,
+          questionRound: 0,
+          allowSecondRound: true,
+          assumptions: [],
+        })
+      ).toBe(true);
+    });
+
+    it('does not ask after two rounds', () => {
+      expect(
+        shouldAskPlanningQuestion({
+          missingInfo: true,
+          missingTime: true,
+          missingPriority: true,
+          questionRound: 2,
+          allowSecondRound: false,
+          assumptions: [],
+        })
+      ).toBe(false);
     });
   });
 
