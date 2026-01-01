@@ -99,6 +99,7 @@ USER: Schedule my tasks for tomorrow.
 ```
 
 4. For stricter checks, extend `test-ai-prompts.js` to assert expected mode/preview counts.
+5. Add planning prompts that should trigger clarifying questions or draft plans (planning mode).
 
 ---
 

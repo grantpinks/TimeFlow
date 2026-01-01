@@ -45,3 +45,15 @@ USER: Schedule my tasks for tomorrow.
 FLOW: Availability -> Scheduling
 USER: When am I free this week?
 USER: Schedule my tasks for tomorrow.
+---
+My day feels chaotic—can you help me plan today?
+---
+I'm not sure what to work on next. What's the best use of my time?
+---
+I have a deadline tomorrow and a bunch of small tasks. How should I prioritize?
+---
+Plan my day today and focus on the most important tasks.
+---
+Help me plan. I have about 3 hours this afternoon.
+---
+Help me plan. I need to focus on urgent items.
