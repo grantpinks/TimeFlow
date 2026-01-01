@@ -28,7 +28,7 @@ const navItems: NavItem[] = [
   { id: 'habits', href: '/habits', label: 'Habits', icon: HabitIcon },
   { id: 'assistant', href: '/assistant', label: 'Flow AI', icon: SparkIcon },
   { id: 'calendar', href: '/calendar', label: 'Calendar', icon: CalendarIcon },
-  { id: 'meetings', href: '/meetings', label: 'Meetings', icon: CalendarIcon },
+  { id: 'meetings', href: '/meetings', label: 'Meetings', icon: PhoneIcon },
   { id: 'inbox', href: '/inbox', label: 'Inbox', icon: InboxIcon, children: [{ href: '/settings/email-categories', label: 'Email Categories' }] },
 ];
 
@@ -519,6 +519,15 @@ function HabitIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M7 4.5h10A2.5 2.5 0 0 1 19.5 7v10A2.5 2.5 0 0 1 17 19.5H7A2.5 2.5 0 0 1 4.5 17V7A2.5 2.5 0 0 1 7 4.5Z" />
       <path d="M8.5 12h7M8.5 8.5h7M8.5 15.5h4" />
+    </svg>
+  );
+}
+
+function PhoneIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M7 4.5h4L12 8l-2.2 1.7a10 10 0 0 0 4.5 4.5L16 12l3.5 1v4A2.5 2.5 0 0 1 17 19.5c-6.6 0-12-5.4-12-12A2.5 2.5 0 0 1 7.5 5h-.5Z" />
+      <path d="M15 6h4M17 4v4" />
     </svg>
   );
 }
