@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import type { EmailMessage, FullEmailMessage } from '@timeflow/shared';
-import { ExternalLink, Paperclip, Mail, MailOpen, Archive } from 'lucide-react';
+import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search } from 'lucide-react';
 import DOMPurify from 'dompurify';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -21,6 +21,10 @@ export default function InboxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
   const [correctingEmailId, setCorrectingEmailId] = useState<string | null>(null);
+  const [searchMode, setSearchMode] = useState<'client' | 'server'>('client');
+  const [serverSearchResults, setServerSearchResults] = useState<EmailMessage[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Thread detail state
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -78,6 +82,53 @@ export default function InboxPage() {
       console.error('Failed to fetch categories:', error);
       setCategories([]); // Ensure it's always an array
     }
+  }
+
+  async function performServerSearch(query: string) {
+    if (!query || query.length < 2) {
+      setSearchMode('client');
+      setServerSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchMode('server');
+
+    try {
+      const result = await api.searchEmails(query);
+      setServerSearchResults(result.messages);
+    } catch (error: any) {
+      console.error('Server search failed, falling back to client search:', error);
+      setSearchMode('client');
+      setServerSearchResults([]);
+
+      if (error.message.includes('rate limit') || error.message.includes('429')) {
+        toast.error('Rate limit exceeded. Falling back to client-side search.');
+      }
+    } finally {
+      setSearchLoading(false);
+    }
+  }
+
+  function handleSearchChange(newQuery: string) {
+    setSearchQuery(newQuery);
+
+    // Clear existing timer
+    if (searchDebounceTimer.current) {
+      clearTimeout(searchDebounceTimer.current);
+    }
+
+    // If query is empty, reset to client mode
+    if (!newQuery) {
+      setSearchMode('client');
+      setServerSearchResults([]);
+      return;
+    }
+
+    // Debounce server search (500ms)
+    searchDebounceTimer.current = setTimeout(() => {
+      performServerSearch(newQuery);
+    }, 500);
   }
 
   async function fetchThread(threadId: string) {
@@ -185,13 +236,16 @@ export default function InboxPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  const filteredBySearch = searchQuery
-    ? emails.filter(e =>
-        e.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        e.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (e.snippet?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-      )
-    : emails;
+  const displayEmails = searchMode === 'server'
+    ? serverSearchResults
+    : (searchQuery
+        ? emails.filter(e =>
+            e.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            e.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (e.snippet && e.snippet.toLowerCase().includes(searchQuery.toLowerCase()))
+          )
+        : emails
+      );
 
   if (!isAuthenticated) {
     return (
@@ -216,7 +270,7 @@ export default function InboxPage() {
                   Inbox
                 </h1>
                 <p className="text-sm text-[#666] tracking-wider uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  {filteredBySearch.length} threads · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  {displayEmails.length} threads · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
               </div>
 
@@ -226,13 +280,31 @@ export default function InboxPage() {
                   type="text"
                   placeholder="Search inbox..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-80 px-4 py-3 border border-[#1a1a1a] bg-white text-[#1a1a1a] placeholder-[#999] focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] transition-all"
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-80 px-4 py-3 pl-10 border border-[#1a1a1a] bg-white text-[#1a1a1a] placeholder-[#999] focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] transition-all"
                   style={{ fontFamily: "'Manrope', sans-serif" }}
                 />
-                {searchQuery && (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" size={18} />
+
+                {searchLoading && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#1a1a1a]"></div>
+                  </div>
+                )}
+
+                {searchMode === 'server' && !searchLoading && searchQuery && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#666]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    Gmail search
+                  </div>
+                )}
+
+                {searchQuery && !searchLoading && searchMode === 'client' && (
                   <button
-                    onClick={() => setSearchQuery('')}
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchMode('client');
+                      setServerSearchResults([]);
+                    }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#1a1a1a]"
                   >
                     ✕
@@ -316,7 +388,7 @@ export default function InboxPage() {
                 Loading inbox...
               </div>
             </div>
-          ) : filteredBySearch.length === 0 ? (
+          ) : displayEmails.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-6xl mb-4">📭</div>
               <h3 className="text-2xl font-serif font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
@@ -329,7 +401,7 @@ export default function InboxPage() {
           ) : (
             <div className="space-y-px">
               <AnimatePresence mode="popLayout">
-                {filteredBySearch.map((email, index) => (
+                {displayEmails.map((email, index) => (
                   <EmailThread
                     key={email.id}
                     email={email}
