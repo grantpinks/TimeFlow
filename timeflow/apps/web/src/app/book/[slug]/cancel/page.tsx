@@ -54,7 +54,7 @@ export default function CancelPage() {
           <div className="text-green-500 text-5xl mb-4">✓</div>
           <h1 className="text-2xl font-bold text-slate-800 mb-2">Meeting Cancelled</h1>
           <p className="text-slate-600">
-            Your meeting has been cancelled successfully. You'll receive a confirmation email shortly.
+            Your meeting has been cancelled successfully. You&apos;ll receive a confirmation email shortly.
           </p>
         </div>
       </div>

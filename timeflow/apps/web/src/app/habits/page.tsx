@@ -8,7 +8,8 @@
 'use client';
 
 import { useState } from 'react';
-import Layout from '@/components/Layout';
+import { Layout } from '@/components/Layout';
+import { Panel, SectionHeader, EmptyState } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
 import type { Habit, HabitFrequency, TimeOfDay } from '@timeflow/shared';
 
@@ -147,25 +148,24 @@ export default function HabitsPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Habits</h1>
-            <p className="text-slate-600 mt-1">
-              Build better routines (scheduling coming soon)
-            </p>
-          </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            Add Habit
-          </button>
-        </div>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <SectionHeader
+          title="Habits"
+          subtitle="Build better routines (scheduling coming soon)"
+          count={habits.length}
+          actions={
+            <button
+              onClick={() => setShowAdd(true)}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+            >
+              Add Habit
+            </button>
+          }
+        />
 
         {/* Add Habit Form */}
         {showAdd && (
-          <div className="mb-6 bg-slate-50 rounded-lg border border-slate-200 p-4">
+          <Panel className="bg-slate-50">
             <h2 className="text-lg font-semibold text-slate-800 mb-4">Add New Habit</h2>
             <div className="space-y-3">
               <div>
@@ -288,16 +288,17 @@ export default function HabitsPage() {
                 </button>
               </div>
             </div>
-          </div>
+          </Panel>
         )}
 
         {/* Habits List */}
-        <div className="space-y-3">
+        <Panel padding="none">
+          <div className="divide-y divide-slate-100">
           {habits.map((habit) => (
             <div
               key={habit.id}
-              className={`bg-white rounded-lg border p-4 ${
-                habit.isActive ? 'border-slate-200' : 'border-slate-100 opacity-60'
+              className={`p-4 ${
+                habit.isActive ? '' : 'opacity-60'
               }`}
             >
               {editing === habit.id ? (
@@ -466,29 +467,30 @@ export default function HabitsPage() {
               )}
             </div>
           ))}
-        </div>
-
-        {habits.length === 0 && (
-          <div className="text-center py-12 bg-white rounded-lg border border-slate-200">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-slate-300"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-              />
-            </svg>
-            <p className="text-lg text-slate-600 mb-2">No habits yet</p>
-            <p className="text-sm text-slate-500">
-              Create your first habit to start building better routines
-            </p>
           </div>
-        )}
+
+          {habits.length === 0 && (
+            <EmptyState
+              icon={
+                <svg
+                  className="w-16 h-16 text-slate-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  />
+                </svg>
+              }
+              title="No habits yet"
+              description="Create your first habit to start building better routines"
+            />
+          )}
+        </Panel>
       </div>
     </Layout>
   );

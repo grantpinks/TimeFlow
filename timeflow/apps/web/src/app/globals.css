@@ -434,7 +434,7 @@ body {
   padding: var(--spacing-3);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6); /* Hairline divider */
   background: var(--color-bg-tertiary);
   transition: background var(--transition-fast) var(--transition-ease);
 }
@@ -526,15 +526,15 @@ body {
 }
 
 .rbc-time-slot {
-  border-top-color: var(--color-border-light);
+  border-top-color: rgba(226, 232, 240, 0.5); /* Hairline divider */
 }
 
 .rbc-time-header-content {
-  border-left-color: var(--color-border-light);
+  border-left-color: rgba(226, 232, 240, 0.5); /* Hairline divider */
 }
 
 .rbc-day-slot .rbc-time-slot {
-  border-top-color: var(--color-border-light);
+  border-top-color: rgba(226, 232, 240, 0.5); /* Hairline divider */
 }
 
 .rbc-toolbar {
@@ -579,9 +579,9 @@ body {
   cursor: col-resize;
 }
 
-/* Time Grid Styling */
+/* Time Grid Styling - Hairline Dividers */
 .rbc-time-content {
-  border-top: 1px solid var(--color-border-light);
+  border-top: 1px solid rgba(226, 232, 240, 0.5);
 }
 
 .rbc-time-column {
@@ -589,7 +589,7 @@ body {
 }
 
 .rbc-timeslot-group {
-  border-left: 1px solid var(--color-border-light);
+  border-left: 1px solid rgba(226, 232, 240, 0.4);
   min-height: 60px;
 }
 

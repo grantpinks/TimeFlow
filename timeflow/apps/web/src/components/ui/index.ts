@@ -10,3 +10,9 @@ export * from './HabitCard';
 export * from './SearchBar';
 export * from './FilterPanel';
 export * from './TemplateModal';
+
+// UI Refinement Components (Sprint 16)
+export * from './Panel';
+export * from './SectionHeader';
+export * from './ListRow';
+export * from './EmptyState';

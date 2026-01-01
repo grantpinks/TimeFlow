@@ -26,6 +26,15 @@ To make Sprint 16 fully valuable (and avoid users distrusting labels applied ins
 
 See: `docs/SPRINT_15_INBOX_FOUNDATIONS.md`.
 
+### Trust gate (must be explicit)
+
+TimeFlow should **not** write labels into Gmail for a user until the user has:
+
+- A correction mechanism that persists (override beats heuristics)
+- A lightweight “Why this label?” explanation surface
+
+This prevents the highest-risk failure mode: incorrect labels showing up inside a user’s Gmail with no way to understand or fix it.
+
 ---
 
 ## Goals
@@ -50,6 +59,37 @@ See: `docs/SPRINT_15_INBOX_FOUNDATIONS.md`.
 - **Sensitive scope**: label application requires `gmail.modify`. Consumer rollout may require Google OAuth verification and may trigger policy/security review.
 - **Label colors**: Gmail supports label colors via the API (`users.labels.create/patch` supports a `color` object), but practically within a constrained palette. The UI must offer a **palette picker** (not arbitrary hex), plus a best‑effort default mapping from TimeFlow colors.
 - **Rate limits**: Gmail API quotas and per-user throttling must be respected (especially for background sync). Prefer batching and idempotent updates.
+
+---
+
+## Phased delivery (recommended)
+
+To ship value quickly *and* protect user trust, Sprint 16 should be executed in two phases:
+
+### Phase A — Ship value + trust (no Pub/Sub dependency)
+
+**Outcome**: Labels are created/managed, and labeling happens via manual “Sync now” and/or bounded “sync on inbox fetch”. This is enough for real user value while we harden semantics and reduce blast radius.
+
+Must include:
+- Settings UX (toggle, status, “Sync now”, per-category label name + Gmail palette color)
+- Thread-level apply via Gmail API with strict idempotency
+- Bounded backfill policy (see below)
+- Rules + corrections + “Why this label?” (trust loop)
+
+### Phase B — Background sync (watch + Pub/Sub)
+
+**Outcome**: New mail labeled within minutes using Gmail `watch` + Pub/Sub push, with renewal + operational safeguards.
+
+---
+
+## Backfill policy (blast radius)
+
+Default should be **new mail only**.
+
+If backfill is offered, it must be explicit and bounded, e.g.:
+- “Label last 7 days” and/or “Label last 200 threads”
+
+No “label my entire mailbox” by default.
 
 ---
 
@@ -187,7 +227,8 @@ Extend it to include:
 ## Decision Gate (End of Sprint)
 
 - [ ] Can a consumer user enable sync and see `TimeFlow/*` labels created in Gmail?
-- [ ] Are new threads labeled within minutes via watch, or on next inbox fetch via fallback?
+- [ ] **Phase A**: Can the user run “Sync now” (or on inbox fetch) and see threads labeled correctly, and can they correct mistakes?
+- [ ] **Phase B** (if shipped): Are new threads labeled within minutes via watch + Pub/Sub?
 - [ ] Are operations safe/idempotent under retries and rate limits?
 - [ ] Are docs sufficient for on-call/troubleshooting?
 

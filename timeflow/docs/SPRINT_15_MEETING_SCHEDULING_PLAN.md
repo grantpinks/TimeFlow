@@ -2,9 +2,16 @@
 
 **Project**: TimeFlow  
 **Duration**: 2 weeks  
-**Status**: Planned (documentation-only)  
+**Status**: In progress (backend + UI implemented; QA pending)  
 
 This plan focuses on shipping booking links that are reliable, customizable, and safe under concurrency. It includes Inbox Foundations work that improves the in-app Gmail experience (prep for Sprint 16 Gmail label sync).
+
+**Current implementation highlights**
+- Scheduling link models, CRUD API, and Settings UI are built.
+- Availability engine enforces work hours, buffers, horizon, and daily caps; public booking pages live.
+- Booking/reschedule/cancel flows create/update/cancel events on Google/Apple; Google Meet supported.
+- CalDAV discovery + event CRUD implemented; transparent events respected; tokens guarded.
+- Remaining: integrated QA across web + providers, edge-case hardening, and polish.
 
 ---
 
@@ -161,5 +168,4 @@ See: `docs/SPRINT_15_INBOX_FOUNDATIONS.md`.
 ---
 
 **Last Updated**: 2025-12-23
-
 

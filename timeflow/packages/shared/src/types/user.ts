@@ -63,6 +63,7 @@ export interface UserProfile {
   dailyScheduleConstraints?: DailyScheduleConfig | null;
   defaultTaskDurationMinutes: number;
   defaultCalendarId?: string | null;
+  sidebarNavOrder?: string[];
 
   // Meeting-specific preferences
   meetingStartTime?: string | null;        // Default earliest meeting time
@@ -82,6 +83,7 @@ export interface UserPreferencesUpdate {
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;
+  sidebarNavOrder?: string[];
 
   // Meeting-specific preferences
   meetingStartTime?: string | null;
@@ -97,4 +99,3 @@ export interface AuthSession {
   userId: string;
   email: string;
 }
-

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
-import { ColorPicker } from '@/components/ColorPicker';
+import ColorPicker from '@/components/ColorPicker';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { track } from '@/lib/analytics';
@@ -183,7 +183,7 @@ export default function EmailCategoriesSettingsPage() {
                       {editingCategory === category.id && (
                         <div className="mt-4 flex items-center gap-3">
                           <ColorPicker
-                            color={category.color}
+                            value={category.color}
                             onChange={(color) => handleUpdateCategory(category.id, { color })}
                           />
                           <button

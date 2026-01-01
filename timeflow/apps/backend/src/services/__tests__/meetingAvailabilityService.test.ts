@@ -41,6 +41,49 @@ describe('meetingAvailabilityService', () => {
     expect(busy).toHaveLength(1);
     expect(busy[0].start).toBe('2026-01-10T10:00:00.000Z');
   });
+
+  it('clamps slots to max booking horizon', () => {
+    const rangeStart = '2026-01-10T00:00:00.000Z';
+    const rangeEnd = '2026-01-20T23:59:59.999Z';
+    const slots = buildAvailabilitySlots({
+      rangeStart,
+      rangeEnd,
+      durationsMinutes: [30],
+      bufferBeforeMinutes: 0,
+      bufferAfterMinutes: 0,
+      busyIntervals: [],
+      timeZone: 'UTC',
+      wakeTime: '08:00',
+      sleepTime: '18:00',
+      dailySchedule: null,
+      maxBookingHorizonDays: 2,
+    });
+
+    const latestSlot = slots.reduce((latest, slot) => (slot.start > latest ? slot.start : latest), slots[0]?.start ?? '');
+    expect(DateTime.fromISO(latestSlot).toMillis()).toBeLessThanOrEqual(
+      DateTime.fromISO(rangeStart, { zone: 'UTC' }).plus({ days: 2 }).endOf('day').toMillis()
+    );
+  });
+
+  it('enforces daily cap by keeping earliest slots per day', () => {
+    const slots = buildAvailabilitySlots({
+      rangeStart: '2026-01-10T08:00:00.000Z',
+      rangeEnd: '2026-01-10T12:00:00.000Z',
+      durationsMinutes: [30],
+      bufferBeforeMinutes: 0,
+      bufferAfterMinutes: 0,
+      busyIntervals: [],
+      timeZone: 'UTC',
+      wakeTime: '08:00',
+      sleepTime: '12:00',
+      dailySchedule: null,
+      dailyCap: 2,
+    });
+
+    expect(slots).toHaveLength(2);
+    expect(slots[0].start).toBe('2026-01-10T08:00:00.000Z');
+    expect(slots[1].start).toBe('2026-01-10T08:15:00.000Z');
+  });
 });
 
 describe('Meeting preference handling in buildAvailabilitySlots', () => {

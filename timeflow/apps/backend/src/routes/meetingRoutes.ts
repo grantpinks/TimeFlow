@@ -12,6 +12,9 @@ export async function registerMeetingRoutes(server: FastifyInstance) {
   // Get all meetings for the authenticated user
   server.get('/meetings', { preHandler: requireAuth }, meetingController.getMeetings);
 
+  // Get user meetings with filtering (for dashboard)
+  server.get('/user/meetings', { preHandler: requireAuth }, meetingController.getUserMeetings);
+
   // Cancel a meeting (host action)
   server.post('/meetings/:meetingId/cancel', { preHandler: requireAuth }, meetingController.cancelMeeting);
 

@@ -53,6 +53,7 @@ const preferencesSchema = z.object({
   timeZone: z.string().min(1, 'timeZone is required').optional(),
   defaultTaskDurationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
   defaultCalendarId: z.string().min(1).optional(),
+  sidebarNavOrder: z.array(z.string().min(1)).optional(),
 
   // Meeting-specific preferences
   meetingStartTime: z.string().regex(/^\d{2}:\d{2}$/, 'meetingStartTime must be HH:mm').optional().nullable(),
@@ -91,6 +92,7 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     dailyScheduleConstraints: record.dailyScheduleConstraints || null,
     defaultTaskDurationMinutes: record.defaultTaskDurationMinutes,
     defaultCalendarId: record.defaultCalendarId,
+    sidebarNavOrder: record.sidebarNavOrder || [],
     meetingStartTime: record.meetingStartTime,
     meetingEndTime: record.meetingEndTime,
     blockedDaysOfWeek: record.blockedDaysOfWeek || [],
@@ -138,6 +140,7 @@ interface UpdatePreferencesBody {
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;
+  sidebarNavOrder?: string[];
   meetingStartTime?: string | null;
   meetingEndTime?: string | null;
   blockedDaysOfWeek?: string[];
@@ -171,6 +174,7 @@ export async function updatePreferences(
     timeZone,
     defaultTaskDurationMinutes,
     defaultCalendarId,
+    sidebarNavOrder,
     meetingStartTime,
     meetingEndTime,
     blockedDaysOfWeek,
@@ -193,6 +197,7 @@ export async function updatePreferences(
       ...(timeZone && { timeZone }),
       ...(defaultTaskDurationMinutes && { defaultTaskDurationMinutes }),
       ...(defaultCalendarId && { defaultCalendarId }),
+      ...(sidebarNavOrder !== undefined && { sidebarNavOrder }),
 
       // Meeting preferences
       ...(meetingStartTime !== undefined && { meetingStartTime }),
@@ -213,10 +218,10 @@ export async function updatePreferences(
     dailyScheduleConstraints: updated.dailyScheduleConstraints || null,
     defaultTaskDurationMinutes: updated.defaultTaskDurationMinutes,
     defaultCalendarId: updated.defaultCalendarId,
+    sidebarNavOrder: updated.sidebarNavOrder,
     meetingStartTime: updated.meetingStartTime,
     meetingEndTime: updated.meetingEndTime,
     blockedDaysOfWeek: updated.blockedDaysOfWeek || [],
     dailyMeetingSchedule: updated.dailyMeetingSchedule || null,
   };
 }
-

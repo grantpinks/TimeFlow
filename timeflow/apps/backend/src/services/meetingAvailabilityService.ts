@@ -24,6 +24,10 @@ interface BuildAvailabilitySlotsParams {
   meetingEndTime?: string | null;
   blockedDaysOfWeek?: string[];
   dailyMeetingSchedule?: any;
+
+  // Constraints
+  maxBookingHorizonDays?: number;
+  dailyCap?: number;
 }
 
 /**
@@ -49,15 +53,23 @@ export function buildAvailabilitySlots(params: BuildAvailabilitySlotsParams): Av
     busyIntervals,
     timeZone,
     wakeTime,
-    sleepTime,
-    meetingStartTime,
-    meetingEndTime,
-    blockedDaysOfWeek,
-    dailyMeetingSchedule,
-  } = params;
+  sleepTime,
+  meetingStartTime,
+  meetingEndTime,
+  blockedDaysOfWeek,
+  dailyMeetingSchedule,
+  maxBookingHorizonDays,
+  dailyCap,
+} = params;
 
   const start = DateTime.fromISO(rangeStart, { zone: timeZone });
-  const end = DateTime.fromISO(rangeEnd, { zone: timeZone });
+  const rawEnd = DateTime.fromISO(rangeEnd, { zone: timeZone });
+
+  // Clamp rangeEnd to booking horizon if provided
+  const end =
+    maxBookingHorizonDays && maxBookingHorizonDays > 0
+      ? DateTime.min(rawEnd, start.plus({ days: maxBookingHorizonDays }).endOf('day'))
+      : rawEnd;
 
   // Map day of week numbers to day names (1=monday, 7=sunday)
   const dayNames: Record<number, string> = {
@@ -195,5 +207,27 @@ export function buildAvailabilitySlots(params: BuildAvailabilitySlotsParams): Av
     }
   }
 
-  return slots;
+  if (!dailyCap || dailyCap <= 0) {
+    return slots;
+  }
+
+  // Enforce daily cap: group by day in user time zone and keep earliest slots per day
+  const slotsByDay: Record<string, AvailabilitySlot[]> = {};
+
+  for (const slot of slots) {
+    const day = DateTime.fromISO(slot.start, { zone: timeZone }).toISODate();
+    if (!slotsByDay[day]) {
+      slotsByDay[day] = [];
+    }
+    slotsByDay[day].push(slot);
+  }
+
+  const capped: AvailabilitySlot[] = [];
+  for (const day of Object.keys(slotsByDay)) {
+    const daySlots = slotsByDay[day].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+    capped.push(...daySlots.slice(0, dailyCap));
+  }
+
+  // Sort final slots chronologically
+  return capped.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
 }

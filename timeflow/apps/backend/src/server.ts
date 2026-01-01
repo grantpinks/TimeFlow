@@ -21,6 +21,7 @@ import { registerScheduleRoutes } from './routes/scheduleRoutes.js';
 import { registerAssistantRoutes } from './routes/assistantRoutes.js';
 import { registerHabitRoutes } from './routes/habitRoutes.js';
 import { registerEmailRoutes } from './routes/emailRoutes.js';
+import { registerEmailOverrideRoutes } from './routes/emailOverrideRoutes.js';
 import { registerConversationRoutes } from './routes/conversationRoutes.js';
 import { registerSchedulingLinkRoutes } from './routes/schedulingLinkRoutes.js';
 import { registerAvailabilityRoutes } from './routes/availabilityRoutes.js';
@@ -71,6 +72,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerAssistantRoutes(api);
       await registerHabitRoutes(api);
       await registerEmailRoutes(api);
+      await registerEmailOverrideRoutes(api);
       await registerConversationRoutes(api);
       await registerSchedulingLinkRoutes(api);
       await registerAvailabilityRoutes(api);

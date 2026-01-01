@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import * as api from '@/lib/api';
 import { DateTime } from 'luxon';
@@ -26,16 +26,7 @@ export default function ReschedulePage() {
   const [selectedDate, setSelectedDate] = useState<string>(DateTime.now().toISODate()!);
   const [selectedSlot, setSelectedSlot] = useState<{ start: string; end: string } | null>(null);
 
-  useEffect(() => {
-    if (!token) {
-      setError('Invalid reschedule link');
-      setLoading(false);
-      return;
-    }
-    fetchAvailability();
-  }, [selectedDate, selectedDuration, token]);
-
-  async function fetchAvailability() {
+  const fetchAvailability = useCallback(async () => {
     if (!selectedDuration) return;
 
     try {
@@ -59,7 +50,16 @@ export default function ReschedulePage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedDate, selectedDuration, slug]);
+
+  useEffect(() => {
+    if (!token) {
+      setError('Invalid reschedule link');
+      setLoading(false);
+      return;
+    }
+    fetchAvailability();
+  }, [selectedDate, selectedDuration, token, fetchAvailability]);
 
   async function handleReschedule() {
     if (!selectedSlot || !selectedDuration) {
@@ -120,7 +120,7 @@ export default function ReschedulePage() {
           <div className="text-green-500 text-5xl mb-4">✓</div>
           <h1 className="text-2xl font-bold text-slate-800 mb-2">Meeting Rescheduled!</h1>
           <p className="text-slate-600 mb-6">
-            Your meeting has been rescheduled. You'll receive a confirmation email shortly.
+            Your meeting has been rescheduled. You&apos;ll receive a confirmation email shortly.
           </p>
 
           {selectedSlot && (

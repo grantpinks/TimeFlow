@@ -6,7 +6,7 @@
  * Calendar sidebar panel for creating and sharing scheduling links.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as api from '@/lib/api';
 import type { SchedulingLink, Meeting } from '@timeflow/shared';
 import { CreateLinkModal } from './CreateLinkModal';
@@ -28,11 +28,7 @@ export function MeetingManagementPanel() {
   // Toast notifications
   const { toasts, showToast, removeToast } = useToast();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -56,7 +52,11 @@ export function MeetingManagementPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [showToast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const activeLinks = links.filter((l) => l.isActive);
   const upcomingMeetings = meetings.filter((m) => new Date(m.startDateTime) > new Date());
@@ -152,24 +152,33 @@ export function MeetingManagementPanel() {
           <div className="space-y-2">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="block w-full bg-primary-600 text-white text-xs font-medium py-2 rounded-lg hover:bg-primary-700 text-center transition-colors"
+              className="flex items-center justify-center gap-1.5 w-full bg-primary-600 text-white text-xs font-medium py-2 rounded-lg hover:bg-primary-700 transition-colors"
             >
-              + Create Link
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create Link
             </button>
             <button
               onClick={() => {
                 setSelectedLinkForShare(undefined);
                 setShowShareModal(true);
               }}
-              className="block w-full bg-white border border-primary-600 text-primary-600 text-xs font-medium py-2 rounded-lg hover:bg-primary-50 text-center transition-colors"
+              className="flex items-center justify-center gap-1.5 w-full bg-white border border-primary-600 text-primary-600 text-xs font-medium py-2 rounded-lg hover:bg-primary-50 transition-colors"
             >
-              📤 Share Link
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Share Link
             </button>
             <a
-              href="/settings#meeting-manager"
-              className="block w-full bg-white border border-slate-200 text-slate-700 text-xs font-medium py-2 rounded-lg hover:bg-slate-50 text-center transition-colors"
+              href="/meetings"
+              className="flex items-center justify-center gap-1.5 w-full bg-white border border-slate-200 text-slate-700 text-xs font-medium py-2 rounded-lg hover:bg-slate-50 transition-colors"
             >
-              📋 View All Meetings
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              View All Meetings
             </a>
           </div>
 

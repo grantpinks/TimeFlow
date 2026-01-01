@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as api from '@/lib/api';
 import type { Meeting } from '@timeflow/shared';
 
@@ -13,11 +13,7 @@ export function MeetingManagerPanel() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Load meetings
-  useEffect(() => {
-    fetchMeetings();
-  }, [filter]);
-
-  async function fetchMeetings() {
+  const fetchMeetings = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getMeetings(filter === 'all' ? undefined : filter);
@@ -28,7 +24,11 @@ export function MeetingManagerPanel() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filter]);
+
+  useEffect(() => {
+    fetchMeetings();
+  }, [fetchMeetings]);
 
   async function handleCancelMeeting(meetingId: string) {
     if (!confirm('Are you sure you want to cancel this meeting?')) return;
@@ -147,7 +147,7 @@ export function MeetingManagerPanel() {
                     📅 {formatDateTime(meeting.startDateTime)}
                   </p>
                   {meeting.notes && (
-                    <p className="text-sm text-slate-600 mt-2 italic">"{meeting.notes}"</p>
+                    <p className="text-sm text-slate-600 mt-2 italic">&quot;{meeting.notes}&quot;</p>
                   )}
                 </div>
                 {meeting.status !== 'cancelled' && (

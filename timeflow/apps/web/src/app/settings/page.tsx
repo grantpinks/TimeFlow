@@ -6,7 +6,7 @@ import { useUser } from '@/hooks/useUser';
 import { SchedulingLinksPanel } from '@/components/SchedulingLinksPanel';
 import { MeetingManagerPanel } from '@/components/MeetingManagerPanel';
 import * as api from '@/lib/api';
-import type { Calendar, DailyScheduleConfig, DaySchedule } from '@timeflow/shared';
+import type { Calendar, DailyScheduleConfig, DailyMeetingConfig } from '@timeflow/shared';
 
 export default function SettingsPage() {
   const { user, loading, updatePreferences } = useUser();
@@ -23,6 +23,14 @@ export default function SettingsPage() {
   const [timeZone, setTimeZone] = useState('America/Chicago');
   const [defaultDuration, setDefaultDuration] = useState(30);
   const [defaultCalendarId, setDefaultCalendarId] = useState<string>('');
+
+  // Meeting preference state
+  const [useMeetingHours, setUseMeetingHours] = useState(false);
+  const [meetingStartTime, setMeetingStartTime] = useState('09:00');
+  const [meetingEndTime, setMeetingEndTime] = useState('17:00');
+  const [blockedDays, setBlockedDays] = useState<string[]>([]);
+  const [useCustomMeetingSchedule, setUseCustomMeetingSchedule] = useState(false);
+  const [dailyMeetingSchedule, setDailyMeetingSchedule] = useState<DailyMeetingConfig>({});
 
   // Initialize form from user data
   useEffect(() => {
@@ -41,6 +49,21 @@ export default function SettingsPage() {
       } else {
         setUseCustomSchedule(false);
         setDailySchedule({});
+      }
+
+      // Load meeting preferences
+      if (user.meetingStartTime && user.meetingEndTime) {
+        setUseMeetingHours(true);
+        setMeetingStartTime(user.meetingStartTime);
+        setMeetingEndTime(user.meetingEndTime);
+      }
+      if (user.blockedDaysOfWeek && user.blockedDaysOfWeek.length > 0) {
+        setBlockedDays(user.blockedDaysOfWeek);
+      }
+      const meetingSchedule = user.dailyMeetingSchedule;
+      if (meetingSchedule && Object.keys(meetingSchedule).length > 0) {
+        setUseCustomMeetingSchedule(true);
+        setDailyMeetingSchedule(meetingSchedule);
       }
     }
   }, [user]);
@@ -75,6 +98,12 @@ export default function SettingsPage() {
         timeZone,
         defaultTaskDurationMinutes: defaultDuration,
         defaultCalendarId: defaultCalendarId || undefined,
+
+        // Meeting preferences
+        meetingStartTime: useMeetingHours ? meetingStartTime : null,
+        meetingEndTime: useMeetingHours ? meetingEndTime : null,
+        blockedDaysOfWeek: blockedDays.length > 0 ? blockedDays : [],
+        dailyMeetingSchedule: useCustomMeetingSchedule ? dailyMeetingSchedule : null,
       });
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
     } catch (err) {
@@ -276,6 +305,170 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-500 mt-4">
                   Tip: Different wake/sleep times for weekends vs weekdays help create a more realistic schedule
                 </p>
+              </div>
+            )}
+          </div>
+
+          {/* Meeting Availability Section */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">Meeting Availability</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Configure when you&apos;re available for meetings. This is separate from your general working hours.
+            </p>
+
+            {/* Meeting Hours Toggle */}
+            <div className="mb-6">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useMeetingHours}
+                  onChange={(e) => setUseMeetingHours(e.target.checked)}
+                  className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  Set specific hours for meetings (different from work hours)
+                </span>
+              </label>
+            </div>
+
+            {/* Simple Meeting Hours */}
+            {useMeetingHours && !useCustomMeetingSchedule && (
+              <div className="mb-6 grid grid-cols-2 gap-4 pl-6">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Meeting Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={meetingStartTime}
+                    onChange={(e) => setMeetingStartTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Meeting End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={meetingEndTime}
+                    onChange={(e) => setMeetingEndTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Blocked Days */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Days Not Available for Meetings
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      if (blockedDays.includes(day)) {
+                        setBlockedDays(blockedDays.filter((d) => d !== day));
+                      } else {
+                        setBlockedDays([...blockedDays, day]);
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-lg border transition-colors ${
+                      blockedDays.includes(day)
+                        ? 'bg-red-100 text-red-800 border-red-300'
+                        : 'bg-white text-slate-700 border-slate-300 hover:border-primary-300'
+                    }`}
+                  >
+                    {day.charAt(0).toUpperCase() + day.slice(1)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                Select days when you don&apos;t want to accept any meetings
+              </p>
+            </div>
+
+            {/* Custom Per-Day Meeting Schedule Toggle */}
+            {useMeetingHours && (
+              <div className="mb-6">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useCustomMeetingSchedule}
+                    onChange={(e) => setUseCustomMeetingSchedule(e.target.checked)}
+                    className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                  />
+                  <span className="text-sm font-medium text-slate-700">
+                    Set different meeting hours for each day
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Per-Day Meeting Config */}
+            {useMeetingHours && useCustomMeetingSchedule && (
+              <div className="pl-6 space-y-4">
+                {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day) => {
+                  const config = dailyMeetingSchedule[day] || { isAvailable: true };
+                  return (
+                    <div key={day} className="border border-slate-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={config.isAvailable}
+                            onChange={(e) => {
+                              setDailyMeetingSchedule({
+                                ...dailyMeetingSchedule,
+                                [day]: { ...config, isAvailable: e.target.checked },
+                              });
+                            }}
+                            className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                          />
+                          <span className="text-sm font-medium text-slate-800">
+                            {day.charAt(0).toUpperCase() + day.slice(1)}
+                          </span>
+                        </label>
+                      </div>
+
+                      {config.isAvailable && (
+                        <div className="grid grid-cols-2 gap-4 mt-2">
+                          <div>
+                            <label className="block text-xs text-slate-600 mb-1">Start</label>
+                            <input
+                              type="time"
+                              value={config.startTime || meetingStartTime}
+                              onChange={(e) => {
+                                setDailyMeetingSchedule({
+                                  ...dailyMeetingSchedule,
+                                  [day]: { ...config, startTime: e.target.value },
+                                });
+                              }}
+                              className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-600 mb-1">End</label>
+                            <input
+                              type="time"
+                              value={config.endTime || meetingEndTime}
+                              onChange={(e) => {
+                                setDailyMeetingSchedule({
+                                  ...dailyMeetingSchedule,
+                                  [day]: { ...config, endTime: e.target.value },
+                                });
+                              }}
+                              className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

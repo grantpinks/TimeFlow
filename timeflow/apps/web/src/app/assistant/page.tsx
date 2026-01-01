@@ -12,7 +12,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { useHabits } from '../../hooks/useHabits';
 import { useUser } from '../../hooks/useUser';
 import * as api from '../../lib/api';
-import type { ChatMessage, SchedulePreview } from '@timeflow/shared';
+import type { ChatMessage, SchedulePreview, ApplyScheduleBlock } from '@timeflow/shared';
 
 export default function AssistantPage() {
   const { user, isAuthenticated } = useUser();
@@ -26,6 +26,7 @@ export default function AssistantPage() {
   const [schedulePreview, setSchedulePreview] = useState<SchedulePreview | null>(null);
   const [previewApplied, setPreviewApplied] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<api.Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -67,14 +68,14 @@ export default function AssistantPage() {
 
   // Smart auto-scroll: Only scroll to bottom if user is already near bottom
   useEffect(() => {
-    if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isNearBottom && !schedulePreview) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
     }
-  }, [messages, isNearBottom]);
+  }, [messages, isNearBottom, schedulePreview]);
 
   // Scroll to bottom manually (for button click)
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     setIsNearBottom(true);
     setShowScrollButton(false);
   };
@@ -347,11 +348,15 @@ export default function AssistantPage() {
       queueAutoSave([userMessage, response.message]);
     } catch (error) {
       console.error('Failed to send message:', error);
+      const detailedMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Sorry, I encountered an error. Please try again.';
 
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}_error`,
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: detailedMessage,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => {
@@ -373,30 +378,23 @@ export default function AssistantPage() {
     if (!schedulePreview) return;
 
     setApplying(true);
+    setApplyError(null);
 
     try {
-      const applyBlocks = schedulePreview.blocks
-        .map((block) => {
-          if ('taskId' in block && block.taskId) {
-            return { taskId: block.taskId, start: block.start, end: block.end };
-          }
-          if ('habitId' in block && block.habitId) {
-            return {
-              habitId: (block as any).habitId,
-              title: (block as any).title,
-              start: block.start,
-              end: block.end,
-            };
-          }
-          return null;
-        })
-        .filter(Boolean) as Array<{
-        taskId?: string;
-        habitId?: string;
-        title?: string;
-        start: string;
-        end: string;
-      }>;
+      const applyBlocks: ApplyScheduleBlock[] = [];
+
+      schedulePreview.blocks.forEach((block) => {
+        if ('taskId' in block && block.taskId) {
+          applyBlocks.push({ taskId: block.taskId, start: block.start, end: block.end });
+        } else if ('habitId' in block && block.habitId) {
+          applyBlocks.push({
+            habitId: block.habitId,
+            title: (block as any).title,
+            start: block.start,
+            end: block.end,
+          });
+        }
+      });
 
       const result = await api.applySchedule(applyBlocks);
       const tasksScheduled = result.tasksScheduled;
@@ -431,11 +429,16 @@ export default function AssistantPage() {
       queueAutoSave([successMessage]);
     } catch (error) {
       console.error('Failed to apply schedule:', error);
+      const detailedMessage =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Failed to apply schedule. Please try again.';
+      setApplyError(detailedMessage);
 
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}_error`,
         role: 'assistant',
-        content: 'Failed to apply schedule. Please try again.',
+        content: detailedMessage,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => {
@@ -762,7 +765,7 @@ export default function AssistantPage() {
               {/* Conversation State - Messages */}
               {messages.length > 0 && (
                 <div className="space-y-4 sm:space-y-6 w-full py-4 sm:py-6">
-                  {messages.map((message, index) => {
+                  {messages.map((message) => {
                     const msgMascotState = message.metadata?.mascotState || 'guiding';
 
                     return (
@@ -900,10 +903,16 @@ export default function AssistantPage() {
                     onCancel={() => {
                       setSchedulePreview(null);
                       setPreviewApplied(false);
+                      setApplyError(null);
                     }}
                     applying={applying}
                     applied={previewApplied}
                   />
+                  {applyError && (
+                    <div className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      {applyError}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

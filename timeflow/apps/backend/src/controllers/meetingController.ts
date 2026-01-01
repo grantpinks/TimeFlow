@@ -340,3 +340,55 @@ export async function downloadMeetingCalendar(
     throw error;
   }
 }
+
+/**
+ * GET /api/user/meetings
+ * Get all meetings for the authenticated user (host view)
+ */
+export async function getUserMeetings(
+  request: FastifyRequest<{ Querystring: { status?: string; upcoming?: string } }>,
+  reply: FastifyReply
+) {
+  const userId = request.userId; // Set by auth middleware
+  const { status, upcoming } = request.query;
+
+  const where: any = { userId };
+
+  // Filter by status
+  if (status) {
+    where.status = status;
+  }
+
+  // Filter upcoming/past
+  if (upcoming === 'true') {
+    where.startDateTime = { gte: new Date() };
+  } else if (upcoming === 'false') {
+    where.startDateTime = { lt: new Date() };
+  }
+
+  const meetings = await prisma.meeting.findMany({
+    where,
+    include: {
+      schedulingLink: {
+        select: { name: true, slug: true },
+      },
+    },
+    orderBy: { startDateTime: upcoming === 'false' ? 'desc' : 'asc' },
+  });
+
+  const formatted = meetings.map((m) => ({
+    id: m.id,
+    inviteeName: m.inviteeName,
+    inviteeEmail: m.inviteeEmail,
+    startDateTime: m.startDateTime.toISOString(),
+    endDateTime: m.endDateTime.toISOString(),
+    status: m.status,
+    notes: m.notes,
+    googleMeetLink: m.googleMeetLink,
+    linkName: m.schedulingLink.name,
+    linkSlug: m.schedulingLink.slug,
+    createdAt: m.createdAt.toISOString(),
+  }));
+
+  reply.send({ meetings: formatted });
+}

@@ -17,15 +17,31 @@ function uniqueByEventId(values: CategoryTrainingExampleSnapshot[]) {
 }
 
 export async function getTrainingProfile(userId: string, categoryId: string) {
-  return prisma.categoryTrainingProfile.findFirst({
-    where: { userId, categoryId },
-  });
+  try {
+    return await prisma.categoryTrainingProfile.findFirst({
+      where: { userId, categoryId },
+    });
+  } catch (error: any) {
+    if (error?.code === 'P2021') {
+      // Table missing; treat as no profile rather than crashing
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function getTrainingProfiles(userId: string) {
-  return prisma.categoryTrainingProfile.findMany({
-    where: { userId },
-  });
+  try {
+    return await prisma.categoryTrainingProfile.findMany({
+      where: { userId },
+    });
+  } catch (error: any) {
+    if (error?.code === 'P2021') {
+      // Table missing; skip training data
+      return [];
+    }
+    throw error;
+  }
 }
 
 export async function upsertTrainingProfile(
@@ -44,25 +60,33 @@ export async function upsertTrainingProfile(
   const exampleEventIds = Array.from(new Set(data.exampleEventIds || []));
   const exampleEventsSnapshot = uniqueByEventId(data.exampleEventsSnapshot || []);
 
-  return prisma.categoryTrainingProfile.upsert({
-    where: { categoryId },
-    create: {
-      userId,
-      categoryId,
-      description: data.description?.trim() || null,
-      includeKeywords,
-      excludeKeywords,
-      exampleEventIds,
-      exampleEventsSnapshot,
-    },
-    update: {
-      description: data.description?.trim() || null,
-      includeKeywords,
-      excludeKeywords,
-      exampleEventIds,
-      exampleEventsSnapshot,
-    },
-  });
+  try {
+    return await prisma.categoryTrainingProfile.upsert({
+      where: { categoryId },
+      create: {
+        userId,
+        categoryId,
+        description: data.description?.trim() || null,
+        includeKeywords,
+        excludeKeywords,
+        exampleEventIds,
+        exampleEventsSnapshot,
+      },
+      update: {
+        description: data.description?.trim() || null,
+        includeKeywords,
+        excludeKeywords,
+        exampleEventIds,
+        exampleEventsSnapshot,
+      },
+    });
+  } catch (error: any) {
+    if (error?.code === 'P2021') {
+      // Table missing; silently skip training persistence
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function addTrainingExample(
@@ -72,17 +96,24 @@ export async function addTrainingExample(
 ) {
   const profile = await getTrainingProfile(userId, categoryId);
   if (!profile) {
-    return prisma.categoryTrainingProfile.create({
-      data: {
-        userId,
-        categoryId,
-        description: null,
-        includeKeywords: [],
-        excludeKeywords: [],
-        exampleEventIds: [example.eventId],
-        exampleEventsSnapshot: [example],
-      },
-    });
+    try {
+      return await prisma.categoryTrainingProfile.create({
+        data: {
+          userId,
+          categoryId,
+          description: null,
+          includeKeywords: [],
+          excludeKeywords: [],
+          exampleEventIds: [example.eventId],
+          exampleEventsSnapshot: [example],
+        },
+      });
+    } catch (error: any) {
+      if (error?.code === 'P2021') {
+        return null;
+      }
+      throw error;
+    }
   }
 
   const exampleEventIds = Array.from(
@@ -96,8 +127,15 @@ export async function addTrainingExample(
     example,
   ]).slice(0, 5);
 
-  return prisma.categoryTrainingProfile.update({
-    where: { categoryId },
-    data: { exampleEventIds, exampleEventsSnapshot },
-  });
+  try {
+    return await prisma.categoryTrainingProfile.update({
+      where: { categoryId },
+      data: { exampleEventIds, exampleEventsSnapshot },
+    });
+  } catch (error: any) {
+    if (error?.code === 'P2021') {
+      return null;
+    }
+    throw error;
+  }
 }

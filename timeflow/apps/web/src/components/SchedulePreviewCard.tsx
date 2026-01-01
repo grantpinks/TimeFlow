@@ -28,6 +28,11 @@ export default function SchedulePreviewCard({
   const getTaskById = (taskId: string) => tasks.find((t) => t.id === taskId);
   const getHabitById = (habitId: string) => habits.find((h) => h.id === habitId);
 
+  const dateKey = (isoString: string) =>
+    new Date(isoString).toLocaleDateString('en-CA', {
+      ...(timeZone ? { timeZone } : {}),
+    });
+
   const formatTime = (isoString: string) =>
     new Date(isoString).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -49,13 +54,15 @@ export default function SchedulePreviewCard({
   );
 
   const blocksByDate = sortedBlocks.reduce((acc, block) => {
-    const date = formatDate(block.start);
-    if (!acc[date]) {
-      acc[date] = [];
+    const key = dateKey(block.start);
+    if (!acc[key]) {
+      acc[key] = { label: formatDate(block.start), blocks: [] as typeof preview.blocks };
     }
-    acc[date].push(block);
+    acc[key].blocks.push(block);
     return acc;
-  }, {} as Record<string, typeof preview.blocks>);
+  }, {} as Record<string, { label: string; blocks: typeof preview.blocks }>);
+
+  const orderedDates = Array.from(new Set(sortedBlocks.map((block) => dateKey(block.start))));
 
   const confidenceColor =
     preview.confidence === 'high'
@@ -102,11 +109,16 @@ export default function SchedulePreviewCard({
 
         {/* Time blocks grouped by date */}
         <div className="space-y-3 sm:space-y-4 mb-4 max-h-[50vh] sm:max-h-none overflow-y-auto pr-1">
-          {Object.entries(blocksByDate).map(([date, blocks]) => (
-            <div key={date} className="border border-slate-200 rounded-lg overflow-hidden">
+          {orderedDates.map((dateKeyItem) => {
+            const entry = blocksByDate[dateKeyItem];
+            if (!entry) return null;
+            const blocks = entry.blocks;
+            const dateLabel = entry.label;
+            return (
+            <div key={dateKeyItem} className="border border-slate-200 rounded-lg overflow-hidden">
               <div className="bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 flex items-center gap-2">
                 <span>📅</span>
-                {date}
+                {dateLabel}
               </div>
               <div className="divide-y divide-slate-100">
                 {blocks.map((block, index) => {
@@ -153,7 +165,8 @@ export default function SchedulePreviewCard({
                 })}
               </div>
             </div>
-          ))}
+          );
+          })}
       </div>
 
         {/* Conflicts/Warnings */}

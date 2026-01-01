@@ -57,6 +57,22 @@ export async function getAvailability(
     }
 
     const user = link.user;
+    const requestedFrom = from;
+    const requestedTo = to;
+
+    // Clamp to booking horizon if configured
+    const horizonEnd =
+      link.maxBookingHorizonDays && link.maxBookingHorizonDays > 0
+        ? DateTime.fromISO(requestedFrom, { zone: user.timeZone })
+            .plus({ days: link.maxBookingHorizonDays })
+            .endOf('day')
+            .toISO()
+        : null;
+
+    const effectiveTo =
+      horizonEnd && DateTime.fromISO(requestedTo) > DateTime.fromISO(horizonEnd)
+        ? horizonEnd
+        : requestedTo;
 
     // Fetch busy events from calendar
     const busyIntervals: Array<{ start: string; end: string }> = [];
@@ -67,8 +83,8 @@ export async function getAvailability(
         const events = await googleCalendarService.getEvents(
           user.id,
           link.calendarId,
-          from,
-          to
+          requestedFrom,
+          effectiveTo
         );
 
         // Filter out transparent events (don't block availability)
@@ -91,8 +107,8 @@ export async function getAvailability(
         const events = await appleCalendarService.getEvents(
           user.id,
           link.calendarId,
-          from,
-          to
+          requestedFrom,
+          effectiveTo
         );
 
         // Filter out transparent events
@@ -114,8 +130,8 @@ export async function getAvailability(
       where: {
         task: { userId: user.id },
         blocksAvailability: true,
-        startDateTime: { gte: new Date(from) },
-        endDateTime: { lte: new Date(to) },
+        startDateTime: { gte: new Date(requestedFrom) },
+        endDateTime: { lte: new Date(effectiveTo) },
       },
     });
 
@@ -130,8 +146,8 @@ export async function getAvailability(
       where: {
         userId: user.id,
         blocksAvailability: true,
-        startDateTime: { gte: new Date(from) },
-        endDateTime: { lte: new Date(to) },
+        startDateTime: { gte: new Date(requestedFrom) },
+        endDateTime: { lte: new Date(effectiveTo) },
       },
     });
 
@@ -142,10 +158,23 @@ export async function getAvailability(
       }))
     );
 
+    // DEBUG: Log meeting preferences and busy intervals (guard for tests without logger)
+    if (request.log && typeof request.log.info === 'function') {
+      request.log.info({
+        meetingStartTime: user.meetingStartTime,
+        meetingEndTime: user.meetingEndTime,
+        blockedDaysOfWeek: user.blockedDaysOfWeek,
+        wakeTime: user.wakeTime,
+        sleepTime: user.sleepTime,
+        busyIntervalsCount: busyIntervals.length,
+        busyIntervals: busyIntervals.slice(0, 5), // Log first 5
+      }, 'Meeting preferences for availability calculation');
+    }
+
     // Build availability slots
     const slots = buildAvailabilitySlots({
-      rangeStart: from,
-      rangeEnd: to,
+      rangeStart: requestedFrom,
+      rangeEnd: effectiveTo,
       durationsMinutes: link.durationsMinutes,
       bufferBeforeMinutes: link.bufferBeforeMinutes,
       bufferAfterMinutes: link.bufferAfterMinutes,
@@ -160,6 +189,8 @@ export async function getAvailability(
       meetingEndTime: user.meetingEndTime,
       blockedDaysOfWeek: user.blockedDaysOfWeek,
       dailyMeetingSchedule: user.dailyMeetingSchedule,
+      maxBookingHorizonDays: link.maxBookingHorizonDays,
+      dailyCap: link.dailyCap,
     });
 
     // Group slots by duration

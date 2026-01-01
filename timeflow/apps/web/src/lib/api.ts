@@ -957,3 +957,82 @@ export async function cancelPublicMeeting(
   }
   return response.json();
 }
+
+/**
+ * Host meeting type for dashboard
+ */
+export interface HostMeeting {
+  id: string;
+  inviteeName: string;
+  inviteeEmail: string;
+  startDateTime: string;
+  endDateTime: string;
+  status: string;
+  notes: string | null;
+  googleMeetLink: string | null;
+  linkName: string;
+  linkSlug: string;
+  createdAt: string;
+}
+
+/**
+ * Get user meetings with filtering (for dashboard)
+ */
+export async function getUserMeetings(params?: {
+  status?: string;
+  upcoming?: boolean;
+}): Promise<{ meetings: HostMeeting[] }> {
+  const query = new URLSearchParams();
+  if (params?.status) query.append('status', params.status);
+  if (params?.upcoming !== undefined) query.append('upcoming', String(params.upcoming));
+
+  return request<{ meetings: HostMeeting[] }>(
+    `/user/meetings?${query.toString()}`
+  );
+}
+
+/**
+ * Email Category Override Types
+ */
+export interface EmailCategoryOverride {
+  id: string;
+  userId: string;
+  overrideType: 'sender' | 'domain' | 'threadId';
+  overrideValue: string;
+  categoryName: string;
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get all email category overrides for the authenticated user
+ */
+export async function getEmailOverrides(): Promise<{ overrides: EmailCategoryOverride[] }> {
+  return request<{ overrides: EmailCategoryOverride[] }>('/email/overrides');
+}
+
+/**
+ * Create or update an email category override
+ */
+export async function createEmailOverride(data: {
+  overrideType: 'sender' | 'domain' | 'threadId';
+  overrideValue: string;
+  categoryName: string;
+  reason?: string;
+}): Promise<{ override: EmailCategoryOverride }> {
+  return request<{ override: EmailCategoryOverride }>('/email/overrides', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Delete an email category override
+ */
+export async function deleteEmailOverride(overrideId: string): Promise<void> {
+  return request<void>(`/email/overrides/${overrideId}`, {
+    method: 'DELETE',
+  });
+}

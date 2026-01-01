@@ -112,8 +112,17 @@ export async function applySchedule(
     return result;
   } catch (error) {
     request.log.error(error, 'Apply schedule failed');
-    if (error instanceof Error && error.message.startsWith('Schedule validation failed')) {
-      return reply.status(400).send({ error: error.message });
+    if (error instanceof Error) {
+      const message = error.message || 'Apply schedule failed';
+      if (message.startsWith('Schedule validation failed')) {
+        return reply.status(400).send({ error: message });
+      }
+      if (
+        message.includes('Google Calendar') ||
+        message.includes('not authenticated with Google')
+      ) {
+        return reply.status(400).send({ error: message });
+      }
     }
     return reply.status(500).send({ error: 'Apply schedule failed' });
   }
@@ -159,4 +168,3 @@ export async function rescheduleTask(
     return reply.status(500).send({ error: 'Reschedule failed' });
   }
 }
-

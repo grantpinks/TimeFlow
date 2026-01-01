@@ -43,6 +43,10 @@ export async function scheduleTasksForUser(
     throw new Error('User not found');
   }
 
+  if (!user.googleAccessToken) {
+    throw new Error('Google Calendar is not connected. Connect it to apply schedule.');
+  }
+
   const calendarId = user.defaultCalendarId || 'primary';
 
   // 2. Fetch tasks
@@ -269,13 +273,17 @@ export async function applyScheduleBlocks(
   }
 
   let habitMap = new Map<string, { id: string; title: string }>();
+  let habitDetails = new Map<
+    string,
+    { id: string; title: string; frequency: string; daysOfWeek: string[]; durationMinutes: number; preferredTimeOfDay: string | null }
+  >();
   if (habitIds.length > 0) {
     const habits = await prisma.habit.findMany({
       where: {
         id: { in: habitIds },
         userId,
       },
-      select: { id: true, title: true },
+      select: { id: true, title: true, frequency: true, daysOfWeek: true, durationMinutes: true, preferredTimeOfDay: true },
     });
 
     if (habits.length !== habitIds.length) {
@@ -285,6 +293,7 @@ export async function applyScheduleBlocks(
     }
 
     habitMap = new Map(habits.map((habit) => [habit.id, habit]));
+    habitDetails = new Map(habits.map((habit) => [habit.id, habit]));
   }
 
   const parsedDates = blocks.map((block) => ({
@@ -363,6 +372,10 @@ export async function applyScheduleBlocks(
   if (habitBlocks.length > 0) {
     const { fixed: fixedEvents } = separateFixedAndMovable(calendarEvents);
     const habitErrors: string[] = [];
+    const habitWarnings: string[] = [];
+    const dateKey = (iso: string) =>
+      new Date(iso).toLocaleDateString('en-CA', { timeZone: userPrefs.timeZone || 'UTC' });
+    const weekdayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
     habitBlocks.forEach((block) => {
       const startDate = new Date(block.start);
@@ -387,9 +400,51 @@ export async function applyScheduleBlocks(
       }
     });
 
+    // Frequency coverage: ensure daily habits have blocks for each day in the next 7 days,
+    // and weekly habits cover their specified days within the range.
+    const dayKeys: string[] = [];
+    const localStart = new Date(rangeStart);
+    for (let i = 0; i < 7; i += 1) {
+      const cursor = new Date(localStart);
+      cursor.setDate(cursor.getDate() + i);
+      dayKeys.push(cursor.toLocaleDateString('en-CA', { timeZone: userPrefs.timeZone || 'UTC' }));
+    }
+
+    habitDetails.forEach((habit) => {
+      const blocks = habitBlocks.filter((b) => b.habitId === habit.id);
+      const blockDays = new Set(blocks.map((b) => dateKey(b.start)));
+
+      let expected: string[] = [];
+      if (habit.frequency === 'daily') {
+        expected = dayKeys;
+      } else if (habit.frequency === 'weekly' && habit.daysOfWeek?.length) {
+        expected = dayKeys.filter((d) => {
+          const day = new Date(d).getDay();
+          const abbrev = weekdayMap[day];
+          return habit.daysOfWeek.includes(abbrev);
+        });
+      }
+
+      if (expected.length === 0) {
+        return;
+      }
+
+      const missing = expected.filter((d) => !blockDays.has(d));
+      if (missing.length > 0) {
+        const formatted = missing
+          .map((d) => new Date(d).toLocaleDateString('en-US', { timeZone: userPrefs.timeZone || 'UTC', weekday: 'short', month: 'short', day: 'numeric' }))
+          .join(', ');
+        const label = habit.frequency === 'daily' ? 'daily' : 'weekly';
+        habitWarnings.push(`Habit ${habit.title} is missing ${label} blocks for: ${formatted}`);
+      }
+    });
+
     if (habitErrors.length > 0) {
       throw new Error(`Schedule validation failed: ${habitErrors.join(' | ')}`);
     }
+
+    // We currently do not return conflicts on apply; do not block apply for coverage warnings.
+    void habitWarnings;
   }
 
   // Ensure blocks don't overlap each other.
@@ -545,4 +600,3 @@ export async function rescheduleTask(
     });
   }
 }
-

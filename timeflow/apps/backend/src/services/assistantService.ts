@@ -17,10 +17,13 @@ import {
 import {
   validateSchedulePreview,
   applyValidationToPreview,
+  hasTimeOverlap,
+  isWithinWakeHours,
   type UserPreferences,
 } from '../utils/scheduleValidator.js';
 import { buildAvailabilitySummary } from '../utils/availability.js';
 import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
+import { DateTime } from 'luxon';
 
 /**
  * Get the PromptManager singleton instance
@@ -493,7 +496,13 @@ export async function processMessage(
     const systemPrompt = promptManager.getPrompt(mode);
 
     // Build the context prompt with user data and classified events
-    const { contextPrompt, calendarEvents, taskIds, habitIds } = await buildContextPrompt(
+    const {
+      contextPrompt,
+      calendarEvents,
+      taskIds,
+      habitIds,
+      habits: contextHabits,
+    } = await buildContextPrompt(
       userId,
       message,
       mode,
@@ -531,7 +540,23 @@ export async function processMessage(
     }
 
     // Call the LLM API with mode-specific system prompt
-    const llmResponse = await callLocalLLM(contextPrompt, resolvedHistory, systemPrompt, mode);
+    let llmResponse: string;
+    try {
+      llmResponse = await callLocalLLM(contextPrompt, resolvedHistory, systemPrompt, mode);
+    } catch (error) {
+      console.error('LLM call failed', error);
+      const fallbackContent =
+        "I couldn't reach the scheduling model just now, so I didn't make changes. Please try again in a moment or refresh the assistant.";
+      return {
+        message: {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: fallbackContent,
+          timestamp: new Date().toISOString(),
+          metadata: { mascotState: 'guiding' },
+        },
+      };
+    }
 
     // Parse the response to extract structured data
     let { naturalLanguage, schedulePreview } = parseResponse(llmResponse);
@@ -565,6 +590,20 @@ export async function processMessage(
 
       logDebug(
         `[AssistantService][Debug] Validation: ${validation.valid ? 'PASSED' : 'FAILED'} (errors=${validation.errors.length}, warnings=${validation.warnings.length})`
+      );
+
+      // Auto-fill missing habit days when possible to reduce friction
+      schedulePreview = fillMissingHabitBlocks(
+        schedulePreview,
+        contextHabits,
+        calendarEvents,
+        userPrefs
+      );
+
+      schedulePreview = applyHabitFrequencyConflicts(
+        schedulePreview,
+        contextHabits,
+        user.timeZone
       );
     }
 
@@ -645,6 +684,15 @@ async function buildContextPrompt(
   calendarEvents: any[];
   taskIds: string[];
   habitIds: string[];
+  habits: {
+    id: string;
+    title: string;
+    frequency: string;
+    daysOfWeek: string[];
+    durationMinutes: number;
+    preferredTimeOfDay: string | null;
+  }[];
+  skippedHabitIds: Set<string>;
 }> {
   // Fetch user with preferences
   const user = await prisma.user.findUnique({
@@ -687,7 +735,18 @@ async function buildContextPrompt(
     orderBy: {
       createdAt: 'asc',
     },
+    select: {
+      id: true,
+      title: true,
+      frequency: true,
+      daysOfWeek: true,
+      durationMinutes: true,
+      preferredTimeOfDay: true,
+    },
   });
+
+  const skippedHabitIds = detectSkippedHabits(habits, userMessage);
+  const activeHabits = habits.filter((habit) => !skippedHabitIds.has(habit.id));
 
   // Fetch Google Calendar events for the next 7 days
   const now = new Date();
@@ -793,7 +852,9 @@ async function buildContextPrompt(
   } else {
     prompt += "**Unscheduled Tasks**: None! You're all caught up.\n\n";
     if (mode === 'scheduling') {
-      if (includeScheduledTaskIds) {
+      if (habits.length > 0) {
+        prompt += "**Scheduling Status**: No unscheduled tasks are available, but the user has active habits listed below. Focus on scheduling those habits using their habitId values and DO NOT invent new tasks.\n\n";
+      } else if (includeScheduledTaskIds) {
         prompt += "**Rescheduling Status**: No unscheduled tasks available. Focus on moving tasks listed under \"Already Scheduled Tasks\" only.\n\n";
       } else {
         prompt += "**Scheduling Status**: No unscheduled tasks are available to schedule. If the user asked to schedule, explain that they need to add tasks first.\n\n";
@@ -830,9 +891,9 @@ async function buildContextPrompt(
   }
 
   // Add active habits
-  if (habits.length > 0) {
-    prompt += `**Active Habits** (${habits.length} habits):\n`;
-    habits.forEach((habit, index) => {
+  if (activeHabits.length > 0) {
+    prompt += `**Active Habits** (${activeHabits.length} habits):\n`;
+    activeHabits.forEach((habit, index) => {
       const frequencyText =
         habit.frequency === 'daily' ? 'Daily' :
         habit.frequency === 'weekly' ? `Weekly (${habit.daysOfWeek.join(', ')})` :
@@ -849,8 +910,18 @@ async function buildContextPrompt(
       }
     });
     prompt += '\n';
+    prompt += `**Habit Scheduling Rules**:\n`;
+    prompt += `- Use "habitId" for habit blocks (do NOT put habit IDs in "taskId").\n`;
+    prompt += `- Schedule within the next 7 days, honoring frequency/daysOfWeek and preferred time of day when provided.\n`;
+    prompt += `- Set start/end using the habit durationMinutes; one block per day for daily habits, and one per listed day for weekly habits.\n`;
+    prompt += `- If there are no unscheduled tasks, it is OK to return only habit blocks.\n\n`;
   } else {
     prompt += "**Active Habits**: None set up yet.\n\n";
+  }
+
+  if (skippedHabitIds.size > 0) {
+    const skipped = habits.filter((h) => skippedHabitIds.has(h.id)).map((h) => h.title).join(', ');
+    prompt += `**Skip These Habits (per user request)**: ${skipped}\n\n`;
   }
 
   // Classify calendar events into fixed vs movable (Sprint 13.7)
@@ -934,7 +1005,9 @@ async function buildContextPrompt(
     contextPrompt: prompt,
     calendarEvents,
     taskIds,
-    habitIds,
+    habitIds: activeHabits.map((habit) => habit.id),
+    habits: activeHabits,
+    skippedHabitIds,
   };
 }
 
@@ -1161,24 +1234,47 @@ function sanitizeSchedulePreview(
   validHabitIds: string[]
 ): SchedulePreview {
   const conflicts = [...preview.conflicts];
-  const blocks = preview.blocks.filter((block) => {
+  const blocks = preview.blocks.reduce<SchedulePreview['blocks']>((acc, block) => {
+    const isValidTask = Boolean(block.taskId && validTaskIds.includes(block.taskId));
+    const isValidHabit = Boolean(block.habitId && validHabitIds.includes(block.habitId));
+    const habitFromTaskId =
+      !block.habitId && block.taskId && validHabitIds.includes(block.taskId);
+
+    // Prefer a clean task block when the taskId is valid
+    if (isValidTask && !isValidHabit) {
+      const cleaned = { ...block };
+      delete (cleaned as any).habitId;
+      acc.push(cleaned);
+      return acc;
+    }
+
+    // Normalize to a habit block when habitId is valid (even if taskId was also present)
+    if (isValidHabit) {
+      const cleaned = { ...block, habitId: block.habitId };
+      delete (cleaned as any).taskId;
+      acc.push(cleaned);
+      return acc;
+    }
+
+    // Allow LLMs that incorrectly put the habit ID into taskId
+    if (habitFromTaskId) {
+      const cleaned = { ...block, habitId: block.taskId };
+      delete (cleaned as any).taskId;
+      acc.push(cleaned);
+      return acc;
+    }
+
     if (block.taskId) {
-      if (!validTaskIds.includes(block.taskId)) {
-        conflicts.push(`Dropped block with unknown taskId: ${block.taskId}`);
-        return false;
-      }
-      return true;
+      conflicts.push(`Dropped block with unknown taskId: ${block.taskId}`);
+      return acc;
     }
     if (block.habitId) {
-      if (!validHabitIds.includes(block.habitId)) {
-        conflicts.push(`Dropped block with unknown habitId: ${block.habitId}`);
-        return false;
-      }
-      return true;
+      conflicts.push(`Dropped block with unknown habitId: ${block.habitId}`);
+      return acc;
     }
     conflicts.push('Dropped block missing taskId/habitId');
-    return false;
-  });
+    return acc;
+  }, []);
 
   if (preview.blocks.length > 0 && blocks.length === 0) {
     conflicts.push('No valid blocks remain after sanitization.');
@@ -1189,6 +1285,248 @@ function sanitizeSchedulePreview(
     blocks,
     conflicts,
     confidence: conflicts.length > 0 && preview.confidence === 'high' ? 'medium' : preview.confidence,
+  };
+}
+
+/**
+ * Add conflicts when a habit's frequency/days are not fully covered.
+ */
+function applyHabitFrequencyConflicts(
+  preview: SchedulePreview,
+  habits: {
+    id: string;
+    title: string;
+    frequency: string;
+    daysOfWeek: string[];
+    durationMinutes: number;
+    preferredTimeOfDay: string | null;
+  }[],
+  timeZone: string
+): SchedulePreview {
+  if (!habits || habits.length === 0) {
+    return preview;
+  }
+
+  const conflicts = [...preview.conflicts];
+
+  // Helper to format a date key in the user's timezone
+  const toDateKey = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-CA', { timeZone });
+
+  // Next 7 days starting today (local to user)
+  const today = new Date();
+  const dayKeys: string[] = [];
+  for (let i = 0; i < 7; i += 1) {
+    const cursor = new Date(today);
+    cursor.setDate(cursor.getDate() + i);
+    dayKeys.push(cursor.toLocaleDateString('en-CA', { timeZone }));
+  }
+
+  const weekdayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+  habits.forEach((habit) => {
+    const blocks = preview.blocks.filter((b) => b.habitId === habit.id);
+    const blockDays = new Set(blocks.map((b) => toDateKey(b.start)));
+
+    let expectedDays: string[] = [];
+    if (habit.frequency === 'daily') {
+      expectedDays = dayKeys;
+    } else if (habit.frequency === 'weekly' && habit.daysOfWeek?.length) {
+      expectedDays = dayKeys.filter((dateKey) => {
+        const day = new Date(dateKey).getDay();
+        const abbrev = weekdayMap[day];
+        return habit.daysOfWeek.includes(abbrev);
+      });
+    }
+
+    if (expectedDays.length === 0) {
+      return;
+    }
+
+    const missing = expectedDays.filter((d) => !blockDays.has(d));
+    if (missing.length > 0) {
+      const formattedMissing = missing
+        .map((d) => new Date(d).toLocaleDateString('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric' }))
+        .join(', ');
+      const freqLabel = habit.frequency === 'daily' ? 'daily' : 'weekly';
+      conflicts.push(`Habit "${habit.title}" is missing ${freqLabel} blocks for: ${formattedMissing}`);
+    }
+  });
+
+  if (conflicts.length === preview.conflicts.length) {
+    return preview;
+  }
+
+  return {
+    ...preview,
+    conflicts,
+    confidence: preview.confidence === 'high' ? 'medium' : preview.confidence,
+  };
+}
+
+/**
+ * Detect habit IDs the user asked to skip (e.g., "skip guitar practice", "minus read").
+ */
+function detectSkippedHabits(
+  habits: {
+    id: string;
+    title: string;
+  }[],
+  userMessage: string
+): Set<string> {
+  const skipped = new Set<string>();
+  if (!habits.length || !userMessage) return skipped;
+
+  const lower = userMessage.toLowerCase();
+  const skipKeywords = ['skip', 'minus', 'except', 'without', 'omit', "don't include", 'exclude'];
+
+  habits.forEach((habit) => {
+    const titleLower = habit.title.toLowerCase();
+    const hasTitle = lower.includes(titleLower);
+    const hasSkipKeyword = skipKeywords.some((kw) => lower.includes(kw));
+    if (hasTitle && hasSkipKeyword) {
+      skipped.add(habit.id);
+    }
+  });
+
+  return skipped;
+}
+
+/**
+ * Attempt to auto-fill missing habit days using simple heuristics.
+ * - Uses first provided block time or preferredTimeOfDay as base time
+ * - Tries to avoid fixed events and overlaps within wake/sleep
+ */
+function fillMissingHabitBlocks(
+  preview: SchedulePreview,
+  habits: {
+    id: string;
+    title: string;
+    frequency: string;
+    daysOfWeek: string[];
+    durationMinutes: number;
+    preferredTimeOfDay: string | null;
+  }[],
+  calendarEvents: any[],
+  userPrefs: UserPreferences
+): SchedulePreview {
+  if (!habits || habits.length === 0) {
+    return preview;
+  }
+
+  const fixedEvents = separateFixedAndMovable(calendarEvents).fixed;
+  const blocks = [...preview.blocks];
+  const conflicts = [...preview.conflicts];
+
+  const dateKey = (iso: string) =>
+    DateTime.fromISO(iso, { zone: userPrefs.timeZone }).toFormat('yyyy-LL-dd');
+
+  const dayKeys: string[] = [];
+  const now = DateTime.now().setZone(userPrefs.timeZone);
+  for (let i = 0; i < 7; i += 1) {
+    dayKeys.push(now.plus({ days: i }).toFormat('yyyy-LL-dd'));
+  }
+  const weekdayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+  const baseTimeForHabit = (
+    habitId: string,
+    preferredTimeOfDay: string | null,
+    durationMinutes: number
+  ): { hour: number; minute: number } => {
+    const existing = blocks.find((b) => b.habitId === habitId);
+    if (existing) {
+      const dt = DateTime.fromISO(existing.start, { zone: userPrefs.timeZone });
+      return { hour: dt.hour, minute: dt.minute };
+    }
+    if (preferredTimeOfDay === 'morning') return { hour: 9, minute: 0 };
+    if (preferredTimeOfDay === 'afternoon') return { hour: 13, minute: 0 };
+    if (preferredTimeOfDay === 'evening') return { hour: 19, minute: 0 };
+    const [wakeHour, wakeMinute] = (userPrefs.wakeTime || '08:00').split(':').map(Number);
+    return { hour: wakeHour + 1, minute: wakeMinute || 0 };
+  };
+
+  const makeBlockISO = (day: string, hour: number, minute: number, duration: number) => {
+    const startLocal = DateTime.fromISO(`${day}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`, {
+      zone: userPrefs.timeZone,
+    });
+    const endLocal = startLocal.plus({ minutes: duration });
+    return {
+      start: startLocal.toUTC().toISO(),
+      end: endLocal.toUTC().toISO(),
+    };
+  };
+
+  const overlapsBlocks = (start: string, end: string) =>
+    blocks.some((b) => hasTimeOverlap(start, end, b.start, b.end));
+
+  habits.forEach((habit) => {
+    const habitBlocks = blocks.filter((b) => b.habitId === habit.id);
+    const habitDayKeys = new Set(habitBlocks.map((b) => dateKey(b.start)));
+    const requiredDays =
+      habit.frequency === 'daily'
+        ? dayKeys
+        : habit.daysOfWeek && habit.daysOfWeek.length
+          ? dayKeys.filter((d) => {
+              const dow = weekdayMap[DateTime.fromISO(d, { zone: userPrefs.timeZone }).weekday % 7];
+              return habit.daysOfWeek.includes(dow);
+            })
+          : [];
+
+    if (requiredDays.length === 0) return;
+
+    const baseTime = baseTimeForHabit(habit.id, habit.preferredTimeOfDay, habit.durationMinutes);
+
+    requiredDays.forEach((day) => {
+      if (habitDayKeys.has(day)) {
+        return;
+      }
+
+      const candidateSlots: Array<{ start: string; end: string }> = [];
+      for (let offset = 0; offset < 4; offset += 1) {
+        const hour = baseTime.hour + offset;
+        const minute = baseTime.minute;
+        const { start, end } = makeBlockISO(day, hour, minute, habit.durationMinutes);
+        candidateSlots.push({ start, end });
+      }
+
+      const placed = candidateSlots.find((slot) => {
+        // Wake/sleep check
+        const wakeCheck = isWithinWakeHours(slot.start, slot.end, userPrefs);
+        if (!wakeCheck.valid) return false;
+
+        // Fixed event overlap check
+        const overlapsFixed = fixedEvents.some((event) =>
+          hasTimeOverlap(slot.start, slot.end, event.start, event.end)
+        );
+        if (overlapsFixed) return false;
+
+        // Other blocks overlap check
+        if (overlapsBlocks(slot.start, slot.end)) return false;
+
+        return true;
+      });
+
+      if (placed) {
+        blocks.push({
+          habitId: habit.id,
+          start: placed.start,
+          end: placed.end,
+        } as any);
+        habitDayKeys.add(day);
+      } else {
+        const label = DateTime.fromISO(day, { zone: userPrefs.timeZone }).toFormat('ccc, LLL d');
+        conflicts.push(`Habit "${habit.title}" could not be placed on ${label} without conflicts.`);
+      }
+    });
+  });
+
+  return {
+    ...preview,
+    blocks,
+    conflicts,
+    confidence: conflicts.length > preview.conflicts.length && preview.confidence === 'high'
+      ? 'medium'
+      : preview.confidence,
   };
 }
 
@@ -1315,4 +1653,7 @@ export const __test__ = {
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
+  applyHabitFrequencyConflicts,
+  fillMissingHabitBlocks,
+  detectSkippedHabits,
 };

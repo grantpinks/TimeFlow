@@ -8,7 +8,7 @@ This document provides an overview of features that are currently planned or in 
 
 ### 1. Smart Meeting Scheduling Links (Standalone)
 
-**Status**: Planned (Documentation)
+**Status**: In Progress (implementation underway)
 
 **Overview**:
 TimeFlow will ship reliable, standalone booking links (Calendly-style) so others can book time based on the user’s real availability, with strong constraints and safe concurrency handling.
@@ -22,6 +22,7 @@ TimeFlow will ship reliable, standalone booking links (Calendly-style) so others
 
 **Docs**:
 - Sprint plan: `docs/SPRINT_15_MEETING_SCHEDULING_PLAN.md`
+- QA checklist: `docs/SPRINT_15_MEETING_SCHEDULING_QA.md`
 
 ---
 
@@ -51,7 +52,11 @@ TimeFlow already categorizes your inbox on the TimeFlow dashboard. This feature 
 1. **Create Labels**: When enabled, TimeFlow creates/ensures a set of `TimeFlow/*` labels using the Gmail API.
 2. **Color Mapping**: Category colors are mapped into Gmail’s supported label color palette (best-effort) with user overrides in Settings.
 3. **Thread-Level Apply**: TimeFlow applies the category label to the entire conversation thread (not just a single message) for consistency.
-4. **Background Sync**: New mail is labeled via Gmail `watch` + Pub/Sub push notifications; if watch is unavailable, a bounded “sync-on-inbox-fetch” fallback is used.
+4. **Phase A (Ship value + trust, no Pub/Sub dependency)**: Users can run a manual “Sync now” and/or labels are applied via a bounded “sync-on-inbox-fetch” fallback. This phase includes the trust loop: user corrections + “Why this label?” transparency.
+5. **Phase B (Optional background sync)**: New mail is labeled via Gmail `watch` + Pub/Sub push notifications.
+
+**Trust gate**:
+- TimeFlow should not write labels into Gmail until users can correct misclassifications and see a “Why this label?” explanation.
 
 **Docs**:
 - Sprint plan: `docs/SPRINT_16_PLAN.md`

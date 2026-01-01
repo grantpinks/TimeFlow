@@ -7,7 +7,7 @@
 'use client';
 
 import { useState } from 'react';
-import Layout from '@/components/Layout';
+import { Layout } from '@/components/Layout';
 import { useCategories } from '@/hooks/useCategories';
 import ColorPicker from '@/components/ColorPicker';
 import { CategoryTrainingPanel } from '@/components/CategoryTrainingPanel';

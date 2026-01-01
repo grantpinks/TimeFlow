@@ -220,7 +220,7 @@ export async function createEvent(
   },
   enableMeet = false,
   skipConflictCheck = false
-): Promise<string> {
+): Promise<{ eventId: string; meetLink?: string }> {
   const calendar = await getCalendarClient(userId);
 
   // Conflict detection: Check for overlapping events
@@ -273,11 +273,19 @@ export async function createEvent(
     throw new Error('Failed to create calendar event');
   }
 
+  // Extract Google Meet link if available
+  const meetLink = response.data.conferenceData?.entryPoints?.find(
+    (entry) => entry.entryPointType === 'video'
+  )?.uri;
+
   console.log(
-    `[GoogleCalendar] Created event "${event.summary}" with ID ${response.data.id}`
+    `[GoogleCalendar] Created event "${event.summary}" with ID ${response.data.id}${meetLink ? ` and Meet link ${meetLink}` : ''}`
   );
 
-  return response.data.id;
+  return {
+    eventId: response.data.id,
+    meetLink,
+  };
 }
 
 /**
@@ -366,6 +374,31 @@ export async function deleteEvent(
 }
 
 /**
+ * Mark an event as cancelled without deleting it.
+ */
+export async function cancelEvent(
+  userId: string,
+  calendarId: string,
+  eventId: string
+): Promise<void> {
+  const calendar = await getCalendarClient(userId);
+
+  await withRetry(
+    () =>
+      calendar.events.patch({
+        calendarId: calendarId || 'primary',
+        eventId,
+        requestBody: {
+          status: 'cancelled',
+        },
+      }),
+    `cancelEvent(${eventId})`
+  );
+
+  console.log(`[GoogleCalendar] Cancelled event ${eventId}`);
+}
+
+/**
  * List the user's calendars.
  */
 export async function listCalendars(userId: string) {
@@ -382,4 +415,3 @@ export async function listCalendars(userId: string) {
     primary: cal.primary || false,
   }));
 }
-

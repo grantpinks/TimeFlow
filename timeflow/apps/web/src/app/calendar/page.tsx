@@ -12,6 +12,8 @@ import { UpcomingEventsPanel } from '@/components/UpcomingEventsPanel';
 import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
+import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
+import { Panel } from '@/components/ui/Panel';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
 import type { CalendarEvent, Task } from '@timeflow/shared';
@@ -28,12 +30,13 @@ export default function CalendarPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeDragTask, setActiveDragTask] = useState<any | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const [recentlyCompletedTaskIds, setRecentlyCompletedTaskIds] = useState<Set<string>>(new Set());
-
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const [previewSlot, setPreviewSlot] = useState<{ start: Date; end: Date } | null>(null);
   const [isSchedulingFromPreview, setIsSchedulingFromPreview] = useState(false);
+  // Filter state
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [showEvents, setShowEvents] = useState(true);
 
   // Fetch calendar events for the current month
   const fetchExternalEvents = async () => {
@@ -61,6 +64,8 @@ export default function CalendarPage() {
       try {
         const cats = await api.getCategories();
         setCategories(cats);
+        // Initialize all categories as selected
+        setSelectedCategories(new Set(cats.map(c => c.id)));
       } catch (err) {
         console.error('Failed to fetch categories:', err);
       }
@@ -105,6 +110,20 @@ export default function CalendarPage() {
       return true;
     });
   }, [externalEvents, timeflowEventIds]);
+
+  // Filtered events based on category selection and show events toggle
+  const filteredExternalEvents = useMemo(() => {
+    if (!showEvents) return [];
+    if (selectedCategories.size === 0) return [];
+    if (selectedCategories.size === categories.length) return displayExternalEvents;
+
+    return displayExternalEvents.filter((event) => {
+      if (!event.id) return false;
+      const categorization = eventCategorizations[event.id];
+      if (!categorization) return true; // Show uncategorized events
+      return selectedCategories.has(categorization.categoryId);
+    });
+  }, [displayExternalEvents, showEvents, selectedCategories, eventCategorizations, categories.length]);
 
   // Fetch event categorizations with caching and background auto-categorization
   useEffect(() => {
@@ -333,19 +352,6 @@ export default function CalendarPage() {
     try {
       await api.completeTask(taskId);
       await refreshTasks();
-      setRecentlyCompletedTaskIds((prev) => {
-        const next = new Set(prev);
-        next.add(taskId);
-        return next;
-      });
-      window.setTimeout(() => {
-        setRecentlyCompletedTaskIds((prev) => {
-          if (!prev.has(taskId)) return prev;
-          const next = new Set(prev);
-          next.delete(taskId);
-          return next;
-        });
-      }, 1200);
       setMessage({
         type: 'success',
         text: 'Task completed!',
@@ -450,6 +456,21 @@ export default function CalendarPage() {
     setPreviewSlot(null);
   };
 
+  // Filter handlers
+  const handleCategoryToggle = (categoryId: string) => {
+    const newSelected = new Set(selectedCategories);
+    if (newSelected.has(categoryId)) {
+      newSelected.delete(categoryId);
+    } else {
+      newSelected.add(categoryId);
+    }
+    setSelectedCategories(newSelected);
+  };
+
+  const handleToggleEvents = () => {
+    setShowEvents(!showEvents);
+  };
+
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
 
@@ -512,6 +533,13 @@ export default function CalendarPage() {
             </div>
             <div className="flex flex-col gap-5">
               <div className="flex items-center gap-5">
+                <CalendarFiltersPopover
+                  categories={categories}
+                  selectedCategories={selectedCategories}
+                  onCategoryToggle={handleCategoryToggle}
+                  showEvents={showEvents}
+                  onToggleEvents={handleToggleEvents}
+                />
                 <a
                   href="/categories"
                   className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs font-medium text-slate-700 hover:border-primary-200 hover:text-primary-700"
@@ -619,27 +647,6 @@ export default function CalendarPage() {
                   </button>
                 </div>
               </div>
-
-              {/* Category Legend */}
-              <div className="flex items-center justify-center gap-4 text-xs">
-                {categories.slice(0, 4).map((cat) => (
-                  <div key={cat.id} className="flex items-center gap-2">
-                    <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: cat.color }}
-                    ></span>
-                    <span className="text-slate-600 font-medium">{cat.name}</span>
-                  </div>
-                ))}
-                {categories.length > 4 && (
-                  <span className="text-slate-400">+{categories.length - 4}</span>
-                )}
-                <div className="w-px h-4 bg-slate-300 mx-2"></div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded bg-slate-500"></span>
-                  <span className="text-slate-600 font-medium">Events</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -659,24 +666,51 @@ export default function CalendarPage() {
 
         {/* Dashboard Layout: Left Rail + Main Panel */}
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-12 flex-1 overflow-hidden bg-white">
-            {/* Left Rail - Panels */}
-            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full border-r border-slate-200 overflow-y-auto" style={{ direction: 'rtl' }}>
-              <div style={{ direction: 'ltr' }} className="flex flex-col">
-                <MiniCalendar
-                  events={displayExternalEvents}
-                  tasks={tasks}
-                  selectedDate={calendarDate}
-                  onDateClick={setCalendarDate}
-                />
-                <TimeBreakdown tasks={tasks.filter((t) => t.status === 'scheduled')} />
-                <UpcomingEventsPanel events={displayExternalEvents} />
-                <UnscheduledTasksPanel
-                  tasks={unscheduledTasks}
-                  onCompleteTask={handleCompleteTaskById}
-                  onDeleteTask={handleDeleteTaskById}
-                />
-                <MeetingManagementPanel />
+          <div className="grid grid-cols-12 flex-1 overflow-hidden bg-slate-50">
+            {/* Left Rail - Unified Sidebar Panel */}
+            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full overflow-y-auto bg-white">
+              <div className="p-4 space-y-6">
+                {/* Remove border-b from child components via CSS override */}
+                <style jsx>{`
+                  div :global(.border-b) {
+                    border-bottom: none !important;
+                  }
+                  div :global(.bg-white) {
+                    background: transparent !important;
+                  }
+                  div :global(.p-3) {
+                    padding: 0 !important;
+                  }
+                `}</style>
+
+                <div>
+                  <MiniCalendar
+                    events={filteredExternalEvents}
+                    tasks={tasks}
+                    selectedDate={calendarDate}
+                    onDateClick={setCalendarDate}
+                  />
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <TimeBreakdown tasks={tasks.filter((t) => t.status === 'scheduled')} />
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <UpcomingEventsPanel events={filteredExternalEvents} />
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <UnscheduledTasksPanel
+                    tasks={unscheduledTasks}
+                    onCompleteTask={handleCompleteTaskById}
+                    onDeleteTask={handleDeleteTaskById}
+                  />
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <MeetingManagementPanel />
+                </div>
               </div>
             </div>
 
@@ -689,11 +723,10 @@ export default function CalendarPage() {
               ) : (
                 <CalendarView
                   tasks={tasks}
-                  externalEvents={displayExternalEvents}
+                  externalEvents={filteredExternalEvents}
                   eventCategorizations={eventCategorizations}
                   categories={categories}
                   selectedDate={calendarDate}
-                  recentlyCompletedTaskIds={recentlyCompletedTaskIds}
                   onRescheduleTask={handleRescheduleTask}
                   onCompleteTask={handleCompleteTaskById}
                   onEditTask={handleEditTaskById}

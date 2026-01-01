@@ -24,6 +24,7 @@ model User {
   defaultCalendarId          String?
   dailySchedule              Json?
   dailyScheduleConstraints   Json?
+  sidebarNavOrder            String[]            @default([])
 
   // Meeting-specific availability preferences
   meetingStartTime           String?             // HH:mm - default earliest meeting time
@@ -37,6 +38,7 @@ model User {
   categoryTrainingProfiles   CategoryTrainingProfile[]
   conversations              Conversation[]
   emailCategoryConfigs       EmailCategoryConfig[]
+  emailCategoryOverrides     EmailCategoryOverride[]
   eventCategorizations       EventCategorization[]
   habits                     Habit[]
   scheduledHabits            ScheduledHabit[]
@@ -276,6 +278,7 @@ model Meeting {
   endDateTime      DateTime
   status           String   @default("scheduled")
   googleEventId    String?
+  googleMeetLink   String?
   appleEventUrl    String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -318,4 +321,21 @@ model AppleCalendarAccount {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
+}
+
+model EmailCategoryOverride {
+  id             String   @id @default(cuid())
+  userId         String
+  overrideType   String   // "sender" | "domain" | "threadId"
+  overrideValue  String   // email address, domain, or thread ID
+  categoryName   String   // Category to apply
+  reason         String?  // Optional user note
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, overrideType, overrideValue])
+  @@index([userId])
+  @@index([overrideType, overrideValue])
 }

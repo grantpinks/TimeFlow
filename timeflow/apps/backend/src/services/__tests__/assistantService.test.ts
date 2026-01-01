@@ -10,6 +10,9 @@ const {
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
+  applyHabitFrequencyConflicts,
+  fillMissingHabitBlocks,
+  detectSkippedHabits,
 } = __test__;
 
 describe('assistantService helpers', () => {
@@ -248,6 +251,149 @@ describe('assistantService helpers', () => {
       const sanitized = sanitizeSchedulePreview(preview, [], []);
       expect(sanitized.blocks).toHaveLength(0);
       expect(sanitized.conflicts.some((msg) => msg.includes('No valid blocks'))).toBe(true);
+    });
+
+    it('keeps habit blocks with valid habitId', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { habitId: 'habit-1', start: '2025-02-01T10:00:00.000Z', end: '2025-02-01T10:30:00.000Z' },
+        ],
+        summary: 'Habits only',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const sanitized = sanitizeSchedulePreview(preview, [], ['habit-1']);
+      expect(sanitized.blocks).toHaveLength(1);
+      expect((sanitized.blocks[0] as any).habitId).toBe('habit-1');
+      expect(sanitized.conflicts).toHaveLength(0);
+    });
+
+    it('converts habit IDs incorrectly placed in taskId into habit blocks', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { taskId: 'habit-xyz', start: '2025-02-02T08:00:00.000Z', end: '2025-02-02T08:20:00.000Z' },
+        ],
+        summary: 'Normalize habit ids',
+        conflicts: [],
+        confidence: 'medium',
+      };
+
+      const sanitized = sanitizeSchedulePreview(preview, [], ['habit-xyz']);
+      expect(sanitized.blocks).toHaveLength(1);
+      const normalized = sanitized.blocks[0] as any;
+      expect('taskId' in normalized).toBe(false);
+      expect(normalized.habitId).toBe('habit-xyz');
+    });
+
+    it('prefers habitId when both fields are present but taskId is unknown', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { taskId: 'task-mismatch', habitId: 'habit-abc', start: '2025-02-03T09:00:00.000Z', end: '2025-02-03T09:30:00.000Z' },
+        ],
+        summary: 'Habit with stray taskId',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const sanitized = sanitizeSchedulePreview(preview, [], ['habit-abc']);
+      expect(sanitized.blocks).toHaveLength(1);
+      const normalized = sanitized.blocks[0] as any;
+      expect('taskId' in normalized).toBe(false);
+      expect(normalized.habitId).toBe('habit-abc');
+    });
+  });
+
+  describe('applyHabitFrequencyConflicts', () => {
+    const habits = [
+      { id: 'h1', title: 'Daily Habit', frequency: 'daily', daysOfWeek: [], durationMinutes: 30, preferredTimeOfDay: null },
+      { id: 'h2', title: 'Weekly Tue', frequency: 'weekly', daysOfWeek: ['tue'], durationMinutes: 20, preferredTimeOfDay: null },
+    ];
+
+    it('adds conflicts when daily habits are missing days', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { habitId: 'h1', start: new Date().toISOString(), end: new Date(Date.now() + 30 * 60000).toISOString() },
+        ],
+        summary: '',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const validated = applyHabitFrequencyConflicts(preview, habits, 'UTC');
+      expect(validated.conflicts.some((c) => c.includes('Daily Habit'))).toBe(true);
+      expect(validated.confidence).toBe('medium');
+    });
+
+    it('adds conflicts when weekly habits are missing specified weekdays', () => {
+      const preview: SchedulePreview = {
+        blocks: [],
+        summary: '',
+        conflicts: [],
+        confidence: 'medium',
+      };
+
+      const validated = applyHabitFrequencyConflicts(preview, habits, 'UTC');
+      expect(validated.conflicts.some((c) => c.includes('Weekly Tue'))).toBe(true);
+    });
+  });
+
+  describe('fillMissingHabitBlocks', () => {
+    const habits = [
+      { id: 'h1', title: 'Daily', frequency: 'daily', daysOfWeek: [], durationMinutes: 30, preferredTimeOfDay: 'morning' },
+      { id: 'h2', title: 'Weekly Tue', frequency: 'weekly', daysOfWeek: ['tue'], durationMinutes: 20, preferredTimeOfDay: null },
+    ];
+    const userPrefs = {
+      wakeTime: '08:00',
+      sleepTime: '23:00',
+      timeZone: 'UTC',
+    } as const;
+
+    it('adds missing daily blocks using preferred time when empty', () => {
+      const preview: SchedulePreview = {
+        blocks: [],
+        summary: '',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const filled = fillMissingHabitBlocks(preview, habits, [], userPrefs);
+      const h1Blocks = filled.blocks.filter((b) => (b as any).habitId === 'h1');
+      expect(h1Blocks.length).toBe(7);
+    });
+
+    it('keeps existing block time when cloning to other days', () => {
+      const today = new Date().toISOString();
+      const preview: SchedulePreview = {
+        blocks: [
+          { habitId: 'h1', start: today, end: new Date(Date.now() + 30 * 60000).toISOString() },
+        ],
+        summary: '',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const filled = fillMissingHabitBlocks(preview, habits, [], userPrefs);
+      const h1Blocks = filled.blocks.filter((b) => (b as any).habitId === 'h1');
+      expect(h1Blocks.length).toBeGreaterThanOrEqual(7);
+    });
+  });
+
+  describe('detectSkippedHabits', () => {
+    const habits = [
+      { id: 'h1', title: 'Guitar Practice' },
+      { id: 'h2', title: 'Read' },
+    ];
+
+    it('detects explicit skip keyword', () => {
+      const skipped = detectSkippedHabits(habits as any, 'Plan my habits minus guitar practice');
+      expect(skipped.has('h1')).toBe(true);
+      expect(skipped.has('h2')).toBe(false);
+    });
+
+    it('ignores when no skip keyword is present', () => {
+      const skipped = detectSkippedHabits(habits as any, 'Plan my habits');
+      expect(skipped.size).toBe(0);
     });
   });
 });

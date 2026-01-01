@@ -28,13 +28,15 @@ const bookMeetingSchema = z.object({
   inviteeName: z.string().min(1),
   inviteeEmail: z.string().email(),
   notes: z.string().optional(),
-  startDateTime: z.string().datetime(),
+  // Accept both UTC (Z) and timezone-aware (-06:00) ISO 8601 formats
+  startDateTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})$/, 'Invalid datetime format'),
   durationMinutes: z.number().positive(),
 });
 
 const rescheduleMeetingSchema = z.object({
   token: z.string().min(1),
-  startDateTime: z.string().datetime(),
+  // Accept both UTC (Z) and timezone-aware (-06:00) ISO 8601 formats
+  startDateTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?(Z|[+-]\d{2}:\d{2})$/, 'Invalid datetime format'),
   durationMinutes: z.number().positive(),
 });
 
@@ -52,6 +54,9 @@ export async function bookMeeting(
   const { slug } = request.params;
 
   try {
+    // DEBUG: Log what we received
+    request.log.info({ body: request.body }, 'Booking request received');
+
     const data = bookMeetingSchema.parse(request.body);
 
     const result = await meetingBookingService.bookMeeting(slug, data);

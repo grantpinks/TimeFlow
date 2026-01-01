@@ -32,7 +32,14 @@
       "Bash(pnpm -C apps/web type-check:*)",
       "Skill(superpowers:executing-plans)",
       "Bash(pnpm test:*)",
-      "Bash(pnpm dev)"
+      "Bash(pnpm dev)",
+      "Bash(node:*)",
+      "Bash(brew services:*)",
+      "Bash(lsof:*)",
+      "Bash(cd:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(xargs kill -9)"
     ],
     "deny": [],
     "ask": []
