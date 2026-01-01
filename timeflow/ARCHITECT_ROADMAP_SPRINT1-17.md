@@ -849,21 +849,19 @@
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
-| 16.A0 | **Email → Task → Schedule**: add “Create task” + “Create & schedule” from Inbox threads; store a backlink to the email/thread in the task. | Codex | 6-10h | **P0** | ⬜ |
-| 16.1 | Extend DB schema to persist per-user Gmail label mappings and sync state (labelId, labelName, color mapping, lastHistoryId, watch expiration). | Codex | 4-6h | P0 | 🟡 (partial: labelId + sync state only) |
+| 16.A0 | **Email → Task → Schedule**: add “Create task” + “Create & schedule” from Inbox threads; store a backlink to the email/thread in the task. | Codex | 6-10h | **P0** | ✅ (pending QA) |
+| 16.1 | Extend DB schema to persist per-user Gmail label mappings and sync state (labelId, labelName, color mapping, lastHistoryId, watch expiration). | Codex | 4-6h | P0 | ✅ |
 | 16.2 | Implement Gmail Label Sync service: list/create/patch labels; apply labels to threads via Gmail API; idempotent operations. | Codex | 8-12h | P0 | ✅ (pending QA) |
 | 16.3 | Add API endpoints: enable/disable sync, status, run sync now, and per-category Gmail label settings updates. | Codex | 6-8h | P0 | ✅ (pending QA) |
-| 16.4 | Implement fallback “sync on inbox fetch” path behind a flag, with strict rate limiting and small batch size. | Codex | 4-6h | P0 | ⬜ |
-| 16.7 | Add “Gmail Label Sync” settings under Email Categories: master toggle, status, “Sync now”, per-category name/color mapping controls. | Codex | 6-8h | P0 | 🟡 (settings page + per-category toggle; missing master toggle + dedicated color mapping) |
-| 16.8 | Add **user-defined rules** for categorization (e.g., “all emails from domain X → Work”) and apply rules before heuristics; ensure rules influence Gmail label sync. | Codex | 6-8h | P0 | ⬜ |
-| 16.9 | Add “Why this label?” transparency UI (show rule match / Gmail label match / keyword match) to reduce black-box feel. | Codex | 4-6h | P0 | ⬜ |
-| 16.C1 | Define sync semantics (thread-level add/remove rules, conflicts with user-applied labels, bounded backfill policy). | Claude | 3-4h | P1 | ⬜ |
-| 16.G1 | Document setup + limitations (Gmail color palette limits, sensitive scope verification), plus troubleshooting playbook. | Gemini | 4-6h | P1 | ⬜ |
+| 16.4 | Implement fallback “sync on inbox fetch” path behind a flag, with strict rate limiting and small batch size. | Codex | 4-6h | P0 | ✅ (pending QA) |
+| 16.7 | Add “Gmail Label Sync” settings under Email Categories: master toggle, status, “Sync now”, per-category name/color mapping controls. | Codex | 6-8h | P0 | ✅ (pending QA) |
+| 16.8 | Add **user-defined rules** for categorization (e.g., “all emails from domain X → Work”) and apply rules before heuristics; ensure rules influence Gmail label sync. | Codex | 6-8h | P0 | ✅ (pending QA) |
+| 16.9 | Add “Why this label?” transparency UI (show rule match / Gmail label match / keyword match) to reduce black-box feel. | Codex | 4-6h | P0 | ✅ (pending QA) |
+| 16.C1 | Define sync semantics (thread-level add/remove rules, conflicts with user-applied labels, bounded backfill policy). | Claude | 3-4h | P1 | ✅ |
+| 16.G1 | Document setup + limitations (Gmail color palette limits, sensitive scope verification), plus troubleshooting playbook. | Gemini | 4-6h | P1 | ✅ |
 
 **Phase A Issues / Open Items**
 - Manual QA blocked: needs valid auth token/session + Gmail account connected to verify endpoints and label application.
-- Gmail label metadata not persisted yet (labelName, explicit Gmail color override, historyId/watch expiration).
-- Email Categories page lacks a master toggle/status panel (currently on Settings page only).
 
 **Phase B (optional): Background Sync — Gmail Watch + Pub/Sub**
 
