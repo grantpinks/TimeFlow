@@ -51,6 +51,8 @@ export interface EmailCategoryConfig {
   description?: string;
   emoji?: string;
   gmailSyncEnabled?: boolean;
+  gmailLabelName?: string;
+  gmailLabelColor?: string;
 }
 
 const API_BASE = '/api';

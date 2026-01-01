@@ -89,9 +89,14 @@ export default function EmailCategoriesSettingsPage() {
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [gmailColorOverride, setGmailColorOverride] = useState<string | null>(null);
   const [autoMappedGmailColor, setAutoMappedGmailColor] = useState<GmailColor | null>(null);
+  const [gmailLabelNameInput, setGmailLabelNameInput] = useState<string>('');
+  const [gmailSyncStatus, setGmailSyncStatus] = useState<api.GmailSyncStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
     loadCategories();
+    loadGmailSyncStatus();
   }, []);
 
   useEffect(() => {
@@ -105,7 +110,8 @@ export default function EmailCategoriesSettingsPage() {
     if (category?.color) {
       const mapped = findClosestGmailColor(category.color);
       setAutoMappedGmailColor(mapped);
-      setGmailColorOverride(category.color);
+      setGmailColorOverride(category.gmailLabelColor ?? mapped.backgroundColor);
+      setGmailLabelNameInput(category.gmailLabelName ?? category.name);
     }
   }, [editingCategory, categories]);
 
@@ -118,6 +124,15 @@ export default function EmailCategoriesSettingsPage() {
       setError('Failed to load email categories');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadGmailSyncStatus() {
+    try {
+      const status = await api.getGmailSyncStatus();
+      setGmailSyncStatus(status);
+    } catch (err) {
+      console.error('Failed to load Gmail sync status:', err);
     }
   }
 
@@ -170,6 +185,67 @@ export default function EmailCategoriesSettingsPage() {
     }
   }
 
+  async function handleSyncNow() {
+    setSyncing(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const result = await api.triggerGmailSync();
+      setSuccessMessage(
+        `Synced ${result.syncedCategories} categories and ${result.syncedThreads ?? 0} threads`
+      );
+      await loadGmailSyncStatus();
+    } catch (err) {
+      console.error('Failed to sync Gmail labels:', err);
+      setError('Failed to sync Gmail labels');
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  async function handleRemoveAllLabels() {
+    if (!confirm('This will remove all TimeFlow labels from Gmail. Continue?')) {
+      return;
+    }
+
+    setRemoving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const result = await api.removeAllGmailLabels();
+      setSuccessMessage(`Removed ${result.removedCategories ?? result.syncedCategories} Gmail labels`);
+      await loadGmailSyncStatus();
+      await loadCategories();
+    } catch (err) {
+      console.error('Failed to remove Gmail labels:', err);
+      setError('Failed to remove Gmail labels');
+    } finally {
+      setRemoving(false);
+    }
+  }
+
+  async function handleToggleAllGmailSync(enabled: boolean) {
+    setSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await Promise.all(
+        categories.map((category) => api.updateCategoryGmailSync(category.id, enabled))
+      );
+      await loadCategories();
+      setSuccessMessage(enabled ? 'Enabled Gmail sync for all categories' : 'Disabled Gmail sync for all categories');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      console.error('Failed to update Gmail sync for all categories:', err);
+      setError('Failed to update Gmail sync for all categories');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleResetToDefaults() {
     if (!confirm('Are you sure you want to reset all categories to default settings? This cannot be undone.')) {
       return;
@@ -197,6 +273,8 @@ export default function EmailCategoriesSettingsPage() {
         api.updateEmailCategory(cat.id, {
           color: defaultColors[cat.name] || cat.color,
           enabled: true,
+          gmailLabelName: null,
+          gmailLabelColor: null,
         })
       );
 
@@ -258,6 +336,72 @@ export default function EmailCategoriesSettingsPage() {
           </div>
         )}
 
+        {/* Gmail Sync Overview */}
+        <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Gmail Label Sync</h2>
+              <p className="text-sm text-slate-600">
+                Control Gmail sync behavior and run manual syncs.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={categories.some((category) => category.gmailSyncEnabled)}
+                onChange={(e) => handleToggleAllGmailSync(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                disabled={saving}
+              />
+              Sync all categories
+            </label>
+          </div>
+
+          {gmailSyncStatus && (
+            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div>
+                <div className="text-slate-500 mb-1">Last Synced</div>
+                <div className="font-medium text-slate-800">
+                  {gmailSyncStatus.lastSyncedAt
+                    ? new Date(gmailSyncStatus.lastSyncedAt).toLocaleString()
+                    : 'Never'}
+                </div>
+              </div>
+              <div>
+                <div className="text-slate-500 mb-1">Threads Synced</div>
+                <div className="font-medium text-slate-800">
+                  {gmailSyncStatus.lastSyncThreadCount}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {gmailSyncStatus?.lastSyncError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+              {gmailSyncStatus.lastSyncError}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleSyncNow}
+              disabled={syncing}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium
+                         hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {syncing ? 'Syncing...' : 'Sync Now'}
+            </button>
+            <button
+              onClick={handleRemoveAllLabels}
+              disabled={removing}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium
+                         hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {removing ? 'Removing...' : 'Remove All TimeFlow Labels'}
+            </button>
+          </div>
+        </div>
+
         {/* Categories list */}
         <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
           <div className="divide-y divide-slate-200">
@@ -310,12 +454,36 @@ export default function EmailCategoriesSettingsPage() {
                               <h4 className="text-sm font-semibold text-slate-700 mb-3">
                                 Gmail Label Color
                               </h4>
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-slate-600 mb-2">
+                                  Gmail Label Name
+                                </label>
+                                <input
+                                  type="text"
+                                  value={gmailLabelNameInput}
+                                  onChange={(e) => setGmailLabelNameInput(e.target.value)}
+                                  onBlur={() => {
+                                    const trimmed = gmailLabelNameInput.trim();
+                                    handleUpdateCategory(category.id, {
+                                      gmailLabelName: trimmed.length > 0 ? trimmed : null,
+                                    });
+                                  }}
+                                  className="w-full px-3 py-2 border border-slate-200 rounded-lg
+                                             focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                  placeholder={category.name}
+                                />
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Label will appear as TimeFlow/&lt;Name&gt; in Gmail.
+                                </p>
+                              </div>
                               <GmailColorPicker
                                 selectedColor={gmailColorOverride}
                                 autoMappedColor={autoMappedGmailColor ?? undefined}
                                 onColorSelect={(color) => {
                                   setGmailColorOverride(color.backgroundColor);
-                                  handleUpdateCategory(category.id, { color: color.backgroundColor });
+                                  handleUpdateCategory(category.id, {
+                                    gmailLabelColor: color.backgroundColor,
+                                  });
                                 }}
                               />
                             </div>
