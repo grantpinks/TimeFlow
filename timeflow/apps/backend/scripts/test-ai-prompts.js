@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import { PrismaClient } from '@prisma/client';
+import { parsePrompts, evaluateExpectation } from './aiRegressionUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,47 +46,6 @@ async function getTokenFromEmail(userEmail) {
   await prisma.$disconnect();
   await server.close();
   return signedToken;
-}
-
-function parsePrompts(raw) {
-  return raw
-    .split(/\n---\n/g)
-    .map(section =>
-      section
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0 && !line.startsWith('#'))
-    )
-    .filter(lines => lines.length > 0)
-    .map((lines, index) => {
-      let name = null;
-      if (lines[0] && /^flow:/i.test(lines[0])) {
-        name = lines[0].replace(/^flow:/i, '').trim() || `Flow ${index + 1}`;
-        lines = lines.slice(1);
-      }
-
-      const userLines = lines.filter(line => /^user:/i.test(line));
-      if (userLines.length >= 2) {
-        const prompts = userLines
-          .map(line => line.replace(/^user:/i, '').trim())
-          .filter(Boolean);
-        return {
-          type: 'flow',
-          name: name || `Flow ${index + 1}`,
-          prompts,
-        };
-      }
-
-      const promptLine =
-        userLines.length === 1
-          ? userLines[0].replace(/^user:/i, '').trim()
-          : lines.join('\n').trim();
-
-      return {
-        type: 'single',
-        prompt: promptLine,
-      };
-    });
 }
 
 async function delay(ms) {
@@ -195,11 +155,23 @@ async function main() {
       for (const prompt of entry.prompts) {
         const result = await runPrompt(prompt, history);
         const { messageContent, ...record } = result;
-        turns.push(record);
-        const statusLabel = record.ok ? 'OK' : 'FAIL';
+        const expectation = entry.turnExpectations?.[turns.length + 1];
+        const expectationResult = evaluateExpectation(record, expectation);
+        const turnOk = record.ok && expectationResult.ok;
+        turns.push({
+          ...record,
+          expectation,
+          expectationOk: expectationResult.ok,
+          expectationFailures: expectationResult.reasons,
+          ok: turnOk,
+        });
+        const statusLabel = turnOk ? 'OK' : 'FAIL';
         console.log(
           `  [${statusLabel}] ${record.status} | preview=${record.preview} blocks=${record.blocksCount} | ${prompt}`
         );
+        if (!expectationResult.ok && expectation) {
+          console.log(`    [EXPECT-FAIL] ${expectationResult.reasons.join('; ')}`);
+        }
         if (messageContent !== null) {
           history.push({ role: 'user', content: prompt });
           history.push({ role: 'assistant', content: messageContent });
@@ -207,9 +179,10 @@ async function main() {
         await delay(delayMs);
       }
       const lastTurn = turns[turns.length - 1];
+      const flowOk = turns.every(turn => turn.ok);
       results.push({
         flow: entry.name,
-        ok: turns.every(turn => turn.ok),
+        ok: flowOk,
         status: lastTurn?.status ?? 0,
         preview: lastTurn?.preview ?? false,
         blocksCount: lastTurn?.blocksCount ?? 0,
@@ -220,11 +193,22 @@ async function main() {
     } else {
       const result = await runPrompt(entry.prompt);
       const { messageContent, ...record } = result;
-      results.push(record);
-      const statusLabel = record.ok ? 'OK' : 'FAIL';
+      const expectationResult = evaluateExpectation(record, entry.expect);
+      const recordOk = record.ok && expectationResult.ok;
+      results.push({
+        ...record,
+        ok: recordOk,
+        expectation: entry.expect,
+        expectationOk: expectationResult.ok,
+        expectationFailures: expectationResult.reasons,
+      });
+      const statusLabel = recordOk ? 'OK' : 'FAIL';
       console.log(
         `[${statusLabel}] ${record.status} | preview=${record.preview} blocks=${record.blocksCount} | ${entry.prompt}`
       );
+      if (!expectationResult.ok && entry.expect) {
+        console.log(`  [EXPECT-FAIL] ${expectationResult.reasons.join('; ')}`);
+      }
       await delay(delayMs);
     }
   }
@@ -246,6 +230,12 @@ async function main() {
         return total + result.turns.filter(turn => turn.preview).length;
       }
       return total + (result.preview ? 1 : 0);
+    }, 0),
+    expectationFailures: results.reduce((total, result) => {
+      if (result.turns) {
+        return total + result.turns.filter(turn => turn.expectationOk === false).length;
+      }
+      return total + (result.expectationOk === false ? 1 : 0);
     }, 0),
     timestamp: new Date().toISOString(),
     endpoint,

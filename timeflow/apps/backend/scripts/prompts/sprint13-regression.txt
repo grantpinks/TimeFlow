@@ -39,21 +39,31 @@ Schedule these tasks for tomorrow morning.
 I have no tasks. Can you schedule anyway?
 ---
 FLOW: Conversation -> Scheduling
+EXPECT-TURN-1: status=200 preview=false
+EXPECT-TURN-2: status=200 preview=true
 USER: What tasks do I have?
 USER: Schedule my tasks for tomorrow.
 ---
 FLOW: Availability -> Scheduling
+EXPECT-TURN-1: status=200 preview=false
+EXPECT-TURN-2: status=200 preview=true
 USER: When am I free this week?
 USER: Schedule my tasks for tomorrow.
 ---
 My day feels chaotic—can you help me plan today?
+EXPECT: status=200 preview=false
 ---
 I'm not sure what to work on next. What's the best use of my time?
+EXPECT: status=200 preview=false
 ---
 I have a deadline tomorrow and a bunch of small tasks. How should I prioritize?
+EXPECT: status=200 preview=false
 ---
 Plan my day today and focus on the most important tasks.
+EXPECT: status=200 preview=false
 ---
 Help me plan. I have about 3 hours this afternoon.
+EXPECT: status=200 preview=false
 ---
 Help me plan. I need to focus on urgent items.
+EXPECT: status=200 preview=false

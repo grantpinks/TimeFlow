@@ -94,12 +94,20 @@ Example:
 
 ```text
 FLOW: Conversation -> Scheduling
+EXPECT-TURN-1: status=200 preview=false
+EXPECT-TURN-2: status=200 preview=true
 USER: What tasks do I have?
 USER: Schedule my tasks for tomorrow.
 ```
 
 4. For stricter checks, extend `test-ai-prompts.js` to assert expected mode/preview counts.
 5. Add planning prompts that should trigger clarifying questions or draft plans (planning mode).
+6. For single prompts, you can assert expected outcomes:
+
+```text
+Help me plan today.
+EXPECT: status=200 preview=false
+```
 
 ---
 
