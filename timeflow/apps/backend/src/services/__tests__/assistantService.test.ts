@@ -21,6 +21,7 @@ const {
   detectMeetingIntent,
   getMeetingState,
   buildMeetingClarifyingQuestion,
+  formatDebugError,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
@@ -462,6 +463,18 @@ describe('assistantService helpers', () => {
 
       expect(question.toLowerCase()).toContain('name');
       expect(question.toLowerCase()).toContain('duration');
+    });
+  });
+
+  describe('formatDebugError', () => {
+    it('returns null when disabled', () => {
+      const result = formatDebugError(new Error('Boom'), false);
+      expect(result).toBeNull();
+    });
+
+    it('returns a debug string when enabled', () => {
+      const result = formatDebugError(new Error('Boom'), true);
+      expect(result).toContain('Boom');
     });
   });
 

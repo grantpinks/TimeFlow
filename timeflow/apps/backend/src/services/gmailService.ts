@@ -97,7 +97,8 @@ export async function getInboxMessages(
 
   const listResponse = await gmail.users.messages.list({
     userId: 'me',
-    labelIds: ['INBOX'],
+    // Show all mail (excluding spam and trash)
+    q: '-in:spam -in:trash',
     maxResults: options.maxResults ?? 15,
     pageToken: options.pageToken,
   });

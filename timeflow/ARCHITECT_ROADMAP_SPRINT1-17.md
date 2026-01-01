@@ -762,27 +762,28 @@
 ---
 
 ### Sprint 15.5: Sidebar Navigation Redesign (Authenticated, Collapsible)
+**Status**: DONE ✅
 **Duration**: 2-4 days (immediately after Sprint 15)  
 **Focus**: Replace the cluttered top navigation with a Notion-like **authenticated-only** sidebar that scales as TimeFlow adds more pages and sub-pages.
 
 #### Goals
-- [ ] Signed-in users see a **left sidebar** with the TimeFlow logo and primary destinations.
-- [ ] Sidebar is **collapsible** (expanded + icon-only) and persists state across reloads.
-- [ ] One-click destinations: **Today**, **Tasks**, **Flow AI**, **Calendar**, **Inbox**.
-- [ ] Settings is accessible via a **gear icon** (not a top-level nav label).
-- [ ] Mobile uses a **drawer** sidebar opened by a hamburger button.
-- [ ] No navigation overflow on common laptop widths.
+- [x] Signed-in users see a **left sidebar** with the TimeFlow logo and primary destinations.
+- [x] Sidebar is **collapsible** (expanded + icon-only) and persists state across reloads.
+- [x] One-click destinations: **Today**, **Tasks**, **Flow AI**, **Calendar**, **Inbox**.
+- [x] Settings is accessible via a **gear icon** (not a top-level nav label).
+- [x] Mobile uses a **drawer** sidebar opened by a hamburger button.
+- [x] No navigation overflow on common laptop widths.
 
 #### Tasks
 
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 15.5.1 | Update web app shell to support authenticated sidebar layout (keep unauthenticated layout unchanged) | Codex | 2-3h | P0 |
-| 15.5.2 | Implement sidebar UI (logo → `/today`, nav items, active states, gear → `/settings`) | Codex | 2-3h | P0 |
-| 15.5.3 | Add collapse toggle + localStorage persistence + tooltips in collapsed mode | Codex | 1-2h | P0 |
-| 15.5.4 | Add mobile drawer behavior (hamburger, overlay, Esc-to-close, close-on-navigate) | Codex | 2-3h | P0 |
-| 15.5.5 | Add `/inbox` placeholder route so Inbox destination does not 404 | Codex | 0.5-1h | P0 |
-| 15.5.G1 | Write agent handoff + QA checklist doc for sidebar redesign | Gemini | 1-2h | P1 |
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 15.5.1 | Update web app shell to support authenticated sidebar layout (keep unauthenticated layout unchanged) | Codex | 2-3h | P0 | ✅ |
+| 15.5.2 | Implement sidebar UI (logo → `/today`, nav items, active states, gear → `/settings`) | Codex | 2-3h | P0 | ✅ |
+| 15.5.3 | Add collapse toggle + localStorage persistence + tooltips in collapsed mode | Codex | 1-2h | P0 | ✅ |
+| 15.5.4 | Add mobile drawer behavior (hamburger, overlay, Esc-to-close, close-on-navigate) | Codex | 2-3h | P0 | ✅ |
+| 15.5.5 | Add `/inbox` placeholder route so Inbox destination does not 404 | Codex | 0.5-1h | P0 | ✅ |
+| 15.5.G1 | Write agent handoff + QA checklist doc for sidebar redesign | Gemini | 1-2h | P1 | ✅ |
 
 #### Acceptance Criteria
 - Signed out: no sidebar; existing header remains.
@@ -794,11 +795,15 @@
 
 ---
 
-### Sprint 16: Gmail Label Sync (Thread-Level)
+### Sprint 16: Inbox MVP (Email Triage) + Gmail Label Sync (Thread-Level)
+**Status**: 🟡 In Progress
 **Duration**: Week 31-32  
-**Focus**: Mirror TimeFlow’s inbox organization directly inside Gmail by creating real Gmail labels and applying them at the **thread level**, shipped in a **trust-first Phase A** (manual/fallback) and an optional **Phase B** (watch + Pub/Sub).
+**Focus**: Build a **real, daily-usable Inbox** inside TimeFlow (thread triage: list + detail + read/unread + archive + search) and then optionally mirror that organization inside Gmail via real Gmail labels applied at the **thread level**, shipped in a **trust-first Phase A** (manual/fallback) and an optional **Phase B** (watch + Pub/Sub).
 
 #### Goals
+- [ ] `/inbox` is a true triage surface: fast thread list, thread detail, read/unread, archive, and search.
+- [ ] User trust loop is complete: correction persists and “Why this label?” is transparent (override/rule/heuristic).
+- [ ] **Differentiator**: users can convert an email into a task and optionally **schedule it immediately**.
 - [ ] TimeFlow can **create/ensure Gmail labels** for each enabled email category (namespaced, e.g., `TimeFlow/Work`).
 - [ ] TimeFlow can **apply category labels to Gmail threads** deterministically and idempotently.
 - [ ] A consumer user can enable/disable Gmail label sync and run a manual “Sync now”.
@@ -809,10 +814,20 @@
 
 #### Tasks
 
+**Phase 0: Inbox MVP (Email Triage) — DONE ✅ (no new work added here)**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 16.0 | Upgrade `/inbox` to a true triage Inbox: thread list + thread detail (at least latest message), plus “Open in Gmail”. | Codex | 8-12h | P0 | ✅ |
+| 16.0b | Add triage actions to `/inbox`: mark read/unread and archive with optimistic UI + friendly rate-limit errors. | Codex | 4-6h | P0 | ✅ |
+| 16.0c | Add server-backed search (use Gmail search endpoint when query present), keep fast client-side search as fallback. | Codex | 3-5h | P1 | ✅ |
+| 16.0d | Replace placeholder “Why this label?” with real explanation sources (override vs rule vs heuristic signals). | Codex | 3-5h | P0 | ✅ |
+
 **Phase A (ship value + trust without Pub/Sub)**
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
+| 16.A0 | **Email → Task → Schedule**: add “Create task” + “Create & schedule” from Inbox threads; store a backlink to the email/thread in the task. | Codex | 6-10h | **P0** |
 | 16.1 | Extend DB schema to persist per-user Gmail label mappings and sync state (labelId, labelName, color mapping, lastHistoryId, watch expiration). | Codex | 4-6h | P0 |
 | 16.2 | Implement Gmail Label Sync service: list/create/patch labels; apply labels to threads via Gmail API; idempotent operations. | Codex | 8-12h | P0 |
 | 16.3 | Add API endpoints: enable/disable sync, status, run sync now, and per-category Gmail label settings updates. | Codex | 6-8h | P0 |
@@ -832,11 +847,15 @@
 | 16.10 | Add optional **action-oriented labels** in TimeFlow (`NeedsReply`, `ToRead`, `NeedsAction`) and map them to Gmail labels (namespaced) if enabled. | Codex | 6-8h | P2 |
 
 #### Acceptance Criteria
+- `/inbox` is a real triage surface (list + detail + read/unread + archive + search) and is performant/reliable for daily use.
+- Users can convert an email into a task and (optionally) schedule it from the Inbox without losing context.
 - **Trust gate**: Label writes into Gmail are only enabled when the user has a correction loop and “Why this label?” transparency.
 - Enabled user sees new `TimeFlow/*` labels in Gmail and threads are labeled correctly (manual “Sync now” and/or sync-on-inbox-fetch in Phase A).
 - Phase B (if shipped): background sync labels new mail within minutes when watch is enabled.
 - Label operations are safe under rate limits and are idempotent (retries do not produce duplicates or thrash colors).
 - Clear docs exist for OAuth scopes, verification requirements, and operational monitoring (and Pub/Sub setup if Phase B ships).
+
+**Plan doc**: See **[`docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md`](./docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md)**.
 
 ---
 
@@ -848,6 +867,7 @@
 - [ ] Users can **mark habit blocks complete** (calendar-first) and see streaks/adherence update reliably.
 - [ ] Habits page becomes an **Insights hub**: consistency charts + best windows + 1–3 explainable recommendations.
 - [ ] Establish privacy-safe analytics instrumentation (no sensitive content logging).
+- [ ] (Inbox follow-on) Add action-state inbox queues and AI assist on threads (cost-controlled), building on Sprint 16.
 
 #### Tasks
 
@@ -861,54 +881,66 @@
 
 **Plan doc**: See **[`docs/plans/2025-12-31-analytics-insights-habits.md`](./docs/plans/2025-12-31-analytics-insights-habits.md)** for full scope, metrics, and acceptance criteria.
 
----
-
-### Sprint 18: App Overhaul & Public Mobile Launch
-**Duration**: Week 35-36  
-**Focus**: Make TimeFlow feel like a polished, app-store-ready product across web and mobile, with a premium, cohesive UI and smooth interactions.
-
-#### Goals
-- [ ] Mobile app (Expo) feels fast, stable, and visually consistent with the updated web experience.
-- [ ] Core pages (Today, Tasks, Calendar, Assistant) are fully responsive and feel great on phone-sized screens.
-- [ ] App surfaces share a cohesive visual language (color, typography, spacing, iconography) and subtle, performant motion.
-- [ ] Mobile apps are ready for public distribution on iOS and Android (store metadata, icons, splash screens, basic analytics).
-
-#### Tasks
-
-**Mobile UX & Navigation**
+**Inbox follow-on tasks (from Sprint 16): Action States + AI Assist**
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 18.1 | Align `/today`, Tasks, Calendar, and Assistant mobile screens with updated Phase 2 designs (layout, sections, typography, color) | Codex | 6-8h | P0 |
-| 18.2 | Audit and refine mobile navigation patterns (tabs, stacks, modals) to ensure smooth transitions between core screens | Codex | 4-6h | P1 |
-| 18.3 | Implement deep links/shortcuts for key flows (e.g., open Today, open specific task or meeting link) | Codex | 4-6h | P1 |
+| 17.I1 | Add action-state inbox queues (`NeedsReply`, `ReadLater`, optional `NeedsAction`) with thread-level state, filters, and fast toggles. | Codex | 6-10h | P0 |
+| 17.I2 | Add aging nudges UI (e.g., “Needs Reply > X days”, “Unread important > X days”) as in-app indicators (no notifications yet). | Codex | 3-6h | P1 |
+| 17.I3 | Add AI thread assist: “Summarize” + “Extract tasks” + “Create tasks” (strict quotas + max tokens + friendly limit UX). | Codex | 8-12h | P1 |
 
-**Visual System & Components on Mobile**
+**Plan doc**: See **[`docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md`](./docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md)**.
 
-| 18.4 | Port web `Card`, `Button`, and form components into reusable mobile equivalents (or shared design system components) | Codex | 6-8h | P1 |
-| 18.5 | Align mobile color tokens and typography scale with `docs/BRAND_GUIDELINES.md` (headings, body, accent colors) | Codex | 3-4h | P1 |
-| 18.6 | Ensure iconography (including Flow mascot usage on mobile) is crisp and consistent across device densities | Codex | 3-4h | P1 |
+---
 
-**Animations & Premium Feel**
+### Sprint 18: Public Beta Launch (Web + Mobile) — SaaS Readiness
+**Duration**: Week 35-36  
+**Focus**: Ship a **public beta** that runs like a typical SaaS: production hosting (Vercel + Render + Supabase), Google-only auth, beta gating, AI cost controls, onboarding, docs, and mobile distribution readiness.
 
-| 18.7 | Implement smooth screen transitions and micro-interactions using an Expo-friendly animation library (e.g., Reanimated/Moti) with `prefers-reduced-motion` support | Codex | 6-8h | P1 |
-| 18.8 | Add delightful yet subtle feedback for key actions (task complete, schedule applied, habit checked off) consistent with Sprint 8 motion guidelines | Codex | 4-6h | P1 |
+#### Goals
+- [ ] Backend successfully deploys to **Render**, connects to **Supabase**, and passes a production smoke test.
+- [ ] Web app is publicly deployed on **Vercel** and correctly routes `/api/*` to the deployed backend (no `localhost` rewrites).
+- [ ] Google-only sign-in works end-to-end for web + mobile.
+- [ ] **Beta gating** via email allowlist (plus “Heavy beta” allowlist for higher AI limits).
+- [ ] AI Assistant is enabled in production with strict **cost controls** (per-user quotas + global cap).
+- [ ] Mobile app (Expo) is stable and ready for beta distribution (TestFlight + internal Android track, or store-ready).
+- [ ] Onboarding + docs are “SaaS-grade”: setup, help/FAQ, deployment runbook, and rollback steps.
 
-**App Store Readiness**
+#### Tasks
 
-| 18.9 | Implement app icons, splash screens, and launch screens for iOS and Android following brand guidelines | Codex | 4-6h | P1 |
-| 18.10 | Prepare App Store / Play Store metadata: descriptions, screenshots, preview videos, and privacy policy links | Gemini | 4-6h | P1 |
-| 18.11 | Integrate basic mobile analytics (screen views, key actions, crashes) aligned with web analytics events | Codex | 4-6h | P1 |
+**Production Deploy & SaaS Readiness (Web + Backend)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 18.1 | Unblock Render backend deployment: fix Supabase connection string (session pooler 5432 + correct username), ensure logs + port binding work, `/health` passes. | Codex | 8-12h | **P0** |
+| 18.2 | Fix web production API routing: update Next.js rewrite/proxy so `/api/*` targets `NEXT_PUBLIC_API_URL` in production (no localhost). | Codex | 2-4h | **P0** |
+| 18.3 | Production OAuth hardening: ensure Google OAuth redirect URIs and `APP_BASE_URL` are correct for Vercel + Render. | Codex | 3-6h | **P0** |
+| 18.4 | Beta gating: add email allowlist for access + “Heavy beta” allowlist override for elevated entitlements. | Codex | 3-6h | **P0** |
+| 18.5 | AI cost controls foundation: per-user monthly quotas + global cap; graceful “limit reached” UX; future-ready plan/entitlement plumbing for Sprint 19. | Codex | 6-10h | **P0** |
+| 18.6 | Beta operations pack: smoke test checklist + rollback steps + support/feedback workflow (docs + lightweight tooling). | Codex | 3-6h | P1 |
+
+**Mobile UX, Visual System & Distribution**
+
+| 18.7 | Align `/today`, Tasks, Calendar, and Assistant mobile screens with updated Phase 2 designs (layout, sections, typography, color). | Codex | 6-8h | P0 |
+| 18.8 | Audit and refine mobile navigation patterns (tabs, stacks, modals) to ensure smooth transitions between core screens. | Codex | 4-6h | P1 |
+| 18.9 | Implement deep links/shortcuts for key flows (e.g., open Today, open specific task). | Codex | 4-6h | P1 |
+| 18.10 | App icons, splash screens, and launch screens for iOS and Android following brand guidelines. | Codex | 4-6h | P1 |
+| 18.11 | Prepare App Store / Play Store metadata: descriptions, screenshots, preview videos, privacy policy links. | Gemini | 4-6h | P1 |
+| 18.12 | Integrate basic analytics + crash reporting aligned with web events (privacy-safe). | Codex | 4-6h | P1 |
 
 **Stability & Performance**
 
-| 18.12 | Profile mobile app performance (startup time, navigation latency, memory usage) and address top issues | Codex | 4-6h | P1 |
-| 18.13 | Implement offline-friendly behaviors for core flows (task creation/editing, viewing Today and Calendar snapshots) | Codex | 4-6h | P1 |
+| 18.13 | Profile mobile app performance (startup time, navigation latency, memory usage) and address top issues. | Codex | 4-6h | P1 |
+| 18.14 | Implement offline-friendly behaviors for core flows (task creation/editing, viewing Today and Calendar snapshots). | Codex | 4-6h | P1 |
 
 #### Acceptance Criteria
-- Mobile apps pass internal QA on a representative set of devices (iOS + Android) with good performance and no critical crashes.
-- Core flows (sign-in, Today planning, scheduling, task management, Assistant) are smooth and visually consistent with the web app.
-- App store listings are complete and ready for submission.
+- Backend is deployed on Render and stable; `/health` returns OK; web can call production APIs successfully.
+- Web is deployed on Vercel; Google OAuth works; core flows function end-to-end in production.
+- Beta gating is enforced (allowlist), including Heavy beta override for invited users.
+- AI Assistant runs in production with enforced quotas + clear limit UX (ready for Sprint 19 subscription wiring).
+- Mobile passes internal QA and is ready for beta distribution; store assets are complete (or submission-ready).
+
+**Plan doc**: See **[`docs/plans/2026-01-01-sprint-18-public-beta-launch.md`](./docs/plans/2026-01-01-sprint-18-public-beta-launch.md)** for the full checklist and gates.
 
 ---
 
@@ -1057,4 +1089,3 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 | 22.2 | Add booking flows for multiple attendees (invites, confirmations, reschedules, cancellations). | Codex | 8-12h | P0 |
 | 22.C1 | Define UX and rules for attendee constraints (whose work hours apply; buffers; caps; organizer vs participant). | Claude | 4-6h | P1 |
 | 22.G1 | Document group scheduling behavior, privacy boundaries, and failure modes. | Gemini | 4-6h | P1 |
-

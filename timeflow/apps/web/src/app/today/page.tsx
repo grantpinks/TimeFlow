@@ -10,7 +10,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, memo } from 'react';
-import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useDraggable, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useDraggable, useSensor, useSensors, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
@@ -23,7 +23,6 @@ import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache';
-import { track } from '@/lib/analytics';
 import type { CalendarEvent, HabitSuggestionBlock, EmailMessage, Task, FullEmailMessage, EmailCategory } from '@timeflow/shared';
 
 export default function TodayPage() {
@@ -300,21 +299,21 @@ export default function TodayPage() {
     }
   };
 
-  const handleDragStart = (event: { active: { id: string; data: { current?: { task: Task } } } }) => {
-    const task = event.active.data.current?.task ?? unscheduledTasks.find((t) => t.id === event.active.id);
+  const handleDragStart = (event: DragStartEvent) => {
+    const task = event.active.data.current?.task ?? unscheduledTasks.find((t) => t.id === String(event.active.id));
     if (task) {
       setActiveDragTask(task);
     }
   };
 
-  const handleDragEnd = async (event: { active: { id: string }; over: { data: { current?: { hour?: number } } } | null }) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     if (!event.over || typeof event.over.data.current?.hour !== 'number') {
       setActiveDragTask(null);
       return;
     }
 
     const droppedHour = event.over.data.current.hour;
-    const task = unscheduledTasks.find((t) => t.id === event.active.id);
+    const task = unscheduledTasks.find((t) => t.id === String(event.active.id));
     if (!task) {
       setActiveDragTask(null);
       return;
@@ -513,7 +512,7 @@ export default function TodayPage() {
                             task={task}
                             accentClass="bg-amber-50 border border-amber-200"
                             onComplete={() => handleCompleteTask(task.id)}
-                            prefersReducedMotion={prefersReducedMotion}
+                            prefersReducedMotion={prefersReducedMotion ?? false}
                           />
                         ))}
                       </div>
@@ -533,7 +532,7 @@ export default function TodayPage() {
                             task={task}
                             accentClass="bg-red-50 border border-red-200"
                             onComplete={() => handleCompleteTask(task.id)}
-                            prefersReducedMotion={prefersReducedMotion}
+                            prefersReducedMotion={prefersReducedMotion ?? false}
                           />
                         ))}
                       </div>
@@ -553,7 +552,7 @@ export default function TodayPage() {
                             task={task}
                             accentClass="bg-slate-50 border border-slate-200"
                             onComplete={() => handleCompleteTask(task.id)}
-                            prefersReducedMotion={prefersReducedMotion}
+                            prefersReducedMotion={prefersReducedMotion ?? false}
                           />
                         ))}
                       </div>

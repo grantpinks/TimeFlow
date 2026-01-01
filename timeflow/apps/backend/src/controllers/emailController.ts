@@ -14,7 +14,7 @@ import * as categoryService from '../services/categoryService.js';
 import * as emailExplanationService from '../services/emailExplanationService.js';
 
 const inboxQuerySchema = z.object({
-  maxResults: z.coerce.number().int().min(1).max(50).optional(),
+  maxResults: z.coerce.number().int().min(1).max(100).optional(),
   pageToken: z.string().optional(),
 });
 
@@ -28,7 +28,7 @@ const sendEmailSchema = z.object({
 
 const searchQuerySchema = z.object({
   q: z.string().min(1),
-  maxResults: z.coerce.number().int().min(1).max(50).optional(),
+  maxResults: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 const markAsReadSchema = z.object({

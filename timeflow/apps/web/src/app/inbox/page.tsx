@@ -8,6 +8,7 @@ import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import type { EmailMessage, FullEmailMessage } from '@timeflow/shared';
 import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search } from 'lucide-react';
+import Image from 'next/image';
 import DOMPurify from 'dompurify';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -301,17 +302,33 @@ export default function InboxPage() {
     <Layout>
       <Toaster position="top-right" />
       <div className="min-h-screen bg-[#FFFEF7]">
-        {/* Editorial Header */}
-        <div className="border-b-2 border-[#1a1a1a] bg-white">
+        {/* Editorial Header with Flow Mascot */}
+        <div className="border-b-2 border-[#0BAF9A] bg-gradient-to-r from-white to-[#0BAF9A]/5">
           <div className="max-w-7xl mx-auto px-8 py-8">
             <div className="flex items-end justify-between">
-              <div>
-                <h1 className="text-5xl font-serif font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
-                  Inbox
-                </h1>
-                <p className="text-sm text-[#666] tracking-wider uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  {displayEmails.length} threads · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
+              <div className="flex items-center gap-4">
+                {/* Flow Mascot Icon */}
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                >
+                  <Image
+                    src="/branding/flow-default.png"
+                    alt="Flow assistant"
+                    width={56}
+                    height={56}
+                    className="rounded-full"
+                  />
+                </motion.div>
+                <div>
+                  <h1 className="text-5xl font-serif font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
+                    Inbox
+                  </h1>
+                  <p className="text-sm text-[#666] tracking-wider uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {displayEmails.length} threads · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </p>
+                </div>
               </div>
 
               {/* Search */}
@@ -321,14 +338,14 @@ export default function InboxPage() {
                   placeholder="Search inbox..."
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-80 px-4 py-3 pl-10 border border-[#1a1a1a] bg-white text-[#1a1a1a] placeholder-[#999] focus:outline-none focus:ring-2 focus:ring-[#1a1a1a] transition-all"
+                  className="w-80 px-4 py-3 pl-10 border-2 border-[#0BAF9A]/30 bg-white text-[#1a1a1a] placeholder-[#999] focus:outline-none focus:ring-2 focus:ring-[#0BAF9A] focus:border-[#0BAF9A] transition-all"
                   style={{ fontFamily: "'Manrope', sans-serif" }}
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#999]" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0BAF9A]" size={18} />
 
                 {searchLoading && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#1a1a1a]"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0BAF9A]"></div>
                   </div>
                 )}
 
@@ -359,8 +376,8 @@ export default function InboxPage() {
                 onClick={() => { setSelectedFilter('all'); setSelectedCategoryId(null); }}
                 className={`px-5 py-2 text-sm font-medium transition-all border-2 ${
                   selectedFilter === 'all' && !selectedCategoryId
-                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f5f5f5]'
+                    ? 'bg-[#0BAF9A] text-white border-[#0BAF9A] shadow-lg shadow-[#0BAF9A]/20'
+                    : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A]'
                 }`}
                 style={{ fontFamily: "'Manrope', sans-serif" }}
               >
@@ -370,8 +387,8 @@ export default function InboxPage() {
                 onClick={() => { setSelectedFilter('professional'); setSelectedCategoryId(null); }}
                 className={`px-5 py-2 text-sm font-medium transition-all border-2 ${
                   selectedFilter === 'professional'
-                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f5f5f5]'
+                    ? 'bg-[#0BAF9A] text-white border-[#0BAF9A] shadow-lg shadow-[#0BAF9A]/20'
+                    : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A]'
                 }`}
                 style={{ fontFamily: "'Manrope', sans-serif" }}
               >
@@ -381,8 +398,8 @@ export default function InboxPage() {
                 onClick={() => { setSelectedFilter('personal'); setSelectedCategoryId(null); }}
                 className={`px-5 py-2 text-sm font-medium transition-all border-2 ${
                   selectedFilter === 'personal'
-                    ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                    : 'bg-white text-[#1a1a1a] border-[#1a1a1a] hover:bg-[#f5f5f5]'
+                    ? 'bg-[#0BAF9A] text-white border-[#0BAF9A] shadow-lg shadow-[#0BAF9A]/20'
+                    : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A]'
                 }`}
                 style={{ fontFamily: "'Manrope', sans-serif" }}
               >
@@ -423,21 +440,55 @@ export default function InboxPage() {
         {/* Email List */}
         <div className="max-w-7xl mx-auto px-8 py-8">
           {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="text-[#666]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                Loading inbox...
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <Image
+                src="/branding/flow-thinking.png"
+                alt="Flow thinking"
+                width={128}
+                height={128}
+                className="mb-6"
+              />
+              <div className="text-[#0BAF9A] font-medium" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                Flow is checking your inbox...
               </div>
-            </div>
+              <div className="mt-2 animate-pulse text-sm text-[#666]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                Analyzing emails
+              </div>
+            </motion.div>
           ) : displayEmails.length === 0 ? (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">📭</div>
-              <h3 className="text-2xl font-serif font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
-                {searchQuery ? 'No matching emails' : 'Inbox Zero'}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="text-center py-20"
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+              >
+                <Image
+                  src="/branding/flow-celebrating.png"
+                  alt="Flow celebrating"
+                  width={160}
+                  height={160}
+                  className="mx-auto mb-6"
+                />
+              </motion.div>
+              <h3 className="text-3xl font-serif font-bold text-[#1a1a1a] mb-3" style={{ fontFamily: "'Crimson Pro', serif" }}>
+                {searchQuery ? 'No matching emails' : 'Inbox Zero!'}
               </h3>
-              <p className="text-[#666]" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                {searchQuery ? 'Try a different search term' : 'All caught up!'}
+              <p className="text-lg text-[#0BAF9A] mb-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                {searchQuery ? 'Try a different search term' : "You're all caught up"}
               </p>
-            </div>
+              <p className="text-sm text-[#666]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                {searchQuery ? '' : 'Take a break — you deserve it'}
+              </p>
+            </motion.div>
           ) : (
             <div className="space-y-px">
               <AnimatePresence mode="popLayout">
@@ -668,9 +719,9 @@ function EmailThread({
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.3) }}
       className={`bg-white border-l-4 hover:shadow-lg transition-all duration-200 group ${
-        !email.isRead ? 'bg-blue-50' : ''
+        !email.isRead ? 'bg-[#0BAF9A]/5' : ''
       }`}
-      style={{ borderLeftColor: !email.isRead ? '#2563eb' : categoryColor }}
+      style={{ borderLeftColor: !email.isRead ? '#0BAF9A' : categoryColor }}
     >
       {/* Main Thread Row */}
       <div
@@ -752,7 +803,7 @@ function EmailThread({
                   e.stopPropagation();
                   onOpenThread(email.threadId || email.id);
                 }}
-                className="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity font-medium"
+                className="text-xs text-[#0BAF9A] hover:text-[#078c77] opacity-0 group-hover:opacity-100 transition-opacity font-medium"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 View Thread →
@@ -762,7 +813,7 @@ function EmailThread({
                   e.stopPropagation();
                   onStartCorrect();
                 }}
-                className="text-xs text-[#999] hover:text-[#1a1a1a] opacity-0 group-hover:opacity-100 transition-opacity"
+                className="text-xs text-[#999] hover:text-[#0BAF9A] opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 Correct →
@@ -784,9 +835,9 @@ function EmailThread({
           >
             <div className="px-6 py-5 border-b border-[#e0e0e0]">
               {/* Why This Label? */}
-              <div className="bg-white border-l-4 border-[#3b82f6] p-4 mb-4">
+              <div className="bg-gradient-to-r from-[#0BAF9A]/5 to-white border-l-4 border-[#0BAF9A] p-4 mb-4">
                 <div className="flex items-start gap-3">
-                  <span className="text-sm font-mono text-[#3b82f6]">ℹ</span>
+                  <span className="text-sm font-mono text-[#0BAF9A]">ℹ</span>
                   <div className="flex-1">
                     <h4 className="text-xs font-semibold text-[#1a1a1a] mb-1 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                       Why &ldquo;{email.category}&rdquo;?
@@ -795,7 +846,7 @@ function EmailThread({
                     {!explanation ? (
                       <button
                         onClick={() => onFetchExplanation && onFetchExplanation(email.id)}
-                        className="text-sm text-blue-600 hover:underline"
+                        className="text-sm text-[#0BAF9A] hover:underline font-medium"
                         style={{ fontFamily: "'Manrope', sans-serif" }}
                       >
                         Show explanation →
@@ -807,25 +858,25 @@ function EmailThread({
                         </p>
 
                         {explanation.source === 'override' && (
-                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <div className="text-xs text-[#0BAF9A] mt-2 font-medium" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             ✓ Your manual correction
                           </div>
                         )}
 
                         {explanation.source === 'keywords' && explanation.details.matchedKeywords && (
-                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             Keywords: {explanation.details.matchedKeywords.join(', ')}
                           </div>
                         )}
 
                         {explanation.source === 'domain' && explanation.details.matchedValue && (
-                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             Domain: {explanation.details.matchedValue}
                           </div>
                         )}
 
                         {explanation.source === 'gmailLabel' && explanation.details.gmailLabel && (
-                          <div className="text-xs text-blue-600 mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                             Gmail label: {explanation.details.gmailLabel}
                           </div>
                         )}
@@ -883,14 +934,14 @@ function EmailThread({
                 <button
                   onClick={() => onCorrect(selectedCategory)}
                   disabled={!selectedCategory || selectedCategory === email.category}
-                  className="px-6 py-2 bg-[#1a1a1a] text-white text-sm font-medium hover:bg-[#333] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="px-6 py-2 bg-[#0BAF9A] text-white text-sm font-medium hover:bg-[#078c77] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#0BAF9A]/20"
                   style={{ fontFamily: "'Manrope', sans-serif" }}
                 >
                   Save Correction
                 </button>
                 <button
                   onClick={onCancelCorrect}
-                  className="px-6 py-2 border-2 border-[#1a1a1a] text-[#1a1a1a] text-sm font-medium hover:bg-[#f5f5f5] transition-all"
+                  className="px-6 py-2 border-2 border-[#0BAF9A]/30 text-[#1a1a1a] text-sm font-medium hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A] transition-all"
                   style={{ fontFamily: "'Manrope', sans-serif" }}
                 >
                   Cancel

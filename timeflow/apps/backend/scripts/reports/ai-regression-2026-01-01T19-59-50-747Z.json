@@ -1,0 +1,612 @@
+{
+  "summary": {
+    "total": 30,
+    "ok": 0,
+    "failed": 30,
+    "previews": 0,
+    "turnsTotal": 32,
+    "turnsPreviews": 0,
+    "expectationFailures": 13,
+    "timestamp": "2026-01-01T19:59:50.748Z",
+    "endpoint": "http://localhost:3011/api/assistant/chat"
+  },
+  "results": [
+    {
+      "prompt": "What tasks do I have?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 33,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my tasks for tomorrow.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "When am I free this week?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I'd like to schedule these tasks tomorrow from 9am-12pm and 1pm-5pm.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Can we schedule it?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Add my tasks to my calendar.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Help me schedule my homework and laundry for today.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "What is due today?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my high priority tasks first.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "When can I fit in a 2 hour study block?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Please organize my tasks around my fixed events.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my tasks but keep evenings free.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Can you make a schedule for next week?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Show me open slots tomorrow.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "What is on my calendar?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my habits for this week.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Plan my tasks and avoid my CS 101 lecture.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule these tasks for tomorrow morning.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I have no tasks. Can you schedule anyway?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "flow": "Conversation -> Scheduling",
+      "ok": false,
+      "status": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "turns": [
+        {
+          "prompt": "What tasks do I have?",
+          "status": 0,
+          "ok": false,
+          "durationMs": 1,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "error": "TypeError: fetch failed",
+          "messagePreview": null,
+          "expectation": {
+            "status": 200,
+            "preview": false
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "status 0 != 200"
+          ]
+        },
+        {
+          "prompt": "Schedule my tasks for tomorrow.",
+          "status": 0,
+          "ok": false,
+          "durationMs": 0,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "error": "TypeError: fetch failed",
+          "messagePreview": null,
+          "expectation": {
+            "status": 200,
+            "preview": true
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "status 0 != 200",
+            "preview false != true"
+          ]
+        }
+      ]
+    },
+    {
+      "flow": "Availability -> Scheduling",
+      "ok": false,
+      "status": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "turns": [
+        {
+          "prompt": "When am I free this week?",
+          "status": 0,
+          "ok": false,
+          "durationMs": 1,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "error": "TypeError: fetch failed",
+          "messagePreview": null,
+          "expectation": {
+            "status": 200,
+            "preview": false
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "status 0 != 200"
+          ]
+        },
+        {
+          "prompt": "Schedule my tasks for tomorrow.",
+          "status": 0,
+          "ok": false,
+          "durationMs": 0,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "error": "TypeError: fetch failed",
+          "messagePreview": null,
+          "expectation": {
+            "status": 200,
+            "preview": true
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "status 0 != 200",
+            "preview false != true"
+          ]
+        }
+      ]
+    },
+    {
+      "prompt": "My day feels chaotic—can you help me plan today?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "question false != true"
+      ]
+    },
+    {
+      "prompt": "I'm not sure what to work on next. What's the best use of my time?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "question false != true"
+      ]
+    },
+    {
+      "prompt": "I have a deadline tomorrow and a bunch of small tasks. How should I prioritize?",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": false,
+        "cta": true,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "cta false != true"
+      ]
+    },
+    {
+      "prompt": "Plan my day today and focus on the most important tasks.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": false,
+        "cta": true,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "cta false != true"
+      ]
+    },
+    {
+      "prompt": "Help me plan. I have about 3 hours this afternoon.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "question false != true"
+      ]
+    },
+    {
+      "prompt": "Help me plan. I need to focus on urgent items.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "question false != true"
+      ]
+    },
+    {
+      "prompt": "Schedule a meeting with Alex.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "question false != true"
+      ]
+    },
+    {
+      "prompt": "Create a meeting link for 30 min calls.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 1,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200"
+      ]
+    },
+    {
+      "prompt": "Send a meeting request to alex@company.com",
+      "status": 0,
+      "ok": false,
+      "durationMs": 0,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "status 0 != 200",
+        "question false != true"
+      ]
+    }
+  ]
+}

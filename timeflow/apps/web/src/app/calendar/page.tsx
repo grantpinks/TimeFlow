@@ -13,7 +13,6 @@ import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
-import { Panel } from '@/components/ui/Panel';
 import { useTasks } from '@/hooks/useTasks';
 import * as api from '@/lib/api';
 import type { CalendarEvent, Task } from '@timeflow/shared';

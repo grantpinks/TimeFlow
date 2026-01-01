@@ -39,7 +39,10 @@
       "Bash(cd:*)",
       "Bash(curl:*)",
       "Bash(python3:*)",
-      "Bash(xargs kill -9)"
+      "Bash(xargs kill -9)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(pnpm build:*)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "ask": []

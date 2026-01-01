@@ -1,0 +1,35 @@
+{
+  "summary": {
+    "total": 1,
+    "ok": 1,
+    "failed": 0,
+    "previews": 0,
+    "turnsTotal": 1,
+    "turnsPreviews": 0,
+    "expectationFailures": 0,
+    "timestamp": "2026-01-01T19:51:02.160Z",
+    "endpoint": "http://localhost:3001/api/assistant/chat"
+  },
+  "results": [
+    {
+      "prompt": "My day feels chaotic—can you help me plan today?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 1428,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Which priority should I focus on first?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    }
+  ]
+}

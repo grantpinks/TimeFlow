@@ -23,6 +23,7 @@ const envSchema = z.object({
   LLM_MAX_TOKENS: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().optional(),
+  AI_DEBUG_ERRORS: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -39,5 +40,4 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
-
 

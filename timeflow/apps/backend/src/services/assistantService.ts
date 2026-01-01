@@ -562,6 +562,16 @@ function formatMeetingStateBlock(state: MeetingWorkflowState): string {
   return `**Meeting State**:\n\`\`\`json\n${JSON.stringify(state, null, 2)}\n\`\`\`\n\n`;
 }
 
+function formatDebugError(error: unknown, enabled: boolean): string | null {
+  if (!enabled) {
+    return null;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
 /**
  * Task 13.18: Intelligent conversation memory selection
  *
@@ -1159,12 +1169,16 @@ export async function processMessage(
       }
     }
 
+    const debugMessage = formatDebugError(error, env.AI_DEBUG_ERRORS === 'true');
+    const responseMessage = debugMessage ? `${errorMessage}\n\n[debug] ${debugMessage}` : errorMessage;
+
     return {
       message: {
         id: generateMessageId(),
         role: 'assistant',
-        content: errorMessage,
+        content: responseMessage,
         timestamp: new Date().toISOString(),
+        ...(debugMessage ? { metadata: { debugError: debugMessage } } : {}),
       },
     };
   }
@@ -2245,6 +2259,7 @@ export const __test__ = {
   detectMeetingIntent,
   getMeetingState,
   buildMeetingClarifyingQuestion,
+  formatDebugError,
   parseResponse,
   sanitizeSchedulePreview,
   sanitizeAssistantContent,
