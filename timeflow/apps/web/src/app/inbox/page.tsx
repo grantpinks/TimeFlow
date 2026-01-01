@@ -9,9 +9,10 @@ import type { EmailCategoryConfig } from '@/lib/api';
 import type { EmailMessage, FullEmailMessage } from '@timeflow/shared';
 import { ExternalLink, Paperclip, Mail, MailOpen, Archive } from 'lucide-react';
 import DOMPurify from 'dompurify';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function InboxPage() {
-  const { user, isAuthenticated } = useUser();
+  const { isAuthenticated } = useUser();
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'professional' | 'personal'>('all');
@@ -121,38 +122,44 @@ export default function InboxPage() {
       ));
 
       if (error.response?.status === 429) {
-        alert(`Rate limit exceeded. ${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
+        toast.error(`${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
       } else {
-        alert('Failed to update read status. Please try again.');
+        toast.error('Failed to update read status. Please try again.');
       }
     }
   }
 
   async function handleArchive(emailId: string) {
-    // Optimistic removal
+    // Find the email first
     const emailToArchive = emails.find(e => e.id === emailId);
+
+    // Guard clause - if email not found, exit early
+    if (!emailToArchive) {
+      console.error('Email not found for archive:', emailId);
+      return;
+    }
+
+    // Optimistic removal
     setEmails(prev => prev.filter(e => e.id !== emailId));
 
     try {
       await api.archiveEmail(emailId);
 
       // If thread detail is open for this email, close it
-      if (selectedThreadId === emailToArchive?.threadId) {
+      if (selectedThreadId === emailToArchive.threadId) {
         setSelectedThreadId(null);
         setThreadMessages([]);
       }
     } catch (error: any) {
       // Revert on error
-      if (emailToArchive) {
-        setEmails(prev => [...prev, emailToArchive].sort((a, b) =>
-          new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
-        ));
-      }
+      setEmails(prev => [...prev, emailToArchive].sort((a, b) =>
+        new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+      ));
 
       if (error.response?.status === 429) {
-        alert(`Rate limit exceeded. ${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
+        toast.error(`${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
       } else {
-        alert('Failed to archive email. Please try again.');
+        toast.error('Failed to archive email. Please try again.');
       }
     }
   }
@@ -198,6 +205,7 @@ export default function InboxPage() {
 
   return (
     <Layout>
+      <Toaster position="top-right" />
       <div className="min-h-screen bg-[#FFFEF7]">
         {/* Editorial Header */}
         <div className="border-b-2 border-[#1a1a1a] bg-white">
@@ -352,7 +360,7 @@ export default function InboxPage() {
                         fetchInbox();
                       } catch (error) {
                         console.error('Failed to save category override:', error);
-                        alert('Failed to save category correction. Please try again.');
+                        toast.error('Failed to save category correction. Please try again.');
                       }
                     }}
                     onOpenThread={fetchThread}
@@ -663,7 +671,7 @@ function EmailThread({
                   <span className="text-sm font-mono text-[#3b82f6]">ℹ</span>
                   <div className="flex-1">
                     <h4 className="text-xs font-semibold text-[#1a1a1a] mb-1 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                      Why "{email.category}"?
+                      Why &ldquo;{email.category}&rdquo;?
                     </h4>
                     <p className="text-sm text-[#666]" style={{ fontFamily: "'Manrope', sans-serif" }}>
                       Based on sender domain and keywords in subject line.
