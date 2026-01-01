@@ -758,7 +758,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <a
-                href="/categories"
+                href="/settings/email-categories"
                 className="inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100"
               >
                 Manage Categories
