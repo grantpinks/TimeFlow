@@ -31,6 +31,11 @@ export default function SettingsPage() {
   const [blockedDays, setBlockedDays] = useState<string[]>([]);
   const [useCustomMeetingSchedule, setUseCustomMeetingSchedule] = useState(false);
   const [dailyMeetingSchedule, setDailyMeetingSchedule] = useState<DailyMeetingConfig>({});
+  const [gmailSyncStatus, setGmailSyncStatus] = useState<api.GmailSyncStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [backfillDaysInput, setBackfillDaysInput] = useState(7);
+  const [backfillMaxThreadsInput, setBackfillMaxThreadsInput] = useState(100);
 
   // Initialize form from user data
   useEffect(() => {
@@ -83,6 +88,97 @@ export default function SettingsPage() {
 
     fetchCalendars();
   }, []);
+
+  async function loadGmailSyncStatus() {
+    try {
+      const status = await api.getGmailSyncStatus();
+      setGmailSyncStatus(status);
+      setBackfillDaysInput(status.backfillDays);
+      setBackfillMaxThreadsInput(status.backfillMaxThreads);
+    } catch (error) {
+      console.error('Error loading Gmail sync status:', error);
+    }
+  }
+
+  useEffect(() => {
+    if (user) {
+      loadGmailSyncStatus();
+    }
+  }, [user]);
+
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      const result = await api.triggerGmailSync();
+      setMessage({
+        type: 'success',
+        text: `Synced ${result.syncedCategories} categories and ${result.syncedThreads ?? 0} threads.`,
+      });
+      await loadGmailSyncStatus();
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Sync failed',
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleRemoveAllLabels = async () => {
+    if (!window.confirm('This will remove ALL TimeFlow labels from Gmail. Continue?')) {
+      return;
+    }
+
+    setRemoving(true);
+    try {
+      const result = await api.removeAllGmailLabels();
+      setMessage({
+        type: 'success',
+        text: `Removed ${result.removedCategories ?? result.syncedCategories} labels from Gmail.`,
+      });
+      await loadGmailSyncStatus();
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to remove labels',
+      });
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  const handleUpdateBackfillSettings = async (days: number, maxThreads: number) => {
+    if (days < 1 || days > 30) {
+      setMessage({ type: 'error', text: 'Backfill days must be between 1 and 30.' });
+      if (gmailSyncStatus) {
+        setBackfillDaysInput(gmailSyncStatus.backfillDays);
+      }
+      return;
+    }
+
+    if (maxThreads < 10 || maxThreads > 500) {
+      setMessage({ type: 'error', text: 'Max threads must be between 10 and 500.' });
+      if (gmailSyncStatus) {
+        setBackfillMaxThreadsInput(gmailSyncStatus.backfillMaxThreads);
+      }
+      return;
+    }
+
+    try {
+      await api.updateGmailSyncSettings({
+        backfillDays: days,
+        backfillMaxThreads: maxThreads,
+      });
+      setMessage({ type: 'success', text: 'Backfill settings updated.' });
+      await loadGmailSyncStatus();
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to update settings',
+      });
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +322,104 @@ export default function SettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </a>
+          </div>
+
+          {/* Gmail Label Sync Settings */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">Gmail Label Sync</h2>
+
+            {gmailSyncStatus && (
+              <div className="bg-slate-50 rounded-lg p-4 mb-5 border border-slate-200">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-slate-500 mb-1">Last Synced</div>
+                    <div className="font-medium text-slate-800">
+                      {gmailSyncStatus.lastSyncedAt
+                        ? new Date(gmailSyncStatus.lastSyncedAt).toLocaleString()
+                        : 'Never'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500 mb-1">Threads Synced</div>
+                    <div className="font-medium text-slate-800">
+                      {gmailSyncStatus.lastSyncThreadCount}
+                    </div>
+                  </div>
+                </div>
+
+                {gmailSyncStatus.lastSyncError && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                    {gmailSyncStatus.lastSyncError}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-3 mb-6">
+              <button
+                type="button"
+                onClick={handleSyncNow}
+                disabled={syncing}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium
+                           hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-colors"
+              >
+                {syncing ? 'Syncing...' : 'Sync Now'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRemoveAllLabels}
+                disabled={removing}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium
+                           hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed
+                           transition-colors"
+              >
+                {removing ? 'Removing...' : 'Remove All TimeFlow Labels'}
+              </button>
+            </div>
+
+            {gmailSyncStatus && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-slate-700">Backfill Settings</h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Backfill Days
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={backfillDaysInput}
+                      onChange={(e) => setBackfillDaysInput(Number(e.target.value))}
+                      onBlur={() => handleUpdateBackfillSettings(backfillDaysInput, backfillMaxThreadsInput)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg
+                                 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">How many days back to sync (1-30)</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Max Threads
+                    </label>
+                    <input
+                      type="number"
+                      min="10"
+                      max="500"
+                      value={backfillMaxThreadsInput}
+                      onChange={(e) => setBackfillMaxThreadsInput(Number(e.target.value))}
+                      onBlur={() => handleUpdateBackfillSettings(backfillDaysInput, backfillMaxThreadsInput)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg
+                                 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Max threads per sync (10-500)</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Working Hours */}
