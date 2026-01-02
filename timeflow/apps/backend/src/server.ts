@@ -27,6 +27,7 @@ import { registerSchedulingLinkRoutes } from './routes/schedulingLinkRoutes.js';
 import { registerAvailabilityRoutes } from './routes/availabilityRoutes.js';
 import { registerBookingRoutes } from './routes/bookingRoutes.js';
 import { registerMeetingRoutes } from './routes/meetingRoutes.js';
+import { startWatchRenewalJob } from './services/gmailWatchScheduler.js';
 import { registerGmailSyncRoutes } from './routes/gmailSyncRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
@@ -83,6 +84,10 @@ export async function buildServer(): Promise<FastifyInstance> {
     },
     { prefix: '/api' }
   );
+
+  if (env.NODE_ENV !== 'test') {
+    startWatchRenewalJob();
+  }
 
   return server;
 }

@@ -29,6 +29,9 @@ const envSchema = z.object({
   GMAIL_PUBSUB_PUSH_SECRET: z.string().optional(),
   GMAIL_PUBSUB_OIDC_AUDIENCE: z.string().optional(),
   GMAIL_PUBSUB_OIDC_EMAIL_ALLOWLIST: z.string().optional(),
+  GMAIL_WATCH_RENEWAL_ENABLED: z.string().optional(),
+  GMAIL_WATCH_RENEWAL_WINDOW_MINUTES: z.string().optional(),
+  GMAIL_WATCH_RENEWAL_INTERVAL_MINUTES: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
