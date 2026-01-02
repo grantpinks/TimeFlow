@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type { EmailCategoryConfig } from '@/lib/api';
@@ -9,10 +9,22 @@ type Props = {
   categories: EmailCategoryConfig[];
   selectedCategoryId: string | null;
   onSelectCategory: (categoryId: string | null) => void;
+  forceExpanded?: boolean;
 };
 
-export function CategoryPills({ categories, selectedCategoryId, onSelectCategory }: Props) {
+export function CategoryPills({
+  categories,
+  selectedCategoryId,
+  onSelectCategory,
+  forceExpanded,
+}: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
+
+  useEffect(() => {
+    if (forceExpanded) {
+      setIsExpanded(true);
+    }
+  }, [forceExpanded]);
 
   const enabledCategories = useMemo(
     () => (Array.isArray(categories) ? categories.filter((category) => category.enabled) : []),
