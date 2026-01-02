@@ -24,6 +24,9 @@ CREATE INDEX IF NOT EXISTS "EventCategorization_userId_idx" ON "EventCategorizat
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "EventCategorization_categoryId_idx" ON "EventCategorization"("categoryId");
 
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "EventCategorization_userId_categoryId_idx" ON "EventCategorization"("userId", "categoryId");
+
 -- AddForeignKey
 DO $$
 BEGIN
