@@ -6,23 +6,30 @@ import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
-import type { EmailMessage, FullEmailMessage } from '@timeflow/shared';
-import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search } from 'lucide-react';
+import type { EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
+import { DEFAULT_INBOX_VIEWS } from '../../../../../packages/shared/src/types/email.js';
+import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar } from 'lucide-react';
 import Image from 'next/image';
 import DOMPurify from 'dompurify';
 import toast, { Toaster } from 'react-hot-toast';
 import { filterInboxEmails } from '@/lib/inboxFilters';
 import { CategoryPills } from '@/components/inbox/CategoryPills';
+import { InboxViewEditor } from '@/components/inbox/InboxViewEditor';
+import { loadInboxViews, saveInboxViews } from '@/lib/inboxViewsStorage';
+import { track } from '@/lib/analytics';
 
 export default function InboxPage() {
   const { isAuthenticated } = useUser();
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'professional' | 'personal'>('all');
+  const [views, setViews] = useState<InboxView[]>(DEFAULT_INBOX_VIEWS);
+  const [selectedViewId, setSelectedViewId] = useState<string>(
+    DEFAULT_INBOX_VIEWS[0]?.id ?? 'all'
+  );
+  const [showViewEditor, setShowViewEditor] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [categories, setCategories] = useState<EmailCategoryConfig[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedThreadId, setExpandedThreadId] = useState<string | null>(null);
   const [correctingEmailId, setCorrectingEmailId] = useState<string | null>(null);
   const [searchMode, setSearchMode] = useState<'client' | 'server'>('client');
   const [serverSearchResults, setServerSearchResults] = useState<EmailMessage[]>([]);
@@ -38,13 +45,32 @@ export default function InboxPage() {
 
   // Explanation state
   const [explanations, setExplanations] = useState<Record<string, api.EmailCategoryExplanation>>({});
+  const [showExplanation, setShowExplanation] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchInbox();
       fetchCategories();
     }
-  }, [isAuthenticated, selectedFilter, selectedCategoryId]);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const cachedViews = loadInboxViews();
+    setViews(cachedViews);
+    setSelectedViewId((current) => ensureSelectedViewId(cachedViews, current));
+
+    api
+      .getInboxViews()
+      .then(({ views: serverViews }) => {
+        setViews(serverViews);
+        saveInboxViews(serverViews);
+        setSelectedViewId((current) => ensureSelectedViewId(serverViews, current));
+      })
+      .catch((error) => {
+        console.error('Failed to load inbox views:', error);
+      });
+  }, [isAuthenticated]);
 
   // Cleanup function to clear timer on unmount
   useEffect(() => {
@@ -55,20 +81,64 @@ export default function InboxPage() {
     };
   }, []);
 
+  // Auto-select first email when list changes
+  useEffect(() => {
+    const displayEmails = getDisplayEmails();
+    if (displayEmails.length > 0 && !selectedThreadId) {
+      const firstEmail = displayEmails[0];
+      fetchThread(firstEmail.threadId || firstEmail.id);
+    }
+  }, [emails, searchMode, serverSearchResults, searchQuery]);
+
   async function fetchInbox() {
     try {
       setLoading(true);
       const result = await api.getInboxEmails({ maxResults: 100 });
-
-      const filteredEmails = filterInboxEmails(result.messages, {
-        selectedFilter,
-        selectedCategoryId,
-      });
-      setEmails(filteredEmails);
+      setEmails(result.messages);
     } catch (error) {
       console.error('Failed to fetch inbox:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function ensureSelectedViewId(nextViews: InboxView[], preferredId: string) {
+    if (nextViews.some((view) => view.id === preferredId)) {
+      return preferredId;
+    }
+    const allView = nextViews.find((view) => view.id === 'all');
+    return allView?.id ?? nextViews[0]?.id ?? 'all';
+  }
+
+  async function handleViewsChange(nextViews: InboxView[]) {
+    setViews(nextViews);
+    saveInboxViews(nextViews);
+    setSelectedViewId((current) => ensureSelectedViewId(nextViews, current));
+
+    try {
+      const result = await api.updateInboxViews(nextViews);
+      setViews(result.views);
+      saveInboxViews(result.views);
+      setSelectedViewId((current) => ensureSelectedViewId(result.views, current));
+    } catch (error) {
+      console.error('Failed to update inbox views:', error);
+      toast.error('Failed to save view changes.');
+    }
+  }
+
+  async function handleDeleteView(viewId: string) {
+    const nextViews = views.filter((view) => view.id !== viewId);
+    setViews(nextViews);
+    saveInboxViews(nextViews);
+    setSelectedViewId((current) =>
+      ensureSelectedViewId(nextViews, current === viewId ? 'all' : current)
+    );
+
+    try {
+      await api.deleteInboxView(viewId);
+    } catch (error) {
+      console.error('Failed to delete inbox view:', error);
+      toast.error('Failed to delete view.');
     }
   }
 
@@ -149,6 +219,9 @@ export default function InboxPage() {
   async function fetchThread(threadId: string) {
     setLoadingThread(true);
     setThreadError(null);
+    setSelectedThreadId(threadId);
+    setShowExplanation(false);
+
     try {
       // TODO: This creates N+1 queries. Backend should provide /threads/:id endpoint
       // that returns all messages in one call for better performance.
@@ -162,21 +235,24 @@ export default function InboxPage() {
       );
 
       setThreadMessages(fullMessages);
-      setSelectedThreadId(threadId);
     } catch (error) {
       console.error('Failed to fetch thread:', error);
-      setThreadError('Failed to load thread');
+      setThreadError('Failed to load email');
     } finally {
       setLoadingThread(false);
     }
   }
 
   async function fetchExplanation(emailId: string) {
-    if (explanations[emailId]) return; // Already fetched
+    if (explanations[emailId]) {
+      setShowExplanation(!showExplanation);
+      return;
+    }
 
     try {
       const result = await api.getEmailExplanation(emailId);
       setExplanations(prev => ({ ...prev, [emailId]: result.explanation }));
+      setShowExplanation(true);
     } catch (error) {
       console.error('Failed to fetch explanation:', error);
       toast.error('Failed to load explanation. Please try again.');
@@ -208,28 +284,28 @@ export default function InboxPage() {
   }
 
   async function handleArchive(emailId: string) {
-    // Find the email first
     const emailToArchive = emails.find(e => e.id === emailId);
-
-    // Guard clause - if email not found, exit early
     if (!emailToArchive) {
       console.error('Email not found for archive:', emailId);
       return;
     }
 
-    // Optimistic removal
     setEmails(prev => prev.filter(e => e.id !== emailId));
 
     try {
       await api.archiveEmail(emailId);
 
-      // If thread detail is open for this email, close it
-      if (selectedThreadId === emailToArchive.threadId) {
-        setSelectedThreadId(null);
-        setThreadMessages([]);
+      // If we archived the selected email, select the next one
+      if (selectedThreadId === emailToArchive.threadId || selectedThreadId === emailToArchive.id) {
+        const displayEmails = getDisplayEmails().filter(e => e.id !== emailId);
+        if (displayEmails.length > 0) {
+          fetchThread(displayEmails[0].threadId || displayEmails[0].id);
+        } else {
+          setSelectedThreadId(null);
+          setThreadMessages([]);
+        }
       }
     } catch (error: any) {
-      // Revert on error
       setEmails(prev => [...prev, emailToArchive].sort((a, b) =>
         new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
       ));
@@ -333,16 +409,33 @@ export default function InboxPage() {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  const displayEmails = searchMode === 'server'
-    ? serverSearchResults
-    : (searchQuery
-        ? emails.filter(e =>
-            e.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            e.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (e.snippet && e.snippet.toLowerCase().includes(searchQuery.toLowerCase()))
-          )
-        : emails
+  function getDisplayEmails(): EmailMessage[] {
+    const baseEmails = searchMode === 'server' ? serverSearchResults : emails;
+    const filteredByView = filterInboxEmails(baseEmails, {
+      selectedViewId,
+      views,
+      selectedCategoryId,
+    });
+
+    if (searchMode === 'server') {
+      return filteredByView;
+    }
+
+    if (searchQuery) {
+      return filteredByView.filter((email) =>
+        email.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        email.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (email.snippet && email.snippet.toLowerCase().includes(searchQuery.toLowerCase()))
       );
+    }
+
+    return filteredByView;
+  }
+
+  const displayEmails = getDisplayEmails();
+  const selectedEmail = displayEmails.find(e =>
+    e.threadId === selectedThreadId || e.id === selectedThreadId
+  );
 
   if (!isAuthenticated) {
     return (
@@ -357,32 +450,31 @@ export default function InboxPage() {
   return (
     <Layout>
       <Toaster position="top-right" />
-      <div className="min-h-screen bg-[#FFFEF7]">
-        {/* Editorial Header with Flow Mascot */}
-        <div className="border-b-2 border-[#0BAF9A] bg-gradient-to-r from-white to-[#0BAF9A]/5">
-          <div className="max-w-7xl mx-auto px-8 py-8">
-            <div className="flex items-end justify-between">
+      <div className="h-screen flex flex-col bg-[#FFFEF7] overflow-hidden">
+        {/* Header */}
+        <div className="flex-none border-b-2 border-[#0BAF9A] bg-gradient-to-r from-white to-[#0BAF9A]/5">
+          <div className="px-6 py-6">
+            <div className="flex items-end justify-between mb-4">
               <div className="flex items-center gap-4">
-                {/* Flow Mascot Icon */}
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  transition={{ duration: 0.3 }}
                 >
                   <Image
                     src="/branding/flow-default.png"
-                    alt="Flow assistant"
-                    width={56}
-                    height={56}
+                    alt="Flow"
+                    width={48}
+                    height={48}
                     className="rounded-full"
                   />
                 </motion.div>
                 <div>
-                  <h1 className="text-5xl font-serif font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
+                  <h1 className="text-4xl font-bold text-[#1a1a1a] mb-1" style={{ fontFamily: "'Crimson Pro', serif" }}>
                     Inbox
                   </h1>
-                  <p className="text-sm text-[#666] tracking-wider uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    {displayEmails.length} threads · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  <p className="text-xs text-[#666] tracking-wider uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                    {displayEmails.length} threads
                   </p>
                 </div>
               </div>
@@ -394,10 +486,10 @@ export default function InboxPage() {
                   placeholder="Search inbox..."
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-80 px-4 py-3 pl-10 border-2 border-[#0BAF9A]/30 bg-white text-[#1a1a1a] placeholder-[#999] focus:outline-none focus:ring-2 focus:ring-[#0BAF9A] focus:border-[#0BAF9A] transition-all"
+                  className="w-80 px-4 py-2.5 pl-10 border-2 border-[#0BAF9A]/30 bg-white text-[#1a1a1a] placeholder-[#999] focus:outline-none focus:ring-2 focus:ring-[#0BAF9A] focus:border-[#0BAF9A] transition-all rounded-lg"
                   style={{ fontFamily: "'Manrope', sans-serif" }}
                 />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0BAF9A]" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0BAF9A]" size={16} />
 
                 {searchLoading && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -426,262 +518,204 @@ export default function InboxPage() {
               </div>
             </div>
 
-            {/* Quick Filters */}
-            <div className="flex items-start gap-4 mt-6 border-t border-[#e0e0e0] pt-4">
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3">
               <button
-                onClick={() => { setSelectedFilter('all'); setSelectedCategoryId(null); }}
-                className={`px-5 py-2 text-sm font-medium transition-all border-2 ${
-                  selectedFilter === 'all' && !selectedCategoryId
-                    ? 'bg-[#0BAF9A] text-white border-[#0BAF9A] shadow-lg shadow-[#0BAF9A]/20'
-                    : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A]'
+                type="button"
+                onClick={() => setShowViewEditor((prev) => !prev)}
+                className={`px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] rounded-full border ${
+                  showViewEditor
+                    ? 'border-[#0BAF9A] text-[#0BAF9A] bg-[#0BAF9A]/10'
+                    : 'border-[#0BAF9A]/40 text-[#0BAF9A] hover:bg-[#0BAF9A]/10'
                 }`}
-                style={{ fontFamily: "'Manrope', sans-serif" }}
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
-                All
-              </button>
-              <button
-                onClick={() => { setSelectedFilter('professional'); setSelectedCategoryId(null); }}
-                className={`px-5 py-2 text-sm font-medium transition-all border-2 ${
-                  selectedFilter === 'professional'
-                    ? 'bg-[#0BAF9A] text-white border-[#0BAF9A] shadow-lg shadow-[#0BAF9A]/20'
-                    : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A]'
-                }`}
-                style={{ fontFamily: "'Manrope', sans-serif" }}
-              >
-                Professional
-              </button>
-              <button
-                onClick={() => { setSelectedFilter('personal'); setSelectedCategoryId(null); }}
-                className={`px-5 py-2 text-sm font-medium transition-all border-2 ${
-                  selectedFilter === 'personal'
-                    ? 'bg-[#0BAF9A] text-white border-[#0BAF9A] shadow-lg shadow-[#0BAF9A]/20'
-                    : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A]'
-                }`}
-                style={{ fontFamily: "'Manrope', sans-serif" }}
-              >
-                Personal
+                Customize
               </button>
 
-              <div className="h-6 w-px bg-[#e0e0e0] mx-1 mt-2" />
+              {views.map((view) => {
+                const isActive = selectedViewId === view.id && !selectedCategoryId;
+                return (
+                  <button
+                    key={view.id}
+                    onClick={() => {
+                      setSelectedViewId(view.id);
+                      setSelectedCategoryId(null);
+                    }}
+                    className={`px-4 py-1.5 text-sm font-medium transition-all border-2 rounded-full ${
+                      isActive
+                        ? 'bg-[#0BAF9A] text-white border-[#0BAF9A]'
+                        : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5'
+                    }`}
+                    style={{ fontFamily: "'Manrope', sans-serif" }}
+                  >
+                    {view.name}
+                  </button>
+                );
+              })}
+
+              <div className="h-6 w-px bg-[#e0e0e0] mx-1" />
 
               <CategoryPills
                 categories={categories}
                 selectedCategoryId={selectedCategoryId}
                 onSelectCategory={(categoryId) => {
-                  setSelectedFilter('all');
+                  setSelectedViewId('all');
                   setSelectedCategoryId(categoryId);
                 }}
+                forceExpanded={showViewEditor}
               />
             </div>
+
+            {showViewEditor && (
+              <InboxViewEditor
+                views={views}
+                categories={categories}
+                selectedViewId={selectedViewId}
+                onSelectView={setSelectedViewId}
+                onChange={handleViewsChange}
+                onDeleteView={handleDeleteView}
+              />
+            )}
           </div>
         </div>
 
-        {/* Email List */}
-        <div className="max-w-7xl mx-auto px-8 py-8">
-          {loading ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-20"
-            >
-              <Image
-                src="/branding/flow-thinking.png"
-                alt="Flow thinking"
-                width={128}
-                height={128}
-                className="mb-6"
-              />
-              <div className="text-[#0BAF9A] font-medium" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                Flow is checking your inbox...
+        {/* Split Pane Container */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Pane - Email List */}
+          <div className="w-[380px] flex-none border-r border-[#e0e0e0] bg-white overflow-y-auto">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Image
+                  src="/branding/flow-thinking.png"
+                  alt="Loading"
+                  width={96}
+                  height={96}
+                  className="mb-4"
+                />
+                <div className="text-[#0BAF9A] text-sm" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                  Loading inbox...
+                </div>
               </div>
-              <div className="mt-2 animate-pulse text-sm text-[#666]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                Analyzing emails
-              </div>
-            </motion.div>
-          ) : displayEmails.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="text-center py-20"
-            >
-              <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.3 }}
-              >
+            ) : displayEmails.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
                 <Image
                   src="/branding/flow-celebrating.png"
-                  alt="Flow celebrating"
-                  width={160}
-                  height={160}
-                  className="mx-auto mb-6"
+                  alt="Empty"
+                  width={120}
+                  height={120}
+                  className="mb-4"
                 />
-              </motion.div>
-              <h3 className="text-3xl font-serif font-bold text-[#1a1a1a] mb-3" style={{ fontFamily: "'Crimson Pro', serif" }}>
-                {searchQuery ? 'No matching emails' : 'Inbox Zero!'}
-              </h3>
-              <p className="text-lg text-[#0BAF9A] mb-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                {searchQuery ? 'Try a different search term' : "You're all caught up"}
-              </p>
-              <p className="text-sm text-[#666]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                {searchQuery ? '' : 'Take a break — you deserve it'}
-              </p>
-            </motion.div>
-          ) : (
-            <div className="space-y-px">
-              <AnimatePresence mode="popLayout">
-                {displayEmails.map((email, index) => (
-                  <EmailThread
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
+                  {searchQuery ? 'No matches' : 'Inbox Zero!'}
+                </h3>
+                <p className="text-sm text-[#666]" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                  {searchQuery ? 'Try a different search' : "You're all caught up"}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-[#e0e0e0]">
+                {displayEmails.map((email) => (
+                  <EmailListItem
                     key={email.id}
                     email={email}
-                    index={index}
-                    categoryColor={getCategoryColor(email.category || '')}
-                    categoryLabel={getCategoryLabel(email.category)}
-                    categoryId={getCategoryId(email.category)}
-                    formatTimestamp={formatTimestamp}
-                    isExpanded={expandedThreadId === email.id}
-                    onToggleExpand={() => setExpandedThreadId(expandedThreadId === email.id ? null : email.id)}
-                    isCorrecting={correctingEmailId === email.id}
-                    onStartCorrect={() => setCorrectingEmailId(email.id)}
-                    onCancelCorrect={() => setCorrectingEmailId(null)}
-                    categories={categories}
-                    onCorrect={async (categoryId: string, scope: 'sender' | 'domain' | 'thread', reason?: string) => {
-                      try {
-                        // Extract sender email from the email
-                        const senderMatch = email.from.match(/<(.+)>/);
-                        const senderEmail = senderMatch ? senderMatch[1] : email.from;
-                        const domain = senderEmail.split('@')[1];
-                        const overrideType =
-                          scope === 'thread' ? 'threadId' : scope === 'domain' ? 'domain' : 'sender';
-                        const overrideValue =
-                          scope === 'thread'
-                            ? email.threadId || email.id
-                            : scope === 'domain'
-                              ? (domain || senderEmail).toLowerCase()
-                              : senderEmail.toLowerCase();
-
-                        // Create override for this sender
-                        await api.createEmailOverride({
-                          overrideType,
-                          overrideValue,
-                          categoryName: categoryId,
-                          reason,
-                        });
-
-                        setCorrectingEmailId(null);
-                        fetchInbox();
-                      } catch (error) {
-                        console.error('Failed to save category override:', error);
-                        toast.error('Failed to save category correction. Please try again.');
-                      }
-                    }}
-                    onOpenThread={fetchThread}
+                    isSelected={selectedThreadId === email.threadId || selectedThreadId === email.id}
+                    onClick={() => fetchThread(email.threadId || email.id)}
                     onToggleRead={handleToggleRead}
                     onArchive={handleArchive}
-                    onCreateTask={handleCreateTaskFromEmail}
-                    explanation={explanations[email.id]}
-                    onFetchExplanation={fetchExplanation}
+                    categoryColor={getCategoryColor(email.category || '')}
+                    categoryLabel={getCategoryLabel(email.category)}
+                    formatTimestamp={formatTimestamp}
                   />
                 ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
 
-        {/* Thread Detail Panel */}
-        <AnimatePresence>
-          {selectedThreadId && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="fixed right-0 top-0 h-screen w-1/2 bg-white border-l border-gray-200 shadow-2xl overflow-y-auto z-50"
-              role="dialog"
-              aria-label="Email thread details"
-            >
-              {/* Header with Open in Gmail button */}
-              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                <h2 className="font-serif text-xl font-bold">Thread Details</h2>
-                <div className="flex gap-2">
-                  <a
-                    href={`https://mail.google.com/mail/u/0/#inbox/${selectedThreadId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                  >
-                    <ExternalLink size={16} />
-                    Open in Gmail
-                  </a>
+          {/* Right Pane - Reading Pane */}
+          <div className="flex-1 bg-[#FFFEF7] overflow-hidden flex flex-col">
+            {!selectedThreadId || threadMessages.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <Image
+                    src="/branding/flow-default.png"
+                    alt="Select email"
+                    width={120}
+                    height={120}
+                    className="mx-auto mb-4 opacity-30"
+                  />
+                  <p className="text-[#999] text-lg" style={{ fontFamily: "'Crimson Pro', serif" }}>
+                    Select an email to read
+                  </p>
+                </div>
+              </div>
+            ) : loadingThread ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0BAF9A]"></div>
+              </div>
+            ) : threadError ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-red-600 mb-2">{threadError}</p>
                   <button
-                    onClick={() => {
-                      setSelectedThreadId(null);
-                      setThreadMessages([]);
-                      setThreadError(null);
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                    aria-label="Close thread details"
+                    onClick={() => selectedThreadId && fetchThread(selectedThreadId)}
+                    className="text-sm text-[#0BAF9A] hover:underline"
                   >
-                    Close
+                    Try again
                   </button>
                 </div>
               </div>
+            ) : (
+              <ReadingPane
+                email={selectedEmail!}
+                threadMessages={threadMessages}
+                categoryLabel={getCategoryLabel(selectedEmail?.category)}
+                categoryColor={getCategoryColor(selectedEmail?.category || '')}
+                categoryId={getCategoryId(selectedEmail?.category)}
+                categories={categories}
+                onCreateTask={handleCreateTaskFromEmail}
+                onArchive={handleArchive}
+                onToggleRead={handleToggleRead}
+                isCorrecting={correctingEmailId === selectedEmail?.id}
+                onStartCorrect={() => setCorrectingEmailId(selectedEmail?.id || null)}
+                onCancelCorrect={() => setCorrectingEmailId(null)}
+                onCorrect={async (categoryId: string, scope: 'sender' | 'domain' | 'thread', reason?: string) => {
+                  if (!selectedEmail) return;
+                  try {
+                    const senderMatch = selectedEmail.from.match(/<(.+)>/);
+                    const senderEmail = senderMatch ? senderMatch[1] : selectedEmail.from;
+                    const domain = senderEmail.split('@')[1];
+                    const overrideType =
+                      scope === 'thread' ? 'threadId' : scope === 'domain' ? 'domain' : 'sender';
+                    const overrideValue =
+                      scope === 'thread'
+                        ? selectedEmail.threadId || selectedEmail.id
+                        : scope === 'domain'
+                          ? (domain || senderEmail).toLowerCase()
+                          : senderEmail.toLowerCase();
 
-              {/* Thread messages */}
-              <div className="p-6 space-y-6">
-                {threadError ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="text-center">
-                      <div className="text-red-600 font-semibold mb-2">{threadError}</div>
-                      <button
-                        onClick={() => selectedThreadId && fetchThread(selectedThreadId)}
-                        className="text-sm text-blue-600 hover:text-blue-800"
-                      >
-                        Try again
-                      </button>
-                    </div>
-                  </div>
-                ) : loadingThread ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>
-                ) : (
-                  threadMessages.map((message) => (
-                    <div key={message.id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <div className="font-semibold text-gray-900">{message.from}</div>
-                          <div className="text-sm text-gray-500">
-                            To: {message.to} {message.cc && `• Cc: ${message.cc}`}
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {new Date(message.receivedAt).toLocaleString()}
-                        </div>
-                      </div>
+                    await api.createEmailOverride({
+                      overrideType,
+                      overrideValue,
+                      categoryName: categoryId,
+                      reason,
+                    });
 
-                      <EmailBody html={message.body} plainText={message.snippet} />
+                    setCorrectingEmailId(null);
+                    fetchInbox();
+                  } catch (error) {
+                    console.error('Failed to save category override:', error);
+                    toast.error('Failed to save category correction. Please try again.');
+                  }
+                }}
+                explanation={selectedEmail ? explanations[selectedEmail.id] : undefined}
+                showExplanation={showExplanation}
+                onToggleExplanation={() => selectedEmail && fetchExplanation(selectedEmail.id)}
+              />
+            )}
+          </div>
+        </div>
 
-                      {message.attachments && message.attachments.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-gray-300">
-                          <div className="text-sm font-semibold text-gray-700 mb-2">Attachments:</div>
-                          <div className="space-y-2">
-                            {message.attachments.map((att, i) => (
-                              <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                                <Paperclip size={14} />
-                                {att.filename} ({Math.round(att.size / 1024)}KB)
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Web Fonts */}
@@ -696,26 +730,147 @@ export default function InboxPage() {
  * EmailBody Component - Safely renders HTML email content with XSS protection
  */
 function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
   const sanitizedHtml = useMemo(() => {
     if (!html) return null;
+    // Gmail-like permissive sanitization - allow almost everything except scripts
     return DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'a', 'ul', 'ol', 'li', 'blockquote', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+      // Allow all safe tags (Gmail allows nearly everything)
+      ALLOWED_TAGS: [
+        // Text & Formatting
+        'p', 'br', 'b', 'i', 'u', 'strong', 'em', 'a', 'span', 'div', 'font', 'center', 'small', 'big', 'sub', 'sup', 's', 'strike', 'del', 'ins', 'mark',
+        // Headings
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        // Lists
+        'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+        // Quotes & Code
+        'blockquote', 'pre', 'code', 'kbd', 'samp', 'var', 'cite', 'abbr', 'address',
+        // Tables
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'colgroup', 'col', 'caption',
+        // Media & Separators
+        'img', 'hr', 'picture', 'figure', 'figcaption',
+        // Sections & Structure
+        'article', 'section', 'nav', 'aside', 'header', 'footer', 'main', 'details', 'summary',
+        // Forms (display only, no submission)
+        'form', 'fieldset', 'legend', 'label', 'input', 'button', 'select', 'option', 'textarea',
+        // Other
+        'time', 'progress', 'meter', 'wbr'
+      ],
+      // Allow all styling and layout attributes
+      ALLOWED_ATTR: [
+        'href', 'target', 'rel', 'class', 'style', 'id', 'name',
+        'src', 'alt', 'title', 'width', 'height', 'sizes', 'srcset',
+        'align', 'valign', 'border', 'cellpadding', 'cellspacing', 'bgcolor', 'color', 'background',
+        'colspan', 'rowspan', 'nowrap',
+        'dir', 'lang', 'role', 'aria-label', 'aria-labelledby', 'aria-describedby',
+        'type', 'value', 'placeholder', 'disabled', 'readonly', 'checked', 'selected',
+        'start', 'reversed',
+        'datetime', 'cite', 'abbr'
+      ],
+      ALLOW_DATA_ATTR: true, // Gmail allows data attributes
+      ADD_TAGS: ['style'], // Allow inline style tags
+      FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'applet', 'base', 'meta', 'link'], // Block dangerous tags
+      FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'], // Block event handlers
     });
   }, [html]);
 
+  // Update iframe content when HTML changes
+  useEffect(() => {
+    if (!iframeRef.current || !sanitizedHtml) return;
+
+    const iframeDoc = iframeRef.current.contentDocument;
+    if (!iframeDoc) return;
+
+    // Write sanitized HTML to iframe - preserve original email styling
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            /* Minimal reset - preserve email's original styling */
+            body {
+              margin: 0;
+              padding: 16px;
+              background: transparent;
+              overflow-wrap: break-word;
+              word-wrap: break-word;
+            }
+
+            /* Ensure images don't overflow */
+            img {
+              max-width: 100%;
+              height: auto;
+            }
+
+            /* Responsive tables */
+            table {
+              max-width: 100%;
+            }
+
+            /* Make links work */
+            a {
+              cursor: pointer;
+            }
+          </style>
+        </head>
+        <body>
+          ${sanitizedHtml}
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    // Auto-resize iframe to content height
+    const resizeIframe = () => {
+      if (iframeRef.current && iframeDoc.body) {
+        iframeRef.current.style.height = iframeDoc.body.scrollHeight + 'px';
+      }
+    };
+
+    // Initial resize
+    setTimeout(resizeIframe, 100);
+
+    // Resize on image load
+    const images = iframeDoc.querySelectorAll('img');
+    images.forEach(img => {
+      img.addEventListener('load', resizeIframe);
+    });
+
+    return () => {
+      images.forEach(img => {
+        img.removeEventListener('load', resizeIframe);
+      });
+    };
+  }, [sanitizedHtml]);
+
   if (sanitizedHtml) {
     return (
-      <div
-        className="prose max-w-none text-gray-800"
-        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      <iframe
+        ref={iframeRef}
+        sandbox="allow-same-origin"
+        style={{
+          width: '100%',
+          border: 'none',
+          minHeight: '200px',
+          background: 'transparent',
+        }}
+        title="Email content"
       />
     );
   }
 
   if (plainText) {
     return (
-      <div className="prose max-w-none whitespace-pre-wrap text-gray-800">
+      <div className="whitespace-pre-wrap" style={{
+        fontFamily: "'Crimson Pro', Georgia, serif",
+        fontSize: '17px',
+        lineHeight: '1.7',
+        color: '#1a1a1a',
+      }}>
         {plainText}
       </div>
     );
@@ -724,49 +879,145 @@ function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
   return <div className="text-gray-400 italic">No content available</div>;
 }
 
-interface EmailThreadProps {
+/**
+ * Email List Item - Compact row for left pane
+ */
+interface EmailListItemProps {
   email: EmailMessage;
-  index: number;
+  isSelected: boolean;
+  onClick: () => void;
+  onToggleRead: (emailId: string, currentIsRead: boolean) => void;
+  onArchive: (emailId: string) => void;
   categoryColor: string;
   categoryLabel: string;
-  categoryId: string | null;
   formatTimestamp: (date: string) => string;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+}
+
+function EmailListItem({
+  email,
+  isSelected,
+  onClick,
+  onToggleRead,
+  onArchive,
+  categoryColor,
+  categoryLabel,
+  formatTimestamp,
+}: EmailListItemProps) {
+  return (
+    <div
+      onClick={onClick}
+      className={`px-4 py-3 cursor-pointer transition-all border-l-4 group ${
+        isSelected
+          ? 'bg-[#0BAF9A]/10 border-l-[#0BAF9A]'
+          : !email.isRead
+          ? 'bg-[#0BAF9A]/5 border-l-[#0BAF9A] hover:bg-[#0BAF9A]/10'
+          : 'border-l-transparent hover:bg-gray-50'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <span className={`text-sm flex-1 truncate ${
+          !email.isRead ? 'font-bold' : 'font-semibold'
+        }`} style={{ fontFamily: "'Manrope', sans-serif" }}>
+          {email.from.split('<')[0].trim() || email.from}
+        </span>
+        <span className="text-xs text-[#999] flex-none" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          {formatTimestamp(email.receivedAt)}
+        </span>
+      </div>
+
+      <div className={`text-sm mb-1 truncate ${
+        !email.isRead ? 'font-semibold' : 'font-normal'
+      } text-[#1a1a1a]`} style={{ fontFamily: "'Crimson Pro', serif" }}>
+        {email.subject}
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-[#666] truncate flex-1" style={{ fontFamily: "'Manrope', sans-serif" }}>
+          {email.snippet}
+        </p>
+
+        <div className="flex items-center gap-1 flex-none opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleRead(email.id, email.isRead ?? false);
+            }}
+            className="p-1 hover:bg-white rounded"
+            title={email.isRead ? 'Mark unread' : 'Mark read'}
+          >
+            {email.isRead ? <MailOpen size={14} className="text-[#666]" /> : <Mail size={14} className="text-[#0BAF9A]" />}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onArchive(email.id);
+            }}
+            className="p-1 hover:bg-white rounded"
+            title="Archive"
+          >
+            <Archive size={14} className="text-[#666]" />
+          </button>
+        </div>
+      </div>
+
+      {categoryLabel && (
+        <div className="mt-2">
+          <span
+            className="inline-block px-2 py-0.5 text-xs font-medium rounded-full"
+            style={{
+              backgroundColor: `${categoryColor}15`,
+              color: categoryColor,
+              fontFamily: "'Manrope', sans-serif"
+            }}
+          >
+            {categoryLabel}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Reading Pane - Full email display
+ */
+interface ReadingPaneProps {
+  email: EmailMessage;
+  threadMessages: FullEmailMessage[];
+  categoryLabel: string;
+  categoryColor: string;
+  categoryId: string | null;
+  categories: EmailCategoryConfig[];
+  onCreateTask: (email: EmailMessage, options?: { schedule?: boolean }) => void;
+  onArchive: (emailId: string) => void;
+  onToggleRead: (emailId: string, currentIsRead: boolean) => void;
   isCorrecting: boolean;
   onStartCorrect: () => void;
   onCancelCorrect: () => void;
-  categories: EmailCategoryConfig[];
   onCorrect: (categoryId: string, scope: 'sender' | 'domain' | 'thread', reason?: string) => Promise<void>;
-  onOpenThread: (threadId: string) => void;
-  onToggleRead?: (emailId: string, currentIsRead: boolean) => void;
-  onArchive?: (emailId: string) => void;
-  onCreateTask?: (email: EmailMessage, options?: { schedule?: boolean }) => void;
   explanation?: api.EmailCategoryExplanation;
-  onFetchExplanation?: (emailId: string) => void;
+  showExplanation: boolean;
+  onToggleExplanation: () => void;
 }
 
-function EmailThread({
+function ReadingPane({
   email,
-  index,
-  categoryColor,
+  threadMessages,
   categoryLabel,
+  categoryColor,
   categoryId,
-  formatTimestamp,
-  isExpanded,
-  onToggleExpand,
+  categories,
+  onCreateTask,
+  onArchive,
+  onToggleRead,
   isCorrecting,
   onStartCorrect,
   onCancelCorrect,
-  categories,
   onCorrect,
-  onOpenThread,
-  onToggleRead,
-  onArchive,
-  onCreateTask,
   explanation,
-  onFetchExplanation
-}: EmailThreadProps) {
+  showExplanation,
+  onToggleExplanation,
+}: ReadingPaneProps) {
   const [selectedCategory, setSelectedCategory] = useState(categoryId || '');
   const [correctionScope, setCorrectionScope] = useState<'sender' | 'domain' | 'thread'>('sender');
 
@@ -774,52 +1025,68 @@ function EmailThread({
     setSelectedCategory(categoryId || '');
   }, [categoryId]);
 
+  const latestMessage = threadMessages[threadMessages.length - 1] || threadMessages[0];
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.3) }}
-      className={`bg-white border-l-4 hover:shadow-lg transition-all duration-200 group ${
-        !email.isRead ? 'bg-[#0BAF9A]/5' : ''
-      }`}
-      style={{ borderLeftColor: !email.isRead ? '#0BAF9A' : categoryColor }}
-    >
-      {/* Main Thread Row */}
-      <div
-        onClick={onToggleExpand}
-        className="px-6 py-5 cursor-pointer border-b border-[#e0e0e0] hover:bg-[#fafafa]"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            {/* Sender & Timestamp */}
-            <div className="flex items-baseline gap-3 mb-1.5">
-              <span className="text-sm font-semibold text-[#1a1a1a]" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                {email.from.split('<')[0].trim() || email.from}
-              </span>
-              <span className="text-xs text-[#999] tracking-wide" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                {formatTimestamp(email.receivedAt)}
-              </span>
-            </div>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Action Bar - Fixed */}
+      <div className="flex-none bg-white border-b border-[#e0e0e0] px-6 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-2xl font-bold text-[#1a1a1a] pr-4 flex-1" style={{ fontFamily: "'Crimson Pro', serif" }}>
+            {email.subject}
+          </h2>
+          <a
+            href={`https://mail.google.com/mail/u/0/#inbox/${email.threadId || email.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-none px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <ExternalLink size={14} />
+            Gmail
+          </a>
+        </div>
 
-            {/* Subject */}
-            <h3 className={`text-lg text-[#1a1a1a] mb-2 line-clamp-1 ${
-              !email.isRead ? 'font-bold' : 'font-semibold'
-            }`} style={{ fontFamily: "'Crimson Pro', serif" }}>
-              {email.subject}
-            </h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => onCreateTask(email)}
+            className="px-4 py-2 text-sm font-medium bg-white border-2 border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10 transition-colors rounded-lg flex items-center gap-2"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <Clock size={14} />
+            Create Task
+          </button>
+          <button
+            onClick={() => onCreateTask(email, { schedule: true })}
+            className="px-4 py-2 text-sm font-medium bg-[#0BAF9A] text-white hover:bg-[#078c77] transition-colors rounded-lg flex items-center gap-2"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <Calendar size={14} />
+            Schedule
+          </button>
+          <button
+            onClick={() => onArchive(email.id)}
+            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <Archive size={14} />
+            Archive
+          </button>
+          <button
+            onClick={() => onToggleRead(email.id, email.isRead ?? false)}
+            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            {email.isRead ? <Mail size={14} /> : <MailOpen size={14} />}
+            {email.isRead ? 'Mark Unread' : 'Mark Read'}
+          </button>
 
-            {/* Snippet */}
-            <p className="text-sm text-[#666] line-clamp-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
-              {email.snippet}
-            </p>
-          </div>
+          <div className="flex-1" />
 
-          {/* Category Badge & Actions */}
-          <div className="flex flex-col items-end gap-2">
-            {categoryLabel && (
+          {categoryLabel && (
+            <div className="flex items-center gap-2">
               <span
-                className="px-3 py-1 text-xs font-medium rounded-full border"
+                className="px-3 py-1.5 text-sm font-medium rounded-full border"
                 style={{
                   backgroundColor: `${categoryColor}15`,
                   color: categoryColor,
@@ -829,233 +1096,191 @@ function EmailThread({
               >
                 {categoryLabel}
               </span>
-            )}
-
-            <div className="flex gap-2">
-              {/* Read/Unread Action Button */}
-              {onToggleRead && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleRead(email.id, email.isRead ?? false);
-                  }}
-                  className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-all"
-                  title={email.isRead ? 'Mark as unread' : 'Mark as read'}
-                >
-                  {email.isRead ? <MailOpen size={16} /> : <Mail size={16} />}
-                </button>
-              )}
-
-              {/* Archive Action Button */}
-              {onArchive && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onArchive(email.id);
-                  }}
-                  className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-all"
-                  title="Archive"
-                >
-                  <Archive size={16} />
-                </button>
-              )}
-
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenThread(email.threadId || email.id);
-                }}
-                className="text-xs text-[#0BAF9A] hover:text-[#078c77] opacity-0 group-hover:opacity-100 transition-opacity font-medium"
+                onClick={onStartCorrect}
+                className="text-xs text-[#0BAF9A] hover:underline"
                 style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
-                View Thread →
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStartCorrect();
-                }}
-                className="text-xs text-[#999] hover:text-[#0BAF9A] opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              >
-                Correct →
+                Correct
               </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Expanded Content */}
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden bg-[#fafafa]"
-          >
-            <div className="px-6 py-5 border-b border-[#e0e0e0]">
-              <div className="flex flex-wrap gap-3 mb-4">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCreateTask?.(email);
-                  }}
-                  className="px-4 py-2 text-sm font-medium bg-white border border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10 transition-colors"
-                  style={{ fontFamily: "'Manrope', sans-serif" }}
-                >
-                  Create Task
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCreateTask?.(email, { schedule: true });
-                  }}
-                  className="px-4 py-2 text-sm font-medium bg-[#0BAF9A] text-white hover:bg-[#078c77] transition-colors"
-                  style={{ fontFamily: "'Manrope', sans-serif" }}
-                >
-                  Create &amp; Schedule
-                </button>
-              </div>
-
-              {/* Why This Label? */}
-              <div className="bg-gradient-to-r from-[#0BAF9A]/5 to-white border-l-4 border-[#0BAF9A] p-4 mb-4">
-                <div className="flex items-start gap-3">
-                  <span className="text-sm font-mono text-[#0BAF9A]">ℹ</span>
-                  <div className="flex-1">
-                    <h4 className="text-xs font-semibold text-[#1a1a1a] mb-1 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                      Why &ldquo;{categoryLabel}&rdquo;?
-                    </h4>
-
-                    {!explanation ? (
-                      <button
-                        onClick={() => onFetchExplanation && onFetchExplanation(email.id)}
-                        className="text-sm text-[#0BAF9A] hover:underline font-medium"
-                        style={{ fontFamily: "'Manrope', sans-serif" }}
-                      >
-                        Show explanation →
-                      </button>
-                    ) : (
-                      <div>
-                        <p className="text-sm text-[#666] mb-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                          {explanation.reason}
-                        </p>
-
-                        {explanation.source === 'override' && explanation.details.overrideType && (
-                          <div className="text-xs text-[#0BAF9A] mt-2 font-medium" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                            ✓ Rule: {explanation.details.overrideType} ({explanation.details.matchedValue})
-                          </div>
-                        )}
-
-                        {explanation.source === 'keywords' && explanation.details.matchedKeywords && (
-                          <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                            Keywords: {explanation.details.matchedKeywords.join(', ')}
-                          </div>
-                        )}
-
-                        {explanation.source === 'domain' && explanation.details.matchedValue && (
-                          <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                            Domain: {explanation.details.matchedValue}
-                          </div>
-                        )}
-
-                        {explanation.source === 'gmailLabel' && explanation.details.gmailLabel && (
-                          <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                            Gmail label: {explanation.details.gmailLabel}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+      {/* Email Content - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          {/* Email Metadata */}
+          <div className="mb-6 pb-6 border-b border-[#e0e0e0]">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <div className="text-lg font-bold text-[#1a1a1a] mb-1" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                  {latestMessage.from}
+                </div>
+                <div className="text-sm text-[#666]" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                  To: {latestMessage.to}
+                  {latestMessage.cc && ` • Cc: ${latestMessage.cc}`}
                 </div>
               </div>
-
-              {/* Full Email Content Preview */}
-              <div className="text-sm text-[#333] leading-relaxed" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                {email.snippet}
+              <div className="text-sm text-[#999]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                {new Date(latestMessage.receivedAt).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
 
-      {/* Category Correction Panel */}
-      <AnimatePresence>
-        {isCorrecting && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden bg-[#fffdf5] border-t-2 border-[#f59e0b]"
+          {/* Why This Label */}
+          <button
+            onClick={onToggleExplanation}
+            className="w-full mb-6 p-4 bg-gradient-to-r from-[#0BAF9A]/5 to-transparent border-l-4 border-[#0BAF9A] hover:from-[#0BAF9A]/10 transition-all text-left rounded-r-lg"
           >
-            <div className="px-6 py-5">
-              <h4 className="text-sm font-semibold text-[#1a1a1a] mb-3 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                Correct Category
-              </h4>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {([
-                  { value: 'sender', label: 'This sender' },
-                  { value: 'domain', label: 'This domain' },
-                  { value: 'thread', label: 'This thread' },
-                ] as const).map((option) => (
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-semibold text-[#1a1a1a] tracking-wide uppercase mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  Why "{categoryLabel}"?
+                </h4>
+                {showExplanation && explanation && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <p className="text-sm text-[#666] mt-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                      {explanation.reason}
+                    </p>
+                    {explanation.source === 'override' && explanation.details.overrideType && (
+                      <div className="text-xs text-[#0BAF9A] mt-2 font-medium" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        ✓ Rule: {explanation.details.overrideType} ({explanation.details.matchedValue})
+                      </div>
+                    )}
+                    {explanation.source === 'keywords' && explanation.details.matchedKeywords && (
+                      <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        Keywords: {explanation.details.matchedKeywords.join(', ')}
+                      </div>
+                    )}
+                    {explanation.source === 'gmailLabel' && explanation.details.gmailLabel && (
+                      <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                        Gmail label: {explanation.details.gmailLabel}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </div>
+              {showExplanation ? <ChevronUp size={16} className="text-[#0BAF9A]" /> : <ChevronDown size={16} className="text-[#0BAF9A]" />}
+            </div>
+          </button>
+
+          {/* Correction Panel */}
+          <AnimatePresence>
+            {isCorrecting && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-6 p-4 bg-[#fffdf5] border-2 border-[#f59e0b] rounded-lg"
+              >
+                <h4 className="text-sm font-semibold text-[#1a1a1a] mb-3 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  Correct Category
+                </h4>
+                <div className="flex gap-2 mb-4">
+                  {([
+                    { value: 'sender', label: 'This sender' },
+                    { value: 'domain', label: 'This domain' },
+                    { value: 'thread', label: 'This thread' },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setCorrectionScope(option.value)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 transition-all ${
+                        correctionScope === option.value
+                          ? 'border-[#0BAF9A] bg-[#0BAF9A]/10 text-[#0BAF9A]'
+                          : 'border-[#e0e0e0] text-[#666] hover:border-[#999]'
+                      }`}
+                      style={{ fontFamily: "'Manrope', sans-serif" }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {categories.filter(c => c.enabled).map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={`px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
+                        selectedCategory === category.id
+                          ? 'border-[#1a1a1a]'
+                          : 'border-[#e0e0e0] hover:border-[#999]'
+                      }`}
+                      style={{
+                        backgroundColor: selectedCategory === category.id ? category.color : 'white',
+                        color: selectedCategory === category.id ? '#1a1a1a' : category.color,
+                        fontFamily: "'Manrope', sans-serif"
+                      }}
+                    >
+                      {category.emoji && <span className="mr-2">{category.emoji}</span>}
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
                   <button
-                    key={option.value}
-                    onClick={() => setCorrectionScope(option.value)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded border transition-all ${
-                      correctionScope === option.value
-                        ? 'border-[#0BAF9A] bg-[#0BAF9A]/10 text-[#0BAF9A]'
-                        : 'border-[#e0e0e0] text-[#666] hover:border-[#999]'
-                    }`}
+                    onClick={() => onCorrect(selectedCategory, correctionScope)}
+                    disabled={!selectedCategory || selectedCategory === categoryId}
+                    className="px-6 py-2 bg-[#0BAF9A] text-white text-sm font-medium hover:bg-[#078c77] disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-lg"
                     style={{ fontFamily: "'Manrope', sans-serif" }}
                   >
-                    {option.label}
+                    Save Correction
                   </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {Array.isArray(categories) && categories.filter(c => c.enabled).map((category) => (
                   <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`px-4 py-2 text-sm font-medium rounded border-2 transition-all ${
-                      selectedCategory === category.id
-                        ? 'border-[#1a1a1a]'
-                        : 'border-[#e0e0e0] hover:border-[#999]'
-                    }`}
-                    style={{
-                      backgroundColor: selectedCategory === category.id ? category.color : 'white',
-                      color: selectedCategory === category.id ? '#1a1a1a' : category.color,
-                      fontFamily: "'Manrope', sans-serif"
-                    }}
+                    onClick={onCancelCorrect}
+                    className="px-6 py-2 border-2 border-[#0BAF9A]/30 text-[#1a1a1a] text-sm font-medium hover:bg-[#0BAF9A]/5 transition-all rounded-lg"
+                    style={{ fontFamily: "'Manrope', sans-serif" }}
                   >
-                    {category.emoji && <span className="mr-2">{category.emoji}</span>}
-                    {category.name}
+                    Cancel
                   </button>
-                ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Email Messages */}
+          <div className="space-y-6">
+            {threadMessages.map((message, index) => (
+              <div key={message.id} className={index < threadMessages.length - 1 ? 'opacity-60' : ''}>
+                <EmailBody html={message.body} plainText={message.snippet} />
+
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-[#e0e0e0]">
+                    <div className="text-sm font-semibold text-[#1a1a1a] mb-3" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                      Attachments
+                    </div>
+                    <div className="space-y-2">
+                      {message.attachments.map((att, i) => (
+                        <div key={i} className="flex items-center gap-3 px-3 py-2 bg-white border border-[#e0e0e0] rounded-lg">
+                          <Paperclip size={16} className="text-[#0BAF9A]" />
+                          <span className="text-sm flex-1" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                            {att.filename}
+                          </span>
+                          <span className="text-xs text-[#999]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                            {Math.round(att.size / 1024)}KB
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => onCorrect(selectedCategory, correctionScope)}
-                  disabled={!selectedCategory || selectedCategory === categoryId}
-                  className="px-6 py-2 bg-[#0BAF9A] text-white text-sm font-medium hover:bg-[#078c77] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-[#0BAF9A]/20"
-                  style={{ fontFamily: "'Manrope', sans-serif" }}
-                >
-                  Save Correction
-                </button>
-                <button
-                  onClick={onCancelCorrect}
-                  className="px-6 py-2 border-2 border-[#0BAF9A]/30 text-[#1a1a1a] text-sm font-medium hover:bg-[#0BAF9A]/5 hover:border-[#0BAF9A] transition-all"
-                  style={{ fontFamily: "'Manrope', sans-serif" }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

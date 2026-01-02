@@ -32,6 +32,7 @@ import type {
   SendEmailRequest,
   SendEmailResponse,
   EmailCategory,
+  InboxView,
   SchedulingLink,
   Meeting,
 } from '@timeflow/shared';
@@ -135,8 +136,24 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    const message = typeof error.error === 'string' ? error.error : `API error: ${response.status}`;
+    const rawText = await response.text().catch(() => '');
+    let error: Record<string, unknown> = {};
+    try {
+      error = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : {};
+    } catch (_err) {
+      error = rawText ? { raw: rawText } : {};
+    }
+    console.error('API Error Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      error,
+      endpoint,
+    });
+    const message =
+      (typeof error.error === 'string' && error.error) ||
+      (typeof error.message === 'string' && error.message) ||
+      (typeof error.raw === 'string' && error.raw) ||
+      `API error: ${response.status}`;
     throw new Error(message);
   }
 
@@ -560,6 +577,30 @@ export async function getEmailCategories(): Promise<{ categories: EmailCategoryC
 }
 
 /**
+ * Get inbox view configurations.
+ */
+export async function getInboxViews(): Promise<{ views: InboxView[] }> {
+  return request<{ views: InboxView[] }>('/inbox/views');
+}
+
+/**
+ * Update inbox view configurations.
+ */
+export async function updateInboxViews(views: InboxView[]): Promise<{ views: InboxView[] }> {
+  return request<{ views: InboxView[] }>('/inbox/views', {
+    method: 'PUT',
+    body: JSON.stringify({ views }),
+  });
+}
+
+/**
+ * Delete a custom inbox view.
+ */
+export async function deleteInboxView(id: string): Promise<void> {
+  return request<void>(`/inbox/views/${id}`, { method: 'DELETE' });
+}
+
+/**
  * Update an email category configuration.
  */
 export async function updateEmailCategory(
@@ -584,6 +625,7 @@ export interface GmailSyncStatus {
 
 export interface GmailSyncResult {
   message: string;
+  status?: 'in_progress';
   syncedCategories: number;
   syncedThreads?: number;
   removedCategories?: number;
