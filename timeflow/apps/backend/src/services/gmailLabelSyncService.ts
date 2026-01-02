@@ -82,6 +82,16 @@ async function createOrUpdateGmailLabel(
 ): Promise<string | null> {
   try {
     const labelName = `TimeFlow/${category.gmailLabelName ?? category.name ?? category.categoryId}`;
+    const safeColor =
+      getGmailColorByBackground(gmailColor.backgroundColor) ??
+      findClosestGmailColor(category.color ?? '#cfe2f3');
+
+    if (safeColor.backgroundColor !== gmailColor.backgroundColor) {
+      await prisma.emailCategoryConfig.update({
+        where: { id: category.id },
+        data: { gmailLabelColor: safeColor.backgroundColor },
+      });
+    }
 
     if (category.gmailLabelId) {
       try {
@@ -96,8 +106,8 @@ async function createOrUpdateGmailLabel(
           requestBody: {
             name: labelName,
             color: {
-              backgroundColor: gmailColor.backgroundColor,
-              textColor: gmailColor.textColor,
+              backgroundColor: safeColor.backgroundColor,
+              textColor: safeColor.textColor,
             },
             labelListVisibility: 'labelShow',
             messageListVisibility: 'show',
@@ -118,8 +128,8 @@ async function createOrUpdateGmailLabel(
       requestBody: {
         name: labelName,
         color: {
-          backgroundColor: gmailColor.backgroundColor,
-          textColor: gmailColor.textColor,
+          backgroundColor: safeColor.backgroundColor,
+          textColor: safeColor.textColor,
         },
         labelListVisibility: 'labelShow',
         messageListVisibility: 'show',
