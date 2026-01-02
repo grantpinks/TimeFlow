@@ -5,29 +5,29 @@ import { getGoogleAuthUrl } from '@/lib/api';
 
 const plans = [
   {
-    name: 'Free',
+    name: 'Beta',
     price: '$0',
-    period: '/mo',
-    features: ['50 tasks', '1 calendar', 'Basic AI assistant'],
-    cta: 'Start Free',
+    period: 'during beta',
+    features: ['Smart scheduling', 'Google Calendar sync', 'AI assistant (fair-use limits)'],
+    cta: 'Join Beta Free',
     ctaLink: getGoogleAuthUrl(),
     popular: false,
   },
   {
-    name: 'Pro',
-    price: '$12',
-    period: '/mo',
-    features: ['Unlimited tasks', 'Advanced AI assistant', 'Habit scheduling', 'Email categorization'],
-    cta: 'Try 14 Days Free',
+    name: 'Subscriptions',
+    price: 'Coming soon',
+    period: '(Sprint 19)',
+    features: ['Higher AI limits', 'Power features', 'Simple tiers'],
+    cta: 'Get Pricing Updates',
     ctaLink: getGoogleAuthUrl(),
     popular: true,
   },
   {
-    name: 'Teams',
-    price: '$20',
-    period: '/user/mo',
-    features: ['Team sharing', 'Admin panel', 'SSO', 'Priority support'],
-    cta: 'Contact Sales',
+    name: 'Questions?',
+    price: 'Talk to us',
+    period: '',
+    features: ['Help picking a plan', 'Beta feedback', 'Enterprise needs later'],
+    cta: 'Contact',
     ctaLink: '/contact',
     popular: false,
   },
@@ -60,10 +60,10 @@ export function PricingTeaser() {
           className="text-center mb-16"
         >
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Start Free. Upgrade As You Grow.
+            Beta is Free. Pricing is Coming Soon.
           </h2>
           <p className="text-xl text-gray-600">
-            Choose the plan that fits your needs
+            We’re shipping subscriptions in Sprint 19. For now, join the beta and help shape the plans.
           </p>
         </motion.div>
 
@@ -149,7 +149,7 @@ export function PricingTeaser() {
             href="/pricing"
             className="text-teal-600 hover:text-teal-700 font-semibold inline-flex items-center gap-2"
           >
-            View Full Pricing Details
+            View Pricing Page
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
