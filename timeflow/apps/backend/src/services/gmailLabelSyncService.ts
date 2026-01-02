@@ -155,6 +155,17 @@ async function createOrUpdateGmailLabel(
 
       return response.data.id ?? null;
     } catch (error: any) {
+      if (String(error.message).includes('Label name exists')) {
+        const existingLabels = await gmail.users.labels.list({ userId: 'me' });
+        const match = existingLabels.data.labels?.find((label) => label.name === labelName);
+        if (match?.id) {
+          await prisma.emailCategoryConfig.update({
+            where: { id: category.id },
+            data: { gmailLabelId: match.id },
+          });
+          return match.id;
+        }
+      }
       if (String(error.message).includes('allowed color palette')) {
         await prisma.emailCategoryConfig.update({
           where: { id: category.id },
