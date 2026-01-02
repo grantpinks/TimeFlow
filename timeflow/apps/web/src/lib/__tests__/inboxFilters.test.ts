@@ -1,37 +1,37 @@
 import { describe, expect, it } from 'vitest';
+import type { InboxView } from '@timeflow/shared';
 import { filterInboxEmails } from '../inboxFilters';
 
 describe('filterInboxEmails', () => {
   const emails = [
     { id: '1', category: 'work', subject: 'Work', from: '', receivedAt: '', importance: 'normal' },
     { id: '2', category: 'personal', subject: 'Personal', from: '', receivedAt: '', importance: 'normal' },
-    { id: '3', category: 'promotion', subject: 'Promo', from: '', receivedAt: '', importance: 'normal' },
+    { id: '3', category: 'updates', subject: 'Updates', from: '', receivedAt: '', importance: 'normal' },
+    { id: '4', category: 'promotion', subject: 'Promo', from: '', receivedAt: '', importance: 'normal' },
   ];
 
-  it('returns only work emails for the professional quick filter', () => {
+  const views: InboxView[] = [
+    { id: 'all', name: 'All', labelIds: [], isBuiltin: true },
+    { id: 'personal', name: 'Personal', labelIds: ['personal', 'updates'], isBuiltin: true },
+  ];
+
+  it('filters by selected view labelIds', () => {
     const result = filterInboxEmails(emails as any, {
-      selectedFilter: 'professional',
+      selectedViewId: 'personal',
+      views,
       selectedCategoryId: null,
     });
 
-    expect(result.map((email) => email.id)).toEqual(['1']);
-  });
-
-  it('returns only personal emails for the personal quick filter', () => {
-    const result = filterInboxEmails(emails as any, {
-      selectedFilter: 'personal',
-      selectedCategoryId: null,
-    });
-
-    expect(result.map((email) => email.id)).toEqual(['2']);
+    expect(result.map((email) => email.id)).toEqual(['2', '3']);
   });
 
   it('filters by selected category id when provided', () => {
     const result = filterInboxEmails(emails as any, {
-      selectedFilter: 'all',
+      selectedViewId: 'personal',
+      views,
       selectedCategoryId: 'promotion',
     });
 
-    expect(result.map((email) => email.id)).toEqual(['3']);
+    expect(result.map((email) => email.id)).toEqual(['4']);
   });
 });
