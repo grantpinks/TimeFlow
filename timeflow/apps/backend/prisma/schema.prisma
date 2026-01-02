@@ -25,6 +25,7 @@ model User {
   dailySchedule              Json?
   dailyScheduleConstraints   Json?
   sidebarNavOrder            String[]            @default([])
+  inboxViews                 Json?
 
   // Meeting-specific availability preferences
   meetingStartTime           String?             // HH:mm - default earliest meeting time

@@ -10,5 +10,6 @@ describe('Prisma Schema', () => {
     expect(schema).toContain('model Meeting');
     expect(schema).toContain('model MeetingActionToken');
     expect(schema).toContain('model AppleCalendarAccount');
+    expect(schema).toContain('inboxViews');
   });
 });
