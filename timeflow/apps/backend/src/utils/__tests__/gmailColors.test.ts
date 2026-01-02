@@ -24,7 +24,7 @@ describe('gmailColors', () => {
 
   describe('getGmailColorByBackground', () => {
     it('should find color by exact background match', () => {
-      const result = getGmailColorByBackground('#cfe2f3');
+      const result = getGmailColorByBackground('#e7e7e7');
       expect(result?.backgroundColor).toEqual(GMAIL_LABEL_COLORS[0].backgroundColor);
     });
 
@@ -34,7 +34,7 @@ describe('gmailColors', () => {
     });
 
     it('should be case-insensitive', () => {
-      const result = getGmailColorByBackground('#CFE2F3');
+      const result = getGmailColorByBackground('#E7E7E7');
       expect(result).toEqual(GMAIL_LABEL_COLORS[0]);
     });
   });
