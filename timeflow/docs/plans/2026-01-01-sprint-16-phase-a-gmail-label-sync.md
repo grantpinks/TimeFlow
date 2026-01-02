@@ -489,6 +489,10 @@ test('maps red hex to nearest Gmail red', () => {
 - [ ] Disable sync, verify labels remain but no new syncing
 - [ ] Test with 0 threads, 1 thread, 100+ threads
 
+### Resolved (2026-01-02)
+- Gmail label colors were not applying because the palette did not match Gmail’s allowed API colors.
+- Updated the backend palette and frontend pickers to Gmail’s allowed set; sync now applies colors correctly in Gmail.
+
 ---
 
 ## Implementation Sequence

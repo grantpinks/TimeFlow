@@ -12,6 +12,8 @@ import {
   updateSyncSettings,
   getSyncStatus,
 } from '../services/gmailLabelSyncService.js';
+import { startGmailWatch, stopGmailWatch } from '../services/gmailWatchService.js';
+import { env } from '../config/env.js';
 import { handleGmailPush } from '../controllers/gmailPushController.js';
 
 function extractErrorDetails(error: any): {
@@ -142,5 +144,23 @@ export async function registerGmailSyncRoutes(server: FastifyInstance) {
       request.log.error(error, 'Error updating sync settings');
       return reply.status(500).send({ message: 'Failed to update settings', error: error.message });
     }
+  });
+
+  // Enable Gmail watch (Pub/Sub background sync)
+  server.post('/gmail-sync/watch/enable', { preHandler: requireAuth }, async (request, reply) => {
+    if (!env.GMAIL_PUBSUB_TOPIC) {
+      return reply.status(400).send({ message: 'GMAIL_PUBSUB_TOPIC is not configured' });
+    }
+
+    const userId = request.user!.id;
+    const syncState = await startGmailWatch(userId, { topicName: env.GMAIL_PUBSUB_TOPIC });
+    return reply.send(syncState);
+  });
+
+  // Disable Gmail watch
+  server.post('/gmail-sync/watch/disable', { preHandler: requireAuth }, async (request, reply) => {
+    const userId = request.user!.id;
+    const syncState = await stopGmailWatch(userId);
+    return reply.send(syncState);
   });
 }
