@@ -247,6 +247,9 @@ model GmailLabelSyncState {
   lastSyncThreadCount Int      @default(0)
   lastSyncError       String?
   lastHistoryId       String?
+  watchEnabled        Boolean  @default(false)
+  watchResourceId     String?
+  watchTopicName      String?
   watchExpiration     DateTime?
   backfillDays        Int      @default(7)
   backfillMaxThreads  Int      @default(100)

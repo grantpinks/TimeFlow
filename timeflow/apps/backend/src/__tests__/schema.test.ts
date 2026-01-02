@@ -11,5 +11,8 @@ describe('Prisma Schema', () => {
     expect(schema).toContain('model MeetingActionToken');
     expect(schema).toContain('model AppleCalendarAccount');
     expect(schema).toContain('inboxViews');
+    expect(schema).toContain('watchEnabled');
+    expect(schema).toContain('watchResourceId');
+    expect(schema).toContain('watchTopicName');
   });
 });
