@@ -15,31 +15,31 @@ export interface GmailColor {
  * Source: Gmail Label API documentation
  */
 export const GMAIL_LABEL_COLORS: GmailColor[] = [
-  { backgroundColor: '#cfe2f3', textColor: '#0b5394' }, // Light Blue
-  { backgroundColor: '#d9ead3', textColor: '#38761d' }, // Light Green
-  { backgroundColor: '#fff2cc', textColor: '#7f6000' }, // Light Yellow
-  { backgroundColor: '#fce5cd', textColor: '#b45f06' }, // Light Orange
-  { backgroundColor: '#f4cccc', textColor: '#990000' }, // Light Red
-  { backgroundColor: '#d9d2e9', textColor: '#674ea7' }, // Light Purple
-  { backgroundColor: '#d0e0e3', textColor: '#0c343d' }, // Light Cyan
-  { backgroundColor: '#ead1dc', textColor: '#783f04' }, // Light Magenta
-  { backgroundColor: '#c9daf8', textColor: '#1155cc' }, // Cornflower Blue
-  { backgroundColor: '#b6d7a8', textColor: '#274e13' }, // Light Green 2
-  { backgroundColor: '#ffe599', textColor: '#bf9000' }, // Light Cornsilk Yellow
-  { backgroundColor: '#f9cb9c', textColor: '#b45f06' }, // Light Coral
-  { backgroundColor: '#ea9999', textColor: '#990000' }, // Light Red 2
-  { backgroundColor: '#b4a7d6', textColor: '#351c75' }, // Light Purple 2
-  { backgroundColor: '#a2c4c9', textColor: '#0c343d' }, // Light Cyan 2
-  { backgroundColor: '#d5a6bd', textColor: '#783f04' }, // Light Magenta 2
-  { backgroundColor: '#9fc5e8', textColor: '#0b5394' }, // Light Sky Blue
-  { backgroundColor: '#93c47d', textColor: '#38761d' }, // Light Green 3
-  { backgroundColor: '#ffd966', textColor: '#7f6000' }, // Light Orange Yellow
-  { backgroundColor: '#f6b26b', textColor: '#b45f06' }, // Light Orange 2
-  { backgroundColor: '#e06666', textColor: '#990000' }, // Light Red 3
-  { backgroundColor: '#8e7cc3', textColor: '#351c75' }, // Light Purple 3
-  { backgroundColor: '#76a5af', textColor: '#0c343d' }, // Light Cyan 3
-  { backgroundColor: '#c27ba0', textColor: '#783f04' }, // Light Magenta 3
-  { backgroundColor: '#a4c2f4', textColor: '#0b5394' }, // Cerulean
+  { backgroundColor: '#cfe2f3', textColor: '#000000' }, // Light Blue
+  { backgroundColor: '#d9ead3', textColor: '#000000' }, // Light Green
+  { backgroundColor: '#fff2cc', textColor: '#000000' }, // Light Yellow
+  { backgroundColor: '#fce5cd', textColor: '#000000' }, // Light Orange
+  { backgroundColor: '#f4cccc', textColor: '#000000' }, // Light Red
+  { backgroundColor: '#d9d2e9', textColor: '#000000' }, // Light Purple
+  { backgroundColor: '#d0e0e3', textColor: '#000000' }, // Light Cyan
+  { backgroundColor: '#ead1dc', textColor: '#000000' }, // Light Magenta
+  { backgroundColor: '#c9daf8', textColor: '#000000' }, // Cornflower Blue
+  { backgroundColor: '#b6d7a8', textColor: '#000000' }, // Light Green 2
+  { backgroundColor: '#ffe599', textColor: '#000000' }, // Light Cornsilk Yellow
+  { backgroundColor: '#f9cb9c', textColor: '#000000' }, // Light Coral
+  { backgroundColor: '#ea9999', textColor: '#000000' }, // Light Red 2
+  { backgroundColor: '#b4a7d6', textColor: '#000000' }, // Light Purple 2
+  { backgroundColor: '#a2c4c9', textColor: '#000000' }, // Light Cyan 2
+  { backgroundColor: '#d5a6bd', textColor: '#000000' }, // Light Magenta 2
+  { backgroundColor: '#9fc5e8', textColor: '#000000' }, // Light Sky Blue
+  { backgroundColor: '#93c47d', textColor: '#000000' }, // Light Green 3
+  { backgroundColor: '#ffd966', textColor: '#000000' }, // Light Orange Yellow
+  { backgroundColor: '#f6b26b', textColor: '#000000' }, // Light Orange 2
+  { backgroundColor: '#e06666', textColor: '#000000' }, // Light Red 3
+  { backgroundColor: '#8e7cc3', textColor: '#ffffff' }, // Light Purple 3
+  { backgroundColor: '#76a5af', textColor: '#000000' }, // Light Cyan 3
+  { backgroundColor: '#c27ba0', textColor: '#ffffff' }, // Light Magenta 3
+  { backgroundColor: '#a4c2f4', textColor: '#000000' }, // Cerulean
 ];
 
 /**
@@ -68,6 +68,13 @@ function colorDistance(
       Math.pow(rgb1.g - rgb2.g, 2) +
       Math.pow(rgb1.b - rgb2.b, 2)
   );
+}
+
+function getReadableTextColor(backgroundColor: string): string {
+  const rgb = hexToRgb(backgroundColor);
+  if (!rgb) return '#000000';
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.6 ? '#000000' : '#ffffff';
 }
 
 /**
@@ -100,7 +107,10 @@ export function findClosestGmailColor(hexColor: string): GmailColor {
     }
   }
 
-  return closestColor;
+  return {
+    backgroundColor: closestColor.backgroundColor,
+    textColor: getReadableTextColor(closestColor.backgroundColor),
+  };
 }
 
 /**
@@ -108,7 +118,12 @@ export function findClosestGmailColor(hexColor: string): GmailColor {
  * Useful for user manual override selection
  */
 export function getGmailColorByBackground(backgroundColor: string): GmailColor | undefined {
-  return GMAIL_LABEL_COLORS.find(
+  const match = GMAIL_LABEL_COLORS.find(
     (color) => color.backgroundColor.toLowerCase() === backgroundColor.toLowerCase()
   );
+  if (!match) return undefined;
+  return {
+    backgroundColor: match.backgroundColor,
+    textColor: getReadableTextColor(match.backgroundColor),
+  };
 }

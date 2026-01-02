@@ -17,14 +17,15 @@ describe('gmailColors', () => {
     it('should find exact match for Gmail standard colors', () => {
       const gmailColor = GMAIL_LABEL_COLORS[5];
       const result = findClosestGmailColor(gmailColor.backgroundColor);
-      expect(result).toEqual(gmailColor);
+      expect(result.backgroundColor).toEqual(gmailColor.backgroundColor);
+      expect(result.textColor).toMatch(/#[a-f0-9]{6}/i);
     });
   });
 
   describe('getGmailColorByBackground', () => {
     it('should find color by exact background match', () => {
       const result = getGmailColorByBackground('#cfe2f3');
-      expect(result).toEqual(GMAIL_LABEL_COLORS[0]);
+      expect(result?.backgroundColor).toEqual(GMAIL_LABEL_COLORS[0].backgroundColor);
     });
 
     it('should return undefined for non-existent color', () => {
