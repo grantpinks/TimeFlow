@@ -12,31 +12,53 @@ import {
   updateSyncSettings,
   getSyncStatus,
 } from '../services/gmailLabelSyncService.js';
+import { handleGmailPush } from '../controllers/gmailPushController.js';
+
+function extractErrorDetails(error: any): {
+  message: string;
+  code?: string | number;
+  status?: number;
+  reason?: string;
+} {
+  const message = error?.message ? String(error.message) : 'Unknown error';
+  const code = error?.code;
+  const status = error?.response?.status ?? error?.statusCode;
+  const reason = error?.response?.data?.error?.message ?? error?.response?.data?.error;
+  return { message, code, status, reason };
+}
 
 export async function registerGmailSyncRoutes(server: FastifyInstance) {
+  // Pub/Sub push handler for Gmail watch notifications
+  server.post('/integrations/gmail/push', handleGmailPush);
+
   // Trigger manual Gmail label sync
   server.post('/gmail-sync/sync', { preHandler: requireAuth }, async (request, reply) => {
     try {
       const userId = request.user!.id;
-      const result = await syncGmailLabels(userId);
-
-      if (result.success) {
-        return reply.send({
-          message: 'Sync completed successfully',
-          syncedCategories: result.syncedCategories,
-          syncedThreads: result.syncedThreads,
+      void syncGmailLabels(userId)
+        .then((result) => {
+          if (!result.success) {
+            request.log.warn(
+              { errors: result.errors, syncedCategories: result.syncedCategories },
+              'Gmail sync completed with errors'
+            );
+          }
+        })
+        .catch((error) => {
+          const details = extractErrorDetails(error);
+          request.log.error({ details, error }, 'Background Gmail sync failed');
         });
-      }
 
-      return reply.status(400).send({
-        message: 'Sync completed with errors',
-        syncedCategories: result.syncedCategories,
-        syncedThreads: result.syncedThreads,
-        errors: result.errors,
+      return reply.status(202).send({
+        message: 'Gmail sync started',
+        status: 'in_progress',
       });
     } catch (error: any) {
-      request.log.error(error, 'Error syncing Gmail labels');
-      return reply.status(500).send({ message: 'Failed to sync Gmail labels', error: error.message });
+      const details = extractErrorDetails(error);
+      request.log.error({ details, error }, 'Error syncing Gmail labels');
+      return reply
+        .status(500)
+        .send({ message: 'Failed to sync Gmail labels', error: details.message, details });
     }
   });
 
