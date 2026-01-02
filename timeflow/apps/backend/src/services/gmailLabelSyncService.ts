@@ -214,10 +214,16 @@ export async function syncGmailLabels(
     for (const category of user.emailCategoryConfigs) {
       try {
         const overrideColor = category.gmailLabelColor;
-        const gmailColor =
-          overrideColor
-            ? getGmailColorByBackground(overrideColor) ?? findClosestGmailColor(overrideColor)
-            : findClosestGmailColor(category.color ?? '#cfe2f3');
+        const overrideMatch = overrideColor ? getGmailColorByBackground(overrideColor) : undefined;
+        const fallbackColor = findClosestGmailColor(category.color ?? '#cfe2f3');
+        const gmailColor = overrideMatch ?? fallbackColor;
+
+        if (overrideColor && !overrideMatch) {
+          await prisma.emailCategoryConfig.update({
+            where: { id: category.id },
+            data: { gmailLabelColor: gmailColor.backgroundColor },
+          });
+        }
 
         const gmailLabelId = await createOrUpdateGmailLabel(gmail, category, gmailColor);
 
