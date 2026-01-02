@@ -31,6 +31,7 @@ export interface EmailMessage {
   isRead?: boolean;
   isPromotional?: boolean;
   category?: EmailCategory; // Auto-assigned category
+  needsResponse?: boolean;
 }
 
 export interface EmailInboxResponse {

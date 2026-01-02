@@ -5,7 +5,7 @@ import { getUserOAuth2Client } from '../config/google.js';
 import { decrypt, encrypt } from '../utils/crypto.js';
 import { env } from '../config/env.js';
 import { findClosestGmailColor, getGmailColorByBackground, GmailColor } from '../utils/gmailColors.js';
-import { categorizeEmail, normalizeEmailCategoryId } from './emailCategorizationService.js';
+import { normalizeEmailCategoryId, scoreEmailCategoryWithFallback } from './emailCategorizationService.js';
 import { applyCategoryOverride } from './emailOverrideService.js';
 
 /**
@@ -81,10 +81,22 @@ async function createOrUpdateGmailLabel(
   gmailColor: GmailColor
 ): Promise<string | null> {
   try {
-    const labelName = `TimeFlow/${category.gmailLabelName ?? category.name ?? category.categoryId}`;
+    const rawLabelName = (category.gmailLabelName ?? category.name ?? category.categoryId).trim();
+    const normalizedLabelName = rawLabelName.startsWith('TimeFlow/')
+      ? rawLabelName.slice('TimeFlow/'.length).trim()
+      : rawLabelName;
+    const labelName = normalizedLabelName.length > 0 ? normalizedLabelName : category.categoryId;
+    const legacyLabelName = `TimeFlow/${labelName}`;
     const safeColor =
       getGmailColorByBackground(gmailColor.backgroundColor) ??
       findClosestGmailColor(category.color ?? '#cfe2f3');
+
+    if (category.gmailLabelName && category.gmailLabelName !== labelName) {
+      await prisma.emailCategoryConfig.update({
+        where: { id: category.id },
+        data: { gmailLabelName: labelName },
+      });
+    }
 
     if (safeColor.backgroundColor !== gmailColor.backgroundColor) {
       await prisma.emailCategoryConfig.update({
@@ -139,6 +151,52 @@ async function createOrUpdateGmailLabel(
       }
     }
 
+    const existingLabels = await gmail.users.labels.list({ userId: 'me' });
+    const labels = existingLabels.data.labels ?? [];
+    const legacyMatch = labels.find((label) => label.name === legacyLabelName);
+    if (legacyMatch?.id) {
+      const response = await gmail.users.labels.update({
+        userId: 'me',
+        id: legacyMatch.id,
+        requestBody: {
+          name: labelName,
+          color: {
+            backgroundColor: safeColor.backgroundColor,
+            textColor: safeColor.textColor,
+          },
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show',
+        },
+      });
+      await prisma.emailCategoryConfig.update({
+        where: { id: category.id },
+        data: { gmailLabelId: response.data.id ?? legacyMatch.id },
+      });
+      return response.data.id ?? legacyMatch.id;
+    }
+
+    const existingMatch = labels.find((label) => label.name === labelName);
+    if (existingMatch?.id) {
+      const response = await gmail.users.labels.update({
+        userId: 'me',
+        id: existingMatch.id,
+        requestBody: {
+          name: labelName,
+          color: {
+            backgroundColor: safeColor.backgroundColor,
+            textColor: safeColor.textColor,
+          },
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show',
+        },
+      });
+      await prisma.emailCategoryConfig.update({
+        where: { id: category.id },
+        data: { gmailLabelId: response.data.id ?? existingMatch.id },
+      });
+      return response.data.id ?? existingMatch.id;
+    }
+
     try {
       const response = await gmail.users.labels.create({
         userId: 'me',
@@ -153,16 +211,48 @@ async function createOrUpdateGmailLabel(
         },
       });
 
-      return response.data.id ?? null;
+        return response.data.id ?? null;
     } catch (error: any) {
       if (String(error.message).includes('Label name exists')) {
-        const existingLabels = await gmail.users.labels.list({ userId: 'me' });
-        const match = existingLabels.data.labels?.find((label) => label.name === labelName);
+        const match = labels.find((label) => label.name === labelName);
         if (match?.id) {
           await prisma.emailCategoryConfig.update({
             where: { id: category.id },
             data: { gmailLabelId: match.id },
           });
+          try {
+            await gmail.users.labels.update({
+              userId: 'me',
+              id: match.id,
+              requestBody: {
+                name: labelName,
+                color: {
+                  backgroundColor: safeColor.backgroundColor,
+                  textColor: safeColor.textColor,
+                },
+                labelListVisibility: 'labelShow',
+                messageListVisibility: 'show',
+              },
+            });
+          } catch (updateError: any) {
+            if (String(updateError.message).includes('allowed color palette')) {
+              await prisma.emailCategoryConfig.update({
+                where: { id: category.id },
+                data: { gmailLabelColor: null },
+              });
+              await gmail.users.labels.update({
+                userId: 'me',
+                id: match.id,
+                requestBody: {
+                  name: labelName,
+                  labelListVisibility: 'labelShow',
+                  messageListVisibility: 'show',
+                },
+              });
+            } else {
+              throw updateError;
+            }
+          }
           return match.id;
         }
       }
@@ -212,6 +302,42 @@ async function applyLabelToThread(
   } catch (error: any) {
     console.error(`Error applying label to thread ${threadId}:`, error);
     return false;
+  }
+}
+
+async function ensureGmailLabelColor(
+  gmail: gmail_v1.Gmail,
+  labelId: string,
+  gmailColor: GmailColor
+): Promise<void> {
+  const current = await gmail.users.labels.get({ userId: 'me', id: labelId });
+  const currentColor = current.data.color;
+  const matchesColor =
+    currentColor?.backgroundColor?.toLowerCase() === gmailColor.backgroundColor.toLowerCase() &&
+    currentColor?.textColor?.toLowerCase() === gmailColor.textColor.toLowerCase();
+
+  if (matchesColor) {
+    return;
+  }
+
+  try {
+    await gmail.users.labels.update({
+      userId: 'me',
+      id: labelId,
+      requestBody: {
+        color: {
+          backgroundColor: gmailColor.backgroundColor,
+          textColor: gmailColor.textColor,
+        },
+        labelListVisibility: 'labelShow',
+        messageListVisibility: 'show',
+      },
+    });
+  } catch (error: any) {
+    if (String(error.message).includes('allowed color palette')) {
+      throw new Error(`Gmail rejected label color ${gmailColor.backgroundColor}`);
+    }
+    throw error;
   }
 }
 
@@ -303,6 +429,16 @@ export async function syncGmailLabels(
         });
 
         result.syncedCategories++;
+        try {
+          const safeColor =
+            getGmailColorByBackground(gmailColor.backgroundColor) ??
+            findClosestGmailColor(category.color ?? '#cfe2f3');
+          await ensureGmailLabelColor(gmail, gmailLabelId, safeColor);
+        } catch (error: any) {
+          result.errors.push(
+            `Label color sync failed for "${category.name ?? category.categoryId}": ${error.message}`
+          );
+        }
 
         const threadsSynced = await syncThreadsForCategory(
           gmail,
@@ -364,6 +500,23 @@ async function syncThreadsForCategory(
       return 0;
     }
 
+    // PERFORMANCE FIX: Load all overrides upfront to avoid N+1 queries
+    const allOverrides = await prisma.emailCategoryOverride.findMany({
+      where: { userId },
+    });
+
+    // Create lookup maps for fast in-memory access
+    const overridesBySender = new Map<string, string>();
+    const overridesByThread = new Map<string, string>();
+
+    for (const override of allOverrides) {
+      if (override.overrideType === 'sender' || override.overrideType === 'domain') {
+        overridesBySender.set(override.overrideValue.toLowerCase(), override.categoryName);
+      } else if (override.overrideType === 'thread') {
+        overridesByThread.set(override.overrideValue, override.categoryName);
+      }
+    }
+
     const seenThreads = new Set<string>();
     let syncedCount = 0;
 
@@ -391,16 +544,35 @@ async function syncThreadsForCategory(
       const snippet = message.snippet ?? '';
 
       const senderEmail = from.match(/<(.+)>/)?.[1] ?? from;
-      const overrideCategory = await applyCategoryOverride(userId, senderEmail, threadId);
+
+      // Check overrides using in-memory maps instead of database queries
+      let overrideCategory: string | null = null;
+      if (threadId && overridesByThread.has(threadId)) {
+        overrideCategory = overridesByThread.get(threadId)!;
+      } else if (senderEmail) {
+        const senderLower = senderEmail.toLowerCase();
+        if (overridesBySender.has(senderLower)) {
+          overrideCategory = overridesBySender.get(senderLower)!;
+        } else {
+          // Check domain override
+          const domain = senderEmail.split('@')[1];
+          if (domain && overridesBySender.has(domain.toLowerCase())) {
+            overrideCategory = overridesBySender.get(domain.toLowerCase())!;
+          }
+        }
+      }
+
       const normalizedOverride = normalizeEmailCategoryId(overrideCategory);
       const categorized = normalizedOverride
         ? normalizedOverride
-        : categorizeEmail({
-          from,
-          subject,
-          snippet,
-          labels,
-        });
+        : (
+            await scoreEmailCategoryWithFallback({
+              from,
+              subject,
+              snippet,
+              labels,
+            })
+          ).category;
 
       if (categorized !== categoryId) {
         continue;
@@ -412,7 +584,7 @@ async function syncThreadsForCategory(
         seenThreads.add(threadId);
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Reduced delay
     }
 
     return syncedCount;

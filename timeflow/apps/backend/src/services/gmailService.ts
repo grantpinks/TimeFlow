@@ -10,9 +10,57 @@ import { decrypt, encrypt } from '../utils/crypto.js';
 import { getUserOAuth2Client } from '../config/google.js';
 import { analyzeEmailImportance } from '../utils/emailImportance.js';
 import { assertWithinGmailRateLimit } from '../utils/gmailRateLimiter.js';
-import { categorizeEmail, normalizeEmailCategoryId } from './emailCategorizationService.js';
+import {
+  detectNeedsResponseWithFallback,
+  normalizeEmailCategoryId,
+  scoreEmailCategoryWithFallback,
+} from './emailCategorizationService.js';
 import { applyCategoryOverride } from './emailOverrideService.js';
 import type { EmailInboxResponse, EmailMessage, FullEmailMessage, SendEmailRequest, SendEmailResponse, EmailAttachment } from '@timeflow/shared';
+
+function decodeGmailBody(data: string): string {
+  const normalized = data.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '==='.slice((normalized.length + 3) % 4);
+  return Buffer.from(padded, 'base64').toString('utf-8');
+}
+
+export function extractMessageBody(
+  payload?: gmail_v1.Schema$MessagePart
+): { body: string; mimeType?: string } {
+  let htmlBody: string | undefined;
+  let textBody: string | undefined;
+
+  const visit = (part?: gmail_v1.Schema$MessagePart) => {
+    if (!part) return;
+
+    const mimeType = part.mimeType?.toLowerCase();
+    const data = part.body?.data;
+
+    if (mimeType === 'text/html' && data && htmlBody === undefined) {
+      htmlBody = decodeGmailBody(data);
+    } else if (mimeType === 'text/plain' && data && textBody === undefined) {
+      textBody = decodeGmailBody(data);
+    }
+
+    if (part.parts?.length) {
+      for (const child of part.parts) {
+        visit(child);
+      }
+    }
+  };
+
+  visit(payload);
+
+  if (htmlBody) {
+    return { body: htmlBody, mimeType: 'text/html' };
+  }
+
+  if (textBody) {
+    return { body: textBody, mimeType: 'text/plain' };
+  }
+
+  return { body: '', mimeType: payload?.mimeType };
+}
 
 async function getGmailClient(userId: string): Promise<gmail_v1.Gmail> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -72,12 +120,20 @@ async function mapMessage(userId: string, message: gmail_v1.Schema$Message): Pro
   const normalizedOverride = normalizeEmailCategoryId(overrideCategory);
   const category = normalizedOverride
     ? normalizedOverride
-    : categorizeEmail({
-        from,
-        subject,
-        snippet: message.snippet ?? undefined,
-        labels,
-      });
+    : (
+        await scoreEmailCategoryWithFallback({
+          from,
+          subject,
+          snippet: message.snippet ?? undefined,
+          labels,
+        })
+      ).category;
+
+  const needsResponseResult = await detectNeedsResponseWithFallback({
+    from,
+    subject,
+    snippet: message.snippet ?? undefined,
+  });
 
   return {
     id: message.id,
@@ -91,6 +147,7 @@ async function mapMessage(userId: string, message: gmail_v1.Schema$Message): Pro
     isRead: !isUnread,
     isPromotional: labels.includes('CATEGORY_PROMOTIONS'),
     category,
+    needsResponse: needsResponseResult.needsResponse,
   };
 }
 
@@ -180,30 +237,23 @@ export async function getFullEmail(userId: string, emailId: string): Promise<Ful
   const normalizedOverride = normalizeEmailCategoryId(overrideCategory);
   const category = normalizedOverride
     ? normalizedOverride
-    : categorizeEmail({
-        from,
-        subject,
-        snippet: message.snippet ?? undefined,
-        labels,
-      });
+    : (
+        await scoreEmailCategoryWithFallback({
+          from,
+          subject,
+          snippet: message.snippet ?? undefined,
+          labels,
+        })
+      ).category;
 
-  // Extract body
-  let body = '';
+  const needsResponseResult = await detectNeedsResponseWithFallback({
+    from,
+    subject,
+    snippet: message.snippet ?? undefined,
+  });
+
+  const { body } = extractMessageBody(message.payload);
   const parts = message.payload?.parts || [message.payload];
-
-  for (const part of parts) {
-    if (part?.mimeType === 'text/plain' && part.body?.data) {
-      body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-      break;
-    } else if (part?.mimeType === 'text/html' && part.body?.data && !body) {
-      body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-    }
-  }
-
-  // If no parts, check if body is directly on payload
-  if (!body && message.payload?.body?.data) {
-    body = Buffer.from(message.payload.body.data, 'base64').toString('utf-8');
-  }
 
   // Extract attachments
   const attachments: EmailAttachment[] = [];
@@ -235,6 +285,7 @@ export async function getFullEmail(userId: string, emailId: string): Promise<Ful
     isRead: !isUnread,
     isPromotional: labels.includes('CATEGORY_PROMOTIONS'),
     category,
+    needsResponse: needsResponseResult.needsResponse,
     attachments: attachments.length > 0 ? attachments : undefined,
   };
 }

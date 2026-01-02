@@ -28,6 +28,7 @@ export default function InboxPage() {
   );
   const [showViewEditor, setShowViewEditor] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [needsResponseOnly, setNeedsResponseOnly] = useState(false);
   const [categories, setCategories] = useState<EmailCategoryConfig[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [correctingEmailId, setCorrectingEmailId] = useState<string | null>(null);
@@ -415,6 +416,7 @@ export default function InboxPage() {
       selectedViewId,
       views,
       selectedCategoryId,
+      needsResponseOnly,
     });
 
     if (searchMode === 'server') {
@@ -554,6 +556,19 @@ export default function InboxPage() {
                 );
               })}
 
+              <button
+                type="button"
+                onClick={() => setNeedsResponseOnly((prev) => !prev)}
+                className={`px-4 py-1.5 text-sm font-medium transition-all border-2 rounded-full ${
+                  needsResponseOnly
+                    ? 'bg-[#F97316] text-white border-[#F97316]'
+                    : 'bg-white text-[#1a1a1a] border-[#F97316]/30 hover:bg-[#F97316]/10'
+                }`}
+                style={{ fontFamily: "'Manrope', sans-serif" }}
+              >
+                Needs Reply
+              </button>
+
               <div className="h-6 w-px bg-[#e0e0e0] mx-1" />
 
               <CategoryPills
@@ -626,6 +641,7 @@ export default function InboxPage() {
                     categoryColor={getCategoryColor(email.category || '')}
                     categoryLabel={getCategoryLabel(email.category)}
                     formatTimestamp={formatTimestamp}
+                    needsResponse={email.needsResponse}
                   />
                 ))}
               </div>
@@ -673,6 +689,7 @@ export default function InboxPage() {
                 categoryColor={getCategoryColor(selectedEmail?.category || '')}
                 categoryId={getCategoryId(selectedEmail?.category)}
                 categories={categories}
+                needsResponse={selectedEmail?.needsResponse}
                 onCreateTask={handleCreateTaskFromEmail}
                 onArchive={handleArchive}
                 onToggleRead={handleToggleRead}
@@ -891,6 +908,7 @@ interface EmailListItemProps {
   categoryColor: string;
   categoryLabel: string;
   formatTimestamp: (date: string) => string;
+  needsResponse?: boolean;
 }
 
 function EmailListItem({
@@ -902,6 +920,7 @@ function EmailListItem({
   categoryColor,
   categoryLabel,
   formatTimestamp,
+  needsResponse,
 }: EmailListItemProps) {
   return (
     <div
@@ -960,18 +979,32 @@ function EmailListItem({
         </div>
       </div>
 
-      {categoryLabel && (
-        <div className="mt-2">
-          <span
-            className="inline-block px-2 py-0.5 text-xs font-medium rounded-full"
-            style={{
-              backgroundColor: `${categoryColor}15`,
-              color: categoryColor,
-              fontFamily: "'Manrope', sans-serif"
-            }}
-          >
-            {categoryLabel}
-          </span>
+      {(categoryLabel || needsResponse) && (
+        <div className="mt-2 flex items-center gap-2">
+          {categoryLabel && (
+            <span
+              className="inline-block px-2 py-0.5 text-xs font-medium rounded-full"
+              style={{
+                backgroundColor: `${categoryColor}15`,
+                color: categoryColor,
+                fontFamily: "'Manrope', sans-serif"
+              }}
+            >
+              {categoryLabel}
+            </span>
+          )}
+          {needsResponse && (
+            <span
+              className="inline-block px-2 py-0.5 text-xs font-medium rounded-full"
+              style={{
+                backgroundColor: '#F9731620',
+                color: '#F97316',
+                fontFamily: "'Manrope', sans-serif"
+              }}
+            >
+              Needs Reply
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -988,6 +1021,7 @@ interface ReadingPaneProps {
   categoryColor: string;
   categoryId: string | null;
   categories: EmailCategoryConfig[];
+  needsResponse?: boolean;
   onCreateTask: (email: EmailMessage, options?: { schedule?: boolean }) => void;
   onArchive: (emailId: string) => void;
   onToggleRead: (emailId: string, currentIsRead: boolean) => void;
@@ -1007,6 +1041,7 @@ function ReadingPane({
   categoryColor,
   categoryId,
   categories,
+  needsResponse,
   onCreateTask,
   onArchive,
   onToggleRead,
@@ -1083,26 +1118,43 @@ function ReadingPane({
 
           <div className="flex-1" />
 
-          {categoryLabel && (
+          {(categoryLabel || needsResponse) && (
             <div className="flex items-center gap-2">
-              <span
-                className="px-3 py-1.5 text-sm font-medium rounded-full border"
-                style={{
-                  backgroundColor: `${categoryColor}15`,
-                  color: categoryColor,
-                  borderColor: `${categoryColor}40`,
-                  fontFamily: "'Manrope', sans-serif"
-                }}
-              >
-                {categoryLabel}
-              </span>
-              <button
-                onClick={onStartCorrect}
-                className="text-xs text-[#0BAF9A] hover:underline"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              >
-                Correct
-              </button>
+              {categoryLabel && (
+                <span
+                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
+                  style={{
+                    backgroundColor: `${categoryColor}15`,
+                    color: categoryColor,
+                    borderColor: `${categoryColor}40`,
+                    fontFamily: "'Manrope', sans-serif"
+                  }}
+                >
+                  {categoryLabel}
+                </span>
+              )}
+              {needsResponse && (
+                <span
+                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
+                  style={{
+                    backgroundColor: '#F9731620',
+                    color: '#F97316',
+                    borderColor: '#F9731640',
+                    fontFamily: "'Manrope', sans-serif"
+                  }}
+                >
+                  Needs Reply
+                </span>
+              )}
+              {categoryLabel && (
+                <button
+                  onClick={onStartCorrect}
+                  className="text-xs text-[#0BAF9A] hover:underline"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  Correct
+                </button>
+              )}
             </div>
           )}
         </div>

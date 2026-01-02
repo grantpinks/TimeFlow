@@ -48,7 +48,27 @@ export const EMAIL_CATEGORIES: Record<EmailCategory, EmailCategoryConfig> = {
     color: '#8B5CF6', // Purple
     icon: 'briefcase',
     enabled: true,
-    keywords: ['meeting', 'deadline', 'project', 'team', 'presentation', 'report', 'urgent', 'action required'],
+    keywords: [
+      'meeting',
+      'deadline',
+      'project',
+      'team',
+      'presentation',
+      'report',
+      'urgent',
+      'action required',
+      'interview',
+      'coffee chat',
+      'coffee',
+      'connect',
+      'follow up',
+      'follow-up',
+      'schedule',
+      'availability',
+      'calendar invite',
+      'invite',
+      '1:1',
+    ],
     domains: [],
     gmailLabels: [],
   },
@@ -98,8 +118,41 @@ export const EMAIL_CATEGORIES: Record<EmailCategory, EmailCategoryConfig> = {
     color: '#14B8A6', // Teal
     icon: 'plane',
     enabled: true,
-    keywords: ['flight', 'hotel', 'booking', 'reservation', 'check-in', 'itinerary', 'trip', 'travel', 'boarding pass'],
-    domains: ['airbnb.com', 'booking.com', 'expedia.com', 'uber.com', 'lyft.com'],
+    keywords: [
+      'flight',
+      'hotel',
+      'booking',
+      'reservation',
+      'reservation number',
+      'confirmation',
+      'confirmation number',
+      'check-in',
+      'check in',
+      'itinerary',
+      'trip',
+      'travel',
+      'boarding pass',
+      'gate',
+      'terminal',
+      'seat',
+      'car rental',
+    ],
+    domains: [
+      'airbnb.com',
+      'booking.com',
+      'expedia.com',
+      'hotels.com',
+      'kayak.com',
+      'priceline.com',
+      'travelocity.com',
+      'delta.com',
+      'united.com',
+      'aa.com',
+      'southwest.com',
+      'marriott.com',
+      'hilton.com',
+      'hyatt.com',
+    ],
     gmailLabels: [],
   },
   newsletter: {
@@ -108,8 +161,20 @@ export const EMAIL_CATEGORIES: Record<EmailCategory, EmailCategoryConfig> = {
     color: '#6366F1', // Indigo
     icon: 'mail',
     enabled: true,
-    keywords: ['newsletter', 'digest', 'weekly', 'monthly', 'roundup', 'subscription', 'unsubscribe'],
-    domains: ['substack.com', 'mailchimp.com', 'medium.com'],
+    keywords: [
+      'newsletter',
+      'digest',
+      'weekly',
+      'monthly',
+      'roundup',
+      'subscription',
+      'unsubscribe',
+      'edition',
+      'issue',
+      'view in browser',
+      'daily brief',
+    ],
+    domains: ['morningbrew.com', 'substack.com', 'mailchimp.com', 'convertkit.com', 'medium.com'],
     gmailLabels: [],
   },
   updates: {
@@ -118,7 +183,22 @@ export const EMAIL_CATEGORIES: Record<EmailCategory, EmailCategoryConfig> = {
     color: '#A855F7', // Purple-light
     icon: 'bell',
     enabled: true,
-    keywords: ['update', 'notification', 'alert', 'reminder', 'security', 'verify', 'confirm', 'activate'],
+    keywords: [
+      'update',
+      'notification',
+      'alert',
+      'reminder',
+      'security',
+      'verify',
+      'verification',
+      'confirm',
+      'activate',
+      'password',
+      'reset',
+      'login',
+      'sign-in',
+      'policy',
+    ],
     domains: [],
     gmailLabels: ['CATEGORY_UPDATES'],
   },
@@ -146,40 +226,35 @@ export function normalizeEmailCategoryId(value?: string | null): EmailCategory |
   return entry ? entry.id : null;
 }
 
-/**
- * Categorize an email based on Gmail labels, keywords, and patterns
- */
-export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | 'snippet' | 'labels'>): EmailCategory {
+export function scoreEmailCategory(
+  email: Pick<EmailMessage, 'from' | 'subject' | 'snippet' | 'labels'>
+): { category: EmailCategory; confidence: number } {
   const fromText = email.from.toLowerCase();
   const fromAddress = extractEmailAddress(fromText);
   const subject = email.subject.toLowerCase();
   const snippet = (email.snippet || '').toLowerCase();
-  const combinedText = `${fromText} ${subject} ${snippet}`;
   const labels = email.labels || [];
 
-  // Step 1: Check Gmail labels first (highest priority)
   for (const [categoryId, config] of Object.entries(EMAIL_CATEGORIES)) {
     if (config.gmailLabels && config.gmailLabels.length > 0) {
       for (const label of config.gmailLabels) {
         if (labels.includes(label)) {
-          return categoryId as EmailCategory;
+          return { category: categoryId as EmailCategory, confidence: 0.9 };
         }
       }
     }
   }
 
-  // Step 2: Check domain patterns
   for (const [categoryId, config] of Object.entries(EMAIL_CATEGORIES)) {
     if (config.domains && config.domains.length > 0) {
       for (const domain of config.domains) {
         if (fromAddress.includes(domain)) {
-          return categoryId as EmailCategory;
+          return { category: categoryId as EmailCategory, confidence: 0.85 };
         }
       }
     }
   }
 
-  // Step 3: Check keywords (with scoring for better accuracy)
   const categoryScores: Record<EmailCategory, number> = {
     personal: 0,
     work: 0,
@@ -196,15 +271,12 @@ export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | '
   for (const [categoryId, config] of Object.entries(EMAIL_CATEGORIES)) {
     if (config.keywords && config.keywords.length > 0) {
       for (const keyword of config.keywords) {
-        // Check subject first (higher weight)
         if (subject.includes(keyword)) {
           categoryScores[categoryId as EmailCategory] += 3;
         }
-        // Check snippet (medium weight)
         if (snippet.includes(keyword)) {
           categoryScores[categoryId as EmailCategory] += 2;
         }
-        // Check from (lower weight, but still relevant)
         if (fromText.includes(keyword)) {
           categoryScores[categoryId as EmailCategory] += 1;
         }
@@ -212,7 +284,6 @@ export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | '
     }
   }
 
-  // Find category with highest score
   let maxScore = 0;
   let bestCategory: EmailCategory = 'other';
 
@@ -223,48 +294,148 @@ export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | '
     }
   }
 
-  // Step 4: Special heuristics for ambiguous cases
-
-  // If we have multiple high scores, prefer more specific categories
-  // Example: "work" keywords might overlap with "updates", prefer work
-  if (maxScore >= 3) {
-    return bestCategory;
+  if (maxScore >= 4) {
+    return { category: bestCategory, confidence: 0.75 };
   }
 
-  // If score is low (< 3), apply additional heuristics
+  if (maxScore >= 3) {
+    return { category: bestCategory, confidence: 0.65 };
+  }
 
-  // Check if it's likely work-related (corporate domains)
+  if (maxScore >= 2) {
+    return { category: bestCategory, confidence: 0.55 };
+  }
+
   const corporateDomainPattern = /[a-z0-9]+@[a-z0-9-]+\.(com|io|net|org|co)$/i;
   const isGenericDomain = /(gmail|yahoo|hotmail|outlook|icloud)\.com/i.test(fromAddress);
   const placeholderDomainPattern = /@(example\.com|example\.org|example\.net|test\.com|localhost)$/i;
 
   if (maxScore === 0 && placeholderDomainPattern.test(fromAddress)) {
-    return 'other';
+    return { category: 'other', confidence: 0.3 };
   }
 
   if (corporateDomainPattern.test(fromAddress) && !isGenericDomain && maxScore === 0) {
-    // Likely work email from corporate domain
-    return 'work';
+    return { category: 'work', confidence: 0.55 };
   }
 
-  // Check for newsletter patterns
   if (
     (subject.includes('edition') ||
-     subject.includes('issue') ||
-     snippet.includes('unsubscribe') ||
-     fromText.includes('newsletter') ||
-     fromText.includes('noreply')) &&
+      subject.includes('issue') ||
+      subject.includes('daily brief') ||
+      snippet.includes('unsubscribe') ||
+      snippet.includes('view in browser') ||
+      fromText.includes('newsletter') ||
+      fromText.includes('noreply')) &&
     bestCategory === 'other'
   ) {
-    return 'newsletter';
+    return { category: 'newsletter', confidence: 0.6 };
   }
 
-  // Default to 'personal' for generic domains with low scores
   if (isGenericDomain && maxScore === 0) {
-    return 'personal';
+    return { category: 'personal', confidence: 0.55 };
   }
 
-  return bestCategory;
+  return { category: bestCategory, confidence: 0.4 };
+}
+
+export function detectNeedsResponse(input: {
+  from: string;
+  subject: string;
+  snippet?: string;
+}): { needsResponse: boolean; confidence: number } {
+  const subject = input.subject.toLowerCase();
+  const snippet = (input.snippet || '').toLowerCase();
+  const combined = `${subject} ${snippet}`;
+
+  let score = 0;
+
+  const strongPhrases = [
+    'please reply',
+    'please respond',
+    'reply needed',
+    'respond by',
+    'rsvp',
+    'can you',
+    'could you',
+    'let me know',
+    'schedule',
+    'availability',
+    'coffee chat',
+    'interview',
+    'quick question',
+  ];
+
+  for (const phrase of strongPhrases) {
+    if (combined.includes(phrase)) {
+      score += 2;
+    }
+  }
+
+  if (combined.includes('?')) {
+    score += 1;
+  }
+
+  const meetingSignals = ['meeting', 'call', 'chat', 'connect', 'follow up', 'follow-up'];
+  if (meetingSignals.some((signal) => combined.includes(signal))) {
+    score += 1;
+  }
+
+  const needsResponse = score >= 2;
+  const confidence = Math.min(0.9, 0.5 + score * 0.1);
+
+  return { needsResponse, confidence };
+}
+
+const RULE_CONFIDENCE_THRESHOLD = 0.6;
+const AI_CONFIDENCE_THRESHOLD = 0.7;
+
+export async function scoreEmailCategoryWithFallback(
+  email: Pick<EmailMessage, 'from' | 'subject' | 'snippet' | 'labels'>
+): Promise<{ category: EmailCategory; confidence: number; usedAi: boolean }> {
+  const rulesResult = scoreEmailCategory(email);
+  if (rulesResult.confidence >= RULE_CONFIDENCE_THRESHOLD) {
+    return { ...rulesResult, usedAi: false };
+  }
+
+  const { categorizeEmailWithAI } = await import('./aiEmailCategorizationService.js');
+  const aiResult = await categorizeEmailWithAI({
+    from: email.from,
+    subject: email.subject,
+    snippet: email.snippet,
+  });
+
+  if (aiResult.confidence >= AI_CONFIDENCE_THRESHOLD) {
+    return { category: aiResult.categoryId, confidence: aiResult.confidence, usedAi: true };
+  }
+
+  return { ...rulesResult, usedAi: false };
+}
+
+export async function detectNeedsResponseWithFallback(input: {
+  from: string;
+  subject: string;
+  snippet?: string;
+}): Promise<{ needsResponse: boolean; confidence: number; usedAi: boolean }> {
+  const rulesResult = detectNeedsResponse(input);
+  if (rulesResult.confidence >= RULE_CONFIDENCE_THRESHOLD) {
+    return { ...rulesResult, usedAi: false };
+  }
+
+  const { detectNeedsResponseWithAI } = await import('./aiEmailCategorizationService.js');
+  const aiResult = await detectNeedsResponseWithAI(input);
+
+  if (aiResult.confidence >= AI_CONFIDENCE_THRESHOLD) {
+    return { needsResponse: aiResult.needsResponse, confidence: aiResult.confidence, usedAi: true };
+  }
+
+  return { ...rulesResult, usedAi: false };
+}
+
+/**
+ * Categorize an email based on Gmail labels, keywords, and patterns
+ */
+export function categorizeEmail(email: Pick<EmailMessage, 'from' | 'subject' | 'snippet' | 'labels'>): EmailCategory {
+  return scoreEmailCategory(email).category;
 }
 
 /**
