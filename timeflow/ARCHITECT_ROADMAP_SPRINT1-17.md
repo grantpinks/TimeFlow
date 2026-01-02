@@ -970,6 +970,7 @@
 - [ ] AI Assistant is enabled in production with strict **cost controls** (per-user quotas + global cap).
 - [ ] Mobile app (Expo) is stable and ready for beta distribution (TestFlight + internal Android track, or store-ready).
 - [ ] Onboarding + docs are “SaaS-grade”: setup, help/FAQ, deployment runbook, and rollback steps.
+- [ ] Web UI polish for launch: marketing pages are real (not 404), CTAs work, and core management pages (Categories, Meetings) match the product’s design system.
 
 #### Tasks
 
@@ -983,6 +984,17 @@
 | 18.4 | Beta gating: add email allowlist for access + “Heavy beta” allowlist override for elevated entitlements. | Codex | 3-6h | **P0** |
 | 18.5 | AI cost controls foundation: per-user monthly quotas + global cap; graceful “limit reached” UX; future-ready plan/entitlement plumbing for Sprint 19. | Codex | 6-10h | **P0** |
 | 18.6 | Beta operations pack: smoke test checklist + rollback steps + support/feedback workflow (docs + lightweight tooling). | Codex | 3-6h | P1 |
+
+**Web Launch Polish (Marketing + Core Management Pages)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 18.15 | Build real public marketing routes: `/features`, `/pricing`, `/about`, `/contact`, `/help`, `/status`, `/security`, `/privacy`, `/terms` (branded content + clear CTAs). | Codex | 8-14h | **P0** |
+| 18.16 | Fix homepage/nav correctness: remove/replace dead links (e.g., Blog/Careers/Press for now), ensure mobile menu works or is removed, and all footer links resolve. | Codex | 4-6h | **P0** |
+| 18.17 | Pricing page “beta-safe” posture: show plans/positioning without requiring Stripe (subscriptions ship Sprint 19) and ensure all “Contact Sales” / “Try free” CTAs work. | Claude/Codex | 4-6h | **P0** |
+| 18.18 | Categories UX polish: upgrade task categories page (`/categories`) to match brand (layout, empty states, guidance, analytics) and ensure training UI feels premium. | Codex | 4-8h | P1 |
+| 18.19 | Email Categories UX polish: upgrade Settings → Email Categories to be branded, explanatory, and user-friendly (especially Gmail sync status + backfill) without “internal tool” vibes. | Codex | 6-10h | P1 |
+| 18.20 | Meetings page UX rebuild: make `/meetings` match app shell, add clear actions (view scheduling links, manage bookings, download ICS, join link), and instrument analytics. | Codex | 6-10h | **P0** |
 
 **Mobile UX, Visual System & Distribution**
 
@@ -1004,6 +1016,8 @@
 - Beta gating is enforced (allowlist), including Heavy beta override for invited users.
 - AI Assistant runs in production with enforced quotas + clear limit UX (ready for Sprint 19 subscription wiring).
 - Mobile passes internal QA and is ready for beta distribution; store assets are complete (or submission-ready).
+- Marketing site is launch-ready: required public pages exist, are branded, have working CTAs, and there are **no dead links** from the homepage/footer.
+- Categories and Meetings pages feel cohesive with the design system (not “elementary”), with clear empty states and basic analytics instrumentation.
 
 **Plan doc**: See **[`docs/plans/2026-01-01-sprint-18-public-beta-launch.md`](./docs/plans/2026-01-01-sprint-18-public-beta-launch.md)** for the full checklist and gates.
 

@@ -131,6 +131,44 @@
   - “Rollback steps” (Vercel promote + Render redeploy)
   - “Support + feedback” workflow (where users report bugs; how you triage)
 
+### 8) Web launch polish (Marketing pages + “no dead links”) (P0)
+**Goal**: the public web presence is credible and complete (not placeholder/404), and all CTAs work.
+
+- **Create real marketing routes** (minimal-but-real pages):
+  - `/features`
+  - `/pricing` (beta-safe posture; no Stripe dependency yet)
+  - `/about`
+  - `/contact`
+  - `/help`
+  - `/status`
+  - `/security`
+  - `/privacy`
+  - `/terms`
+- **Fix homepage/footer correctness**:
+  - remove/replace links we are **not shipping yet** (Blog/Careers/Press)
+  - ensure the “mobile menu” button is functional or removed
+  - ensure all footer links resolve (no 404s)
+- **Analytics**:
+  - instrument page views + CTA clicks for these marketing pages
+  - ensure analytics is privacy-safe (no sensitive content)
+
+### 9) In-app UX polish (Categories + Meetings) (P0/P1)
+**Goal**: key management pages feel cohesive with the design system and are usable for real users.
+
+- **Meetings (`/meetings`)**:
+  - make it consistent with the authenticated app shell (Layout)
+  - add clear primary actions (view booking links, join meeting, download ICS)
+  - improve empty states and guidance
+  - analytics for core actions
+- **Task Categories (`/categories`)**:
+  - upgrade layout + empty states + microcopy to match brand
+  - ensure training flow feels premium and understandable
+  - analytics for add/edit/train
+- **Email Categories (Settings → Email Categories)**:
+  - make Gmail sync UI understandable (status, backfill, errors)
+  - reduce “internal tool” feel (layout, typography, guidance)
+  - analytics for toggles and sync-now actions
+
 ---
 
 ## Acceptance Criteria (Sprint 18 is “done”)
@@ -140,6 +178,8 @@
 - **Beta gating**: only allowlisted emails can sign in; heavy allowlist receives heavy quota.
 - **AI guardrails**: per-user quotas + global cap enforced; user sees clear messaging when capped.
 - **Docs**: a new engineer (or future you) can deploy and run a beta from scratch using the docs.
+- **Marketing web**: all required marketing pages exist, are branded, have working CTAs, and there are no dead links from homepage/footer.
+- **Web UX polish**: Categories + Meetings pages feel launch-ready (consistent layout, empty states, basic instrumentation).
 
 ---
 
