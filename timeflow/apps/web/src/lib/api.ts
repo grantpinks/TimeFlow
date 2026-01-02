@@ -621,6 +621,8 @@ export interface GmailSyncStatus {
   lastSyncError: string | null;
   backfillDays: number;
   backfillMaxThreads: number;
+  watchEnabled?: boolean;
+  watchExpiration?: string | null;
 }
 
 export interface GmailSyncResult {
@@ -667,6 +669,24 @@ export async function updateGmailSyncSettings(settings: {
   return request<GmailSyncStatus>('/gmail-sync/settings', {
     method: 'PATCH',
     body: JSON.stringify(settings),
+  });
+}
+
+/**
+ * Enable Gmail background sync (Pub/Sub watch).
+ */
+export async function enableGmailWatch(): Promise<GmailSyncStatus> {
+  return request<GmailSyncStatus>('/gmail-sync/watch/enable', {
+    method: 'POST',
+  });
+}
+
+/**
+ * Disable Gmail background sync (Pub/Sub watch).
+ */
+export async function disableGmailWatch(): Promise<GmailSyncStatus> {
+  return request<GmailSyncStatus>('/gmail-sync/watch/disable', {
+    method: 'POST',
   });
 }
 

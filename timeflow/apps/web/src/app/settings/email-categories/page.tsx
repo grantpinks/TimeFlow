@@ -111,6 +111,7 @@ export default function EmailCategoriesSettingsPage() {
   const [backfillDaysInput, setBackfillDaysInput] = useState(7);
   const [backfillMaxThreadsInput, setBackfillMaxThreadsInput] = useState(100);
   const [backfillSaving, setBackfillSaving] = useState(false);
+  const [watchUpdating, setWatchUpdating] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -279,6 +280,24 @@ export default function EmailCategoriesSettingsPage() {
     }
   }
 
+  async function handleToggleBackgroundSync(enabled: boolean) {
+    setWatchUpdating(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const status = enabled ? await api.enableGmailWatch() : await api.disableGmailWatch();
+      setGmailSyncStatus(status);
+      setSuccessMessage(enabled ? 'Background sync enabled.' : 'Background sync disabled.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      console.error('Failed to update background sync:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update background sync');
+    } finally {
+      setWatchUpdating(false);
+    }
+  }
+
   function stopSyncPolling() {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
@@ -334,6 +353,11 @@ export default function EmailCategoriesSettingsPage() {
   }, []);
 
   const syncProgressPercent = Math.min(100, Math.round((syncElapsedSeconds / 120) * 100));
+  const backgroundSyncEnabled = Boolean(gmailSyncStatus?.watchEnabled);
+  const watchExpirationLabel =
+    gmailSyncStatus?.watchExpiration && !Number.isNaN(Date.parse(gmailSyncStatus.watchExpiration))
+      ? new Date(gmailSyncStatus.watchExpiration).toLocaleString()
+      : null;
 
   async function handleRemoveAllLabels() {
     if (!confirm('This will remove all TimeFlow labels from Gmail. Continue?')) {
@@ -506,6 +530,34 @@ export default function EmailCategoriesSettingsPage() {
               </div>
             </div>
           )}
+
+          <div className="rounded-xl border border-slate-200 bg-white p-4 mb-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-700">Background sync</div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Keep labels up to date with Gmail push notifications.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={backgroundSyncEnabled}
+                  onChange={(e) => handleToggleBackgroundSync(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  disabled={watchUpdating}
+                />
+                {backgroundSyncEnabled ? 'On' : 'Off'}
+              </label>
+            </div>
+            <div className="mt-2 text-xs text-slate-500">
+              {backgroundSyncEnabled
+                ? `Watching for new Gmail activity${
+                    watchExpirationLabel ? ` until ${watchExpirationLabel}.` : '.'
+                  }`
+                : 'Background sync is off. Manual syncs only.'}
+            </div>
+          </div>
 
           {gmailSyncStatus?.lastSyncError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
