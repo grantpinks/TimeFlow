@@ -15,31 +15,30 @@ export interface GmailColor {
  * Source: Gmail Label API documentation
  */
 export const GMAIL_LABEL_COLORS: GmailColor[] = [
-  { backgroundColor: '#cfe2f3', textColor: '#000000' }, // Light Blue
-  { backgroundColor: '#d9ead3', textColor: '#000000' }, // Light Green
-  { backgroundColor: '#fff2cc', textColor: '#000000' }, // Light Yellow
-  { backgroundColor: '#fce5cd', textColor: '#000000' }, // Light Orange
-  { backgroundColor: '#f4cccc', textColor: '#000000' }, // Light Red
-  { backgroundColor: '#d9d2e9', textColor: '#000000' }, // Light Purple
-  { backgroundColor: '#d0e0e3', textColor: '#000000' }, // Light Cyan
-  { backgroundColor: '#ead1dc', textColor: '#000000' }, // Light Magenta
-  { backgroundColor: '#c9daf8', textColor: '#000000' }, // Cornflower Blue
-  { backgroundColor: '#b6d7a8', textColor: '#000000' }, // Light Green 2
-  { backgroundColor: '#ffe599', textColor: '#000000' }, // Light Cornsilk Yellow
-  { backgroundColor: '#f9cb9c', textColor: '#000000' }, // Light Coral
-  { backgroundColor: '#ea9999', textColor: '#000000' }, // Light Red 2
-  { backgroundColor: '#b4a7d6', textColor: '#000000' }, // Light Purple 2
-  { backgroundColor: '#a2c4c9', textColor: '#000000' }, // Light Cyan 2
-  { backgroundColor: '#d5a6bd', textColor: '#000000' }, // Light Magenta 2
-  { backgroundColor: '#9fc5e8', textColor: '#000000' }, // Light Sky Blue
-  { backgroundColor: '#93c47d', textColor: '#000000' }, // Light Green 3
-  { backgroundColor: '#ffd966', textColor: '#000000' }, // Light Orange Yellow
-  { backgroundColor: '#f6b26b', textColor: '#000000' }, // Light Orange 2
-  { backgroundColor: '#e06666', textColor: '#000000' }, // Light Red 3
-  { backgroundColor: '#8e7cc3', textColor: '#ffffff' }, // Light Purple 3
-  { backgroundColor: '#76a5af', textColor: '#000000' }, // Light Cyan 3
-  { backgroundColor: '#c27ba0', textColor: '#ffffff' }, // Light Magenta 3
-  { backgroundColor: '#a4c2f4', textColor: '#000000' }, // Cerulean
+  { backgroundColor: '#e7e7e7', textColor: '#000000' }, // Light gray
+  { backgroundColor: '#b6cff5', textColor: '#000000' }, // Light blue
+  { backgroundColor: '#98d7e4', textColor: '#000000' }, // Light teal
+  { backgroundColor: '#e3d7ff', textColor: '#000000' }, // Light purple
+  { backgroundColor: '#fbd3e0', textColor: '#000000' }, // Light pink
+  { backgroundColor: '#f2b2a8', textColor: '#000000' }, // Light coral
+  { backgroundColor: '#c2c2c2', textColor: '#000000' }, // Dark gray
+  { backgroundColor: '#4986e7', textColor: '#ffffff' }, // Dark blue
+  { backgroundColor: '#2da2bb', textColor: '#ffffff' }, // Dark teal
+  { backgroundColor: '#b99aff', textColor: '#000000' }, // Dark purple
+  { backgroundColor: '#f691b2', textColor: '#000000' }, // Coral pink
+  { backgroundColor: '#fb4c2f', textColor: '#ffffff' }, // Bright red
+  { backgroundColor: '#ffc8af', textColor: '#000000' }, // Peach
+  { backgroundColor: '#ffdeb5', textColor: '#000000' }, // Beige
+  { backgroundColor: '#fbe983', textColor: '#000000' }, // Yellow
+  { backgroundColor: '#fdedc1', textColor: '#000000' }, // Light yellow
+  { backgroundColor: '#b3efd3', textColor: '#000000' }, // Soft green
+  { backgroundColor: '#a2dcc1', textColor: '#000000' }, // Pale green
+  { backgroundColor: '#ff7537', textColor: '#ffffff' }, // Orange
+  { backgroundColor: '#ffad46', textColor: '#000000' }, // Amber
+  { backgroundColor: '#ebdbde', textColor: '#000000' }, // Mauve gray
+  { backgroundColor: '#cca6ac', textColor: '#000000' }, // Dusty rose
+  { backgroundColor: '#42d692', textColor: '#000000' }, // Bright green
+  { backgroundColor: '#16a765', textColor: '#ffffff' }, // Dark green
 ];
 
 /**

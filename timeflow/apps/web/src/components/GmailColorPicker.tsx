@@ -8,33 +8,55 @@ export interface GmailColor {
   textColor: string;
 }
 
-const GMAIL_COLORS: GmailColor[] = [
-  { backgroundColor: '#cfe2f3', textColor: '#0b5394' },
-  { backgroundColor: '#d9ead3', textColor: '#38761d' },
-  { backgroundColor: '#fff2cc', textColor: '#7f6000' },
-  { backgroundColor: '#fce5cd', textColor: '#b45f06' },
-  { backgroundColor: '#f4cccc', textColor: '#990000' },
-  { backgroundColor: '#d9d2e9', textColor: '#674ea7' },
-  { backgroundColor: '#d0e0e3', textColor: '#0c343d' },
-  { backgroundColor: '#ead1dc', textColor: '#783f04' },
-  { backgroundColor: '#c9daf8', textColor: '#1155cc' },
-  { backgroundColor: '#b6d7a8', textColor: '#274e13' },
-  { backgroundColor: '#ffe599', textColor: '#bf9000' },
-  { backgroundColor: '#f9cb9c', textColor: '#b45f06' },
-  { backgroundColor: '#ea9999', textColor: '#990000' },
-  { backgroundColor: '#b4a7d6', textColor: '#351c75' },
-  { backgroundColor: '#a2c4c9', textColor: '#0c343d' },
-  { backgroundColor: '#d5a6bd', textColor: '#783f04' },
-  { backgroundColor: '#9fc5e8', textColor: '#0b5394' },
-  { backgroundColor: '#93c47d', textColor: '#38761d' },
-  { backgroundColor: '#ffd966', textColor: '#7f6000' },
-  { backgroundColor: '#f6b26b', textColor: '#b45f06' },
-  { backgroundColor: '#e06666', textColor: '#990000' },
-  { backgroundColor: '#8e7cc3', textColor: '#351c75' },
-  { backgroundColor: '#76a5af', textColor: '#0c343d' },
-  { backgroundColor: '#c27ba0', textColor: '#783f04' },
-  { backgroundColor: '#a4c2f4', textColor: '#0b5394' },
+const GMAIL_BACKGROUND_COLORS = [
+  '#e7e7e7',
+  '#b6cff5',
+  '#98d7e4',
+  '#e3d7ff',
+  '#fbd3e0',
+  '#f2b2a8',
+  '#c2c2c2',
+  '#4986e7',
+  '#2da2bb',
+  '#b99aff',
+  '#f691b2',
+  '#fb4c2f',
+  '#ffc8af',
+  '#ffdeb5',
+  '#fbe983',
+  '#fdedc1',
+  '#b3efd3',
+  '#a2dcc1',
+  '#ff7537',
+  '#ffad46',
+  '#ebdbde',
+  '#cca6ac',
+  '#42d692',
+  '#16a765',
 ];
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16),
+      }
+    : null;
+}
+
+function getReadableTextColor(backgroundColor: string): string {
+  const rgb = hexToRgb(backgroundColor);
+  if (!rgb) return '#000000';
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.6 ? '#000000' : '#ffffff';
+}
+
+const GMAIL_COLORS: GmailColor[] = GMAIL_BACKGROUND_COLORS.map((backgroundColor) => ({
+  backgroundColor,
+  textColor: getReadableTextColor(backgroundColor),
+}));
 
 interface GmailColorPickerProps {
   selectedColor: string | null;

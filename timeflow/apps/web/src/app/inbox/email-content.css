@@ -1,0 +1,142 @@
+/* Email Content Styling - Premium editorial reading experience */
+
+.email-content {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.7;
+  color: #1a1a1a;
+}
+
+/* Typography */
+.email-content p {
+  margin-bottom: 1.2em;
+}
+
+.email-content h1,
+.email-content h2,
+.email-content h3,
+.email-content h4,
+.email-content h5,
+.email-content h6 {
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+  font-family: 'Crimson Pro', serif;
+}
+
+.email-content h1 { font-size: 2em; }
+.email-content h2 { font-size: 1.5em; }
+.email-content h3 { font-size: 1.25em; }
+.email-content h4 { font-size: 1.1em; }
+
+/* Links */
+.email-content a {
+  color: #0BAF9A;
+  text-decoration: underline;
+  text-decoration-color: #0BAF9A40;
+  text-underline-offset: 3px;
+  transition: all 0.2s ease;
+}
+
+.email-content a:hover {
+  color: #078c77;
+  text-decoration-color: #078c77;
+}
+
+/* Lists */
+.email-content ul,
+.email-content ol {
+  margin-bottom: 1.2em;
+  padding-left: 2em;
+}
+
+.email-content li {
+  margin-bottom: 0.4em;
+}
+
+/* Blockquotes */
+.email-content blockquote {
+  margin: 1.5em 0;
+  padding-left: 1.5em;
+  border-left: 4px solid #0BAF9A;
+  color: #666;
+  font-style: italic;
+}
+
+/* Code */
+.email-content pre {
+  background: #f5f5f5;
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 1.2em;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+}
+
+.email-content code {
+  background: #f5f5f5;
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+}
+
+.email-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Tables */
+.email-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5em;
+}
+
+.email-content th,
+.email-content td {
+  padding: 0.75em;
+  border: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.email-content th {
+  background: #f5f5f5;
+  font-weight: 600;
+  font-family: 'Manrope', sans-serif;
+}
+
+/* Images */
+.email-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1.5em 0;
+}
+
+/* Horizontal Rule */
+.email-content hr {
+  border: none;
+  border-top: 2px solid #e0e0e0;
+  margin: 2em 0;
+}
+
+/* Strong/Bold */
+.email-content strong,
+.email-content b {
+  font-weight: 700;
+  color: #000;
+}
+
+/* Emphasis/Italic */
+.email-content em,
+.email-content i {
+  font-style: italic;
+}
+
+/* Divs and Spans - Preserve basic styling */
+.email-content div {
+  margin-bottom: 0.5em;
+}

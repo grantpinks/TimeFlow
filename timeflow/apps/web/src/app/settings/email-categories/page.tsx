@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Layout } from '@/components/Layout';
 import ColorPicker from '@/components/ColorPicker';
 import GmailColorPicker, { type GmailColor } from '@/components/GmailColorPicker';
@@ -8,32 +8,31 @@ import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { track } from '@/lib/analytics';
 
-const GMAIL_COLORS: GmailColor[] = [
-  { backgroundColor: '#cfe2f3', textColor: '#0b5394' },
-  { backgroundColor: '#d9ead3', textColor: '#38761d' },
-  { backgroundColor: '#fff2cc', textColor: '#7f6000' },
-  { backgroundColor: '#fce5cd', textColor: '#b45f06' },
-  { backgroundColor: '#f4cccc', textColor: '#990000' },
-  { backgroundColor: '#d9d2e9', textColor: '#674ea7' },
-  { backgroundColor: '#d0e0e3', textColor: '#0c343d' },
-  { backgroundColor: '#ead1dc', textColor: '#783f04' },
-  { backgroundColor: '#c9daf8', textColor: '#1155cc' },
-  { backgroundColor: '#b6d7a8', textColor: '#274e13' },
-  { backgroundColor: '#ffe599', textColor: '#bf9000' },
-  { backgroundColor: '#f9cb9c', textColor: '#b45f06' },
-  { backgroundColor: '#ea9999', textColor: '#990000' },
-  { backgroundColor: '#b4a7d6', textColor: '#351c75' },
-  { backgroundColor: '#a2c4c9', textColor: '#0c343d' },
-  { backgroundColor: '#d5a6bd', textColor: '#783f04' },
-  { backgroundColor: '#9fc5e8', textColor: '#0b5394' },
-  { backgroundColor: '#93c47d', textColor: '#38761d' },
-  { backgroundColor: '#ffd966', textColor: '#7f6000' },
-  { backgroundColor: '#f6b26b', textColor: '#b45f06' },
-  { backgroundColor: '#e06666', textColor: '#990000' },
-  { backgroundColor: '#8e7cc3', textColor: '#351c75' },
-  { backgroundColor: '#76a5af', textColor: '#0c343d' },
-  { backgroundColor: '#c27ba0', textColor: '#783f04' },
-  { backgroundColor: '#a4c2f4', textColor: '#0b5394' },
+const GMAIL_BACKGROUND_COLORS = [
+  '#e7e7e7',
+  '#b6cff5',
+  '#98d7e4',
+  '#e3d7ff',
+  '#fbd3e0',
+  '#f2b2a8',
+  '#c2c2c2',
+  '#4986e7',
+  '#2da2bb',
+  '#b99aff',
+  '#f691b2',
+  '#fb4c2f',
+  '#ffc8af',
+  '#ffdeb5',
+  '#fbe983',
+  '#fdedc1',
+  '#b3efd3',
+  '#a2dcc1',
+  '#ff7537',
+  '#ffad46',
+  '#ebdbde',
+  '#cca6ac',
+  '#42d692',
+  '#16a765',
 ];
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -46,6 +45,18 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
       }
     : null;
 }
+
+function getReadableTextColor(backgroundColor: string): string {
+  const rgb = hexToRgb(backgroundColor);
+  if (!rgb) return '#000000';
+  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+  return luminance > 0.6 ? '#000000' : '#ffffff';
+}
+
+const GMAIL_COLORS: GmailColor[] = GMAIL_BACKGROUND_COLORS.map((backgroundColor) => ({
+  backgroundColor,
+  textColor: getReadableTextColor(backgroundColor),
+}));
 
 function colorDistance(
   rgb1: { r: number; g: number; b: number },
@@ -92,7 +103,16 @@ export default function EmailCategoriesSettingsPage() {
   const [gmailLabelNameInput, setGmailLabelNameInput] = useState<string>('');
   const [gmailSyncStatus, setGmailSyncStatus] = useState<api.GmailSyncStatus | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncInProgress, setSyncInProgress] = useState(false);
+  const [syncPolling, setSyncPolling] = useState(false);
+  const [syncStartTime, setSyncStartTime] = useState<number | null>(null);
+  const [syncElapsedSeconds, setSyncElapsedSeconds] = useState(0);
   const [removing, setRemoving] = useState(false);
+  const [backfillDaysInput, setBackfillDaysInput] = useState(7);
+  const [backfillMaxThreadsInput, setBackfillMaxThreadsInput] = useState(100);
+  const [backfillSaving, setBackfillSaving] = useState(false);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -111,7 +131,11 @@ export default function EmailCategoriesSettingsPage() {
       const mapped = findClosestGmailColor(category.color);
       setAutoMappedGmailColor(mapped);
       setGmailColorOverride(category.gmailLabelColor ?? mapped.backgroundColor);
-      setGmailLabelNameInput(category.gmailLabelName ?? category.name);
+      const labelNameRaw = category.gmailLabelName ?? category.name;
+      const normalizedLabelName = labelNameRaw.startsWith('TimeFlow/')
+        ? labelNameRaw.slice('TimeFlow/'.length)
+        : labelNameRaw;
+      setGmailLabelNameInput(normalizedLabelName);
     }
   }, [editingCategory, categories]);
 
@@ -127,12 +151,16 @@ export default function EmailCategoriesSettingsPage() {
     }
   }
 
-  async function loadGmailSyncStatus() {
+  async function loadGmailSyncStatus(): Promise<api.GmailSyncStatus | null> {
     try {
       const status = await api.getGmailSyncStatus();
       setGmailSyncStatus(status);
+      setBackfillDaysInput(status.backfillDays);
+      setBackfillMaxThreadsInput(status.backfillMaxThreads);
+      return status;
     } catch (err) {
       console.error('Failed to load Gmail sync status:', err);
+      return null;
     }
   }
 
@@ -192,17 +220,120 @@ export default function EmailCategoriesSettingsPage() {
 
     try {
       const result = await api.triggerGmailSync();
-      setSuccessMessage(
-        `Synced ${result.syncedCategories} categories and ${result.syncedThreads ?? 0} threads`
-      );
-      await loadGmailSyncStatus();
-    } catch (err) {
+      if (result.status === 'in_progress') {
+        const startedAt = Date.now();
+        setSyncStartTime(startedAt);
+        setSyncInProgress(true);
+        setSyncElapsedSeconds(0);
+        setSuccessMessage('Gmail sync started. Status will update shortly.');
+        startSyncPolling(startedAt);
+      } else {
+        setSuccessMessage(
+          `Synced ${result.syncedCategories} categories and ${result.syncedThreads ?? 0} threads`
+        );
+        await loadGmailSyncStatus();
+      }
+    } catch (err: any) {
       console.error('Failed to sync Gmail labels:', err);
-      setError('Failed to sync Gmail labels');
+      // Show more detailed error message
+      const errorMessage = err?.message || err?.error || 'Failed to sync Gmail labels';
+      setError(errorMessage);
     } finally {
       setSyncing(false);
     }
   }
+
+  async function handleUpdateBackfillSettings(days: number, maxThreads: number) {
+    if (days < 1 || days > 30) {
+      setError('Backfill days must be between 1 and 30.');
+      if (gmailSyncStatus) {
+        setBackfillDaysInput(gmailSyncStatus.backfillDays);
+      }
+      return;
+    }
+
+    if (maxThreads < 10 || maxThreads > 500) {
+      setError('Max threads must be between 10 and 500.');
+      if (gmailSyncStatus) {
+        setBackfillMaxThreadsInput(gmailSyncStatus.backfillMaxThreads);
+      }
+      return;
+    }
+
+    setBackfillSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      await api.updateGmailSyncSettings({
+        backfillDays: days,
+        backfillMaxThreads: maxThreads,
+      });
+      setSuccessMessage('Backfill settings updated.');
+      await loadGmailSyncStatus();
+    } catch (err) {
+      console.error('Failed to update Gmail sync settings:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update settings');
+    } finally {
+      setBackfillSaving(false);
+    }
+  }
+
+  function stopSyncPolling() {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
+    setSyncPolling(false);
+  }
+
+  function startSyncPolling(startedAt: number) {
+    stopSyncPolling();
+    setSyncPolling(true);
+
+    const pollOnce = async () => {
+      setSyncElapsedSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+      const status = await loadGmailSyncStatus();
+      if (!status) return;
+      if (status.lastSyncedAt) {
+        const lastSyncedAtMs = new Date(status.lastSyncedAt).getTime();
+        if (lastSyncedAtMs >= startedAt - 1000) {
+          setSyncInProgress(false);
+          setSyncPolling(false);
+          setSyncStartTime(null);
+          setSyncElapsedSeconds(0);
+          if (status.lastSyncError) {
+            setError(`Gmail sync completed with errors: ${status.lastSyncError}`);
+          } else {
+            setSuccessMessage('Gmail sync completed. See updated status below.');
+          }
+          stopSyncPolling();
+        }
+      }
+    };
+
+    pollOnce();
+    pollIntervalRef.current = setInterval(pollOnce, 5000);
+    pollTimeoutRef.current = setTimeout(() => {
+      setSyncPolling(false);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    }, 120000);
+  }
+
+  useEffect(() => {
+    return () => {
+      stopSyncPolling();
+    };
+  }, []);
+
+  const syncProgressPercent = Math.min(100, Math.round((syncElapsedSeconds / 120) * 100));
 
   async function handleRemoveAllLabels() {
     if (!confirm('This will remove all TimeFlow labels from Gmail. Continue?')) {
@@ -273,8 +404,8 @@ export default function EmailCategoriesSettingsPage() {
         api.updateEmailCategory(cat.id, {
           color: defaultColors[cat.name] || cat.color,
           enabled: true,
-          gmailLabelName: null,
-          gmailLabelColor: null,
+          gmailLabelName: undefined,
+          gmailLabelColor: undefined,
         })
       );
 
@@ -389,7 +520,7 @@ export default function EmailCategoriesSettingsPage() {
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium
                          hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {syncing ? 'Syncing...' : 'Sync Now'}
+              {syncing ? 'Starting...' : 'Sync Now'}
             </button>
             <button
               onClick={handleRemoveAllLabels}
@@ -400,6 +531,85 @@ export default function EmailCategoriesSettingsPage() {
               {removing ? 'Removing...' : 'Remove All TimeFlow Labels'}
             </button>
           </div>
+          {(syncInProgress || syncPolling) && (
+            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-600" />
+                </span>
+                <div className="text-sm font-medium">
+                  Sync scan in progress ({syncElapsedSeconds}s)
+                </div>
+                <div className="text-xs text-emerald-700">
+                  {syncPolling
+                    ? 'Auto-refreshing status for up to 2 minutes'
+                    : 'Still running. Status will update when it finishes'}
+                </div>
+              </div>
+              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-emerald-100">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-700"
+                  style={{ width: `${syncProgressPercent}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {gmailSyncStatus && (
+            <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-slate-700">Backfill Settings</div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Control how deep and how broad the labeling scan goes.
+                  </p>
+                </div>
+                {backfillSaving && (
+                  <div className="text-xs font-medium text-emerald-600">Saving…</div>
+                )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-lg bg-white border border-slate-200 p-3">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                    Backfill Days
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    value={backfillDaysInput}
+                    onChange={(e) => setBackfillDaysInput(Number(e.target.value))}
+                    onBlur={() =>
+                      handleUpdateBackfillSettings(backfillDaysInput, backfillMaxThreadsInput)
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-base font-medium text-slate-900
+                               focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">How many days back to scan (1-30)</p>
+                </div>
+                <div className="rounded-lg bg-white border border-slate-200 p-3">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                    Max Threads
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="500"
+                    value={backfillMaxThreadsInput}
+                    onChange={(e) => setBackfillMaxThreadsInput(Number(e.target.value))}
+                    onBlur={() =>
+                      handleUpdateBackfillSettings(backfillDaysInput, backfillMaxThreadsInput)
+                    }
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-base font-medium text-slate-900
+                               focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">Max threads per sync (10-500)</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Categories list */}
@@ -465,7 +675,7 @@ export default function EmailCategoriesSettingsPage() {
                                   onBlur={() => {
                                     const trimmed = gmailLabelNameInput.trim();
                                     handleUpdateCategory(category.id, {
-                                      gmailLabelName: trimmed.length > 0 ? trimmed : null,
+                                      gmailLabelName: trimmed.length > 0 ? trimmed : undefined,
                                     });
                                   }}
                                   className="w-full px-3 py-2 border border-slate-200 rounded-lg

@@ -8,17 +8,33 @@
 
 import { useState } from 'react';
 
+// Gmail-compatible color palette (matches GmailColorPicker)
 const PRESET_COLORS = [
-  '#3B82F6', // blue
-  '#8B5CF6', // purple
-  '#10B981', // green
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#EC4899', // pink
-  '#6366F1', // indigo
-  '#14B8A6', // teal
-  '#F97316', // orange
-  '#6B7280', // gray
+  '#cfe2f3', // light blue
+  '#d9ead3', // light green
+  '#fff2cc', // light yellow
+  '#fce5cd', // light orange
+  '#f4cccc', // light red
+  '#d9d2e9', // light purple
+  '#d0e0e3', // light teal
+  '#ead1dc', // light pink
+  '#c9daf8', // medium blue
+  '#b6d7a8', // medium green
+  '#ffe599', // medium yellow
+  '#f9cb9c', // medium orange
+  '#ea9999', // medium red
+  '#b4a7d6', // medium purple
+  '#a2c4c9', // medium teal
+  '#d5a6bd', // medium pink
+  '#9fc5e8', // dark blue
+  '#93c47d', // dark green
+  '#ffd966', // dark yellow
+  '#f6b26b', // dark orange
+  '#e06666', // dark red
+  '#8e7cc3', // dark purple
+  '#76a5af', // dark teal
+  '#c27ba0', // dark pink
+  '#a4c2f4', // bright blue
 ];
 
 interface ColorPickerProps {
