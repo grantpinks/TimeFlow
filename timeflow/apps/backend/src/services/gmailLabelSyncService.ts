@@ -75,7 +75,7 @@ async function getOrCreateSyncState(userId: string): Promise<GmailLabelSyncState
  *
  * @returns Gmail label ID or null if creation failed
  */
-async function createOrUpdateGmailLabel(
+export async function createOrUpdateGmailLabel(
   gmail: gmail_v1.Gmail,
   category: EmailCategoryConfig,
   gmailColor: GmailColor
