@@ -119,24 +119,59 @@ async function createOrUpdateGmailLabel(
         if (error.code === 404) {
           return null;
         }
+        if (String(error.message).includes('allowed color palette')) {
+          await prisma.emailCategoryConfig.update({
+            where: { id: category.id },
+            data: { gmailLabelColor: null },
+          });
+          const response = await gmail.users.labels.update({
+            userId: 'me',
+            id: category.gmailLabelId,
+            requestBody: {
+              name: labelName,
+              labelListVisibility: 'labelShow',
+              messageListVisibility: 'show',
+            },
+          });
+          return response.data.id ?? null;
+        }
         throw error;
       }
     }
 
-    const response = await gmail.users.labels.create({
-      userId: 'me',
-      requestBody: {
-        name: labelName,
-        color: {
-          backgroundColor: safeColor.backgroundColor,
-          textColor: safeColor.textColor,
+    try {
+      const response = await gmail.users.labels.create({
+        userId: 'me',
+        requestBody: {
+          name: labelName,
+          color: {
+            backgroundColor: safeColor.backgroundColor,
+            textColor: safeColor.textColor,
+          },
+          labelListVisibility: 'labelShow',
+          messageListVisibility: 'show',
         },
-        labelListVisibility: 'labelShow',
-        messageListVisibility: 'show',
-      },
-    });
+      });
 
-    return response.data.id ?? null;
+      return response.data.id ?? null;
+    } catch (error: any) {
+      if (String(error.message).includes('allowed color palette')) {
+        await prisma.emailCategoryConfig.update({
+          where: { id: category.id },
+          data: { gmailLabelColor: null },
+        });
+        const response = await gmail.users.labels.create({
+          userId: 'me',
+          requestBody: {
+            name: labelName,
+            labelListVisibility: 'labelShow',
+            messageListVisibility: 'show',
+          },
+        });
+        return response.data.id ?? null;
+      }
+      throw error;
+    }
   } catch (error: any) {
     if (error?.code === 404) {
       return null;
