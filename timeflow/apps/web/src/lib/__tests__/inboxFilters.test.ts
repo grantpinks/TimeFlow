@@ -4,9 +4,9 @@ import { filterInboxEmails } from '../inboxFilters';
 
 describe('filterInboxEmails', () => {
   const emails = [
-    { id: '1', category: 'work', subject: 'Work', from: '', receivedAt: '', importance: 'normal' },
+    { id: '1', category: 'work', subject: 'Work', from: '', receivedAt: '', importance: 'normal', needsResponse: true },
     { id: '2', category: 'personal', subject: 'Personal', from: '', receivedAt: '', importance: 'normal' },
-    { id: '3', category: 'updates', subject: 'Updates', from: '', receivedAt: '', importance: 'normal' },
+    { id: '3', category: 'updates', subject: 'Updates', from: '', receivedAt: '', importance: 'normal', needsResponse: true },
     { id: '4', category: 'promotion', subject: 'Promo', from: '', receivedAt: '', importance: 'normal' },
   ];
 
@@ -33,5 +33,16 @@ describe('filterInboxEmails', () => {
     });
 
     expect(result.map((email) => email.id)).toEqual(['4']);
+  });
+
+  it('filters by needsResponse when requested', () => {
+    const result = filterInboxEmails(emails as any, {
+      selectedViewId: 'all',
+      views,
+      selectedCategoryId: null,
+      needsResponseOnly: true,
+    });
+
+    expect(result.map((email) => email.id)).toEqual(['1', '3']);
   });
 });

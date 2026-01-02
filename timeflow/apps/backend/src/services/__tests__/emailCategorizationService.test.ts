@@ -10,7 +10,10 @@ import {
   getAllCategoryConfigs,
   groupEmailsByCategory,
   getCategoryStatistics,
+  scoreEmailCategory,
+  detectNeedsResponse,
 } from '../emailCategorizationService';
+import { runEmailEvalSet } from './emailCategorizationEvalSet';
 import type { EmailMessage } from '@timeflow/shared';
 
 describe('Email Categorization Service', () => {
@@ -87,11 +90,35 @@ describe('Email Categorization Service', () => {
       expect(category).toBe('travel');
     });
 
+    it('should categorize hotel reservation confirmations as travel', () => {
+      const email = {
+        from: 'reservations@marriott.com',
+        subject: 'Your reservation confirmation',
+        snippet: 'Confirmation number and check-in details inside',
+        labels: [],
+      };
+
+      const category = categorizeEmail(email);
+      expect(category).toBe('travel');
+    });
+
     it('should categorize newsletter emails by keywords', () => {
       const email = {
         from: 'newsletter@techblog.com',
         subject: 'Weekly Tech Digest',
         snippet: 'This week in technology. Click here to unsubscribe',
+        labels: [],
+      };
+
+      const category = categorizeEmail(email);
+      expect(category).toBe('newsletter');
+    });
+
+    it('should categorize Morning Brew as newsletter', () => {
+      const email = {
+        from: 'Morning Brew <newsletter@morningbrew.com>',
+        subject: "Today\'s edition",
+        snippet: 'View in browser · Unsubscribe',
         labels: [],
       };
 
@@ -135,6 +162,18 @@ describe('Email Categorization Service', () => {
       expect(category).toBe('work');
     });
 
+    it('should categorize coffee chat invites as work', () => {
+      const email = {
+        from: 'Jane Doe <jane@company.com>',
+        subject: 'Coffee chat next week?',
+        snippet: 'Would love to connect and find time to chat',
+        labels: [],
+      };
+
+      const category = categorizeEmail(email);
+      expect(category).toBe('work');
+    });
+
     it('should default to "other" for ambiguous emails', () => {
       const email = {
         from: 'unknown@example.com',
@@ -159,6 +198,40 @@ describe('Email Categorization Service', () => {
       // even though 'order' is also present (shopping)
       const category = categorizeEmail(email);
       expect(category).toBe('finance');
+    });
+  });
+
+  describe('scoreEmailCategory', () => {
+    it('returns higher confidence for strong newsletter signals', () => {
+      const result = scoreEmailCategory({
+        from: 'newsletter@morningbrew.com',
+        subject: "Today\'s edition",
+        snippet: 'View in browser · Unsubscribe',
+        labels: [],
+      });
+
+      expect(result.category).toBe('newsletter');
+      expect(result.confidence).toBeGreaterThan(0.7);
+    });
+  });
+
+  describe('detectNeedsResponse', () => {
+    it('flags reply-needed emails using rules', () => {
+      const result = detectNeedsResponse({
+        from: 'jane@company.com',
+        subject: 'Can we meet next week?',
+        snippet: 'Let me know what times work for you',
+      });
+
+      expect(result.needsResponse).toBe(true);
+      expect(result.confidence).toBeGreaterThan(0.6);
+    });
+  });
+
+  describe('email categorization eval set', () => {
+    it('passes the eval set', () => {
+      const failures = runEmailEvalSet();
+      expect(failures).toEqual([]);
     });
   });
 
