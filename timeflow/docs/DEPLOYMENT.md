@@ -47,7 +47,7 @@ LLM_MAX_TOKENS="4000"
 
 ---
 
-## Optional: Gmail Label Sync (Sprint 15)
+## Optional: Gmail Label Sync (Sprint 16)
 
 If you enable the “Gmail Label Sync” feature (labels applied inside Gmail), you’ll also need Google Cloud Pub/Sub and a stable public push endpoint.
 
@@ -61,12 +61,31 @@ If you enable the “Gmail Label Sync” feature (labels applied inside Gmail), 
 
 - Create a Pub/Sub **topic** (e.g., `gmail-watch-topic`).
 - Create a **push subscription** to your backend endpoint (e.g., `POST /api/integrations/gmail/push`).
-- Prefer configuring Pub/Sub push auth (OIDC) or an allowlist at the edge/WAF layer.
+- Prefer configuring Pub/Sub push auth (OIDC) with a service account allowlist, or use the shared secret header fallback.
 
 ### Operational Notes
 
 - Gmail watch subscriptions expire; you must renew them periodically.
 - Push delivery is at-least-once; your handler must be idempotent and dedupe by historyId.
+
+### Additional Env Vars (Gmail Watch + Pub/Sub)
+
+```bash
+# Pub/Sub topic used for users.watch
+GMAIL_PUBSUB_TOPIC="projects/<project-id>/topics/<topic>"
+
+# Optional shared secret for Pub/Sub push auth (x-pubsub-token header)
+GMAIL_PUBSUB_PUSH_SECRET="<random-secret>"
+
+# Optional OIDC auth for Pub/Sub push
+GMAIL_PUBSUB_OIDC_AUDIENCE="https://your-backend.com/api/integrations/gmail/push"
+GMAIL_PUBSUB_OIDC_EMAIL_ALLOWLIST="service-account@project.iam.gserviceaccount.com"
+
+# Watch renewal job
+GMAIL_WATCH_RENEWAL_ENABLED="true"
+GMAIL_WATCH_RENEWAL_WINDOW_MINUTES="10"
+GMAIL_WATCH_RENEWAL_INTERVAL_MINUTES="5"
+```
 
 Docs:
 - Sprint plan: `docs/SPRINT_16_PLAN.md`

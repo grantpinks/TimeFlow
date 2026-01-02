@@ -71,6 +71,9 @@ sequenceDiagram
 - `watchExpiration`
 - `lastSyncAt`
 - (recommended) `lastErrorAt`, `lastErrorMessage`
+- `watchEnabled`
+- `watchResourceId`
+- `watchTopicName`
 
 ---
 
@@ -100,6 +103,32 @@ Docs:
 Docs:
 - [Gmail API users.watch](https://developers.google.com/gmail/api/reference/rest/v1/users/watch)
 - [Gmail API users.history](https://developers.google.com/gmail/api/reference/rest/v1/users.history)
+
+---
+
+## Pub/Sub Push Auth (Background Sync)
+
+The push handler accepts either:
+
+1. **OIDC JWT** from Pub/Sub push auth
+   - Validate `aud` matches `GMAIL_PUBSUB_OIDC_AUDIENCE`
+   - Optionally restrict by service account email allowlist
+2. **Shared secret** header
+   - `x-pubsub-token` must equal `GMAIL_PUBSUB_PUSH_SECRET`
+
+This supports secure push delivery even without an edge proxy/WAF.
+
+---
+
+## Watch Renewal Job
+
+Gmail watches expire; renew them on an interval:
+
+- `GMAIL_WATCH_RENEWAL_ENABLED=true` to start the job
+- `GMAIL_WATCH_RENEWAL_WINDOW_MINUTES` controls how soon before expiration to renew
+- `GMAIL_WATCH_RENEWAL_INTERVAL_MINUTES` controls how often the job runs
+
+If a history sync fails due to stale history, fall back to a bounded sync and reset `lastHistoryId`.
 
 ---
 
@@ -145,5 +174,4 @@ When watch is disabled/unavailable:
 ---
 
 **Last Updated**: 2025-12-23
-
 
