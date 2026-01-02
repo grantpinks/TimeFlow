@@ -17,10 +17,20 @@ import {
   updateEmailCategory,
   explainEmailCategory,
 } from '../controllers/emailController.js';
+import {
+  deleteInboxView,
+  getInboxViews,
+  updateInboxViews,
+} from '../controllers/inboxViewsController.js';
 
 export async function registerEmailRoutes(server: FastifyInstance) {
   // Get inbox messages (list view)
   server.get('/email/inbox', { preHandler: requireAuth }, getInboxEmails);
+
+  // Get/update inbox view configurations
+  server.get('/inbox/views', { preHandler: requireAuth }, getInboxViews);
+  server.put('/inbox/views', { preHandler: requireAuth }, updateInboxViews);
+  server.delete('/inbox/views/:id', { preHandler: requireAuth }, deleteInboxView);
 
   // Get full email content
   server.get('/email/:id', { preHandler: requireAuth }, getFullEmail);

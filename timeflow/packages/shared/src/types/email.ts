@@ -38,6 +38,19 @@ export interface EmailInboxResponse {
   nextPageToken?: string;
 }
 
+export interface InboxView {
+  id: string;
+  name: string;
+  labelIds: string[];
+  isBuiltin?: boolean;
+}
+
+export const DEFAULT_INBOX_VIEWS: InboxView[] = [
+  { id: 'all', name: 'All', labelIds: [], isBuiltin: true },
+  { id: 'professional', name: 'Professional', labelIds: ['work'], isBuiltin: true },
+  { id: 'personal', name: 'Personal', labelIds: ['personal'], isBuiltin: true },
+];
+
 /**
  * Full email message with body content
  */
