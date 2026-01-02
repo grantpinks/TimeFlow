@@ -82,6 +82,27 @@ Must include:
 
 ---
 
+## Phase B+ (carryover): AI Assistant Hardening (Email Categorization + Needs Response)
+
+This carryover hardens email categorization accuracy and adds a Needs Response flag that can overlay any category.
+
+Planned deliverables:
+- Expand rules for Newsletter, Travel, Work/Professional, Personal, Updates (domains + keywords + heuristics).
+- Add confidence scoring and AI fallback for low-confidence categorizations.
+- Add Needs Response flag (rules + AI fallback) and an Inbox filter toggle.
+- Add an email eval set and regression tests (privacy-safe metrics only).
+
+Status:
+- ✅ Rule hardening + confidence scoring
+- ✅ AI fallback for low-confidence categorization
+- ✅ Needs Response flag + Inbox filter toggle
+- ✅ Eval set + regression tests
+
+Design doc: `timeflow/docs/plans/2026-01-02-ai-email-categorization-hardening-design.md`  
+Implementation plan: `timeflow/docs/plans/2026-01-02-ai-email-categorization-hardening-implementation-plan.md`
+
+---
+
 ## Backfill policy (blast radius)
 
 Default should be **new mail only**.
@@ -235,5 +256,3 @@ Extend it to include:
 ---
 
 **Last Updated**: 2025-12-23
-
-

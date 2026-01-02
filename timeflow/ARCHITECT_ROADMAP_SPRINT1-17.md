@@ -822,6 +822,18 @@
 **Duration**: Week 31-32  
 **Focus**: Build a **real, daily-usable Inbox** inside TimeFlow (thread triage: list + detail + read/unread + archive + search) and then optionally mirror that organization inside Gmail via real Gmail labels applied at the **thread level**, shipped in a **trust-first Phase A** (manual/fallback) and an optional **Phase B** (watch + Pub/Sub).
 
+#### Supporting Docs (source of truth)
+- Inbox triage scope: **[`docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md`](./docs/plans/2026-01-01-sprint-16-inbox-mvp-email-triage.md)**
+- Gmail label sync design: **[`docs/plans/2026-01-01-sprint-16-phase-a-gmail-label-sync.md`](./docs/plans/2026-01-01-sprint-16-phase-a-gmail-label-sync.md)**
+- Gmail label sync implementation: **[`docs/plans/2026-01-01-sprint-16-phase-a-implementation.md`](./docs/plans/2026-01-01-sprint-16-phase-a-implementation.md)**
+- AI Email Draft design (Phase B+): **[`docs/plans/2026-01-02-ai-email-draft-workflow-design.md`](./docs/plans/2026-01-02-ai-email-draft-workflow-design.md)**
+- AI Email Draft implementation plan (Phase B+): **[`docs/plans/2026-01-02-ai-email-draft-workflow-implementation-plan.md`](./docs/plans/2026-01-02-ai-email-draft-workflow-implementation-plan.md)**
+
+#### Current Focus (Top 3) — prioritize user-visible value
+- [ ] **(1) Inbox UI: AI Email Draft Panel** — implement Generate → Edit → Full Preview + actions (ties to `16.B6e`).
+- [ ] **(2) Gmail Draft creation** — add `gmail.users.drafts.create` + deterministic preview payload (ties to `16.B6d`).
+- [ ] **(3) Minimal backend endpoints** — `POST /email/draft/ai`, `POST /email/draft/preview`, `POST /email/drafts` (ties to `16.B6c`).
+
 #### Goals
 - [ ] `/inbox` is a true triage surface: fast thread list, thread detail, read/unread, archive, and search.
 - [ ] User trust loop is complete: correction persists and “Why this label?” is transparent (override/rule/heuristic).
@@ -873,13 +885,29 @@
 
 **Phase B+ (carryover): AI Assistant Hardening**
 
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 16.B1 | Fix AI regression harness failures for planning/meetings flows; make prompts pass expectation checks. | Codex | 2-4h | P1 |
-| 16.B2 | Add CI gate for AI regression content-quality checks (question/CTA/no scheduling language). | Codex | 2-3h | P2 |
-| 16.B3 | Add production-safe AI debug toggle + logging for prompt failures (off by default). | Codex | 2-3h | P2 |
-| 16.B4 | Add Inbox prompts for email→task, label sync, and “Why this label?” flows with always-draft + confirm. | Codex | 3-5h | P1 |
-| 16.B5 | Extend AI regression harness with Inbox scenarios and expectations (draft required, confirmation CTA, no auto-apply language). | Codex | 2-4h | P1 |
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 16.B1 | Fix AI regression harness failures for planning/meetings flows; make prompts pass expectation checks. | Codex | 2-4h | P1 | ⬜ |
+| 16.B2 | Add CI gate for AI regression content-quality checks (question/CTA/no scheduling language). | Codex | 2-3h | P2 | ⬜ |
+| 16.B3 | Add production-safe AI debug toggle + logging for prompt failures (off by default). | Codex | 2-3h | P2 | ⬜ |
+| 16.B4 | Add Inbox prompts for email→task, label sync, and “Why this label?” flows with always-draft + confirm. | Codex | 3-5h | P1 | ⬜ |
+| 16.B5 | Extend AI regression harness with Inbox scenarios and expectations (draft required, confirmation CTA, no auto-apply language). | Codex | 2-4h | P1 | ⬜ |
+| 16.BH1 | Harden email categorization rules for Newsletter, Travel, Work/Professional, Personal, Updates (domains + keywords + heuristics) with tests. | Codex | 4-6h | P1 | ✅ |
+| 16.BH2 | Add confidence scoring and AI fallback for low-confidence email categorization (accept AI only above threshold). | Codex | 4-6h | P1 | ✅ |
+| 16.BH3 | Add Needs Response signal (rules + AI fallback) and expose as a filter toggle in Inbox UI. | Codex | 4-6h | P1 | ✅ |
+| 16.BH4 | Add email categorization eval set and regression tests (privacy-safe). | Codex | 3-5h | P1 | ✅ |
+
+**Phase B+ (carryover): AI Email Draft Workflow (Inbox)**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 16.B6a | Add shared types for AI email draft + preview payloads (request/response) in `@timeflow/shared`. | Codex | 1-2h | P1 | ⬜ |
+| 16.B6b | Add DB model(s): `WritingVoiceProfile` (B/C defaults, A opt-in config) + minimal AI usage counter for quotas. | Codex | 3-5h | P1 | ⬜ |
+| 16.B6c | Add backend endpoints: `POST /email/draft/ai`, `POST /email/draft/preview`, `POST /email/drafts`, and safe send (confirmed checkbox required). | Codex | 4-6h | **P1** | ⬜ |
+| 16.B6d | Add Gmail draft creation (`gmail.users.drafts.create`) and ensure preview payload determinism (no regen after preview). | Codex | 3-5h | P1 | ⬜ |
+| 16.B6e | Add Inbox UI: Draft Panel with Generate → Edit → Full Preview + actions (Send, Create Gmail Draft, Open in Gmail to refine) + Reply-all toggle. | Codex | 6-10h | **P1** | ⬜ |
+| 16.B6f | Add “Writing & Voice” settings (B sliders/toggles + C paste samples + A opt-in w/ warning; revoke controls). | Codex | 4-8h | P1 | ⬜ |
+| 16.B6g | Add tests + guardrails: quotas enforced, no raw email/draft logging, send requires checkbox, and e2e route coverage. | Codex | 4-6h | P1 | ⬜ |
 
 #### Acceptance Criteria
 - `/inbox` is a real triage surface (list + detail + read/unread + archive + search) and is performant/reliable for daily use.
@@ -908,7 +936,7 @@
 
 #### Tasks
 
-| ID | Task | Agent | Hours | Priority |
+| ID | Task | Agent | Hours | Priority|
 |----|------|-------|-------|----------|
 | 17.1 | Extend habit scheduling data model to support completion tracking (habit instances + complete/uncomplete/skip). | Codex | 6-10h | **P0** |
 | 17.2 | Calendar popover: mark habit instance complete/undo; show streak context (“keeps your streak alive”). | Codex | 6-10h | **P0** |
@@ -1052,7 +1080,7 @@
 
 ### Sprint 20: Pre-Launch Hardening & Scalability
 **Duration**: Week 39-40
-**Focus**: Address critical security vulnerabilities, scalability bottlenecks, production deployment, and future-proof the architecture for a safe and successful public launch.
+**Focus**: Address critical security vulnerabilities, scalability bottlenecks, production deployment, and implement the **audit-ready security/compliance foundations** needed to earn user trust (SOC 2 / ISO 27001 readiness, PCI scope minimization).
 
 #### Goals
 - [ ] **Resolve production deployment issues and deploy backend successfully**
@@ -1060,6 +1088,7 @@
 - [ ] Implement foundational scalability patterns for the backend and database
 - [ ] Solidify the architecture to safely support upcoming premium features
 - [ ] Ensure the application is robust, resilient, and ready for its first wave of public users
+- [ ] Target **SOC 2 Type I** readiness: documented controls + initial evidence capture; minimize PCI scope by architecture.
 
 #### Critical Tasks
 
@@ -1074,6 +1103,9 @@
 #### Additional Tasks
 This sprint focuses on hardening the existing application. For a detailed breakdown of security, scalability tasks, priorities, and implementation plans, see the full sprint plan:
 - **[View Full Plan: Sprint 20 Pre-Launch Plan](./docs/SPRINT_20_PRELAUNCH_PLAN.md)**
+
+**Compliance/Audit Readiness Plan (Sprint 20)**:
+- **[`docs/plans/2026-01-02-sprint-20-compliance-audit-readiness.md`](./docs/plans/2026-01-02-sprint-20-compliance-audit-readiness.md)** (SOC 2 / ISO 27001 readiness + PCI scope minimization)
 
 #### Decision Gate
 - [ ] **Is the backend successfully deployed and accessible in production?**
