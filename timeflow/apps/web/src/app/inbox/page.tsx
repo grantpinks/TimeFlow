@@ -12,6 +12,7 @@ import Image from 'next/image';
 import DOMPurify from 'dompurify';
 import toast, { Toaster } from 'react-hot-toast';
 import { filterInboxEmails } from '@/lib/inboxFilters';
+import { CategoryPills } from '@/components/inbox/CategoryPills';
 
 export default function InboxPage() {
   const { isAuthenticated } = useUser();
@@ -426,7 +427,7 @@ export default function InboxPage() {
             </div>
 
             {/* Quick Filters */}
-            <div className="flex items-center gap-4 mt-6 border-t border-[#e0e0e0] pt-4">
+            <div className="flex items-start gap-4 mt-6 border-t border-[#e0e0e0] pt-4">
               <button
                 onClick={() => { setSelectedFilter('all'); setSelectedCategoryId(null); }}
                 className={`px-5 py-2 text-sm font-medium transition-all border-2 ${
@@ -461,33 +462,16 @@ export default function InboxPage() {
                 Personal
               </button>
 
-              <div className="h-6 w-px bg-[#e0e0e0] mx-2" />
+              <div className="h-6 w-px bg-[#e0e0e0] mx-1 mt-2" />
 
-              {/* Category Pills */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {Array.isArray(categories) && categories.filter(c => c.enabled).map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => {
-                      setSelectedFilter('all');
-                      setSelectedCategoryId(selectedCategoryId === category.id ? null : category.id);
-                    }}
-                    className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all border-2 ${
-                      selectedCategoryId === category.id
-                        ? 'border-[#1a1a1a]'
-                        : 'border-transparent hover:border-[#e0e0e0]'
-                    }`}
-                    style={{
-                      backgroundColor: selectedCategoryId === category.id ? category.color : `${category.color}20`,
-                      color: selectedCategoryId === category.id ? '#1a1a1a' : category.color,
-                      fontFamily: "'Manrope', sans-serif"
-                    }}
-                  >
-                    {category.emoji && <span className="mr-1.5">{category.emoji}</span>}
-                    {category.name}
-                  </button>
-                ))}
-              </div>
+              <CategoryPills
+                categories={categories}
+                selectedCategoryId={selectedCategoryId}
+                onSelectCategory={(categoryId) => {
+                  setSelectedFilter('all');
+                  setSelectedCategoryId(categoryId);
+                }}
+              />
             </div>
           </div>
         </div>

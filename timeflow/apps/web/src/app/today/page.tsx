@@ -738,7 +738,7 @@ export default function TodayPage() {
 
           {/* FULL-WIDTH INBOX SECTION */}
           <div className="mt-6">
-            <Panel padding="none">
+            <Panel padding="none" className="overflow-hidden">
               {/* Top Bar */}
               <div className="border-b border-slate-200 p-4">
                 <div className="flex items-center gap-3">

@@ -332,7 +332,13 @@ export function Layout({ children }: LayoutProps) {
         </nav>
 
         <div className="border-t border-slate-200 px-3 py-3 space-y-3">
-          <div className="flex items-center justify-between">
+          <div
+            className={`transition-all duration-200 ease-out ${
+              isSidebarExpanded
+                ? 'flex items-center justify-between gap-2'
+                : 'grid grid-cols-2 gap-2 justify-items-center'
+            }`}
+          >
             <Link
               href="/settings"
               title="Settings"
@@ -344,17 +350,25 @@ export function Layout({ children }: LayoutProps) {
             >
               <GearIcon className="h-4 w-4" />
             </Link>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={openPalette}
-                className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
-                aria-label="Open command palette"
-              >
-                <CommandIcon className="h-4 w-4" />
-              </button>
-              <ThemeToggle />
-            </div>
+            <button
+              type="button"
+              onClick={openPalette}
+              className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
+              aria-label="Open command palette"
+            >
+              <CommandIcon className="h-4 w-4" />
+            </button>
+            <ThemeToggle />
+            <button
+              onClick={logout}
+              className={`inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors ${
+                isSidebarExpanded ? 'hidden' : ''
+              }`}
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogoutIcon className="h-4 w-4" />
+            </button>
           </div>
 
           <div className={`rounded-lg border border-slate-200 bg-white px-3 py-2 ${isSidebarExpanded ? '' : 'hidden'}`}>
@@ -369,16 +383,7 @@ export function Layout({ children }: LayoutProps) {
             >
               Sign out
             </button>
-          ) : (
-            <button
-              onClick={logout}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
-              aria-label="Sign out"
-              title="Sign out"
-            >
-              <LogoutIcon className="h-4 w-4 mx-auto" />
-            </button>
-          )}
+          ) : null}
         </div>
       </aside>
 
