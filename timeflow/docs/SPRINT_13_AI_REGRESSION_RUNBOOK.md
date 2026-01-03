@@ -29,6 +29,7 @@ Prompts are separated by `---` lines. Multi-turn flows can be defined with a `FL
 - Local LLM running (per `LLM_ENDPOINT` / `LLM_MODEL` in `.env`)
 - DB seeded with tasks/habits for the target user
 - `SESSION_SECRET` set in `timeflow/apps/backend/.env`
+- Gmail connected for the regression user if running inbox draft scenarios
 
 ---
 
@@ -45,6 +46,7 @@ node scripts/test-ai-prompts.js
 
 Notes:
 - `AI_REGRESSION_USER_EMAIL` lets the harness mint a JWT using `SESSION_SECRET`.
+- `AI_REGRESSION_INBOX_EMAIL` (optional) lets inbox draft scenarios fetch the latest inbox email for that address.
 - If you already have a token, you can skip email lookup:
 
 ```powershell
@@ -107,6 +109,12 @@ USER: Schedule my tasks for tomorrow.
 ```text
 Help me plan today.
 EXPECT: status=200 preview=false question=true cta=false no_schedule_language=true
+```
+7. For inbox draft endpoints, use:
+
+```text
+ENDPOINT: inbox-task-draft
+EXPECT: status=200 draft=true confirm_cta=true no_auto_apply_language=true
 ```
 7. Add meeting prompts with expectations (question for link selection, no auto-send).
 

@@ -14,6 +14,7 @@
     "pretest": "pnpm -C ../../packages/scheduling build",
     "test": "vitest run",
     "test:watch": "vitest watch",
+    "ai:regression": "AI_REGRESSION_PROMPTS=./scripts/prompts/sprint13-regression.txt node scripts/test-ai-prompts.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },

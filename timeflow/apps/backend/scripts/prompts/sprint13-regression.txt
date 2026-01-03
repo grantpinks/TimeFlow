@@ -76,3 +76,12 @@ EXPECT: status=200 preview=false
 ---
 Send a meeting request to alex@company.com
 EXPECT: status=200 preview=false question=true
+---
+ENDPOINT: inbox-task-draft
+EXPECT: status=200 draft=true confirm_cta=true no_auto_apply_language=true
+---
+ENDPOINT: inbox-label-sync
+EXPECT: status=200 draft=true confirm_cta=true no_auto_apply_language=true
+---
+ENDPOINT: inbox-label-explain
+EXPECT: status=200 draft=true confirm_cta=true no_auto_apply_language=true

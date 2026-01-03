@@ -14,8 +14,8 @@
     "dev:mobile": "pnpm -C apps/mobile start",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "ai:regression": "pnpm -C apps/backend ai:regression",
     "format": "pnpm -r format"
   }
 }
-
 

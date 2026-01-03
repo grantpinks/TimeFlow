@@ -52,6 +52,27 @@ function parseExpectationTokens(tokens) {
       }
       continue;
     }
+    if (token.startsWith('draft=')) {
+      const value = token.replace('draft=', '').toLowerCase();
+      if (value === 'true' || value === 'false') {
+        expectation.draft = value === 'true';
+      }
+      continue;
+    }
+    if (token.startsWith('confirm_cta=')) {
+      const value = token.replace('confirm_cta=', '').toLowerCase();
+      if (value === 'true' || value === 'false') {
+        expectation.confirmCta = value === 'true';
+      }
+      continue;
+    }
+    if (token.startsWith('no_auto_apply_language=')) {
+      const value = token.replace('no_auto_apply_language=', '').toLowerCase();
+      if (value === 'true' || value === 'false') {
+        expectation.noAutoApplyLanguage = value === 'true';
+      }
+      continue;
+    }
   }
   return expectation;
 }
@@ -79,6 +100,7 @@ export function parsePrompts(raw) {
       const userLines = [];
       const contentLines = [];
       let expect = null;
+      let endpoint = null;
       const turnExpectations = {};
 
       for (const line of lines) {
@@ -96,6 +118,10 @@ export function parsePrompts(raw) {
         }
         if (/^expect:/i.test(line)) {
           expect = parseExpectationLine(line);
+          continue;
+        }
+        if (/^endpoint:/i.test(line)) {
+          endpoint = line.replace(/^endpoint:/i, '').trim();
           continue;
         }
         if (/^user:/i.test(line)) {
@@ -121,6 +147,7 @@ export function parsePrompts(raw) {
 
       return {
         type: 'single',
+        endpoint,
         prompt: promptLine,
         expect,
       };
@@ -188,5 +215,54 @@ export function evaluateExpectation(record, expectation, messageContent = null) 
     }
   }
 
+  if (typeof expectation.draft === 'boolean') {
+    const hasDraft = Boolean(record.draft);
+    if (expectation.draft !== hasDraft) {
+      reasons.push(`draft ${hasDraft} != ${expectation.draft}`);
+    }
+  }
+
+  if (typeof expectation.confirmCta === 'boolean') {
+    const confirmCta = typeof record.confirmCta === 'string' ? record.confirmCta.trim() : '';
+    const hasConfirmCta = confirmCta.endsWith('?');
+    if (expectation.confirmCta !== hasConfirmCta) {
+      reasons.push(`confirmCta ${hasConfirmCta} != ${expectation.confirmCta}`);
+    }
+  }
+
+  if (typeof expectation.noAutoApplyLanguage === 'boolean') {
+    const content = (messageContent || '').toLowerCase();
+    const autoApplyKeywords = [
+      'i applied',
+      "i've applied",
+      'applied the label',
+      'labels have been applied',
+      'i updated',
+      "i've updated",
+      'label updated',
+      'label applied',
+      'task created',
+      'created the task',
+      'already created',
+      'went ahead and',
+      'applied it',
+      'synced it',
+      'saved it',
+      'updated the label',
+      'set the label',
+    ];
+    const hasAutoApplyLanguage = autoApplyKeywords.some((kw) => content.includes(kw));
+    if (expectation.noAutoApplyLanguage === hasAutoApplyLanguage) {
+      reasons.push(
+        `noAutoApplyLanguage ${!hasAutoApplyLanguage} != ${expectation.noAutoApplyLanguage}`
+      );
+    }
+  }
+
   return { ok: reasons.length === 0, reasons };
+}
+
+export function shouldFailRun(summary) {
+  if (!summary) return true;
+  return Boolean(summary.failed > 0 || summary.expectationFailures > 0);
 }

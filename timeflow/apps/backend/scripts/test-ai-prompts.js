@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import { PrismaClient } from '@prisma/client';
-import { parsePrompts, evaluateExpectation } from './aiRegressionUtils.js';
+import { parsePrompts, evaluateExpectation, shouldFailRun } from './aiRegressionUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +20,19 @@ const email = process.env.AI_REGRESSION_USER_EMAIL;
 const delayMs = parseInt(process.env.PROMPT_DELAY_MS || '0', 10);
 const reportDir =
   process.env.AI_REGRESSION_REPORT_DIR || path.join(__dirname, 'reports');
+const inboxEmail = process.env.AI_REGRESSION_INBOX_EMAIL || email;
+const apiBase = (() => {
+  if (process.env.AI_REGRESSION_API_BASE) {
+    return process.env.AI_REGRESSION_API_BASE.replace(/\/$/, '');
+  }
+  try {
+    const url = new URL(endpoint);
+    const basePath = url.pathname.replace(/\/api\/assistant\/chat.*$/, '/api');
+    return `${url.origin}${basePath}`;
+  } catch {
+    return 'http://localhost:3001/api';
+  }
+})();
 
 async function getTokenFromEmail(userEmail) {
   const secret = process.env.SESSION_SECRET;
@@ -120,6 +133,8 @@ async function runPrompt(prompt, conversationHistory = []) {
       blocksCount,
       conflictsCount,
       confidence,
+      draft: false,
+      confirmCta: null,
       messageContent,
     };
   } catch (error) {
@@ -132,6 +147,115 @@ async function runPrompt(prompt, conversationHistory = []) {
       blocksCount: 0,
       conflictsCount: 0,
       confidence: null,
+      draft: false,
+      confirmCta: null,
+      messageContent: null,
+      error: String(error),
+    };
+  }
+}
+
+async function getLatestInboxEmailId() {
+  if (!inboxEmail) {
+    throw new Error('AI_REGRESSION_INBOX_EMAIL or AI_REGRESSION_USER_EMAIL is required for inbox checks.');
+  }
+  const response = await fetch(`${apiBase}/email/inbox?maxResults=1`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Inbox fetch failed: ${response.status} ${errorText}`);
+  }
+  const body = await response.json();
+  const message = Array.isArray(body?.messages) ? body.messages[0] : null;
+  if (!message?.id) {
+    throw new Error('No inbox messages found for regression inbox checks.');
+  }
+  return message.id;
+}
+
+async function runInboxDraft(endpointKey) {
+  const start = Date.now();
+  try {
+    const emailId = await getLatestInboxEmailId();
+    const pathMap = {
+      'inbox-task-draft': '/email/ai/task-draft',
+      'inbox-label-sync': '/email/ai/label-sync',
+      'inbox-label-explain': '/email/ai/label-explain',
+    };
+    const path = pathMap[endpointKey];
+    if (!path) {
+      throw new Error(`Unknown inbox endpoint: ${endpointKey}`);
+    }
+
+    const response = await fetch(`${apiBase}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ emailId }),
+    });
+
+    const durationMs = Date.now() - start;
+    const bodyText = await response.text();
+    let bodyJson = null;
+    try {
+      bodyJson = JSON.parse(bodyText);
+    } catch (error) {
+      return {
+        prompt: endpointKey,
+        status: response.status,
+        ok: response.ok,
+        durationMs,
+        preview: false,
+        blocksCount: 0,
+        conflictsCount: 0,
+        confidence: null,
+        draft: false,
+        confirmCta: null,
+        messageContent: null,
+        error: `Failed to parse JSON response: ${String(error)}`,
+      };
+    }
+
+    const draft = Boolean(bodyJson?.draft);
+    const confirmCta = typeof bodyJson?.confirmCta === 'string' ? bodyJson.confirmCta : null;
+    const messageContent = [
+      confirmCta,
+      bodyJson?.draft?.reason,
+      bodyJson?.draft?.explanation,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    return {
+      prompt: endpointKey,
+      status: response.status,
+      ok: response.ok,
+      durationMs,
+      preview: false,
+      blocksCount: 0,
+      conflictsCount: 0,
+      confidence: null,
+      draft,
+      confirmCta,
+      messageContent,
+    };
+  } catch (error) {
+    return {
+      prompt: endpointKey,
+      status: 0,
+      ok: false,
+      durationMs: Date.now() - start,
+      preview: false,
+      blocksCount: 0,
+      conflictsCount: 0,
+      confidence: null,
+      draft: false,
+      confirmCta: null,
       messageContent: null,
       error: String(error),
     };
@@ -207,7 +331,9 @@ async function main() {
         turns,
       });
     } else {
-      const result = await runPrompt(entry.prompt);
+      const result = entry.endpoint
+        ? await runInboxDraft(entry.endpoint)
+        : await runPrompt(entry.prompt);
       const { messageContent, ...record } = result;
       const messagePreview =
         typeof messageContent === 'string'
@@ -225,7 +351,7 @@ async function main() {
       });
       const statusLabel = recordOk ? 'OK' : 'FAIL';
       console.log(
-        `[${statusLabel}] ${record.status} | preview=${record.preview} blocks=${record.blocksCount} | ${entry.prompt}`
+        `[${statusLabel}] ${record.status} | preview=${record.preview} blocks=${record.blocksCount} | ${entry.endpoint || entry.prompt}`
       );
       if (!expectationResult.ok && entry.expect) {
         console.log(`  [EXPECT-FAIL] ${expectationResult.reasons.join('; ')}`);
@@ -268,6 +394,10 @@ async function main() {
   );
 
   console.log(`Report written: ${reportPath}`);
+
+  if (shouldFailRun(summary)) {
+    process.exit(1);
+  }
 }
 
 main().catch(error => {
