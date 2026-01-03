@@ -910,6 +910,7 @@
 | 16.B6e | Add Inbox UI: Draft Panel with Generate → Edit → Full Preview + actions (Send, Create Gmail Draft, Open in Gmail to refine) + Reply-all toggle. | Codex | 6-10h | **P1** | ✅ |
 | 16.B6f | Add “Writing & Voice” settings (B sliders/toggles + C paste samples + A opt-in w/ warning; revoke controls). | Codex | 4-8h | P1 | ✅ |
 | 16.B6g | Add tests + guardrails: quotas enforced, no raw email/draft logging, send requires checkbox, and e2e route coverage. | Codex | 4-6h | P1 | ⬜ |
+| 16.B6h | Add assistant email-draft mode + prompt formatting + tests; wire draft generation to assistant service. | Codex | 2-4h | P1 | ✅ |
 
 **Phase B+ (carryover): Inbox Queues + AI Thread Assist (moved from Sprint 17)**
 
