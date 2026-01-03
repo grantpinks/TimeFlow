@@ -10,6 +10,7 @@ import type {
   UpdateTaskRequest,
   UserProfile,
   UserPreferencesUpdate,
+  EmailAccount,
   CalendarEvent,
   Calendar,
   ScheduleRequest,
@@ -27,6 +28,8 @@ import type {
   CreateHabitRequest,
   UpdateHabitRequest,
   HabitSuggestionsResponse,
+  HabitSkipReason,
+  HabitCompletionResponse,
   EmailInboxResponse,
   FullEmailMessage,
   SendEmailRequest,
@@ -225,6 +228,14 @@ export async function getMe(): Promise<UserProfile> {
 }
 
 /**
+ * Get connected email accounts for the current user.
+ */
+export async function getEmailAccounts(): Promise<EmailAccount[]> {
+  const result = await request<{ accounts: EmailAccount[] }>('/user/email-accounts');
+  return result.accounts ?? [];
+}
+
+/**
  * Update user preferences.
  */
 export async function updatePreferences(
@@ -398,6 +409,84 @@ export async function rejectHabitSuggestion(data: { habitId: string; start: stri
   return request('/habits/suggestions/reject', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Mark a scheduled habit instance as complete.
+ */
+export async function completeHabitInstance(scheduledHabitId: string): Promise<HabitCompletionResponse> {
+  return request<HabitCompletionResponse>(`/habits/instances/${scheduledHabitId}/complete`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Undo a completed or skipped habit instance.
+ */
+export async function undoHabitInstance(scheduledHabitId: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/habits/instances/${scheduledHabitId}/undo`, {
+    method: 'POST',
+  });
+}
+
+/**
+ * Skip a scheduled habit instance with a reason code.
+ */
+export async function skipHabitInstance(
+  scheduledHabitId: string,
+  reasonCode: HabitSkipReason
+): Promise<HabitCompletionResponse> {
+  return request<HabitCompletionResponse>(`/habits/instances/${scheduledHabitId}/skip`, {
+    method: 'POST',
+    body: JSON.stringify({ reasonCode }),
+  });
+}
+
+/**
+ * Get habit insights for the user.
+ */
+export async function getHabitInsights(days: 14 | 28 = 14): Promise<any> {
+  return request(`/habits/insights?days=${days}`);
+}
+
+/**
+ * Schedule a rescue block for a habit.
+ */
+export async function scheduleRescueBlock(habitId: string, windowStart: string): Promise<any> {
+  return request(`/habits/${habitId}/rescue-block`, {
+    method: 'POST',
+    body: JSON.stringify({ windowStart }),
+  });
+}
+
+/**
+ * Adjust habit window (preferred time of day).
+ */
+export async function adjustHabitWindow(habitId: string, newPreferredTime: string): Promise<Habit> {
+  return request<Habit>(`/habits/${habitId}/window`, {
+    method: 'PUT',
+    body: JSON.stringify({ preferredTimeOfDay: newPreferredTime }),
+  });
+}
+
+/**
+ * Dismiss a coach suggestion.
+ */
+export async function dismissCoachSuggestion(suggestionId: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>('/habits/coach/dismiss', {
+    method: 'POST',
+    body: JSON.stringify({ suggestionId }),
+  });
+}
+
+/**
+ * Snooze a coach suggestion.
+ */
+export async function snoozeCoachSuggestion(suggestionId: string, snoozedUntil: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>('/habits/coach/snooze', {
+    method: 'POST',
+    body: JSON.stringify({ suggestionId, snoozedUntil }),
   });
 }
 
