@@ -50,7 +50,7 @@ describe('habitRecommendationService', () => {
       expect(recommendations[0].habitId).toBe('habit-1');
       expect(recommendations[0].action.type).toBe('schedule_rescue_block');
       expect(recommendations[0].priority).toBe(1); // Highest priority
-      expect(recommendations[0].insight).toContain('streak will break');
+      expect(recommendations[0].insight).toContain('amazing');
     });
 
     it('should recommend adjusting window for low adherence with best window', () => {
@@ -218,7 +218,7 @@ describe('habitRecommendationService', () => {
       const forgotRec = recommendations.find((r) => r.type === 'repeated_skip_forgot');
       expect(forgotRec).toBeDefined();
       expect(forgotRec?.action.type).toBe('schedule_rescue_block');
-      expect(forgotRec?.insight).toContain('forgotten');
+      expect(forgotRec?.insight).toContain('impossible to miss');
     });
 
     it('should limit to top 3 recommendations', () => {

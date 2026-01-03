@@ -152,7 +152,7 @@ export default function HabitsPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <SectionHeader
           title="Habits"
-          subtitle="Track your progress and build better routines"
+          subtitle="Track your progress and build better routines with Flow, your AI habits coach"
           count={habits.length}
           actions={
             <button
@@ -163,6 +163,26 @@ export default function HabitsPage() {
             </button>
           }
         />
+
+        {/* Flow Coach Welcome (only show if user has habits) */}
+        {habits.length > 0 && (
+          <div className="bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200 rounded-xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-md">
+                <span className="text-white text-xl font-bold">F</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-primary-900 text-lg mb-1">
+                  Meet Flow, your AI habits coach
+                </h3>
+                <p className="text-primary-800 text-sm leading-relaxed">
+                  I analyze your habit patterns and provide personalized recommendations to help you build consistency.
+                  Check my recommendations below and let's work together to strengthen your routines.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Insights Dashboard */}
         {habits.length > 0 && <HabitsInsights />}

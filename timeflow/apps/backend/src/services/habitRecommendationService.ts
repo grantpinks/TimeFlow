@@ -32,7 +32,7 @@ export function generateRecommendations(
           value: habit.streak.current,
           context: 'Not completed today',
         },
-        insight: `Your ${habit.streak.current}-day streak will break if you skip today. Don't lose your progress!`,
+        insight: `You've built an amazing ${habit.streak.current}-day streak! Let's protect it. I can help you find time today to keep your momentum going.`,
         action: {
           type: 'schedule_rescue_block',
           label: 'Schedule rescue block',
@@ -61,7 +61,7 @@ export function generateRecommendations(
             value: adherencePercent,
             context: `${habit.completed}/${habit.scheduled} completed`,
           },
-          insight: `Your completion rate is low. Try scheduling during your best window when you're ${Math.round(habit.bestWindow.completionRate * 100)}% more likely to complete.`,
+          insight: `I've noticed you complete this habit ${Math.round(habit.bestWindow.completionRate * 100)}% of the time on ${habit.bestWindow.dayOfWeek}s at ${habit.bestWindow.timeSlot}. Let's schedule it during your peak success window!`,
           action: {
             type: 'move_to_best_window',
             label: `Move to ${habit.bestWindow.dayOfWeek} ${habit.bestWindow.timeSlot}`,
@@ -83,7 +83,7 @@ export function generateRecommendations(
             value: adherencePercent,
             context: `${habit.completed}/${habit.scheduled} completed`,
           },
-          insight: `Your completion rate is low. Try shortening the duration to build consistency.`,
+          insight: `Let's make this easier to stick with. Starting smaller often leads to bigger success. I recommend shortening the duration to build momentum.`,
           action: {
             type: 'reduce_duration',
             label: 'Reduce duration',
@@ -111,7 +111,7 @@ export function generateRecommendations(
           value: noTimeSkips.count,
           context: `${noTimeSkips.count} times: "No time"`,
         },
-        insight: `You've skipped ${noTimeSkips.count} times because you ran out of time. Try scheduling earlier in the day.`,
+        insight: `I see the day gets away from you. Let's tackle this earlier when you have more energy and fewer distractions. Morning might be your secret weapon!`,
         action: {
           type: 'adjust_window',
           label: 'Move to earlier time',
@@ -136,7 +136,7 @@ export function generateRecommendations(
           value: forgotSkips.count,
           context: `${forgotSkips.count} times: "Forgot"`,
         },
-        insight: `You've forgotten ${forgotSkips.count} times. Schedule a rescue block and consider enabling reminders.`,
+        insight: `Life gets busy and things slip through the cracks—it happens! Let me help you make this habit impossible to miss by getting it on your calendar now.`,
         action: {
           type: 'schedule_rescue_block',
           label: 'Schedule rescue block',

@@ -21,7 +21,18 @@ export function Recommendations({ recommendations, onActionClick }: Recommendati
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-800">Recommendations</h2>
+      {/* Flow Coach Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-sm">
+          <span className="text-white text-lg font-semibold">F</span>
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Flow's Recommendations</h2>
+          <p className="text-sm text-slate-600">Your AI habits coach</p>
+        </div>
+      </div>
+
+      {/* Recommendation Cards */}
       <div className="space-y-3">
         {recommendations.map((rec, index) => (
           <RecommendationCard
@@ -99,23 +110,30 @@ function RecommendationCard({ recommendation, onActionClick }: RecommendationCar
   const style = getCardStyle();
 
   return (
-    <Panel className={`${style.bg} border ${style.border}`}>
+    <Panel className={`${style.bg} border-2 ${style.border}`}>
       <div className="flex items-start gap-4">
         {/* Icon */}
-        <div className={`flex-shrink-0 w-10 h-10 ${style.iconBg} rounded-full flex items-center justify-center text-xl`}>
+        <div className={`flex-shrink-0 w-12 h-12 ${style.iconBg} rounded-full flex items-center justify-center text-2xl shadow-sm`}>
           {style.icon}
         </div>
 
         {/* Content */}
         <div className="flex-1 space-y-2">
           {/* Habit Title */}
-          <div className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-            {habitTitle}
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              {habitTitle}
+            </div>
+            {priority === 1 && (
+              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                Urgent
+              </span>
+            )}
           </div>
 
-          {/* Metric - What we noticed */}
+          {/* Metric - What Flow noticed */}
           <div>
-            <div className={`font-semibold ${style.metricText}`}>
+            <div className={`text-base font-bold ${style.metricText}`}>
               {metric.label}
             </div>
             {metric.context && (
@@ -123,26 +141,19 @@ function RecommendationCard({ recommendation, onActionClick }: RecommendationCar
             )}
           </div>
 
-          {/* Insight - Why it matters */}
-          <div className={`text-sm ${style.insightText}`}>
-            {insight}
+          {/* Insight - Flow's coaching message */}
+          <div className={`text-sm leading-relaxed ${style.insightText}`}>
+            <span className="font-medium">Flow says:</span> {insight}
           </div>
 
           {/* Action CTA */}
           <button
             onClick={() => onActionClick?.(recommendation)}
-            className={`mt-3 px-4 py-2 ${style.buttonBg} ${style.buttonText} rounded-lg font-medium text-sm transition-colors`}
+            className={`mt-3 px-5 py-2.5 ${style.buttonBg} ${style.buttonText} rounded-lg font-semibold text-sm transition-all hover:shadow-md active:scale-95`}
           >
             {action.label}
           </button>
         </div>
-
-        {/* Priority badge (for debugging - can be removed) */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="flex-shrink-0">
-            <span className="text-xs text-slate-400">P{priority}</span>
-          </div>
-        )}
       </div>
     </Panel>
   );
