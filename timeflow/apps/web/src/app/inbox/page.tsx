@@ -6,7 +6,7 @@ import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
-import type { EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
+import type { EmailAccount, EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
 import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
 import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
@@ -25,6 +25,7 @@ export default function InboxPage() {
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshingInbox, setRefreshingInbox] = useState(false);
+  const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [views, setViews] = useState<InboxView[]>(DEFAULT_INBOX_VIEWS);
   const [selectedViewId, setSelectedViewId] = useState<string>(
     DEFAULT_INBOX_VIEWS[0]?.id ?? 'all'
@@ -63,6 +64,7 @@ export default function InboxPage() {
     if (isAuthenticated) {
       fetchInbox();
       fetchCategories();
+      fetchEmailAccounts();
     }
   }, [isAuthenticated]);
 
@@ -172,6 +174,16 @@ export default function InboxPage() {
     } catch (error) {
       console.error('Failed to fetch categories:', error);
       setCategories([]); // Ensure it's always an array
+    }
+  }
+
+  async function fetchEmailAccounts() {
+    try {
+      const accounts = await api.getEmailAccounts();
+      setEmailAccounts(accounts);
+    } catch (error) {
+      console.error('Failed to fetch email accounts:', error);
+      setEmailAccounts([]);
     }
   }
 
@@ -546,6 +558,35 @@ export default function InboxPage() {
   const selectedEmail = displayEmails.find(e =>
     e.threadId === selectedThreadId || e.id === selectedThreadId
   );
+  const activeEmailAccount =
+    emailAccounts.find((account) => account.primary) ??
+    emailAccounts[0] ??
+    (user?.email
+      ? ({
+          id: `google:${user.email}`,
+          provider: 'google',
+          email: user.email,
+          connected: false,
+          primary: true,
+        } satisfies EmailAccount)
+      : null);
+  const providerLabel = activeEmailAccount?.provider === 'google' ? 'Gmail' : activeEmailAccount?.provider ?? 'Email';
+  const providerIcon =
+    activeEmailAccount?.provider === 'google' ? (
+      <span
+        aria-hidden="true"
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white"
+      >
+        <svg width="12" height="12" viewBox="0 0 48 48" role="img" aria-label="Google">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.06 1.53 7.44 2.8l5.48-5.48C33.64 3.78 29.2 2 24 2 14.92 2 7.2 7.02 3.62 14.3l6.6 5.12C11.78 13.62 17.44 9.5 24 9.5z" />
+          <path fill="#4285F4" d="M46.14 24.5c0-1.64-.15-3.21-.43-4.73H24v8.95h12.4c-.54 2.9-2.18 5.36-4.64 7.01l7.08 5.5c4.14-3.82 6.3-9.45 6.3-16.73z" />
+          <path fill="#FBBC05" d="M10.22 28.42a14.43 14.43 0 0 1 0-8.84l-6.6-5.12a22.1 22.1 0 0 0 0 19.08l6.6-5.12z" />
+          <path fill="#34A853" d="M24 46c5.2 0 9.58-1.72 12.77-4.67l-7.08-5.5c-1.96 1.32-4.48 2.1-5.7 2.1-6.56 0-12.22-4.12-13.78-9.78l-6.6 5.12C7.2 40.98 14.92 46 24 46z" />
+        </svg>
+      </span>
+    ) : (
+      <Mail size={14} className="text-[#0BAF9A]" />
+    );
 
   if (!isAuthenticated) {
     return (
@@ -703,30 +744,51 @@ export default function InboxPage() {
 
             <div className="mt-4 flex w-full items-center justify-between gap-4">
               <div className="inline-flex items-center rounded-full border-2 border-[#0BAF9A]/30 bg-white/80 shadow-[0_10px_30px_rgba(11,175,154,0.08)]">
-                <span
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] bg-[#0BAF9A]/10 rounded-l-full"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  <Mail size={14} className="text-[#0BAF9A]" />
-                  Gmail
-                </span>
-                <span
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm text-[#1a1a1a] border-l-2 border-[#0BAF9A]/20"
-                  style={{ fontFamily: "'Manrope', sans-serif" }}
-                >
-                  {user?.email ?? 'Connected account'}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleRefreshInbox}
-                  disabled={refreshingInbox}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] border-l-2 border-[#0BAF9A]/20 rounded-r-full transition-all hover:bg-[#0BAF9A]/10 disabled:opacity-60"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  aria-label="Refresh inbox"
-                >
-                  <RefreshCw size={14} className={refreshingInbox ? 'animate-spin' : ''} />
-                  {refreshingInbox ? 'Refreshing' : 'Refresh'}
-                </button>
+                {activeEmailAccount ? (
+                  <>
+                    <span
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] bg-[#0BAF9A]/10 rounded-l-full"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                    >
+                      {providerIcon}
+                      {providerLabel}
+                    </span>
+                    <span
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm text-[#1a1a1a] border-l-2 border-[#0BAF9A]/20"
+                      style={{ fontFamily: "'Manrope', sans-serif" }}
+                    >
+                      {activeEmailAccount.email}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRefreshInbox}
+                      disabled={refreshingInbox}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] border-l-2 border-[#0BAF9A]/20 rounded-r-full transition-all hover:bg-[#0BAF9A]/10 disabled:opacity-60"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      aria-label="Refresh inbox"
+                    >
+                      <RefreshCw size={14} className={refreshingInbox ? 'animate-spin' : ''} />
+                      {refreshingInbox ? 'Refreshing' : 'Refresh'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#9CA3AF] bg-[#F3F4F6] rounded-l-full"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                    >
+                      <Mail size={14} className="text-[#9CA3AF]" />
+                      No email connected
+                    </span>
+                    <a
+                      href={api.getGoogleAuthUrl()}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] border-l-2 border-[#0BAF9A]/20 rounded-r-full transition-all hover:bg-[#0BAF9A]/10"
+                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                    >
+                      Connect Google
+                    </a>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -890,6 +952,7 @@ export default function InboxPage() {
           isOpen={draftPanelOpen}
           onClose={() => setDraftPanelOpen(false)}
           email={draftEmail}
+          userEmails={user?.email ? [user.email] : []}
           onSuccess={() => {
             fetchInbox();
             if (selectedThreadId) {

@@ -828,11 +828,12 @@
 - Gmail label sync implementation: **[`docs/plans/2026-01-01-sprint-16-phase-a-implementation.md`](./docs/plans/2026-01-01-sprint-16-phase-a-implementation.md)**
 - AI Email Draft design (Phase B+): **[`docs/plans/2026-01-02-ai-email-draft-workflow-design.md`](./docs/plans/2026-01-02-ai-email-draft-workflow-design.md)**
 - AI Email Draft implementation plan (Phase B+): **[`docs/plans/2026-01-02-ai-email-draft-workflow-implementation-plan.md`](./docs/plans/2026-01-02-ai-email-draft-workflow-implementation-plan.md)**
+- AI Email Draft remaining work (Phase B+): **[`docs/AI_EMAIL_DRAFT_REMAINING_WORK.md`](./docs/AI_EMAIL_DRAFT_REMAINING_WORK.md)** ← **Backend complete, frontend pending**
 
 #### Current Focus (Top 3) — prioritize user-visible value
-- [ ] **(1) Inbox UI: AI Email Draft Panel** — implement Generate → Edit → Full Preview + actions (ties to `16.B6e`).
-- [ ] **(2) Gmail Draft creation** — add `gmail.users.drafts.create` + deterministic preview payload (ties to `16.B6d`).
-- [ ] **(3) Minimal backend endpoints** — `POST /email/draft/ai`, `POST /email/draft/preview`, `POST /email/drafts` (ties to `16.B6c`).
+- [x] **(1) Inbox UI: AI Email Draft Panel** — implement Generate → Edit → Full Preview + actions (ties to `16.B6e`). ✅ **DONE**
+- [x] **(2) Gmail Draft creation** — add `gmail.users.drafts.create` + deterministic preview payload (ties to `16.B6d`). ✅ **DONE**
+- [x] **(3) Minimal backend endpoints** — `POST /email/draft/ai`, `POST /email/draft/preview`, `POST /email/drafts` (ties to `16.B6c`). ✅ **DONE**
 
 #### Goals
 - [ ] `/inbox` is a true triage surface: fast thread list, thread detail, read/unread, archive, and search.
@@ -856,6 +857,7 @@
 | 16.0b | Add triage actions to `/inbox`: mark read/unread and archive with optimistic UI + friendly rate-limit errors. | Codex | 4-6h | P0 | ✅ |
 | 16.0c | Add server-backed search (use Gmail search endpoint when query present), keep fast client-side search as fallback. | Codex | 3-5h | P1 | ✅ |
 | 16.0d | Replace placeholder “Why this label?” with real explanation sources (override vs rule vs heuristic signals). | Codex | 3-5h | P0 | ✅ |
+| 16.0e | Add inbox header account pill + refresh; expose connected email accounts endpoint for multi-account readiness. | Codex | 2-3h | P1 | ✅ |
 
 **Phase A (ship value + trust without Pub/Sub)**
 
@@ -901,12 +903,12 @@
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
-| 16.B6a | Add shared types for AI email draft + preview payloads (request/response) in `@timeflow/shared`. | Codex | 1-2h | P1 | ⬜ |
-| 16.B6b | Add DB model(s): `WritingVoiceProfile` (B/C defaults, A opt-in config) + minimal AI usage counter for quotas. | Codex | 3-5h | P1 | ⬜ |
-| 16.B6c | Add backend endpoints: `POST /email/draft/ai`, `POST /email/draft/preview`, `POST /email/drafts`, and safe send (confirmed checkbox required). | Codex | 4-6h | **P1** | ⬜ |
-| 16.B6d | Add Gmail draft creation (`gmail.users.drafts.create`) and ensure preview payload determinism (no regen after preview). | Codex | 3-5h | P1 | ⬜ |
-| 16.B6e | Add Inbox UI: Draft Panel with Generate → Edit → Full Preview + actions (Send, Create Gmail Draft, Open in Gmail to refine) + Reply-all toggle. | Codex | 6-10h | **P1** | ⬜ |
-| 16.B6f | Add “Writing & Voice” settings (B sliders/toggles + C paste samples + A opt-in w/ warning; revoke controls). | Codex | 4-8h | P1 | ⬜ |
+| 16.B6a | Add shared types for AI email draft + preview payloads (request/response) in `@timeflow/shared`. | Codex | 1-2h | P1 | ✅ |
+| 16.B6b | Add DB model(s): `WritingVoiceProfile` (B/C defaults, A opt-in config) + minimal AI usage counter for quotas. | Codex | 3-5h | P1 | ✅ |
+| 16.B6c | Add backend endpoints: `POST /email/draft/ai`, `POST /email/draft/preview`, `POST /email/drafts`, and safe send (confirmed checkbox required). | Codex | 4-6h | **P1** | ✅ |
+| 16.B6d | Add Gmail draft creation (`gmail.users.drafts.create`) and ensure preview payload determinism (no regen after preview). | Codex | 3-5h | P1 | ✅ |
+| 16.B6e | Add Inbox UI: Draft Panel with Generate → Edit → Full Preview + actions (Send, Create Gmail Draft, Open in Gmail to refine) + Reply-all toggle. | Codex | 6-10h | **P1** | ✅ |
+| 16.B6f | Add “Writing & Voice” settings (B sliders/toggles + C paste samples + A opt-in w/ warning; revoke controls). | Codex | 4-8h | P1 | ✅ |
 | 16.B6g | Add tests + guardrails: quotas enforced, no raw email/draft logging, send requires checkbox, and e2e route coverage. | Codex | 4-6h | P1 | ⬜ |
 
 **Phase B+ (carryover): Inbox Queues + AI Thread Assist (moved from Sprint 17)**
