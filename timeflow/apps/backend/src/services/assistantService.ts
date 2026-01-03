@@ -973,6 +973,9 @@ export async function processMessage(
       habits: contextHabits,
       planningState,
       planningWillAsk,
+      meetingState,
+      meetingWillAsk,
+      meetingContext,
     } = await buildContextPrompt(
       userId,
       message,
