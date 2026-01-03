@@ -9,7 +9,8 @@
 import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
 import { getHabitInsights } from '@/lib/api';
-import type { HabitInsightsSummary, PerHabitInsights } from '@timeflow/shared';
+import { Recommendations } from './Recommendations';
+import type { HabitInsightsSummary, PerHabitInsights, HabitRecommendation } from '@timeflow/shared';
 
 export function HabitsInsights() {
   const [insights, setInsights] = useState<HabitInsightsSummary | null>(null);
@@ -32,6 +33,13 @@ export function HabitsInsights() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRecommendationAction = (recommendation: HabitRecommendation) => {
+    // TODO: Implement action handlers in Task 5 (Coach Card + Next Actions)
+    // For now, just log the action
+    console.log('Recommendation action clicked:', recommendation);
+    alert(`Action "${recommendation.action.label}" will be implemented in Task 5`);
   };
 
   if (loading) {
@@ -103,6 +111,14 @@ export function HabitsInsights() {
           </button>
         </div>
       </div>
+
+      {/* Recommendations */}
+      {insights.recommendations && insights.recommendations.length > 0 && (
+        <Recommendations
+          recommendations={insights.recommendations}
+          onActionClick={handleRecommendationAction}
+        />
+      )}
 
       {/* Overall Metrics */}
       <Panel>

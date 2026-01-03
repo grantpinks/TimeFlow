@@ -10,6 +10,7 @@ import type {
   BestWindow,
   StreakMetrics,
 } from '@timeflow/shared';
+import * as habitRecommendationService from './habitRecommendationService.js';
 
 /**
  * Get habit insights for a user
@@ -113,6 +114,15 @@ export async function getHabitInsights(
   const overallAdherence =
     totalScheduled > 0 ? totalCompleted / totalScheduled : 0;
 
+  // Generate recommendations based on insights
+  const allRecommendations = habitRecommendationService.generateRecommendations(habitInsights);
+
+  // Filter out dismissed recommendations
+  const recommendations = habitRecommendationService.filterDismissedRecommendations(
+    allRecommendations,
+    user.habitsCoachState
+  );
+
   return {
     period: {
       days,
@@ -125,6 +135,7 @@ export async function getHabitInsights(
     totalMinutesScheduled,
     totalMinutesCompleted,
     habits: habitInsights,
+    recommendations,
     generatedAt: new Date().toISOString(),
   };
 }

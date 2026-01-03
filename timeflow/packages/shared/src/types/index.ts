@@ -9,6 +9,7 @@ export * from './categoryTraining.js';
 export * from './habit.js';
 export * from './habitCompletion.js';
 export * from './habitInsights.js';
+export * from './habitRecommendation.js';
 export * from './calendar.js';
 export * from './schedule.js';
 export * from './assistant.js';
