@@ -879,19 +879,19 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 16.5 | Implement Gmail watch setup + Pub/Sub push handler endpoint; validate push authenticity; dedupe by historyId. | Codex | 8-12h | P1 |
-| 16.6 | Implement watch renewal job and operational safeguards (retry, dead-letter strategy, alerting hooks). | Codex | 4-6h | P1 |
+| 16.5 | Implement Gmail watch setup + Pub/Sub push handler endpoint; validate push authenticity; dedupe by historyId. | Codex | 8-12h | P1 | ✅ |
+| 16.6 | Implement watch renewal job and operational safeguards (retry, dead-letter strategy, alerting hooks). | Codex | 4-6h | P1 | ✅ |
 | 16.10 | Add optional **action-oriented labels** in TimeFlow (`NeedsReply`, `ToRead`, `NeedsAction`) and map them to Gmail labels (namespaced) if enabled. | Codex | 6-8h | P2 |
 
 **Phase B+ (carryover): AI Assistant Hardening**
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
-| 16.B1 | Fix AI regression harness failures for planning/meetings flows; make prompts pass expectation checks. | Codex | 2-4h | P1 | ⬜ |
-| 16.B2 | Add CI gate for AI regression content-quality checks (question/CTA/no scheduling language). | Codex | 2-3h | P2 | ⬜ |
-| 16.B3 | Add production-safe AI debug toggle + logging for prompt failures (off by default). | Codex | 2-3h | P2 | ⬜ |
-| 16.B4 | Add Inbox prompts for email→task, label sync, and “Why this label?” flows with always-draft + confirm. | Codex | 3-5h | P1 | ⬜ |
-| 16.B5 | Extend AI regression harness with Inbox scenarios and expectations (draft required, confirmation CTA, no auto-apply language). | Codex | 2-4h | P1 | ⬜ |
+| 16.B1 | Fix AI regression harness failures for planning/meetings flows; make prompts pass expectation checks. | Codex | 2-4h | P1 | ✅ |
+| 16.B2 | Add CI gate for AI regression content-quality checks (question/CTA/no scheduling language). | Codex | 2-3h | P2 | ✅ |
+| 16.B3 | Add production-safe AI debug toggle + logging for prompt failures (off by default). | Codex | 2-3h | P2 | ✅ |
+| 16.B4 | Add Inbox prompts for email→task, label sync, and “Why this label?” flows with always-draft + confirm. | Codex | 3-5h | P1 | ✅ |
+| 16.B5 | Extend AI regression harness with Inbox scenarios and expectations (draft required, confirmation CTA, no auto-apply language). | Codex | 2-4h | P1 | ✅ |
 | 16.BH1 | Harden email categorization rules for Newsletter, Travel, Work/Professional, Personal, Updates (domains + keywords + heuristics) with tests. | Codex | 4-6h | P1 | ✅ |
 | 16.BH2 | Add confidence scoring and AI fallback for low-confidence email categorization (accept AI only above threshold). | Codex | 4-6h | P1 | ✅ |
 | 16.BH3 | Add Needs Response signal (rules + AI fallback) and expose as a filter toggle in Inbox UI. | Codex | 4-6h | P1 | ✅ |
@@ -908,6 +908,16 @@
 | 16.B6e | Add Inbox UI: Draft Panel with Generate → Edit → Full Preview + actions (Send, Create Gmail Draft, Open in Gmail to refine) + Reply-all toggle. | Codex | 6-10h | **P1** | ⬜ |
 | 16.B6f | Add “Writing & Voice” settings (B sliders/toggles + C paste samples + A opt-in w/ warning; revoke controls). | Codex | 4-8h | P1 | ⬜ |
 | 16.B6g | Add tests + guardrails: quotas enforced, no raw email/draft logging, send requires checkbox, and e2e route coverage. | Codex | 4-6h | P1 | ⬜ |
+
+**Phase B+ (carryover): Inbox Queues + AI Thread Assist (moved from Sprint 17)**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 16.B7 | Add action-state inbox queues (`NeedsReply`, `ReadLater`, optional `NeedsAction`) with thread-level state, filters, and fast toggles. | Codex | 6-10h | P2 | ⬜ |
+| 16.B8 | Add aging nudges UI (e.g., “Needs Reply > X days”, “Unread important > X days”) as in-app indicators (no notifications yet). | Codex | 3-6h | P2 | ⬜ |
+| 16.B9 | Add AI thread assist: “Summarize” + “Extract tasks” + “Create tasks” (strict quotas + max tokens + friendly limit UX). | Codex | 8-12h | P2 | ⬜ |
+
+**Reference doc**: See **[`docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md`](./docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md)**.
 
 #### Acceptance Criteria
 - `/inbox` is a real triage surface (list + detail + read/unread + archive + search) and is performant/reliable for daily use.
@@ -931,8 +941,11 @@
 #### Goals
 - [ ] Users can **mark habit blocks complete** (calendar-first) and see streaks/adherence update reliably.
 - [ ] Habits page becomes an **Insights hub**: consistency charts + best windows + 1–3 explainable recommendations.
+- [ ] Habits feels like a **Coach**: a “Next Action” card drives daily behavior (not just charts).
+- [ ] Insights are **actionable**: every insight includes a 1-click “Do this now” action (**A/B/D**: schedule rescue block, adjust habit window, snooze/skip with reason).
+- [ ] Retention loop: users get an optional, privacy-safe **streak-at-risk reminder** (opt-in) with a clear call-to-action.
+- [ ] Trust: insights have clear “why/how calculated” explanations and are robust to edge cases (timezone/DST/missed days).
 - [ ] Establish privacy-safe analytics instrumentation (no sensitive content logging).
-- [ ] (Inbox follow-on) Add action-state inbox queues and AI assist on threads (cost-controlled), building on Sprint 16.
 
 #### Tasks
 
@@ -943,18 +956,13 @@
 | 17.3 | Habits page: add Insights dashboard (14/28d adherence chart, minutes/week, streaks, best window). | Codex | 8-12h | **P0** |
 | 17.4 | Recommendations MVP (rules-based): 1–3 cards tied to metrics (best window, streak at risk, duration too long). | Claude/Codex | 4-8h | P1 |
 | 17.5 | Instrumentation + privacy guardrails: define events and ensure no sensitive content is logged. | Codex | 3-6h | P1 |
+| 17.6 | Coach + Next Actions: add a top “Coach Card” + “Next Actions” stack with **A/B/D** actions (rescue block, adjust window, snooze/skip with **preset reason codes**). | Codex | 4-8h | **P0** |
+| 17.7 | Streak-at-risk detection + UX: define “at risk” rules and surface a clear banner/CTA when a streak will break soon. | Codex | 3-6h | **P0** |
+| 17.8 | Minimal reminders (opt-in): streak-at-risk reminder notification (email or in-app) with unsubscribe/disable controls. | Codex | 4-8h | P1 |
+| 17.9 | Insight trust + edge cases: add “why/how calculated” explanations + tests for timezone/DST/missed-day handling. | Codex | 4-8h | P1 |
 
 **Plan doc**: See **[`docs/plans/2025-12-31-analytics-insights-habits.md`](./docs/plans/2025-12-31-analytics-insights-habits.md)** for full scope, metrics, and acceptance criteria.
-
-**Inbox follow-on tasks (from Sprint 16): Action States + AI Assist**
-
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 17.I1 | Add action-state inbox queues (`NeedsReply`, `ReadLater`, optional `NeedsAction`) with thread-level state, filters, and fast toggles. | Codex | 6-10h | P0 |
-| 17.I2 | Add aging nudges UI (e.g., “Needs Reply > X days”, “Unread important > X days”) as in-app indicators (no notifications yet). | Codex | 3-6h | P1 |
-| 17.I3 | Add AI thread assist: “Summarize” + “Extract tasks” + “Create tasks” (strict quotas + max tokens + friendly limit UX). | Codex | 8-12h | P1 |
-
-**Plan doc**: See **[`docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md`](./docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md)**.
+**Action-loop add-on plan**: See **[`docs/plans/2026-01-02-sprint-17-habits-retention-loop.md`](./docs/plans/2026-01-02-sprint-17-habits-retention-loop.md)**.
 
 ---
 
@@ -991,7 +999,7 @@
 |----|------|-------|-------|----------|
 | 18.15 | Build real public marketing routes: `/features`, `/pricing`, `/about`, `/contact`, `/help`, `/status`, `/security`, `/privacy`, `/terms` (branded content + clear CTAs). | Codex | 8-14h | **P0** |
 | 18.16 | Fix homepage/nav correctness: remove/replace dead links (e.g., Blog/Careers/Press for now), ensure mobile menu works or is removed, and all footer links resolve. | Codex | 4-6h | **P0** |
-| 18.17 | Pricing page “beta-safe” posture: show plans/positioning without requiring Stripe (subscriptions ship Sprint 19) and ensure all “Contact Sales” / “Try free” CTAs work. | Claude/Codex | 4-6h | **P0** |
+| 18.17 | Pricing page “beta-safe” posture: **Beta is free / pricing coming soon** (subscriptions ship Sprint 19), build real `/pricing`, and ensure all CTAs work (Join Beta + Contact). | Claude/Codex | 4-6h | **P0** |
 | 18.18 | Categories UX polish: upgrade task categories page (`/categories`) to match brand (layout, empty states, guidance, analytics) and ensure training UI feels premium. | Codex | 4-8h | P1 |
 | 18.19 | Email Categories UX polish: upgrade Settings → Email Categories to be branded, explanatory, and user-friendly (especially Gmail sync status + backfill) without “internal tool” vibes. | Codex | 6-10h | P1 |
 | 18.20 | Meetings page UX rebuild: make `/meetings` match app shell, add clear actions (view scheduling links, manage bookings, download ICS, join link), and instrument analytics. | Codex | 6-10h | **P0** |
