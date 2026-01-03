@@ -732,11 +732,58 @@ export interface EmailCategoryExplanation {
   };
 }
 
+export interface InboxTaskDraftResponse {
+  draft: {
+    title: string;
+    description: string;
+    priority: number;
+    dueDate: string | null;
+    reason?: string;
+  };
+  confirmCta: string;
+}
+
+export interface InboxLabelDraftResponse {
+  draft: {
+    categoryId: string;
+    reason: string;
+  };
+  confirmCta: string;
+}
+
+export interface InboxLabelExplanationResponse {
+  draft: {
+    explanation: string;
+  };
+  confirmCta: string;
+}
+
 /**
  * Get explanation for email categorization.
  */
 export async function getEmailExplanation(emailId: string): Promise<{ explanation: EmailCategoryExplanation }> {
   return request(`/email/${emailId}/explanation`);
+}
+
+export async function draftTaskFromEmailAi(emailId: string): Promise<InboxTaskDraftResponse> {
+  return request<InboxTaskDraftResponse>('/email/ai/task-draft', {
+    method: 'POST',
+    body: JSON.stringify({ emailId }),
+  });
+}
+
+export async function draftLabelSyncAi(emailId: string): Promise<InboxLabelDraftResponse> {
+  return request<InboxLabelDraftResponse>('/email/ai/label-sync', {
+    method: 'POST',
+    body: JSON.stringify({ emailId }),
+  });
+}
+
+export async function draftLabelExplanationAi(emailId: string): Promise<InboxLabelExplanationResponse> {
+  return request<InboxLabelExplanationResponse>('/email/ai/label-explain', {
+    method: 'POST',
+    body: JSON.stringify({ emailId }),
+  });
 }
 
 // ===== AI Email Draft (Sprint 16 Phase B+) =====

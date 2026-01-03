@@ -7,21 +7,24 @@ import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import type { EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
-import { DEFAULT_INBOX_VIEWS } from '../../../../../packages/shared/src/types/email.js';
-import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar } from 'lucide-react';
+import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
+import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle } from 'lucide-react';
 import Image from 'next/image';
 import DOMPurify from 'dompurify';
 import toast, { Toaster } from 'react-hot-toast';
 import { filterInboxEmails } from '@/lib/inboxFilters';
 import { CategoryPills } from '@/components/inbox/CategoryPills';
 import { InboxViewEditor } from '@/components/inbox/InboxViewEditor';
+import { DraftPanel } from '@/components/inbox/DraftPanel';
+import { InboxAiDraftPanel, type InboxAiDraft } from '@/components/inbox/InboxAiDraftPanel';
 import { loadInboxViews, saveInboxViews } from '@/lib/inboxViewsStorage';
 import { track } from '@/lib/analytics';
 
 export default function InboxPage() {
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, user } = useUser();
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshingInbox, setRefreshingInbox] = useState(false);
   const [views, setViews] = useState<InboxView[]>(DEFAULT_INBOX_VIEWS);
   const [selectedViewId, setSelectedViewId] = useState<string>(
     DEFAULT_INBOX_VIEWS[0]?.id ?? 'all'
@@ -47,6 +50,14 @@ export default function InboxPage() {
   // Explanation state
   const [explanations, setExplanations] = useState<Record<string, api.EmailCategoryExplanation>>({});
   const [showExplanation, setShowExplanation] = useState(false);
+
+  // Draft panel state (Sprint 16 Phase B+)
+  const [draftPanelOpen, setDraftPanelOpen] = useState(false);
+  const [draftEmail, setDraftEmail] = useState<FullEmailMessage | null>(null);
+  const [aiDraftPanelOpen, setAiDraftPanelOpen] = useState(false);
+  const [aiDraft, setAiDraft] = useState<InboxAiDraft | null>(null);
+  const [aiDraftEmail, setAiDraftEmail] = useState<EmailMessage | null>(null);
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -100,6 +111,15 @@ export default function InboxPage() {
       console.error('Failed to fetch inbox:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRefreshInbox() {
+    setRefreshingInbox(true);
+    try {
+      await fetchInbox();
+    } finally {
+      setRefreshingInbox(false);
     }
   }
 
@@ -323,29 +343,91 @@ export default function InboxPage() {
     email: EmailMessage,
     options: { schedule?: boolean } = {}
   ) {
-    const threadId = email.threadId || email.id;
-    const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${threadId}`;
-    const description = [
-      `From: ${email.from}`,
-      `Subject: ${email.subject}`,
-      `Source: ${gmailUrl}`,
-      '',
-      email.snippet || '',
-    ].join('\n');
-
     try {
+      setAiDraftLoading(true);
+      const response = await api.draftTaskFromEmailAi(email.id);
+      setAiDraftEmail(email);
+      setAiDraft({
+        type: 'task',
+        draft: response.draft,
+        confirmCta: response.confirmCta,
+        schedule: Boolean(options.schedule),
+      });
+      setAiDraftPanelOpen(true);
+    } catch (error) {
+      console.error('Failed to generate task draft:', error);
+      toast.error('Failed to generate task draft. Please try again.');
+    } finally {
+      setAiDraftLoading(false);
+    }
+  }
+
+  async function handleDraftLabelSync(email: EmailMessage) {
+    try {
+      setAiDraftLoading(true);
+      const response = await api.draftLabelSyncAi(email.id);
+      setAiDraftEmail(email);
+      setAiDraft({
+        type: 'label',
+        draft: response.draft,
+        confirmCta: response.confirmCta,
+      });
+      setAiDraftPanelOpen(true);
+    } catch (error) {
+      console.error('Failed to generate label draft:', error);
+      toast.error('Failed to generate label draft. Please try again.');
+    } finally {
+      setAiDraftLoading(false);
+    }
+  }
+
+  async function handleDraftExplanation(email: EmailMessage) {
+    try {
+      setAiDraftLoading(true);
+      const response = await api.draftLabelExplanationAi(email.id);
+      setAiDraftEmail(email);
+      setAiDraft({
+        type: 'explanation',
+        draft: response.draft,
+        confirmCta: response.confirmCta,
+      });
+      setAiDraftPanelOpen(true);
+    } catch (error) {
+      console.error('Failed to generate explanation draft:', error);
+      toast.error('Failed to generate explanation draft. Please try again.');
+    } finally {
+      setAiDraftLoading(false);
+    }
+  }
+
+  async function handleAiDraftConfirm() {
+    if (!aiDraft || !aiDraftEmail) return;
+
+    if (aiDraft.type === 'task') {
+      const threadId = aiDraftEmail.threadId || aiDraftEmail.id;
+      const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${threadId}`;
+      const description = [
+        aiDraft.draft.description,
+        '',
+        `From: ${aiDraftEmail.from}`,
+        `Subject: ${aiDraftEmail.subject}`,
+        `Source: ${gmailUrl}`,
+      ].join('\n');
+
       const task = await api.createTask({
-        title: email.subject || 'Email follow-up',
+        title: aiDraft.draft.title,
         description,
-        sourceEmailId: email.id,
-        sourceThreadId: email.threadId,
+        priority: aiDraft.draft.priority as 1 | 2 | 3,
+        dueDate: aiDraft.draft.dueDate || undefined,
+        sourceEmailId: aiDraftEmail.id,
+        sourceThreadId: aiDraftEmail.threadId,
         sourceEmailProvider: 'gmail',
         sourceEmailUrl: gmailUrl,
       });
 
-      track('email_converted_to_task', { email_id: email.id });
+      track('email_converted_to_task', { email_id: aiDraftEmail.id });
 
-      if (options.schedule) {
+      if (aiDraft.schedule) {
         const now = new Date();
         const end = new Date();
         end.setDate(end.getDate() + 14);
@@ -364,10 +446,36 @@ export default function InboxPage() {
       } else {
         toast.success('Task created from email');
       }
-    } catch (error) {
-      console.error('Failed to create task from email:', error);
-      toast.error('Failed to create task. Please try again.');
     }
+
+    if (aiDraft.type === 'label') {
+      const overrideValue = aiDraftEmail.threadId || aiDraftEmail.id;
+      await api.createEmailOverride({
+        overrideType: 'threadId',
+        overrideValue,
+        categoryName: aiDraft.draft.categoryId,
+        reason: aiDraft.draft.reason,
+      });
+      toast.success('Label update saved');
+      fetchInbox();
+    }
+
+    if (aiDraft.type === 'explanation') {
+      setExplanations((prev) => ({
+        ...prev,
+        [aiDraftEmail.id]: {
+          category: aiDraftEmail.category || 'other',
+          source: 'default',
+          reason: aiDraft.draft.explanation,
+          details: {},
+        },
+      }));
+      setShowExplanation(true);
+    }
+
+    setAiDraftPanelOpen(false);
+    setAiDraft(null);
+    setAiDraftEmail(null);
   }
 
   function getCategoryConfig(categoryValue?: string | null) {
@@ -592,6 +700,35 @@ export default function InboxPage() {
                 onDeleteView={handleDeleteView}
               />
             )}
+
+            <div className="mt-4 flex w-full items-center justify-between gap-4">
+              <div className="inline-flex items-center rounded-full border-2 border-[#0BAF9A]/30 bg-white/80 shadow-[0_10px_30px_rgba(11,175,154,0.08)]">
+                <span
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] bg-[#0BAF9A]/10 rounded-l-full"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  <Mail size={14} className="text-[#0BAF9A]" />
+                  Gmail
+                </span>
+                <span
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm text-[#1a1a1a] border-l-2 border-[#0BAF9A]/20"
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
+                >
+                  {user?.email ?? 'Connected account'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRefreshInbox}
+                  disabled={refreshingInbox}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] border-l-2 border-[#0BAF9A]/20 rounded-r-full transition-all hover:bg-[#0BAF9A]/10 disabled:opacity-60"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  aria-label="Refresh inbox"
+                >
+                  <RefreshCw size={14} className={refreshingInbox ? 'animate-spin' : ''} />
+                  {refreshingInbox ? 'Refreshing' : 'Refresh'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -691,6 +828,9 @@ export default function InboxPage() {
                 categories={categories}
                 needsResponse={selectedEmail?.needsResponse}
                 onCreateTask={handleCreateTaskFromEmail}
+                onDraftLabelSync={handleDraftLabelSync}
+                onDraftExplanation={handleDraftExplanation}
+                aiDraftLoading={aiDraftLoading}
                 onArchive={handleArchive}
                 onToggleRead={handleToggleRead}
                 isCorrecting={correctingEmailId === selectedEmail?.id}
@@ -728,6 +868,10 @@ export default function InboxPage() {
                 explanation={selectedEmail ? explanations[selectedEmail.id] : undefined}
                 showExplanation={showExplanation}
                 onToggleExplanation={() => selectedEmail && fetchExplanation(selectedEmail.id)}
+                onOpenDraft={(email) => {
+                  setDraftEmail(email);
+                  setDraftPanelOpen(true);
+                }}
               />
             )}
           </div>
@@ -739,6 +883,32 @@ export default function InboxPage() {
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
+
+      {/* Draft Panel (Sprint 16 Phase B+) */}
+      {draftEmail && (
+        <DraftPanel
+          isOpen={draftPanelOpen}
+          onClose={() => setDraftPanelOpen(false)}
+          email={draftEmail}
+          onSuccess={() => {
+            fetchInbox();
+            if (selectedThreadId) {
+              fetchThread(selectedThreadId);
+            }
+          }}
+        />
+      )}
+
+      <InboxAiDraftPanel
+        isOpen={aiDraftPanelOpen}
+        draft={aiDraft}
+        onClose={() => {
+          setAiDraftPanelOpen(false);
+          setAiDraft(null);
+          setAiDraftEmail(null);
+        }}
+        onConfirm={handleAiDraftConfirm}
+      />
     </Layout>
   );
 }
@@ -1023,6 +1193,9 @@ interface ReadingPaneProps {
   categories: EmailCategoryConfig[];
   needsResponse?: boolean;
   onCreateTask: (email: EmailMessage, options?: { schedule?: boolean }) => void;
+  onDraftLabelSync: (email: EmailMessage) => void;
+  onDraftExplanation: (email: EmailMessage) => void;
+  aiDraftLoading: boolean;
   onArchive: (emailId: string) => void;
   onToggleRead: (emailId: string, currentIsRead: boolean) => void;
   isCorrecting: boolean;
@@ -1032,6 +1205,7 @@ interface ReadingPaneProps {
   explanation?: api.EmailCategoryExplanation;
   showExplanation: boolean;
   onToggleExplanation: () => void;
+  onOpenDraft: (email: FullEmailMessage) => void;
 }
 
 function ReadingPane({
@@ -1043,6 +1217,9 @@ function ReadingPane({
   categories,
   needsResponse,
   onCreateTask,
+  onDraftLabelSync,
+  onDraftExplanation,
+  aiDraftLoading,
   onArchive,
   onToggleRead,
   isCorrecting,
@@ -1052,6 +1229,7 @@ function ReadingPane({
   explanation,
   showExplanation,
   onToggleExplanation,
+  onOpenDraft,
 }: ReadingPaneProps) {
   const [selectedCategory, setSelectedCategory] = useState(categoryId || '');
   const [correctionScope, setCorrectionScope] = useState<'sender' | 'domain' | 'thread'>('sender');
@@ -1085,7 +1263,8 @@ function ReadingPane({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => onCreateTask(email)}
-            className="px-4 py-2 text-sm font-medium bg-white border-2 border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10 transition-colors rounded-lg flex items-center gap-2"
+            disabled={aiDraftLoading}
+            className="px-4 py-2 text-sm font-medium bg-white border-2 border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10 transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
             style={{ fontFamily: "'Manrope', sans-serif" }}
           >
             <Clock size={14} />
@@ -1093,11 +1272,30 @@ function ReadingPane({
           </button>
           <button
             onClick={() => onCreateTask(email, { schedule: true })}
-            className="px-4 py-2 text-sm font-medium bg-[#0BAF9A] text-white hover:bg-[#078c77] transition-colors rounded-lg flex items-center gap-2"
+            disabled={aiDraftLoading}
+            className="px-4 py-2 text-sm font-medium bg-[#0BAF9A] text-white hover:bg-[#078c77] transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
             style={{ fontFamily: "'Manrope', sans-serif" }}
           >
             <Calendar size={14} />
             Schedule
+          </button>
+          <button
+            onClick={() => onDraftLabelSync(email)}
+            disabled={aiDraftLoading}
+            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <Tag size={14} />
+            Label Sync
+          </button>
+          <button
+            onClick={() => onDraftExplanation(email)}
+            disabled={aiDraftLoading}
+            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <HelpCircle size={14} />
+            Why this label?
           </button>
           <button
             onClick={() => onArchive(email.id)}
@@ -1114,6 +1312,14 @@ function ReadingPane({
           >
             {email.isRead ? <Mail size={14} /> : <MailOpen size={14} />}
             {email.isRead ? 'Mark Unread' : 'Mark Read'}
+          </button>
+          <button
+            onClick={() => onOpenDraft(latestMessage)}
+            className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all rounded-lg flex items-center gap-2 shadow-sm"
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <Sparkles size={14} />
+            Draft Reply with AI
           </button>
 
           <div className="flex-1" />
@@ -1195,7 +1401,7 @@ function ReadingPane({
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-semibold text-[#1a1a1a] tracking-wide uppercase mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  Why "{categoryLabel}"?
+                  Why &quot;{categoryLabel}&quot;?
                 </h4>
                 {showExplanation && explanation && (
                   <motion.div

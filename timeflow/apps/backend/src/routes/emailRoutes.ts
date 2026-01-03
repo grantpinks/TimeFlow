@@ -22,6 +22,18 @@ import {
   getInboxViews,
   updateInboxViews,
 } from '../controllers/inboxViewsController.js';
+import {
+  generateEmailDraft,
+  generateEmailPreview,
+  createOrSendDraft,
+  getWritingVoice,
+  updateWritingVoice,
+} from '../controllers/emailDraftController.js';
+import {
+  draftTaskFromEmail,
+  draftLabelSync,
+  draftLabelExplanation,
+} from '../controllers/inboxAiController.js';
 
 export async function registerEmailRoutes(server: FastifyInstance) {
   // Get inbox messages (list view)
@@ -55,4 +67,18 @@ export async function registerEmailRoutes(server: FastifyInstance) {
 
   // Get explanation for email categorization
   server.get('/email/:id/explanation', { preHandler: requireAuth }, explainEmailCategory);
+
+  // AI Email Draft endpoints
+  server.post('/email/draft/ai', { preHandler: requireAuth }, generateEmailDraft);
+  server.post('/email/draft/preview', { preHandler: requireAuth }, generateEmailPreview);
+  server.post('/email/drafts', { preHandler: requireAuth }, createOrSendDraft);
+
+  // Writing voice profile endpoints
+  server.get('/user/writing-voice', { preHandler: requireAuth }, getWritingVoice);
+  server.put('/user/writing-voice', { preHandler: requireAuth }, updateWritingVoice);
+
+  // Inbox AI draft endpoints (always draft + confirm)
+  server.post('/email/ai/task-draft', { preHandler: requireAuth }, draftTaskFromEmail);
+  server.post('/email/ai/label-sync', { preHandler: requireAuth }, draftLabelSync);
+  server.post('/email/ai/label-explain', { preHandler: requireAuth }, draftLabelExplanation);
 }

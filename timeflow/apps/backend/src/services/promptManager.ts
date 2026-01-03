@@ -90,6 +90,20 @@ export class PromptManager {
   }
 
   /**
+   * Get a raw prompt by filename (without base prompt)
+   */
+  getAuxPrompt(promptName: string): string {
+    const cacheKey = `aux:${promptName}`;
+    const filename = `${promptName}.txt`;
+    if (this.prompts.has(cacheKey)) {
+      return this.prompts.get(cacheKey)!;
+    }
+    const content = this.loadPromptFile(filename);
+    this.prompts.set(cacheKey, content);
+    return content;
+  }
+
+  /**
    * Clear the prompt cache (useful for testing or hot-reloading)
    */
   clearCache(): void {
