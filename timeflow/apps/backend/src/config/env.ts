@@ -23,6 +23,7 @@ const envSchema = z.object({
   LLM_MAX_TOKENS: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().optional(),
+  AI_DEBUG_ENABLED: z.string().optional(),
   AI_DEBUG_ERRORS: z.string().optional(),
   GMAIL_SYNC_ON_INBOX_FETCH: z.string().optional(),
   GMAIL_PUBSUB_TOPIC: z.string().optional(),

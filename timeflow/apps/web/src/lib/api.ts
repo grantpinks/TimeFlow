@@ -35,7 +35,15 @@ import type {
   InboxView,
   SchedulingLink,
   Meeting,
+  EmailDraftRequest,
+  EmailDraftResponse,
+  EmailPreviewRequest,
+  EmailPreviewResponse,
+  CreateDraftRequest,
+  CreateDraftResponse,
+  WritingVoiceProfile,
 } from '@timeflow/shared';
+import { getAiDebugEnabled } from './aiDebug';
 
 /**
  * Email category configuration type (matches backend)
@@ -477,9 +485,15 @@ export async function sendChatMessage(
     conversationId,
   };
 
+  const headers: Record<string, string> = {};
+  if (getAiDebugEnabled()) {
+    headers['x-ai-debug'] = 'true';
+  }
+
   return request<AssistantChatResponse>('/assistant/chat', {
     method: 'POST',
     body: JSON.stringify(body),
+    headers,
   });
 }
 
@@ -725,6 +739,60 @@ export async function getEmailExplanation(emailId: string): Promise<{ explanatio
   return request(`/email/${emailId}/explanation`);
 }
 
+// ===== AI Email Draft (Sprint 16 Phase B+) =====
+
+/**
+ * Generate AI email draft
+ */
+export async function generateEmailDraft(data: EmailDraftRequest): Promise<EmailDraftResponse> {
+  return request<EmailDraftResponse>('/email/draft/ai', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Generate email preview with determinism token
+ */
+export async function generateEmailPreview(data: EmailPreviewRequest): Promise<EmailPreviewResponse> {
+  return request<EmailPreviewResponse>('/email/draft/preview', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Create Gmail draft or send email (requires preview confirmation)
+ */
+export async function createOrSendDraft(data: CreateDraftRequest): Promise<CreateDraftResponse> {
+  return request<CreateDraftResponse>('/email/drafts', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/**
+ * Get writing voice profile
+ */
+export async function getWritingVoice(): Promise<WritingVoiceProfile> {
+  return request<WritingVoiceProfile>('/user/writing-voice');
+}
+
+/**
+ * Update writing voice profile
+ */
+export async function updateWritingVoice(data: {
+  formality?: number;
+  length?: number;
+  tone?: number;
+  voiceSamples?: string;
+}): Promise<{ success: boolean; profile: WritingVoiceProfile }> {
+  return request<{ success: boolean; profile: WritingVoiceProfile }>('/user/writing-voice', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
 // ===== Conversations (Saved Chats) =====
 
 export interface Conversation {
@@ -823,6 +891,13 @@ export interface UpdateCategoryTrainingRequest {
   exampleEventsSnapshot?: CategoryTrainingExampleSnapshot[];
 }
 
+export interface CategoryTrainingProfile {
+  description?: string | null;
+  includeKeywords?: string[];
+  excludeKeywords?: string[];
+  exampleEventsSnapshot?: CategoryTrainingExampleSnapshot[];
+}
+
 export interface EventCategorization {
   categoryId: string;
   categoryName: string;
@@ -844,8 +919,8 @@ export async function getEventCategorizations(
   });
 }
 
-export async function getCategoryTraining(categoryId: string) {
-  return request(`/categories/${categoryId}/training`);
+export async function getCategoryTraining(categoryId: string): Promise<CategoryTrainingProfile | null> {
+  return request<CategoryTrainingProfile | null>(`/categories/${categoryId}/training`);
 }
 
 export async function upsertCategoryTraining(

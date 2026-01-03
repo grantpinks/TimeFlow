@@ -828,8 +828,10 @@ export async function processMessage(
   userId: string,
   message: string,
   conversationHistory?: ChatMessage[],
-  conversationId?: string
+  conversationId?: string,
+  options?: { debugEnabled?: boolean }
 ): Promise<AssistantChatResponse> {
+  const debugEnabled = options?.debugEnabled ?? env.AI_DEBUG_ERRORS === 'true';
   try {
     // Fetch user to get preferences (needed for mode detection and validation)
     const user = await prisma.user.findUnique({
@@ -1077,14 +1079,19 @@ export async function processMessage(
     // Parse the response to extract structured data
     let { naturalLanguage, schedulePreview } = parseResponse(llmResponse);
 
+    if (effectiveMode === 'scheduling' && !schedulePreview && debugEnabled) {
+      console.warn('[AssistantService][Debug] Missing structured output in scheduling response.');
+    }
+
     if (effectiveMode === 'scheduling' && !schedulePreview) {
-      logDebug('[AssistantService][Debug] Missing structured output in scheduling response.');
       const retryPrompt = `${contextPrompt}\n\nIMPORTANT: The previous response omitted the required [STRUCTURED_OUTPUT]. Reformat your response to include BOTH the natural language summary and the [STRUCTURED_OUTPUT] JSON. End with the JSON code block and add no text after it.`;
       const retryResponse = await callLocalLLM(retryPrompt, resolvedHistory, systemPrompt, effectiveMode);
       const retryParsed = parseResponse(retryResponse);
       if (retryParsed.schedulePreview) {
         naturalLanguage = retryParsed.naturalLanguage;
         schedulePreview = retryParsed.schedulePreview;
+      } else if (debugEnabled) {
+        console.warn('[AssistantService][Debug] Retry still missing structured output.');
       }
     }
 
@@ -1172,7 +1179,7 @@ export async function processMessage(
       }
     }
 
-    const debugMessage = formatDebugError(error, env.AI_DEBUG_ERRORS === 'true');
+    const debugMessage = formatDebugError(error, debugEnabled);
     const responseMessage = debugMessage ? `${errorMessage}\n\n[debug] ${debugMessage}` : errorMessage;
 
     return {

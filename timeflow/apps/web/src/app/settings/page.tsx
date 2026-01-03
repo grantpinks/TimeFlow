@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import { SchedulingLinksPanel } from '@/components/SchedulingLinksPanel';
 import { MeetingManagerPanel } from '@/components/MeetingManagerPanel';
 import * as api from '@/lib/api';
+import { canShowAiDebugToggle, getAiDebugEnabled, setAiDebugEnabled as persistAiDebugEnabled } from '@/lib/aiDebug';
 import type { Calendar, DailyScheduleConfig, DailyMeetingConfig } from '@timeflow/shared';
 
 export default function SettingsPage() {
@@ -23,6 +25,8 @@ export default function SettingsPage() {
   const [timeZone, setTimeZone] = useState('America/Chicago');
   const [defaultDuration, setDefaultDuration] = useState(30);
   const [defaultCalendarId, setDefaultCalendarId] = useState<string>('');
+  const [aiDebugEnabled, setAiDebugEnabled] = useState(false);
+  const showAiDebugToggle = canShowAiDebugToggle();
 
   // Meeting preference state
   const [useMeetingHours, setUseMeetingHours] = useState(false);
@@ -67,6 +71,12 @@ export default function SettingsPage() {
       }
     }
   }, [user]);
+
+  useEffect(() => {
+    if (showAiDebugToggle) {
+      setAiDebugEnabled(getAiDebugEnabled());
+    }
+  }, [showAiDebugToggle]);
 
   // Fetch calendars
   useEffect(() => {
@@ -143,6 +153,11 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAiDebugToggle = (enabled: boolean) => {
+    setAiDebugEnabled(enabled);
+    persistAiDebugEnabled(enabled);
+  };
+
   // Common timezones
   const timezones = [
     'America/New_York',
@@ -209,8 +224,36 @@ export default function SettingsPage() {
                 <h2 className="text-lg font-semibold text-slate-800">Google Connection</h2>
                 <p className="text-slate-600 text-sm">
                   Gmail inbox requires a connected Google account with read-only access.
-                </p>
+            </p>
+          </div>
+
+          {showAiDebugToggle && (
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-800">AI Debugging (Admin)</h2>
+                  <p className="text-slate-600 text-sm">
+                    Show AI error details for troubleshooting. Hidden unless enabled by env.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAiDebugToggle(!aiDebugEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    aiDebugEnabled ? 'bg-emerald-500' : 'bg-slate-300'
+                  }`}
+                  aria-pressed={aiDebugEnabled}
+                  aria-label="Toggle AI debugging"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      aiDebugEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
+            </div>
+          )}
               <span className="text-sm font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
                 Connected
               </span>
@@ -564,7 +607,7 @@ export default function SettingsPage() {
                   Create custom categories and train AI to auto-sort new events.
                 </p>
               </div>
-              <a
+              <Link
                 href="/settings/email-categories"
                 className="inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100"
               >
@@ -572,7 +615,30 @@ export default function SettingsPage() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </a>
+              </Link>
+            </div>
+          </div>
+
+          {/* Writing & Voice */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800 mb-1">
+                  Writing &amp; Voice
+                </h2>
+                <p className="text-slate-600 text-sm">
+                  Configure how AI drafts emails in your unique voice and style.
+                </p>
+              </div>
+              <Link
+                href="/settings/writing-voice"
+                className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100"
+              >
+                Configure Voice
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
 

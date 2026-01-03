@@ -4,6 +4,8 @@ import * as conversationService from '../services/conversationService.js';
 import type { AssistantChatRequest, ChatMessage } from '@timeflow/shared';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
+import { env } from '../config/env.js';
+import { resolveAiDebugFlag } from '../utils/aiDebug.js';
 
 /**
  * Request body shape for chat endpoint
@@ -43,13 +45,18 @@ export async function chat(
   }
 
   const { message, conversationHistory, conversationId } = parsed.data;
+  const debugEnabled = resolveAiDebugFlag(
+    env.AI_DEBUG_ENABLED === 'true',
+    request.headers['x-ai-debug']
+  );
 
   try {
     const response = await assistantService.processMessage(
       user.id,
       message,
       conversationHistory as ChatMessage[] | undefined,
-      conversationId
+      conversationId,
+      { debugEnabled }
     );
 
     return reply.status(200).send(response);
