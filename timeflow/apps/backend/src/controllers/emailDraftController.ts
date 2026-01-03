@@ -8,7 +8,7 @@ import { prisma } from '../config/prisma.js';
 import { getFullEmail } from '../services/gmailService.js';
 import { createGmailDraft } from '../services/gmailService.js';
 import { sendEmail } from '../services/gmailService.js';
-import { processMessage } from '../services/assistantService.js';
+import { runAssistantTask } from '../services/assistantService.js';
 import crypto from 'crypto';
 import type {
   EmailDraftRequest,
@@ -520,6 +520,58 @@ export async function updateWritingVoice(
   }
 }
 
+export function buildEmailDraftContext({
+  originalEmail,
+  preferences,
+  additionalContext,
+}: {
+  originalEmail: { from: string; subject: string; body: string };
+  preferences: {
+    formality: number;
+    length: number;
+    tone: number;
+    voiceSamples?: string | null;
+  };
+  additionalContext?: string;
+}) {
+  const formalityLabel =
+    preferences.formality <= 3
+      ? 'casual'
+      : preferences.formality >= 7
+        ? 'professional'
+        : 'balanced';
+  const lengthLabel =
+    preferences.length <= 3
+      ? 'concise (2-3 sentences)'
+      : preferences.length >= 7
+        ? 'detailed (5-7 sentences)'
+        : 'moderate (3-5 sentences)';
+  const toneLabel =
+    preferences.tone <= 3
+      ? 'friendly and warm'
+      : preferences.tone >= 7
+        ? 'formal and respectful'
+        : 'professional but approachable';
+
+  return {
+    email: {
+      from: originalEmail.from,
+      subject: originalEmail.subject,
+      body: originalEmail.body,
+    },
+    voice: {
+      formality: preferences.formality,
+      length: preferences.length,
+      tone: preferences.tone,
+      formalityLabel,
+      lengthLabel,
+      toneLabel,
+      voiceSamples: preferences.voiceSamples ?? undefined,
+    },
+    additionalContext: additionalContext || undefined,
+  };
+}
+
 /**
  * Helper: Build context message for AI assistant
  * TODO: Move to assistantService integration
@@ -529,29 +581,28 @@ function buildEmailDraftContextMessage(
   preferences: any,
   additionalContext?: string
 ): string {
-  const formalityLabel = preferences.formality <= 3 ? 'casual' :
-                         preferences.formality >= 7 ? 'professional' : 'balanced';
-  const lengthLabel = preferences.length <= 3 ? 'concise (2-3 sentences)' :
-                      preferences.length >= 7 ? 'detailed (5-7 sentences)' : 'moderate (3-5 sentences)';
-  const toneLabel = preferences.tone <= 3 ? 'friendly and warm' :
-                    preferences.tone >= 7 ? 'formal and respectful' : 'professional but approachable';
+  const context = buildEmailDraftContext({
+    originalEmail,
+    preferences,
+    additionalContext,
+  });
 
   let message = `Write a reply to this email:\n\n`;
-  message += `From: ${originalEmail.from}\n`;
-  message += `Subject: ${originalEmail.subject}\n\n`;
-  message += `${originalEmail.body}\n\n`;
+  message += `From: ${context.email.from}\n`;
+  message += `Subject: ${context.email.subject}\n\n`;
+  message += `${context.email.body}\n\n`;
   message += `---\n\n`;
   message += `Voice preferences:\n`;
-  message += `- Formality: ${formalityLabel}\n`;
-  message += `- Length: ${lengthLabel}\n`;
-  message += `- Tone: ${toneLabel}\n`;
+  message += `- Formality: ${context.voice.formalityLabel}\n`;
+  message += `- Length: ${context.voice.lengthLabel}\n`;
+  message += `- Tone: ${context.voice.toneLabel}\n`;
 
-  if (preferences.voiceSamples) {
-    message += `\nWriting style examples:\n${preferences.voiceSamples}\n`;
+  if (context.voice.voiceSamples) {
+    message += `\nWriting style examples:\n${context.voice.voiceSamples}\n`;
   }
 
-  if (additionalContext) {
-    message += `\nAdditional instructions: ${additionalContext}\n`;
+  if (context.additionalContext) {
+    message += `\nAdditional instructions: ${context.additionalContext}\n`;
   }
 
   return message;
@@ -566,20 +617,19 @@ async function generateDraftWithLLM(
   preferences: any,
   additionalContext?: string
 ): Promise<string> {
-  // Placeholder implementation
-  // TODO: Replace with actual assistant service integration
-
-  const contextMessage = buildEmailDraftContextMessage(
+  const contextPrompt = buildEmailDraftContextMessage(
     originalEmail,
     preferences,
     additionalContext
   );
 
-  // For now, return a simple template
-  // This will be replaced with actual LLM call
-  return `Hi,
+  const result = await runAssistantTask('email-draft', {
+    contextPrompt,
+  });
 
-Thanks for your email. I'll review this and get back to you soon.
+  if (!result?.draftText) {
+    throw new Error('Assistant did not return a draft.');
+  }
 
-Best regards`;
+  return result.draftText;
 }
