@@ -128,6 +128,15 @@ export async function generateEmailDraft(
     // Get or create voice profile
     const profile = await getOrCreateVoiceProfile(userId);
 
+    const maxDraftsRaw = Number(process.env.AI_DRAFT_QUOTA_MAX || '50');
+    const maxDrafts = Number.isNaN(maxDraftsRaw) ? 50 : maxDraftsRaw;
+    if (maxDrafts > 0 && profile.aiDraftsGenerated >= maxDrafts) {
+      return reply.status(429).send({
+        error: 'AI draft quota exceeded. Please try again later.',
+        code: 'AI_DRAFT_QUOTA_EXCEEDED',
+      });
+    }
+
     // Apply voice overrides if provided
     const effectivePreferences = {
       formality: voicePreferences?.formality ?? profile.formality,
