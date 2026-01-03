@@ -172,19 +172,37 @@ export async function getInboxMessages(
   }
 
   const messages: EmailMessage[] = [];
+  const batchSize = 10;
 
-  for (const ref of messageRefs) {
-    if (!ref.id) continue;
-    const full = await gmail.users.messages.get({
-      userId: 'me',
-      id: ref.id,
-      format: 'metadata',
-      metadataHeaders: ['From', 'Subject', 'Importance'],
-    });
+  for (let i = 0; i < messageRefs.length; i += batchSize) {
+    const batch = messageRefs.slice(i, i + batchSize);
+    const fetched = await Promise.all(
+      batch.map(async (ref) => {
+        if (!ref.id) return null;
+        try {
+          const full = await gmail.users.messages.get({
+            userId: 'me',
+            id: ref.id,
+            format: 'metadata',
+            metadataHeaders: ['From', 'Subject', 'Importance'],
+          });
 
-    const mapped = await mapMessage(userId, full.data);
-    if (mapped) {
-      messages.push(mapped);
+          return await mapMessage(userId, full.data);
+        } catch (error) {
+          console.error('Failed to fetch Gmail message', {
+            userId,
+            messageId: ref.id,
+            error,
+          });
+          return null;
+        }
+      })
+    );
+
+    for (const mapped of fetched) {
+      if (mapped) {
+        messages.push(mapped);
+      }
     }
   }
 
