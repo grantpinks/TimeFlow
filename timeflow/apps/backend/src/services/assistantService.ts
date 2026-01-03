@@ -1195,6 +1195,24 @@ export async function processMessage(
 }
 
 /**
+ * Run a focused assistant task that returns structured output.
+ * Currently supports email draft generation.
+ */
+export async function runAssistantTask(
+  mode: 'email-draft',
+  options: { contextPrompt: string }
+): Promise<{ draftText: string }> {
+  const systemPrompt = promptManager.getPrompt(mode);
+  const llmResponse = await callLocalLLM(options.contextPrompt, undefined, systemPrompt, mode);
+
+  const fencedMatch = llmResponse.match(/```(?:\w+)?\s*([\s\S]*?)\s*```/);
+  const rawDraft = (fencedMatch ? fencedMatch[1] : llmResponse).trim();
+  const draftText = rawDraft.replace(/^DRAFT:\s*/i, '').trim();
+
+  return { draftText };
+}
+
+/**
  * Build a context-rich prompt with user data, tasks, and calendar events
  *
  * Sprint 13.6 & 13.7: Includes event classification and mode-specific context
@@ -1626,7 +1644,7 @@ async function callLocalLLM(
   contextPrompt: string,
   conversationHistory: ChatMessage[] | undefined,
   systemPrompt: string,
-  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings'
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings' | 'email-draft'
 ): Promise<string> {
   const provider = (env.LLM_PROVIDER || 'local').toLowerCase();
   const isOpenAI = provider === 'openai';
@@ -1667,7 +1685,14 @@ async function callLocalLLM(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-  const temperature = mode === 'scheduling' ? 0.2 : mode === 'availability' ? 0.4 : 0.7;
+  const temperature =
+    mode === 'scheduling'
+      ? 0.2
+      : mode === 'availability'
+        ? 0.4
+        : mode === 'email-draft'
+          ? 0.5
+          : 0.7;
   const parsedMaxTokens = parseInt(env.LLM_MAX_TOKENS || '4000', 10);
   const maxTokens = Number.isNaN(parsedMaxTokens) ? 4000 : parsedMaxTokens;
 
