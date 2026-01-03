@@ -58,3 +58,37 @@ export interface HabitRecommendations {
   recommendations: HabitRecommendation[];
   count: number;
 }
+
+/**
+ * Coach suggestions with primary/secondary split
+ */
+export interface CoachSuggestions {
+  primary: HabitRecommendation | null;      // Single most important suggestion
+  secondary: HabitRecommendation[];         // Max 2 secondary suggestions
+}
+
+/**
+ * Request to dismiss a coach suggestion
+ */
+export interface DismissCoachSuggestionRequest {
+  type: RecommendationType;
+  habitId: string;
+  snoozedUntil?: string; // ISO timestamp, if snoozed instead of dismissed
+}
+
+/**
+ * Coach state stored in User.habitsCoachState JSON
+ */
+export interface HabitsCoachState {
+  dismissedSuggestions: Array<{
+    type: RecommendationType;
+    habitId: string;
+    dismissedAt: string;    // ISO timestamp
+    snoozedUntil: string | null; // ISO timestamp or null if permanently dismissed
+  }>;
+  lastPrimarySuggestion: {
+    type: RecommendationType;
+    habitId: string;
+    timestamp: string;      // ISO timestamp
+  } | null;
+}

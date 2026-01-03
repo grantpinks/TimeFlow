@@ -123,6 +123,12 @@ export async function getHabitInsights(
     user.habitsCoachState
   );
 
+  // Create coach suggestions with primary/secondary split and noise control
+  const coachSuggestions = habitRecommendationService.createCoachSuggestions(
+    recommendations,
+    user.habitsCoachState
+  );
+
   return {
     period: {
       days,
@@ -136,6 +142,7 @@ export async function getHabitInsights(
     totalMinutesCompleted,
     habits: habitInsights,
     recommendations,
+    coachSuggestions,
     generatedAt: new Date().toISOString(),
   };
 }

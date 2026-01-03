@@ -85,4 +85,11 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     { preHandler: requireAuth },
     habitController.skipHabitInstance
   );
+
+  // POST /api/habits/coach/dismiss - Dismiss or snooze a coach suggestion
+  server.post(
+    '/habits/coach/dismiss',
+    { preHandler: requireAuth },
+    habitController.dismissCoachSuggestion
+  );
 }

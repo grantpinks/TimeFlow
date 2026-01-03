@@ -10,6 +10,8 @@ import type {
   HabitRecommendation,
   RecommendationType,
   RecommendationAction,
+  CoachSuggestions,
+  HabitsCoachState,
 } from '@timeflow/shared';
 
 /**
@@ -171,7 +173,7 @@ export function filterDismissedRecommendations(
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // Filter out recently dismissed (within 7 days)
+  // Filter out recently dismissed (within 7 days) or snoozed
   return recommendations.filter((rec) => {
     const dismissed = dismissedState.dismissedSuggestions.find(
       (d: any) =>
@@ -179,6 +181,68 @@ export function filterDismissedRecommendations(
         d.habitId === rec.habitId &&
         new Date(d.dismissedAt) > sevenDaysAgo
     );
-    return !dismissed;
+
+    if (!dismissed) return true;
+
+    // If snoozed, check if snooze period has expired
+    if (dismissed.snoozedUntil) {
+      return new Date(dismissed.snoozedUntil) < now;
+    }
+
+    // Otherwise it's permanently dismissed
+    return false;
   });
+}
+
+/**
+ * Create coach suggestions with primary/secondary split and noise control
+ * @param recommendations - All filtered recommendations
+ * @param coachState - User's habitsCoachState JSON
+ * @returns Coach suggestions with primary + max 2 secondary
+ */
+export function createCoachSuggestions(
+  recommendations: HabitRecommendation[],
+  coachState: HabitsCoachState | null
+): CoachSuggestions {
+  if (recommendations.length === 0) {
+    return {
+      primary: null,
+      secondary: [],
+    };
+  }
+
+  const now = new Date();
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // Check if we showed a primary suggestion in the last 24 hours (noise control)
+  let canShowPrimary = true;
+  if (coachState?.lastPrimarySuggestion) {
+    const lastPrimaryTime = new Date(coachState.lastPrimarySuggestion.timestamp);
+    if (lastPrimaryTime > twentyFourHoursAgo) {
+      canShowPrimary = false;
+    }
+  }
+
+  // Priority 1 recommendations become primary (if noise control allows)
+  const priority1 = recommendations.filter((r) => r.priority === 1);
+  const priority2Plus = recommendations.filter((r) => r.priority >= 2);
+
+  let primary: HabitRecommendation | null = null;
+  let secondary: HabitRecommendation[] = [];
+
+  if (canShowPrimary && priority1.length > 0) {
+    // Show first priority 1 as primary
+    primary = priority1[0];
+    // Remaining priority 1s + priority 2s become secondary (max 2)
+    secondary = [...priority1.slice(1), ...priority2Plus].slice(0, 2);
+  } else {
+    // Can't show primary due to noise control, or no priority 1 recommendations
+    // Show all as secondary (max 2)
+    secondary = recommendations.slice(0, 2);
+  }
+
+  return {
+    primary,
+    secondary,
+  };
 }

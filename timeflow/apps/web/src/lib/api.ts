@@ -31,6 +31,7 @@ import type {
   HabitSkipReason,
   HabitCompletionResponse,
   HabitInsightsSummary,
+  DismissCoachSuggestionRequest,
   EmailInboxResponse,
   FullEmailMessage,
   SendEmailRequest,
@@ -474,20 +475,10 @@ export async function adjustHabitWindow(habitId: string, newPreferredTime: strin
 /**
  * Dismiss a coach suggestion.
  */
-export async function dismissCoachSuggestion(suggestionId: string): Promise<{ success: boolean }> {
+export async function dismissCoachSuggestion(req: DismissCoachSuggestionRequest): Promise<{ success: boolean }> {
   return request<{ success: boolean }>('/habits/coach/dismiss', {
     method: 'POST',
-    body: JSON.stringify({ suggestionId }),
-  });
-}
-
-/**
- * Snooze a coach suggestion.
- */
-export async function snoozeCoachSuggestion(suggestionId: string, snoozedUntil: string): Promise<{ success: boolean }> {
-  return request<{ success: boolean }>('/habits/coach/snooze', {
-    method: 'POST',
-    body: JSON.stringify({ suggestionId, snoozedUntil }),
+    body: JSON.stringify(req),
   });
 }
 

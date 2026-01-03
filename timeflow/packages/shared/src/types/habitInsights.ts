@@ -3,7 +3,7 @@
  * Shared types for habit insights and analytics
  */
 
-import type { HabitRecommendation } from './habitRecommendation.js';
+import type { HabitRecommendation, CoachSuggestions } from './habitRecommendation.js';
 
 /**
  * Streak metrics for a habit
@@ -65,6 +65,7 @@ export interface HabitInsightsSummary {
   totalMinutesScheduled: number;
   totalMinutesCompleted: number;
   habits: PerHabitInsights[];
-  recommendations: HabitRecommendation[]; // Rules-based recommendations
+  recommendations: HabitRecommendation[]; // All rules-based recommendations
+  coachSuggestions: CoachSuggestions;     // Primary + secondary split with noise control
   generatedAt: string;   // ISO timestamp
 }

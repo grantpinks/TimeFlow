@@ -6,12 +6,13 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
+import { prisma } from '../config/prisma.js';
 import * as habitService from '../services/habitService.js';
 import * as habitSuggestionService from '../services/habitSuggestionService.js';
 import * as habitCompletionService from '../services/habitCompletionService.js';
 import * as habitInsightsService from '../services/habitInsightsService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
-import { HabitSkipReason } from '@timeflow/shared';
+import { HabitSkipReason, type DismissCoachSuggestionRequest } from '@timeflow/shared';
 
 const createHabitSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(100, 'Title too long'),
@@ -380,6 +381,75 @@ export async function getHabitInsights(
     request.log.error(error, 'Failed to get habit insights');
     return reply.status(500).send({
       error: error instanceof Error ? error.message : 'Failed to fetch habit insights',
+    });
+  }
+}
+
+const dismissSuggestionSchema = z.object({
+  type: z.string(),
+  habitId: z.string(),
+  snoozedUntil: z.string().optional(),
+});
+
+/**
+ * POST /api/habits/coach/dismiss
+ * Dismisses or snoozes a coach suggestion
+ */
+export async function dismissCoachSuggestion(
+  request: FastifyRequest<{ Body: DismissCoachSuggestionRequest }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = dismissSuggestionSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const { type, habitId, snoozedUntil } = parsed.data;
+
+  try {
+    // Get current coach state
+    const currentUser = await prisma.user.findUnique({ where: { id: user.id } });
+    if (!currentUser) {
+      return reply.status(404).send({ error: 'User not found' });
+    }
+
+    const coachState = (currentUser.habitsCoachState as any) || {
+      dismissedSuggestions: [],
+      lastPrimarySuggestion: null,
+    };
+
+    // Add to dismissed suggestions
+    const dismissedEntry = {
+      type,
+      habitId,
+      dismissedAt: new Date().toISOString(),
+      snoozedUntil: snoozedUntil || null,
+    };
+
+    // Remove any existing dismissed entry for this type/habitId combination
+    coachState.dismissedSuggestions = coachState.dismissedSuggestions.filter(
+      (d: any) => !(d.type === type && d.habitId === habitId)
+    );
+
+    // Add new dismissed entry
+    coachState.dismissedSuggestions.push(dismissedEntry);
+
+    // Update user's coach state
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { habitsCoachState: coachState },
+    });
+
+    return reply.send({ success: true });
+  } catch (error) {
+    request.log.error(error, 'Failed to dismiss coach suggestion');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to dismiss suggestion',
     });
   }
 }

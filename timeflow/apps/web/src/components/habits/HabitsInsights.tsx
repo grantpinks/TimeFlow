@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
 import { getHabitInsights } from '@/lib/api';
+import { CoachCard } from './CoachCard';
 import { Recommendations } from './Recommendations';
 import type { HabitInsightsSummary, PerHabitInsights, HabitRecommendation } from '@timeflow/shared';
 
@@ -112,10 +113,17 @@ export function HabitsInsights() {
         </div>
       </div>
 
-      {/* Recommendations */}
-      {insights.recommendations && insights.recommendations.length > 0 && (
+      {/* Coach Card - Primary Suggestion */}
+      <CoachCard
+        primary={insights.coachSuggestions.primary}
+        onActionClick={handleRecommendationAction}
+        onDismiss={loadInsights} // Reload insights after dismissing
+      />
+
+      {/* Secondary Recommendations */}
+      {insights.coachSuggestions.secondary && insights.coachSuggestions.secondary.length > 0 && (
         <Recommendations
-          recommendations={insights.recommendations}
+          recommendations={insights.coachSuggestions.secondary}
           onActionClick={handleRecommendationAction}
         />
       )}
