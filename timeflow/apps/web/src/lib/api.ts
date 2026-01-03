@@ -30,6 +30,7 @@ import type {
   HabitSuggestionsResponse,
   HabitSkipReason,
   HabitCompletionResponse,
+  HabitInsightsSummary,
   EmailInboxResponse,
   FullEmailMessage,
   SendEmailRequest,
@@ -446,7 +447,7 @@ export async function skipHabitInstance(
 /**
  * Get habit insights for the user.
  */
-export async function getHabitInsights(days: 14 | 28 = 14): Promise<any> {
+export async function getHabitInsights(days: 14 | 28 = 14): Promise<HabitInsightsSummary> {
   return request(`/habits/insights?days=${days}`);
 }
 

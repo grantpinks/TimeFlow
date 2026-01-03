@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Panel, SectionHeader, EmptyState } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
+import { HabitsInsights } from '@/components/habits/HabitsInsights';
 import type { Habit, HabitFrequency, TimeOfDay } from '@timeflow/shared';
 
 export default function HabitsPage() {
@@ -151,7 +152,7 @@ export default function HabitsPage() {
       <div className="max-w-4xl mx-auto space-y-6">
         <SectionHeader
           title="Habits"
-          subtitle="Build better routines (scheduling coming soon)"
+          subtitle="Track your progress and build better routines"
           count={habits.length}
           actions={
             <button
@@ -162,6 +163,9 @@ export default function HabitsPage() {
             </button>
           }
         />
+
+        {/* Insights Dashboard */}
+        {habits.length > 0 && <HabitsInsights />}
 
         {/* Add Habit Form */}
         {showAdd && (
@@ -289,6 +293,15 @@ export default function HabitsPage() {
               </div>
             </div>
           </Panel>
+        )}
+
+        {/* Habits Management Section */}
+        {habits.length > 0 && (
+          <div className="pt-6 border-t border-slate-200">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+              Manage Habits
+            </h2>
+          </div>
         )}
 
         {/* Habits List */}

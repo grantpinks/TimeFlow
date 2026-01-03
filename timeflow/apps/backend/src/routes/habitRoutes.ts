@@ -37,6 +37,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     habitController.getHabits
   );
 
+  // GET /api/habits/insights - Get habit insights and analytics
+  server.get(
+    '/habits/insights',
+    { preHandler: requireAuth },
+    habitController.getHabitInsights
+  );
+
   // POST /api/habits - Create a new habit
   server.post(
     '/habits',

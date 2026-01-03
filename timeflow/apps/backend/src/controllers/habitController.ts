@@ -9,6 +9,7 @@ import { z } from 'zod';
 import * as habitService from '../services/habitService.js';
 import * as habitSuggestionService from '../services/habitSuggestionService.js';
 import * as habitCompletionService from '../services/habitCompletionService.js';
+import * as habitInsightsService from '../services/habitInsightsService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { HabitSkipReason } from '@timeflow/shared';
 
@@ -344,6 +345,41 @@ export async function skipHabitInstance(
     request.log.error(error, 'Failed to skip habit instance');
     return reply.status(400).send({
       error: error instanceof Error ? error.message : 'Failed to skip habit instance',
+    });
+  }
+}
+
+const habitInsightsQuerySchema = z.object({
+  days: z.enum(['14', '28']).optional(),
+});
+
+/**
+ * GET /api/habits/insights?days=14|28
+ * Returns habit insights and analytics for the authenticated user.
+ */
+export async function getHabitInsights(
+  request: FastifyRequest<{ Querystring: { days?: '14' | '28' } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = habitInsightsQuerySchema.safeParse(request.query);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const days = parsed.data.days ? parseInt(parsed.data.days, 10) as 14 | 28 : 14;
+
+  try {
+    const insights = await habitInsightsService.getHabitInsights(user.id, days);
+    return reply.send(insights);
+  } catch (error) {
+    request.log.error(error, 'Failed to get habit insights');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to fetch habit insights',
     });
   }
 }
