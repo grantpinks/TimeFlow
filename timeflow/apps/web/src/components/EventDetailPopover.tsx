@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import type { Task, CategoryTrainingExampleSnapshot } from '@timeflow/shared';
+import type { Task, CategoryTrainingExampleSnapshot, HabitSkipReason } from '@timeflow/shared';
 
 interface Category {
   id: string;
@@ -28,6 +28,16 @@ interface EventDetailPopoverProps {
     description?: string;
     isTask: boolean;
     task?: Task;
+    isHabit?: boolean;
+    scheduledHabitId?: string;
+    habitCompletion?: {
+      status: 'completed' | 'skipped';
+      reasonCode?: string;
+    };
+    habitStreak?: {
+      current: number;
+      atRisk: boolean;
+    };
     categoryColor?: string;
     categoryName?: string;
     categoryId?: string;
@@ -44,6 +54,9 @@ interface EventDetailPopoverProps {
     categoryId: string,
     training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot }
   ) => Promise<void>;
+  onHabitComplete?: (scheduledHabitId: string) => Promise<void>;
+  onHabitUndo?: (scheduledHabitId: string) => Promise<void>;
+  onHabitSkip?: (scheduledHabitId: string, reasonCode: HabitSkipReason) => Promise<void>;
 }
 
 export function EventDetailPopover({
@@ -57,12 +70,20 @@ export function EventDetailPopover({
   onUnschedule,
   onDelete,
   onCategoryChange,
+  onHabitComplete,
+  onHabitUndo,
+  onHabitSkip,
 }: EventDetailPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const [changingCategory, setChangingCategory] = useState(false);
   const [useTraining, setUseTraining] = useState(false);
   const [showTrainingInfo, setShowTrainingInfo] = useState(false);
+
+  // Habit completion state
+  const [habitActionLoading, setHabitActionLoading] = useState(false);
+  const [showSkipReasons, setShowSkipReasons] = useState(false);
+  const [habitError, setHabitError] = useState<string | null>(null);
 
   // Close on Escape key
   useEffect(() => {
@@ -96,8 +117,67 @@ export function EventDetailPopover({
     if (isOpen) {
       setUseTraining(false);
       setShowTrainingInfo(false);
+      setShowSkipReasons(false);
+      setHabitError(null);
+      setHabitActionLoading(false);
     }
   }, [isOpen, event?.id]);
+
+  // Habit action handlers
+  const handleHabitComplete = async () => {
+    if (!event?.scheduledHabitId || !onHabitComplete) return;
+    setHabitActionLoading(true);
+    setHabitError(null);
+    try {
+      await onHabitComplete(event.scheduledHabitId);
+      onClose();
+    } catch (error) {
+      setHabitError(error instanceof Error ? error.message : 'Failed to complete habit');
+    } finally {
+      setHabitActionLoading(false);
+    }
+  };
+
+  const handleHabitUndo = async () => {
+    if (!event?.scheduledHabitId || !onHabitUndo) return;
+    setHabitActionLoading(true);
+    setHabitError(null);
+    try {
+      await onHabitUndo(event.scheduledHabitId);
+      onClose();
+    } catch (error) {
+      setHabitError(error instanceof Error ? error.message : 'Failed to undo habit');
+    } finally {
+      setHabitActionLoading(false);
+    }
+  };
+
+  const handleHabitSkip = async (reasonCode: HabitSkipReason) => {
+    if (!event?.scheduledHabitId || !onHabitSkip) return;
+    setHabitActionLoading(true);
+    setHabitError(null);
+    try {
+      await onHabitSkip(event.scheduledHabitId, reasonCode);
+      setShowSkipReasons(false);
+      onClose();
+    } catch (error) {
+      setHabitError(error instanceof Error ? error.message : 'Failed to skip habit');
+    } finally {
+      setHabitActionLoading(false);
+    }
+  };
+
+  const skipReasons: Array<{ code: HabitSkipReason; label: string }> = [
+    { code: 'NO_TIME' as HabitSkipReason, label: 'No time / too busy' },
+    { code: 'LOW_ENERGY' as HabitSkipReason, label: 'Low energy / not feeling well' },
+    { code: 'SCHEDULE_CHANGED' as HabitSkipReason, label: 'Schedule changed unexpectedly' },
+    { code: 'TRAVEL' as HabitSkipReason, label: 'Travel / away from routine' },
+    { code: 'FORGOT' as HabitSkipReason, label: 'Forgot' },
+    { code: 'NOT_PRIORITY' as HabitSkipReason, label: 'Not a priority today' },
+    { code: 'BLOCKED' as HabitSkipReason, label: 'Blocked by something' },
+    { code: 'INJURY_RECOVERY' as HabitSkipReason, label: 'Injury / recovery' },
+    { code: 'OTHER' as HabitSkipReason, label: 'Other' },
+  ];
 
   if (!event) return null;
 
@@ -225,7 +305,7 @@ export function EventDetailPopover({
                 </h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-xs text-slate-600">
-                    {event.isTask ? 'Task' : 'Event'}
+                    {event.isTask ? 'Task' : event.isHabit ? 'Habit' : 'Event'}
                   </span>
                   {event.categoryName && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
@@ -400,6 +480,104 @@ export function EventDetailPopover({
                   </button>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Habit Actions */}
+          {event.isHabit && event.scheduledHabitId && (onHabitComplete || onHabitUndo || onHabitSkip) && (
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+              {/* Streak context */}
+              {event.habitStreak && (
+                <div className="mb-3 p-2 bg-white rounded-lg border border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-slate-700">Current streak</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-semibold text-primary-600">{event.habitStreak.current} days</span>
+                      {event.habitStreak.atRisk && (
+                        <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 border border-orange-200">
+                          At risk
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {event.habitStreak.atRisk && (
+                    <p className="text-xs text-orange-600 mt-1">Complete today to keep your streak alive!</p>
+                  )}
+                </div>
+              )}
+
+              {/* Error message */}
+              {habitError && (
+                <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-xs text-red-700">{habitError}</p>
+                </div>
+              )}
+
+              {/* Skip reasons dropdown */}
+              {showSkipReasons ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-700">Why are you skipping?</p>
+                  <div className="grid gap-1">
+                    {skipReasons.map((reason) => (
+                      <button
+                        key={reason.code}
+                        onClick={() => handleHabitSkip(reason.code)}
+                        disabled={habitActionLoading}
+                        className="px-3 py-2 text-xs text-left text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {reason.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => setShowSkipReasons(false)}
+                    className="w-full px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Complete or Undo button */}
+                  {event.habitCompletion?.status === 'completed' || event.habitCompletion?.status === 'skipped' ? (
+                    <button
+                      onClick={handleHabitUndo}
+                      disabled={habitActionLoading}
+                      className="px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                      </svg>
+                      Undo
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleHabitComplete}
+                      disabled={habitActionLoading}
+                      className="px-3 py-2 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {habitActionLoading ? 'Completing...' : 'Complete'}
+                    </button>
+                  )}
+
+                  {/* Skip button */}
+                  {!event.habitCompletion && (
+                    <button
+                      onClick={() => setShowSkipReasons(true)}
+                      disabled={habitActionLoading}
+                      className="px-3 py-2 text-xs font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      Skip
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </motion.div>
