@@ -8,7 +8,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../config/prisma.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
-import type { DailyMeetingConfig } from '@timeflow/shared';
+import type { DailyMeetingConfig, EmailAccount } from '@timeflow/shared';
 
 const dayScheduleSchema = z.object({
   wakeTime: z.string().regex(/^\d{2}:\d{2}$/, 'wakeTime must be HH:mm'),
@@ -98,6 +98,43 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     blockedDaysOfWeek: record.blockedDaysOfWeek || [],
     dailyMeetingSchedule: record.dailyMeetingSchedule || null,
   };
+}
+
+/**
+ * GET /api/user/email-accounts
+ * Returns connected email accounts for the authenticated user.
+ */
+export async function getEmailAccounts(request: FastifyRequest, reply: FastifyReply) {
+  const user = request.user;
+
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const record = await prisma.user.findUnique({
+    where: { id: user.id },
+  });
+
+  if (!record) {
+    return reply.status(404).send({ error: 'User not found' });
+  }
+
+  const hasGoogleAuth = Boolean(record.googleRefreshToken || record.googleAccessToken);
+
+  const accounts: EmailAccount[] = hasGoogleAuth
+    ? [
+        {
+          id: `google:${record.email}`,
+          provider: 'google',
+          email: record.email,
+          name: record.name,
+          connected: hasGoogleAuth,
+          primary: true,
+        },
+      ]
+    : [];
+
+  return { accounts };
 }
 
 interface DaySchedule {

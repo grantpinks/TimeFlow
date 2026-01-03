@@ -8,7 +8,9 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import * as habitService from '../services/habitService.js';
 import * as habitSuggestionService from '../services/habitSuggestionService.js';
+import * as habitCompletionService from '../services/habitCompletionService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
+import { HabitSkipReason } from '@timeflow/shared';
 
 const createHabitSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(100, 'Title too long'),
@@ -232,4 +234,116 @@ export async function rejectHabitSuggestion(
 
   // Rejection is just a client-side state update - no backend persistence needed
   return reply.send({ success: true });
+}
+
+const skipHabitSchema = z.object({
+  reasonCode: z.nativeEnum(HabitSkipReason),
+});
+
+/**
+ * POST /api/habits/instances/:scheduledHabitId/complete
+ * Marks a scheduled habit instance as complete.
+ */
+export async function completeHabitInstance(
+  request: FastifyRequest<{ Params: { scheduledHabitId: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const { scheduledHabitId } = request.params;
+
+  try {
+    const completion = await habitCompletionService.markScheduledHabitComplete(
+      user.id,
+      scheduledHabitId
+    );
+    return reply.send({
+      success: true,
+      completion: {
+        id: completion.id,
+        status: completion.status,
+        completedAt: completion.completedAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    request.log.error(error, 'Failed to complete habit instance');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to complete habit instance',
+    });
+  }
+}
+
+/**
+ * POST /api/habits/instances/:scheduledHabitId/undo
+ * Undoes a completed or skipped habit instance.
+ */
+export async function undoHabitInstance(
+  request: FastifyRequest<{ Params: { scheduledHabitId: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const { scheduledHabitId } = request.params;
+
+  try {
+    const result = await habitCompletionService.undoScheduledHabitComplete(
+      user.id,
+      scheduledHabitId
+    );
+    return reply.send(result);
+  } catch (error) {
+    request.log.error(error, 'Failed to undo habit instance');
+    return reply.status(400).send({
+      error: error instanceof Error ? error.message : 'Failed to undo habit instance',
+    });
+  }
+}
+
+/**
+ * POST /api/habits/instances/:scheduledHabitId/skip
+ * Skips a scheduled habit instance with a reason code.
+ */
+export async function skipHabitInstance(
+  request: FastifyRequest<{ Params: { scheduledHabitId: string }; Body: { reasonCode: HabitSkipReason } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const { scheduledHabitId } = request.params;
+
+  const parsed = skipHabitSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  try {
+    const completion = await habitCompletionService.skipScheduledHabit(
+      user.id,
+      scheduledHabitId,
+      parsed.data.reasonCode
+    );
+    return reply.send({
+      success: true,
+      completion: {
+        id: completion.id,
+        status: completion.status,
+        reasonCode: completion.reasonCode,
+        completedAt: completion.completedAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    request.log.error(error, 'Failed to skip habit instance');
+    return reply.status(400).send({
+      error: error instanceof Error ? error.message : 'Failed to skip habit instance',
+    });
+  }
 }

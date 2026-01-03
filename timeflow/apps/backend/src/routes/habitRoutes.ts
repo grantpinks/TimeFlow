@@ -57,4 +57,25 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     { preHandler: requireAuth },
     habitController.deleteHabit
   );
+
+  // POST /api/habits/instances/:scheduledHabitId/complete - Mark habit instance complete
+  server.post(
+    '/habits/instances/:scheduledHabitId/complete',
+    { preHandler: requireAuth },
+    habitController.completeHabitInstance
+  );
+
+  // POST /api/habits/instances/:scheduledHabitId/undo - Undo habit instance
+  server.post(
+    '/habits/instances/:scheduledHabitId/undo',
+    { preHandler: requireAuth },
+    habitController.undoHabitInstance
+  );
+
+  // POST /api/habits/instances/:scheduledHabitId/skip - Skip habit instance with reason
+  server.post(
+    '/habits/instances/:scheduledHabitId/skip',
+    { preHandler: requireAuth },
+    habitController.skipHabitInstance
+  );
 }

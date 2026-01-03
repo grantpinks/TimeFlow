@@ -11,6 +11,11 @@ import { requireAuth } from '../middlewares/auth.js';
 export async function registerUserRoutes(server: FastifyInstance) {
   // Get current user
   server.get('/user/me', { preHandler: requireAuth }, userController.getMe);
+  server.get(
+    '/user/email-accounts',
+    { preHandler: requireAuth },
+    userController.getEmailAccounts
+  );
 
   // Update preferences
   server.patch(
@@ -19,4 +24,3 @@ export async function registerUserRoutes(server: FastifyInstance) {
     userController.updatePreferences
   );
 }
-

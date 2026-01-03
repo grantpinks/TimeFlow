@@ -26,6 +26,7 @@ model User {
   dailyScheduleConstraints   Json?
   sidebarNavOrder            String[]            @default([])
   inboxViews                 Json?
+  habitsCoachState           Json?               // { dismissedSuggestions: [{type, habitId, dismissedAt, snoozedUntil}], lastPrimarySuggestion: {...} }
 
   // Meeting-specific availability preferences
   meetingStartTime           String?             // HH:mm - default earliest meeting time
@@ -44,10 +45,13 @@ model User {
   gmailLabelSyncState        GmailLabelSyncState?
   habits                     Habit[]
   scheduledHabits            ScheduledHabit[]
+  habitCompletions           HabitCompletion[]
+  habitActionHistory         HabitActionHistory[]
   tasks                      Task[]
   schedulingLinks            SchedulingLink[]
   meetings                   Meeting[]
   appleCalendarAccount       AppleCalendarAccount?
+  writingVoiceProfile        WritingVoiceProfile?
 }
 
 model Task {
@@ -140,25 +144,26 @@ model EventCategorization {
 }
 
 model Habit {
-  id                 String           @id @default(cuid())
+  id                 String            @id @default(cuid())
   userId             String
   title              String
   description        String?
   frequency          String
   daysOfWeek         String[]
   preferredTimeOfDay String?
-  durationMinutes    Int              @default(30)
-  isActive           Boolean          @default(true)
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  user               User             @relation(fields: [userId], references: [id])
+  durationMinutes    Int               @default(30)
+  isActive           Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  user               User              @relation(fields: [userId], references: [id])
   scheduledHabits    ScheduledHabit[]
+  completions        HabitCompletion[]
 
   @@index([userId])
 }
 
 model ScheduledHabit {
-  id                 String   @id @default(cuid())
+  id                 String           @id @default(cuid())
   habitId            String
   userId             String
   provider           String
@@ -166,16 +171,52 @@ model ScheduledHabit {
   eventId            String
   startDateTime      DateTime
   endDateTime        DateTime
-  status             String   @default("scheduled")
-  lastSyncedAt       DateTime @default(now())
-  blocksAvailability Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  habit              Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  user               User     @relation(fields: [userId], references: [id])
+  status             String           @default("scheduled")
+  lastSyncedAt       DateTime         @default(now())
+  blocksAvailability Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  habit              Habit            @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  user               User             @relation(fields: [userId], references: [id])
+  completion         HabitCompletion?
 
   @@index([habitId])
   @@index([userId])
+}
+
+model HabitCompletion {
+  id               String         @id @default(cuid())
+  userId           String
+  habitId          String
+  scheduledHabitId String         @unique
+  status           String         // 'completed' | 'skipped'
+  reasonCode       String?        // Required if skipped; from HabitSkipReason enum
+  completedAt      DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  habit          Habit          @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  scheduledHabit ScheduledHabit @relation(fields: [scheduledHabitId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, habitId])
+  @@index([scheduledHabitId])
+}
+
+model HabitActionHistory {
+  id            String   @id @default(cuid())
+  userId        String
+  actionType    String   // 'complete' | 'skip' | 'reschedule_block' | 'adjust_window'
+  entityId      String   // scheduledHabitId or habitId
+  previousState Json?    // For undo
+  newState      Json
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime // Undo available for 24h
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
 }
 
 model AppliedSchedule {
@@ -368,4 +409,30 @@ model EmailCategoryOverride {
   @@unique([userId, overrideType, overrideValue])
   @@index([userId])
   @@index([overrideType, overrideValue])
+}
+
+model WritingVoiceProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+
+  // Voice preferences (1-10 scale, 5 = neutral)
+  formality         Int      @default(5)  // 1=casual, 10=professional
+  length            Int      @default(5)  // 1=concise, 10=detailed
+  tone              Int      @default(5)  // 1=friendly, 10=formal
+
+  // Advanced: user writing samples
+  voiceSamples      String?  // Optional: 2-3 example emails
+
+  // Usage tracking (for future quotas)
+  aiDraftsGenerated Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+
+  // TODO: Post-beta - Add monthly quota limits per subscription tier
+  // TODO: Post-beta - Add profile variants (work/personal contexts)
 }

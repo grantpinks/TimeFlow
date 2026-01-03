@@ -92,3 +92,96 @@ export interface SendEmailResponse {
   messageId?: string;
   threadId?: string;
 }
+
+/**
+ * Writing voice preferences (1-10 scale)
+ * Used for AI email draft generation
+ */
+export interface WritingVoicePreferences {
+  formality?: number;  // 1=casual, 10=professional
+  length?: number;     // 1=concise, 10=detailed
+  tone?: number;       // 1=friendly, 10=formal
+}
+
+/**
+ * Request to generate AI email draft
+ */
+export interface EmailDraftRequest {
+  emailId: string;                          // Original email to reply to
+  voicePreferences?: WritingVoicePreferences;  // Optional overrides
+  additionalContext?: string;                // User instructions
+}
+
+/**
+ * Response from AI email draft generation
+ */
+export interface EmailDraftResponse {
+  draftText: string;                        // Plain text draft
+  to: string;                               // Recipient email
+  subject: string;                          // Re: [original subject]
+  cc?: string;                              // If reply-all
+  metadata: {
+    generatedAt: string;                    // ISO timestamp
+    modelUsed: string;                      // "gpt-4o" or "llama3.2"
+  };
+}
+
+/**
+ * Request to generate email preview
+ */
+export interface EmailPreviewRequest {
+  draftText: string;                        // User's edited draft
+  to: string;
+  subject: string;
+  cc?: string;
+  inReplyTo?: string;                       // Original email ID
+  threadId?: string;                        // Gmail thread ID
+}
+
+/**
+ * Response from email preview generation
+ */
+export interface EmailPreviewResponse {
+  htmlPreview: string;                      // Formatted HTML email
+  textPreview: string;                      // Plain text version
+  determinismToken: string;                 // SHA-256 hash for validation
+  previewedAt: string;                      // ISO timestamp
+}
+
+/**
+ * Request to create draft or send email
+ */
+export interface CreateDraftRequest {
+  action: 'send' | 'create_draft';
+  htmlPreview: string;                      // From preview response
+  textPreview: string;                      // From preview response
+  determinismToken: string;                 // Must match preview token
+  to: string;
+  subject: string;
+  cc?: string;
+  inReplyTo?: string;
+  threadId?: string;
+  confirmed: boolean;                       // MUST be true (checkbox)
+}
+
+/**
+ * Response from creating draft or sending email
+ */
+export interface CreateDraftResponse {
+  success: boolean;
+  messageId?: string;                       // Gmail message ID (for send)
+  threadId?: string;                        // Gmail thread ID (for send)
+  draftId?: string;                         // Gmail draft ID (for create_draft)
+  gmailUrl?: string;                        // Gmail URL (for create_draft)
+}
+
+/**
+ * Writing voice profile data
+ */
+export interface WritingVoiceProfile {
+  formality: number;                        // 1-10
+  length: number;                           // 1-10
+  tone: number;                             // 1-10
+  voiceSamples: string | null;              // Writing examples
+  aiDraftsGenerated: number;                // Usage counter
+}

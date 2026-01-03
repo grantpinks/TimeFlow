@@ -482,3 +482,81 @@ export async function archiveEmail(userId: string, emailId: string): Promise<voi
     },
   });
 }
+
+/**
+ * Create a Gmail draft
+ * Sprint 16 Phase B+: AI Email Draft Workflow
+ */
+export async function createGmailDraft(
+  userId: string,
+  request: {
+    to: string;
+    subject: string;
+    htmlBody: string;
+    textBody: string;
+    cc?: string;
+    inReplyTo?: string;
+    threadId?: string;
+  }
+): Promise<{ draftId: string; gmailUrl: string }> {
+  assertWithinGmailRateLimit(userId);
+  const gmail = await getGmailClient(userId);
+
+  // Build RFC 2822 multipart/alternative message
+  const boundary = `boundary_draft_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  const messageParts = [
+    `To: ${request.to}`,
+    `Subject: ${request.subject}`,
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    'MIME-Version: 1.0',
+  ];
+
+  if (request.cc) {
+    messageParts.push(`Cc: ${request.cc}`);
+  }
+
+  if (request.inReplyTo) {
+    messageParts.push(`In-Reply-To: ${request.inReplyTo}`);
+    messageParts.push(`References: ${request.inReplyTo}`);
+  }
+
+  messageParts.push('');
+  messageParts.push(`--${boundary}`);
+  messageParts.push('Content-Type: text/plain; charset=utf-8');
+  messageParts.push('');
+  messageParts.push(request.textBody);
+  messageParts.push('');
+  messageParts.push(`--${boundary}`);
+  messageParts.push('Content-Type: text/html; charset=utf-8');
+  messageParts.push('');
+  messageParts.push(request.htmlBody);
+  messageParts.push('');
+  messageParts.push(`--${boundary}--`);
+
+  const message = messageParts.join('\r\n');
+  const encodedMessage = Buffer.from(message)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  const draftOptions: any = {
+    userId: 'me',
+    requestBody: {
+      message: {
+        raw: encodedMessage,
+      },
+    },
+  };
+
+  if (request.threadId) {
+    draftOptions.requestBody.message.threadId = request.threadId;
+  }
+
+  const response = await gmail.users.drafts.create(draftOptions);
+
+  const draftId = response.data.id!;
+  const gmailUrl = `https://mail.google.com/mail/u/0/#drafts?compose=${draftId}`;
+
+  return { draftId, gmailUrl };
+}

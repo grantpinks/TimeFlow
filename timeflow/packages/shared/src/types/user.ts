@@ -92,6 +92,17 @@ export interface UserPreferencesUpdate {
   dailyMeetingSchedule?: DailyMeetingConfig | null;
 }
 
+export type EmailAccountProvider = 'google';
+
+export interface EmailAccount {
+  id: string;
+  provider: EmailAccountProvider;
+  email: string;
+  name?: string | null;
+  connected: boolean;
+  primary: boolean;
+}
+
 /**
  * Auth session payload (minimal for MVP).
  */

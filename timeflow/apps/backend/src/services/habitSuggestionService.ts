@@ -136,7 +136,7 @@ export async function acceptSuggestion(
 
   // Create Google Calendar event
   const calendarId = user.defaultCalendarId || 'primary';
-  const eventId = await calendarService.createEvent(userId, calendarId, {
+  const { eventId } = await calendarService.createEvent(userId, calendarId, {
     summary: `[Habit] ${habit.title}`,
     description: habit.description || undefined,
     start,

@@ -111,7 +111,7 @@ export async function scheduleTasksForUser(
     if (!task) continue;
 
     // Create calendar event
-    const eventId = await calendarService.createEvent(userId, calendarId, {
+    const { eventId } = await calendarService.createEvent(userId, calendarId, {
       summary: `[TimeFlow] ${task.title}`,
       description: task.description || undefined,
       start: block.start,
@@ -486,7 +486,7 @@ export async function applyScheduleBlocks(
       seenHabitKeys.add(habitKey);
       continue;
     }
-    const eventId = await calendarService.createEvent(userId, calendarId, {
+    const { eventId } = await calendarService.createEvent(userId, calendarId, {
       summary,
       description: 'Scheduled habit from TimeFlow',
       start: block.start,
@@ -574,7 +574,7 @@ export async function rescheduleTask(
     });
   } else {
     // Task is unscheduled - create new schedule
-    const eventId = await calendarService.createEvent(userId, calendarId, {
+    const { eventId } = await calendarService.createEvent(userId, calendarId, {
       summary: `[TimeFlow] ${task.title}`,
       description: task.description || undefined,
       start: startDateTime,
