@@ -14,10 +14,12 @@ import * as habitRecommendationService from './habitRecommendationService.js';
 
 /**
  * Get habit insights for a user
+ * @param asOfDate - Optional date to use as "today" for analysis (mainly for testing)
  */
 export async function getHabitInsights(
   userId: string,
-  days: 14 | 28 = 14
+  days: 14 | 28 = 14,
+  asOfDate?: Date
 ): Promise<HabitInsightsSummary> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
@@ -25,7 +27,7 @@ export async function getHabitInsights(
   }
 
   const userTz = user.timeZone || 'UTC';
-  const endDate = new Date();
+  const endDate = asOfDate || new Date();
   const startDate = new Date(endDate);
   startDate.setDate(startDate.getDate() - days);
 
@@ -79,7 +81,7 @@ export async function getHabitInsights(
     totalMinutesCompleted += minutesCompleted;
 
     // Calculate streak
-    const streak = calculateStreak(habit.id, userId, userTz, scheduledInstances);
+    const streak = calculateStreak(habit.id, userId, userTz, scheduledInstances, endDate);
 
     // Calculate best window
     const bestWindow = calculateBestWindow(scheduledInstances, userTz);
@@ -150,18 +152,21 @@ export async function getHabitInsights(
 /**
  * Calculate streak metrics for a habit
  * Streak = consecutive days with >= 1 completed instance
+ * @param asOfDate - The date to use as "today" for streak calculation
  */
 function calculateStreak(
   habitId: string,
   userId: string,
   userTz: string,
-  scheduledInstances: any[]
+  scheduledInstances: any[],
+  asOfDate: Date
 ): StreakMetrics {
   // Get all completions sorted by date (newest first)
+  // Use completedAt to determine which day the completion counts for (handles 11:59pm vs 12:01am)
   const completions = scheduledInstances
     .filter((si) => si.completion?.status === 'completed')
     .map((si) => ({
-      date: toUserDate(si.startDateTime, userTz),
+      date: toUserDate(si.completion.completedAt, userTz),
       completedAt: si.completion.completedAt,
     }))
     .sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
@@ -178,7 +183,7 @@ function calculateStreak(
   const lastCompleted = completions[0].completedAt.toISOString();
 
   // Calculate current streak (consecutive days from today backwards)
-  const today = toUserDate(new Date(), userTz);
+  const today = toUserDate(asOfDate, userTz);
   const completedDates = new Set(completions.map((c) => c.date));
 
   let currentStreak = 0;
@@ -323,12 +328,20 @@ function buildAdherenceSeries(
 
   // Fill in actual data
   for (const si of scheduledInstances) {
-    const dateStr = toUserDate(si.startDateTime, userTz);
-    const stats = series.get(dateStr);
-    if (stats) {
-      stats.scheduled++;
-      if (si.completion?.status === 'completed') {
-        stats.completed++;
+    // Use startDateTime for scheduled count (when it was scheduled)
+    const scheduledDateStr = toUserDate(si.startDateTime, userTz);
+    const scheduledStats = series.get(scheduledDateStr);
+    if (scheduledStats) {
+      scheduledStats.scheduled++;
+    }
+
+    // Use completedAt for completed count (when it was actually completed)
+    // This handles boundary cases like completing at 12:01am = next day
+    if (si.completion?.status === 'completed') {
+      const completedDateStr = toUserDate(si.completion.completedAt, userTz);
+      const completedStats = series.get(completedDateStr);
+      if (completedStats) {
+        completedStats.completed++;
       }
     }
   }

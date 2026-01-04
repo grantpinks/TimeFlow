@@ -11,6 +11,8 @@ import { Panel } from '@/components/ui';
 import { getHabitInsights } from '@/lib/api';
 import { CoachCard } from './CoachCard';
 import { Recommendations } from './Recommendations';
+import { StreakReminderBanner } from './StreakReminderBanner';
+import { MetricsTooltip } from './MetricsTooltip';
 import type { HabitInsightsSummary, PerHabitInsights, HabitRecommendation } from '@timeflow/shared';
 
 export function HabitsInsights() {
@@ -84,6 +86,9 @@ export function HabitsInsights() {
     );
   }
 
+  // Get habits with streaks at risk
+  const atRiskHabits = insights.habits.filter(h => h.streak.atRisk && h.streak.current > 0);
+
   return (
     <div className="space-y-6">
       {/* Period Selector */}
@@ -113,6 +118,23 @@ export function HabitsInsights() {
         </div>
       </div>
 
+      {/* Streak Reminder Banner */}
+      {atRiskHabits.length > 0 && (
+        <StreakReminderBanner
+          atRiskHabits={atRiskHabits}
+          onScheduleRescue={(habitId) => {
+            // TODO: Implement schedule rescue block
+            console.log('Schedule rescue for habit:', habitId);
+            alert('Schedule rescue block feature coming soon!');
+          }}
+          onCompleteNow={(habitId) => {
+            // TODO: Navigate to calendar/today page or open quick complete modal
+            console.log('Complete now for habit:', habitId);
+            alert('Quick complete feature coming soon!');
+          }}
+        />
+      )}
+
       {/* Coach Card - Primary Suggestion */}
       <CoachCard
         primary={insights.coachSuggestions.primary}
@@ -132,7 +154,10 @@ export function HabitsInsights() {
       <Panel>
         <div className="grid grid-cols-3 gap-6">
           <div>
-            <p className="text-sm text-slate-600 mb-1">Overall Adherence</p>
+            <div className="flex items-center gap-1 mb-1">
+              <p className="text-sm text-slate-600">Overall Adherence</p>
+              <MetricsTooltip type="adherence" />
+            </div>
             <p className="text-3xl font-bold text-primary-600">
               {Math.round(insights.overallAdherence * 100)}%
             </p>
@@ -190,7 +215,10 @@ function HabitInsightCard({ habit }: HabitInsightCardProps) {
             <div className="text-2xl font-bold text-primary-600">
               {adherencePercent}%
             </div>
-            <div className="text-xs text-slate-500">adherence</div>
+            <div className="flex items-center gap-1 justify-end">
+              <div className="text-xs text-slate-500">adherence</div>
+              <MetricsTooltip type="adherence" />
+            </div>
           </div>
         </div>
 
@@ -198,8 +226,11 @@ function HabitInsightCard({ habit }: HabitInsightCardProps) {
         {habit.streak.current > 0 && (
           <div className="flex items-center gap-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
             <div>
-              <div className="text-sm text-amber-800 font-medium">
-                {habit.streak.current} day streak
+              <div className="flex items-center gap-1">
+                <div className="text-sm text-amber-800 font-medium">
+                  {habit.streak.current} day streak
+                </div>
+                <MetricsTooltip type="streak" />
               </div>
               <div className="text-xs text-amber-600">
                 Best: {habit.streak.best} days
@@ -218,9 +249,10 @@ function HabitInsightCard({ habit }: HabitInsightCardProps) {
         {/* Best Window */}
         {habit.bestWindow && (
           <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-            <div className="text-sm text-green-800">
+            <div className="flex items-center gap-1 text-sm text-green-800">
               <span className="font-medium">Best window: </span>
-              {habit.bestWindow.dayOfWeek} {habit.bestWindow.timeSlot}
+              <span>{habit.bestWindow.dayOfWeek} {habit.bestWindow.timeSlot}</span>
+              <MetricsTooltip type="best-window" />
             </div>
             <div className="text-xs text-green-600 mt-1">
               {Math.round(habit.bestWindow.completionRate * 100)}% completion rate
