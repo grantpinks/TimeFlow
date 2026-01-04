@@ -16,6 +16,7 @@ import {
   scoreEmailCategoryWithFallback,
 } from './emailCategorizationService.js';
 import { applyCategoryOverride } from './emailOverrideService.js';
+import { getActionStateMap } from './emailActionStateService.js';
 import type { EmailInboxResponse, EmailMessage, FullEmailMessage, SendEmailRequest, SendEmailResponse, EmailAttachment } from '@timeflow/shared';
 
 function decodeGmailBody(data: string): string {
@@ -206,8 +207,14 @@ export async function getInboxMessages(
     }
   }
 
+  const threadIds = messages.map((message) => message.threadId ?? message.id);
+  const actionStateMap = await getActionStateMap(userId, threadIds);
+
   return {
-    messages,
+    messages: messages.map((message) => ({
+      ...message,
+      actionState: actionStateMap[message.threadId ?? message.id] ?? null,
+    })),
     nextPageToken: listResponse.data.nextPageToken || undefined,
   };
 }
@@ -270,6 +277,7 @@ export async function getFullEmail(userId: string, emailId: string): Promise<Ful
     snippet: message.snippet ?? undefined,
   });
 
+  const actionStateMap = await getActionStateMap(userId, [message.threadId ?? message.id]);
   const { body } = extractMessageBody(message.payload);
   const parts = message.payload?.parts || [message.payload];
 
@@ -304,6 +312,7 @@ export async function getFullEmail(userId: string, emailId: string): Promise<Ful
     isPromotional: labels.includes('CATEGORY_PROMOTIONS'),
     category,
     needsResponse: needsResponseResult.needsResponse,
+    actionState: actionStateMap[message.threadId ?? message.id] ?? null,
     attachments: attachments.length > 0 ? attachments : undefined,
   };
 }
@@ -429,14 +438,20 @@ export async function searchEmails(
       metadataHeaders: ['From', 'Subject', 'Importance'],
     });
 
-    const mapped = mapMessage(full.data);
+    const mapped = await mapMessage(userId, full.data);
     if (mapped) {
       messages.push(mapped);
     }
   }
 
+  const threadIds = messages.map((message) => message.threadId ?? message.id);
+  const actionStateMap = await getActionStateMap(userId, threadIds);
+
   return {
-    messages,
+    messages: messages.map((message) => ({
+      ...message,
+      actionState: actionStateMap[message.threadId ?? message.id] ?? null,
+    })),
     nextPageToken: listResponse.data.nextPageToken || undefined,
   };
 }

@@ -6,9 +6,9 @@ import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
-import type { EmailAccount, EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
+import type { EmailActionState, EmailAccount, EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
 import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
-import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle } from 'lucide-react';
+import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle, MessageSquare, Bookmark } from 'lucide-react';
 import Image from 'next/image';
 import DOMPurify from 'dompurify';
 import toast, { Toaster } from 'react-hot-toast';
@@ -33,6 +33,7 @@ export default function InboxPage() {
   const [showViewEditor, setShowViewEditor] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [needsResponseOnly, setNeedsResponseOnly] = useState(false);
+  const [queueFilter, setQueueFilter] = useState<'all' | EmailActionState>('all');
   const [categories, setCategories] = useState<EmailCategoryConfig[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [correctingEmailId, setCorrectingEmailId] = useState<string | null>(null);
@@ -351,6 +352,24 @@ export default function InboxPage() {
     }
   }
 
+  async function handleUpdateActionState(threadId: string, actionState: EmailActionState | null) {
+    const applyState = (message: EmailMessage) =>
+      (message.threadId || message.id) === threadId
+        ? { ...message, actionState }
+        : message;
+
+    setEmails((prev) => prev.map(applyState));
+    setServerSearchResults((prev) => prev.map(applyState));
+
+    try {
+      await api.updateEmailActionState(threadId, actionState);
+    } catch (error) {
+      console.error('Failed to update action state:', error);
+      toast.error('Failed to update queue. Please try again.');
+      fetchInbox();
+    }
+  }
+
   async function handleCreateTaskFromEmail(
     email: EmailMessage,
     options: { schedule?: boolean } = {}
@@ -537,6 +556,7 @@ export default function InboxPage() {
       views,
       selectedCategoryId,
       needsResponseOnly,
+      actionStateFilter: queueFilter === 'all' ? null : queueFilter,
     });
 
     if (searchMode === 'server') {
@@ -715,7 +735,7 @@ export default function InboxPage() {
                 }`}
                 style={{ fontFamily: "'Manrope', sans-serif" }}
               >
-                Needs Reply
+                Needs Response
               </button>
 
               <div className="h-6 w-px bg-[#e0e0e0] mx-1" />
@@ -741,6 +761,40 @@ export default function InboxPage() {
                 onDeleteView={handleDeleteView}
               />
             )}
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span
+                className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8b8b8b]"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              >
+                Queues
+              </span>
+              {(['all', 'needs_reply', 'read_later'] as const).map((queue) => {
+                const isActive = queueFilter === queue;
+                const label =
+                  queue === 'all'
+                    ? 'All'
+                    : queue === 'needs_reply'
+                      ? 'Needs Reply'
+                      : 'Read Later';
+
+                return (
+                  <button
+                    key={queue}
+                    type="button"
+                    onClick={() => setQueueFilter(queue)}
+                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] rounded-full border transition-all ${
+                      isActive
+                        ? 'border-[#0BAF9A] text-[#0BAF9A] bg-[#0BAF9A]/10'
+                        : 'border-[#0BAF9A]/30 text-[#0BAF9A] hover:bg-[#0BAF9A]/10'
+                    }`}
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
 
             <div className="mt-4 flex w-full items-center justify-between gap-4">
               <div className="inline-flex items-center rounded-full border-2 border-[#0BAF9A]/30 bg-white/80 shadow-[0_10px_30px_rgba(11,175,154,0.08)]">
@@ -837,6 +891,7 @@ export default function InboxPage() {
                     onClick={() => fetchThread(email.threadId || email.id)}
                     onToggleRead={handleToggleRead}
                     onArchive={handleArchive}
+                    onUpdateActionState={handleUpdateActionState}
                     categoryColor={getCategoryColor(email.category || '')}
                     categoryLabel={getCategoryLabel(email.category)}
                     formatTimestamp={formatTimestamp}
@@ -889,12 +944,14 @@ export default function InboxPage() {
                 categoryId={getCategoryId(selectedEmail?.category)}
                 categories={categories}
                 needsResponse={selectedEmail?.needsResponse}
+                actionState={selectedEmail?.actionState ?? null}
                 onCreateTask={handleCreateTaskFromEmail}
                 onDraftLabelSync={handleDraftLabelSync}
                 onDraftExplanation={handleDraftExplanation}
                 aiDraftLoading={aiDraftLoading}
                 onArchive={handleArchive}
                 onToggleRead={handleToggleRead}
+                onUpdateActionState={handleUpdateActionState}
                 isCorrecting={correctingEmailId === selectedEmail?.id}
                 onStartCorrect={() => setCorrectingEmailId(selectedEmail?.id || null)}
                 onCancelCorrect={() => setCorrectingEmailId(null)}
@@ -1138,6 +1195,7 @@ interface EmailListItemProps {
   onClick: () => void;
   onToggleRead: (emailId: string, currentIsRead: boolean) => void;
   onArchive: (emailId: string) => void;
+  onUpdateActionState: (threadId: string, actionState: EmailActionState | null) => void;
   categoryColor: string;
   categoryLabel: string;
   formatTimestamp: (date: string) => string;
@@ -1150,11 +1208,16 @@ function EmailListItem({
   onClick,
   onToggleRead,
   onArchive,
+  onUpdateActionState,
   categoryColor,
   categoryLabel,
   formatTimestamp,
   needsResponse,
 }: EmailListItemProps) {
+  const threadId = email.threadId || email.id;
+  const isNeedsReply = email.actionState === 'needs_reply';
+  const isReadLater = email.actionState === 'read_later';
+
   return (
     <div
       onClick={onClick}
@@ -1202,6 +1265,26 @@ function EmailListItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              onUpdateActionState(threadId, isNeedsReply ? null : 'needs_reply');
+            }}
+            className="p-1 hover:bg-white rounded"
+            title="Toggle Needs Reply queue"
+          >
+            <MessageSquare size={14} className={isNeedsReply ? 'text-[#F97316]' : 'text-[#666]'} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdateActionState(threadId, isReadLater ? null : 'read_later');
+            }}
+            className="p-1 hover:bg-white rounded"
+            title="Toggle Read Later queue"
+          >
+            <Bookmark size={14} className={isReadLater ? 'text-[#2563EB]' : 'text-[#666]'} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
               onArchive(email.id);
             }}
             className="p-1 hover:bg-white rounded"
@@ -1212,7 +1295,7 @@ function EmailListItem({
         </div>
       </div>
 
-      {(categoryLabel || needsResponse) && (
+      {(categoryLabel || needsResponse || email.actionState) && (
         <div className="mt-2 flex items-center gap-2">
           {categoryLabel && (
             <span
@@ -1235,7 +1318,31 @@ function EmailListItem({
                 fontFamily: "'Manrope', sans-serif"
               }}
             >
+              Needs Response
+            </span>
+          )}
+          {email.actionState === 'needs_reply' && (
+            <span
+              className="inline-block px-2 py-0.5 text-xs font-medium rounded-full"
+              style={{
+                backgroundColor: '#F9731620',
+                color: '#F97316',
+                fontFamily: "'Manrope', sans-serif",
+              }}
+            >
               Needs Reply
+            </span>
+          )}
+          {email.actionState === 'read_later' && (
+            <span
+              className="inline-block px-2 py-0.5 text-xs font-medium rounded-full"
+              style={{
+                backgroundColor: '#2563EB1A',
+                color: '#2563EB',
+                fontFamily: "'Manrope', sans-serif",
+              }}
+            >
+              Read Later
             </span>
           )}
         </div>
@@ -1255,12 +1362,14 @@ interface ReadingPaneProps {
   categoryId: string | null;
   categories: EmailCategoryConfig[];
   needsResponse?: boolean;
+  actionState?: EmailActionState | null;
   onCreateTask: (email: EmailMessage, options?: { schedule?: boolean }) => void;
   onDraftLabelSync: (email: EmailMessage) => void;
   onDraftExplanation: (email: EmailMessage) => void;
   aiDraftLoading: boolean;
   onArchive: (emailId: string) => void;
   onToggleRead: (emailId: string, currentIsRead: boolean) => void;
+  onUpdateActionState: (threadId: string, actionState: EmailActionState | null) => void;
   isCorrecting: boolean;
   onStartCorrect: () => void;
   onCancelCorrect: () => void;
@@ -1279,12 +1388,14 @@ function ReadingPane({
   categoryId,
   categories,
   needsResponse,
+  actionState,
   onCreateTask,
   onDraftLabelSync,
   onDraftExplanation,
   aiDraftLoading,
   onArchive,
   onToggleRead,
+  onUpdateActionState,
   isCorrecting,
   onStartCorrect,
   onCancelCorrect,
@@ -1302,6 +1413,9 @@ function ReadingPane({
   }, [categoryId]);
 
   const latestMessage = threadMessages[threadMessages.length - 1] || threadMessages[0];
+  const threadId = email.threadId || email.id;
+  const isNeedsReply = actionState === 'needs_reply';
+  const isReadLater = actionState === 'read_later';
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -1384,10 +1498,34 @@ function ReadingPane({
             <Sparkles size={14} />
             Draft Reply with AI
           </button>
+          <button
+            onClick={() => onUpdateActionState(threadId, isNeedsReply ? null : 'needs_reply')}
+            className={`px-4 py-2 text-sm font-medium border rounded-lg flex items-center gap-2 transition-colors ${
+              isNeedsReply
+                ? 'border-[#F97316] text-[#F97316] bg-[#F97316]/10'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <MessageSquare size={14} />
+            Needs Reply
+          </button>
+          <button
+            onClick={() => onUpdateActionState(threadId, isReadLater ? null : 'read_later')}
+            className={`px-4 py-2 text-sm font-medium border rounded-lg flex items-center gap-2 transition-colors ${
+              isReadLater
+                ? 'border-[#2563EB] text-[#2563EB] bg-[#2563EB]/10'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+            style={{ fontFamily: "'Manrope', sans-serif" }}
+          >
+            <Bookmark size={14} />
+            Read Later
+          </button>
 
           <div className="flex-1" />
 
-          {(categoryLabel || needsResponse) && (
+          {(categoryLabel || needsResponse || actionState) && (
             <div className="flex items-center gap-2">
               {categoryLabel && (
                 <span
@@ -1412,7 +1550,33 @@ function ReadingPane({
                     fontFamily: "'Manrope', sans-serif"
                   }}
                 >
+                  Needs Response
+                </span>
+              )}
+              {actionState === 'needs_reply' && (
+                <span
+                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
+                  style={{
+                    backgroundColor: '#F9731620',
+                    color: '#F97316',
+                    borderColor: '#F9731640',
+                    fontFamily: "'Manrope', sans-serif",
+                  }}
+                >
                   Needs Reply
+                </span>
+              )}
+              {actionState === 'read_later' && (
+                <span
+                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
+                  style={{
+                    backgroundColor: '#2563EB1A',
+                    color: '#2563EB',
+                    borderColor: '#2563EB40',
+                    fontFamily: "'Manrope', sans-serif",
+                  }}
+                >
+                  Read Later
                 </span>
               )}
               {categoryLabel && (

@@ -46,6 +46,7 @@ import type {
   EmailPreviewResponse,
   CreateDraftRequest,
   CreateDraftResponse,
+  EmailActionState,
   WritingVoiceProfile,
 } from '@timeflow/shared';
 import { getAiDebugEnabled } from './aiDebug';
@@ -662,6 +663,22 @@ export async function archiveEmail(emailId: string): Promise<void> {
     error.response = { status: response.status, data: await response.json().catch(() => ({})) };
     throw error;
   }
+}
+
+/**
+ * Update action-state queue for a thread.
+ */
+export async function updateEmailActionState(
+  threadId: string,
+  actionState: EmailActionState | null
+): Promise<{ success: boolean; actionState: EmailActionState | null }> {
+  return request<{ success: boolean; actionState: EmailActionState | null }>(
+    `/email/thread/${threadId}/action-state`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ actionState }),
+    }
+  );
 }
 
 /**

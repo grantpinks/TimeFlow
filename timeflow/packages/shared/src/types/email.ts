@@ -3,6 +3,7 @@
  */
 
 export type EmailImportance = 'high' | 'normal' | 'low';
+export type EmailActionState = 'needs_reply' | 'read_later';
 
 /**
  * Email category types for automatic categorization
@@ -32,6 +33,7 @@ export interface EmailMessage {
   isPromotional?: boolean;
   category?: EmailCategory; // Auto-assigned category
   needsResponse?: boolean;
+  actionState?: EmailActionState | null;
 }
 
 export interface EmailInboxResponse {

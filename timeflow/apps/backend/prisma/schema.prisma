@@ -41,6 +41,7 @@ model User {
   conversations              Conversation[]
   emailCategoryConfigs       EmailCategoryConfig[]
   emailCategoryOverrides     EmailCategoryOverride[]
+  emailActionStates          EmailActionState[]
   eventCategorizations       EventCategorization[]
   gmailLabelSyncState        GmailLabelSyncState?
   habits                     Habit[]
@@ -409,6 +410,21 @@ model EmailCategoryOverride {
   @@unique([userId, overrideType, overrideValue])
   @@index([userId])
   @@index([overrideType, overrideValue])
+}
+
+model EmailActionState {
+  id          String   @id @default(cuid())
+  userId      String
+  threadId    String
+  actionState String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, threadId])
+  @@index([userId])
+  @@index([threadId])
 }
 
 model WritingVoiceProfile {

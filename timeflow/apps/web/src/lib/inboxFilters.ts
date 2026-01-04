@@ -1,4 +1,4 @@
-import type { EmailMessage, InboxView } from '@timeflow/shared';
+import type { EmailActionState, EmailMessage, InboxView } from '@timeflow/shared';
 
 export function filterInboxEmails(
   emails: EmailMessage[],
@@ -7,6 +7,7 @@ export function filterInboxEmails(
     views?: InboxView[];
     selectedCategoryId: string | null;
     needsResponseOnly?: boolean;
+    actionStateFilter?: EmailActionState | null;
   }
 ): EmailMessage[] {
   let filtered = emails;
@@ -21,6 +22,10 @@ export function filterInboxEmails(
 
   if (options.needsResponseOnly) {
     filtered = filtered.filter((email) => email.needsResponse);
+  }
+
+  if (options.actionStateFilter) {
+    filtered = filtered.filter((email) => email.actionState === options.actionStateFilter);
   }
 
   if (options.selectedViewId && options.views) {

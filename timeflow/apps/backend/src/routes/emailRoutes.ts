@@ -34,6 +34,7 @@ import {
   draftLabelSync,
   draftLabelExplanation,
 } from '../controllers/inboxAiController.js';
+import { updateEmailActionState } from '../controllers/emailActionStateController.js';
 
 export async function registerEmailRoutes(server: FastifyInstance) {
   // Get inbox messages (list view)
@@ -58,6 +59,13 @@ export async function registerEmailRoutes(server: FastifyInstance) {
 
   // Archive email
   server.post('/email/:id/archive', { preHandler: requireAuth }, archiveEmail);
+
+  // Update action-state queues
+  server.post(
+    '/email/thread/:threadId/action-state',
+    { preHandler: requireAuth },
+    updateEmailActionState
+  );
 
   // Get email category configurations
   server.get('/email/categories', { preHandler: requireAuth }, getEmailCategories);
