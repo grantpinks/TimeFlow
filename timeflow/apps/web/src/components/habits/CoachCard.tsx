@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { Panel } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 import { dismissCoachSuggestion } from '@/lib/api';
 import { track, hashHabitId } from '@/lib/analytics';
 import type { HabitRecommendation } from '@timeflow/shared';
@@ -28,8 +29,8 @@ export function CoachCard({ primary, onActionClick, onDismiss }: CoachCardProps)
     return (
       <Panel className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-md">
-            <span className="text-white text-2xl">✨</span>
+          <div className="flex-shrink-0">
+            <FlowMascot size="lg" expression="celebrating" />
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-green-900 text-lg mb-1">
@@ -93,8 +94,8 @@ export function CoachCard({ primary, onActionClick, onDismiss }: CoachCardProps)
     <Panel className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 shadow-lg">
       <div className="flex items-start gap-4">
         {/* Flow Avatar */}
-        <div className="flex-shrink-0 w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center shadow-md">
-          <span className="text-white text-2xl font-bold">F</span>
+        <div className="flex-shrink-0">
+          <FlowMascot size="lg" expression="thinking" />
         </div>
 
         {/* Content */}

@@ -8,6 +8,7 @@
 
 import { useEffect } from 'react';
 import { Panel } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 import { track, hashHabitId } from '@/lib/analytics';
 import type { HabitRecommendation } from '@timeflow/shared';
 
@@ -37,8 +38,8 @@ export function Recommendations({ recommendations, onActionClick }: Recommendati
     <div className="space-y-4">
       {/* Flow Coach Header */}
       <div className="flex items-center gap-3">
-        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-sm">
-          <span className="text-white text-lg font-semibold">F</span>
+        <div className="flex-shrink-0">
+          <FlowMascot size="md" expression="happy" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-slate-800">Flow's Recommendations</h2>

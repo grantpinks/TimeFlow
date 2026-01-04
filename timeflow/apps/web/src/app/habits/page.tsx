@@ -12,6 +12,8 @@ import { Layout } from '@/components/Layout';
 import { Panel, SectionHeader, EmptyState } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
 import { HabitsInsights } from '@/components/habits/HabitsInsights';
+import { HabitCard } from '@/components/habits/HabitCard';
+import { FlowMascot } from '@/components/FlowMascot';
 import { track } from '@/lib/analytics';
 import type { Habit, HabitFrequency, TimeOfDay } from '@timeflow/shared';
 
@@ -172,19 +174,29 @@ export default function HabitsPage() {
 
         {/* Flow Coach Welcome (only show if user has habits) */}
         {habits.length > 0 && (
-          <div className="bg-gradient-to-r from-primary-50 to-primary-100 border border-primary-200 rounded-xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-md">
-                <span className="text-white text-xl font-bold">F</span>
+          <div className="relative overflow-hidden bg-gradient-to-br from-primary-50 via-blue-50 to-indigo-50 border-2 border-primary-200 rounded-2xl p-6 shadow-lg">
+            {/* Decorative wave pattern */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary-100/30 to-transparent rounded-full blur-3xl"></div>
+
+            <div className="relative flex items-start gap-5">
+              <div className="flex-shrink-0">
+                <FlowMascot size="lg" expression="happy" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-primary-900 text-lg mb-1">
+                <h3 className="font-bold text-primary-900 text-xl mb-2 flex items-center gap-2">
                   Meet Flow, your AI habits coach
+                  <span className="inline-block animate-bounce">👋</span>
                 </h3>
-                <p className="text-primary-800 text-sm leading-relaxed">
+                <p className="text-primary-800 text-sm leading-relaxed mb-3">
                   I analyze your habit patterns and provide personalized recommendations to help you build consistency.
                   Check my recommendations below and let's work together to strengthen your routines.
                 </p>
+                <div className="flex items-center gap-2 text-xs text-primary-700">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <span>Tip: Schedule your habits to unlock insights and streaks!</span>
+                </div>
               </div>
             </div>
           </div>
@@ -323,25 +335,23 @@ export default function HabitsPage() {
 
         {/* Habits Management Section */}
         {habits.length > 0 && (
-          <div className="pt-6 border-t border-slate-200">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+          <div className="pt-6">
+            <h2 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
               Manage Habits
             </h2>
           </div>
         )}
 
         {/* Habits List */}
-        <Panel padding="none">
-          <div className="divide-y divide-slate-100">
-          {habits.map((habit) => (
-            <div
-              key={habit.id}
-              className={`p-4 ${
-                habit.isActive ? '' : 'opacity-60'
-              }`}
-            >
-              {editing === habit.id ? (
-                <div className="space-y-3">
+        {habits.length > 0 ? (
+          <div className="grid gap-4">
+            {habits.map((habit) =>
+              editing === habit.id ? (
+                <Panel key={habit.id} className="bg-slate-50">
+                  <div className="space-y-3">
                   <input
                     type="text"
                     value={editTitle}
@@ -465,71 +475,42 @@ export default function HabitsPage() {
                       Cancel
                     </button>
                   </div>
-                </div>
+                  </div>
+                </Panel>
               ) : (
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-slate-800">{habit.title}</h3>
-                      {!habit.isActive && (
-                        <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded">
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                    {habit.description && (
-                      <p className="text-sm text-slate-600 mt-1">{habit.description}</p>
-                    )}
-                    <div className="flex gap-4 mt-2 text-sm text-slate-500">
-                      <span>{formatFrequency(habit)}</span>
-                      {habit.preferredTimeOfDay && (
-                        <span className="capitalize">{habit.preferredTimeOfDay}</span>
-                      )}
-                      <span>{habit.durationMinutes} min</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(habit)}
-                      className="px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded transition-colors"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(habit.id)}
-                      className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+                <HabitCard
+                  key={habit.id}
+                  habit={habit}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onQuickSchedule={(habitId, time) => {
+                    // TODO: Implement quick schedule API call
+                    console.log('Quick schedule:', habitId, time);
+                    alert(`Scheduling ${habit.title} for ${time.toLocaleString()}`);
+                  }}
+                />
+              )
+            )}
           </div>
-
-          {habits.length === 0 && (
-            <EmptyState
-              icon={
-                <svg
-                  className="w-16 h-16 text-slate-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                  />
-                </svg>
-              }
-              title="No habits yet"
-              description="Create your first habit to start building better routines"
-            />
-          )}
-        </Panel>
+        ) : (
+          <Panel>
+            <div className="text-center py-12">
+              <div className="flex justify-center mb-4">
+                <FlowMascot size="xl" expression="encouraging" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">No habits yet!</h3>
+              <p className="text-slate-600 mb-6">
+                Create your first habit to start building better routines with Flow
+              </p>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium shadow-md hover:shadow-lg"
+              >
+                Create Your First Habit
+              </button>
+            </div>
+          </Panel>
+        )}
       </div>
     </Layout>
   );
