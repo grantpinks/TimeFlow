@@ -10,6 +10,7 @@
 import { useState } from 'react';
 import { Panel } from '@/components/ui';
 import { dismissCoachSuggestion } from '@/lib/api';
+import { track, hashHabitId } from '@/lib/analytics';
 import type { HabitRecommendation } from '@timeflow/shared';
 
 interface CoachCardProps {
@@ -48,6 +49,13 @@ export function CoachCard({ primary, onActionClick, onDismiss }: CoachCardProps)
   const handleDismiss = async (snoozedUntil?: string) => {
     try {
       setDismissing(true);
+
+      // Track coach dismissal (privacy-safe - hashed ID, no title)
+      track('habits.coach.dismissed', {
+        suggestion_type: type,
+        habit_id_hash: hashHabitId(primary.habitId),
+      });
+
       await dismissCoachSuggestion({
         type,
         habitId: primary.habitId,

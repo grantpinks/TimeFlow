@@ -9,7 +9,7 @@ export function initAnalytics() {
     if (apiKey) {
       posthog.init(apiKey, {
         api_host: apiHost,
-        loaded: (posthog) => {
+        loaded: () => {
           if (process.env.NODE_ENV === 'development') {
             console.log('[Analytics] PostHog loaded');
           }
@@ -59,10 +59,20 @@ export type AnalyticsEvent =
   | { name: 'command_palette_opened'; properties: { trigger: 'keyboard' | 'click' } }
   | { name: 'command_palette_command_selected'; properties: { command_id: string } }
   | { name: 'page_viewed'; properties: { page: string } }
-  // Habit events
+  // Habit events (basic)
   | { name: 'habit_created'; properties: { frequency: string; duration_minutes: number } }
-  | { name: 'habit_completed'; properties: { habit_id: string } }
-  | { name: 'habit_suggestion_viewed'; properties: {} }
+  // Habit insights and coach events (privacy-safe - no titles, hashed IDs only)
+  | { name: 'page.view.habits'; properties: {} }
+  | { name: 'habits.insight.viewed'; properties: { days_filter: 14 | 28 } }
+  | { name: 'habit.instance.complete'; properties: { habit_id_hash: string } }
+  | { name: 'habit.instance.undo'; properties: { habit_id_hash: string } }
+  | { name: 'habit.instance.skip'; properties: { habit_id_hash: string; reason_code: string } }
+  | { name: 'habits.recommendation.viewed'; properties: { recommendation_type: string; habit_id_hash: string } }
+  | { name: 'habits.recommendation.action_taken'; properties: { recommendation_type: string; action_type: string; habit_id_hash: string } }
+  | { name: 'habits.coach.action_taken'; properties: { action_type: 'rescue_block' | 'adjust_window' | 'snooze_skip' } }
+  | { name: 'habits.coach.dismissed'; properties: { suggestion_type: string; habit_id_hash: string } }
+  | { name: 'habits.coach.undo'; properties: { action_type: string } }
+  | { name: 'habits.streak.milestone_reached'; properties: { streak_length: 7 | 14 | 30 | 100 } }
   // Category events
   | { name: 'category_created'; properties: { category_name: string } }
   | { name: 'category_edited'; properties: { category_id: string } }
@@ -118,6 +128,22 @@ export function resetUser() {
 // Page view tracking
 export function trackPageView(pageName: string) {
   track('page_viewed', { page: pageName });
+}
+
+/**
+ * Privacy-safe habit ID hashing
+ * Converts habit ID to a deterministic hash for analytics
+ * Ensures we NEVER log habit titles or descriptions
+ */
+export function hashHabitId(habitId: string): string {
+  // Simple hash function for privacy (not cryptographic)
+  let hash = 0;
+  for (let i = 0; i < habitId.length; i++) {
+    const char = habitId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return `h_${Math.abs(hash).toString(36)}`;
 }
 
 // Export posthog instance for advanced usage

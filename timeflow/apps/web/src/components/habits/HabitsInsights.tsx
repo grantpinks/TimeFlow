@@ -13,6 +13,7 @@ import { CoachCard } from './CoachCard';
 import { Recommendations } from './Recommendations';
 import { StreakReminderBanner } from './StreakReminderBanner';
 import { MetricsTooltip } from './MetricsTooltip';
+import { track, hashHabitId } from '@/lib/analytics';
 import type { HabitInsightsSummary, PerHabitInsights, HabitRecommendation } from '@timeflow/shared';
 
 export function HabitsInsights() {
@@ -31,6 +32,9 @@ export function HabitsInsights() {
       setError(null);
       const data = await getHabitInsights(selectedPeriod);
       setInsights(data);
+
+      // Track insights viewed (privacy-safe - only period length)
+      track('habits.insight.viewed', { days_filter: selectedPeriod });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load insights');
     } finally {
@@ -39,6 +43,13 @@ export function HabitsInsights() {
   };
 
   const handleRecommendationAction = (recommendation: HabitRecommendation) => {
+    // Track recommendation action (privacy-safe - hashed ID, no title)
+    track('habits.recommendation.action_taken', {
+      recommendation_type: recommendation.type,
+      action_type: recommendation.action.type,
+      habit_id_hash: hashHabitId(recommendation.habitId),
+    });
+
     // TODO: Implement action handlers in Task 5 (Coach Card + Next Actions)
     // For now, just log the action
     console.log('Recommendation action clicked:', recommendation);

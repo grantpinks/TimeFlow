@@ -417,6 +417,9 @@ export async function rejectHabitSuggestion(data: { habitId: string; start: stri
 
 /**
  * Mark a scheduled habit instance as complete.
+ *
+ * @note When calling this from a UI component, also track:
+ * track('habit.instance.complete', { habit_id_hash: hashHabitId(habitId) })
  */
 export async function completeHabitInstance(scheduledHabitId: string): Promise<HabitCompletionResponse> {
   return request<HabitCompletionResponse>(`/habits/instances/${scheduledHabitId}/complete`, {
@@ -426,6 +429,9 @@ export async function completeHabitInstance(scheduledHabitId: string): Promise<H
 
 /**
  * Undo a completed or skipped habit instance.
+ *
+ * @note When calling this from a UI component, also track:
+ * track('habit.instance.undo', { habit_id_hash: hashHabitId(habitId) })
  */
 export async function undoHabitInstance(scheduledHabitId: string): Promise<{ success: boolean }> {
   return request<{ success: boolean }>(`/habits/instances/${scheduledHabitId}/undo`, {
@@ -435,6 +441,9 @@ export async function undoHabitInstance(scheduledHabitId: string): Promise<{ suc
 
 /**
  * Skip a scheduled habit instance with a reason code.
+ *
+ * @note When calling this from a UI component, also track:
+ * track('habit.instance.skip', { habit_id_hash: hashHabitId(habitId), reason_code: reasonCode })
  */
 export async function skipHabitInstance(
   scheduledHabitId: string,

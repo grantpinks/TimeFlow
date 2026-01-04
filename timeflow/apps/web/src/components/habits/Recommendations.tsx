@@ -6,7 +6,9 @@
 
 'use client';
 
+import { useEffect } from 'react';
 import { Panel } from '@/components/ui';
+import { track, hashHabitId } from '@/lib/analytics';
 import type { HabitRecommendation } from '@timeflow/shared';
 
 interface RecommendationsProps {
@@ -15,6 +17,18 @@ interface RecommendationsProps {
 }
 
 export function Recommendations({ recommendations, onActionClick }: RecommendationsProps) {
+  // Track recommendations viewed (privacy-safe - hashed IDs)
+  useEffect(() => {
+    if (recommendations.length > 0) {
+      recommendations.forEach((rec) => {
+        track('habits.recommendation.viewed', {
+          recommendation_type: rec.type,
+          habit_id_hash: hashHabitId(rec.habitId),
+        });
+      });
+    }
+  }, [recommendations]);
+
   if (recommendations.length === 0) {
     return null;
   }

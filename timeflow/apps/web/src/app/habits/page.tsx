@@ -7,17 +7,23 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Panel, SectionHeader, EmptyState } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
 import { HabitsInsights } from '@/components/habits/HabitsInsights';
+import { track } from '@/lib/analytics';
 import type { Habit, HabitFrequency, TimeOfDay } from '@timeflow/shared';
 
 export default function HabitsPage() {
   const { habits, loading, createHabit, updateHabit, deleteHabit } = useHabits();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+
+  // Track page view
+  useEffect(() => {
+    track('page.view.habits', {});
+  }, []);
 
   // Form state for add
   const [newTitle, setNewTitle] = useState('');
