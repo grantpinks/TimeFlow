@@ -60,6 +60,7 @@ export default function InboxPage() {
   const [aiDraft, setAiDraft] = useState<InboxAiDraft | null>(null);
   const [aiDraftEmail, setAiDraftEmail] = useState<EmailMessage | null>(null);
   const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const NUDGE_AGE_DAYS = 3;
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -575,6 +576,24 @@ export default function InboxPage() {
   }
 
   const displayEmails = getDisplayEmails();
+  const agingNudges = useMemo(() => {
+    const now = Date.now();
+    const toAgeDays = (dateString: string) =>
+      Math.floor((now - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24));
+
+    const needsReply = emails.filter(
+      (email) =>
+        email.actionState === 'needs_reply' && toAgeDays(email.receivedAt) > NUDGE_AGE_DAYS
+    ).length;
+    const unreadImportant = emails.filter(
+      (email) =>
+        !email.isRead &&
+        email.importance === 'high' &&
+        toAgeDays(email.receivedAt) > NUDGE_AGE_DAYS
+    ).length;
+
+    return { needsReply, unreadImportant };
+  }, [emails, NUDGE_AGE_DAYS]);
   const selectedEmail = displayEmails.find(e =>
     e.threadId === selectedThreadId || e.id === selectedThreadId
   );
@@ -795,6 +814,39 @@ export default function InboxPage() {
                 );
               })}
             </div>
+
+            {(agingNudges.needsReply > 0 || agingNudges.unreadImportant > 0) && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                  className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8b8b8b]"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  Aging nudges
+                </span>
+                {agingNudges.needsReply > 0 && (
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full border border-[#F9731640] bg-[#F9731620] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#F97316]"
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  >
+                    Needs Reply &gt; {NUDGE_AGE_DAYS} days
+                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-[#F97316]">
+                      {agingNudges.needsReply}
+                    </span>
+                  </span>
+                )}
+                {agingNudges.unreadImportant > 0 && (
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full border border-[#2563EB40] bg-[#2563EB1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#2563EB]"
+                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  >
+                    Unread important &gt; {NUDGE_AGE_DAYS} days
+                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-[#2563EB]">
+                      {agingNudges.unreadImportant}
+                    </span>
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="mt-4 flex w-full items-center justify-between gap-4">
               <div className="inline-flex items-center rounded-full border-2 border-[#0BAF9A]/30 bg-white/80 shadow-[0_10px_30px_rgba(11,175,154,0.08)]">

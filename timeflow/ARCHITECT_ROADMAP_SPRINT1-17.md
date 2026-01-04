@@ -917,7 +917,7 @@
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
 | 16.B7 | Add action-state inbox queues (`NeedsReply`, `ReadLater`, optional `NeedsAction`) with thread-level state, filters, and fast toggles. | Codex | 6-10h | P2 | ✅ |
-| 16.B8 | Add aging nudges UI (e.g., “Needs Reply > X days”, “Unread important > X days”) as in-app indicators (no notifications yet). | Codex | 3-6h | P2 | ⬜ |
+| 16.B8 | Add aging nudges UI (e.g., “Needs Reply > X days”, “Unread important > X days”) as in-app indicators (no notifications yet). | Codex | 3-6h | P2 | ✅ |
 | 16.B9 | Add AI thread assist: “Summarize” + “Extract tasks” + “Create tasks” (strict quotas + max tokens + friendly limit UX). | Codex | 8-12h | P2 | ⬜ |
 
 **Reference doc**: See **[`docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md`](./docs/plans/2026-01-01-sprint-17-inbox-actions-ai.md)**.
@@ -1039,9 +1039,9 @@
 **Focus**: Introduce subscription-based pricing and payments, wire value-adding features into tiers, and prepare the platform for public scale.
 
 #### Goals
-- [ ] Pricing plans (e.g., Free/Trial, Standard ~$2–5/mo, Unlimited ~$10/mo) are defined and implemented.
+- [ ] Pricing plans (Free, Pro, Flow State) are defined and implemented.
 - [ ] Users can start, manage, and cancel subscriptions via a secure payment provider (e.g., Stripe).
-- [ ] Key premium features (recurring tasks, templates, streaks, analytics) are gated and stable.
+- [ ] Key premium features (recurring tasks, templates, streaks, analytics, AI usage) are gated and stable.
 - [ ] Core systems (API, scheduling, queues) are monitored and scaled for public traffic.
 
 #### Tasks
@@ -1050,52 +1050,48 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 19.1 | Define subscription tiers (Free/Trial, Standard, Unlimited) with pricing, limits, and feature entitlements | Architect | 4-6h | P0 |
+| 19.1 | Define and implement subscription tiers (Free, Pro, Flow State) with pricing, limits, and feature entitlements based on `docs/PRICING_MODEL.md` | Architect | 4-6h | P0 |
 | 19.2 | Design upgrade/downgrade flows and in-app messaging for plan changes (including trial to paid, grace periods) | Claude | 4-6h | P1 |
+| 19.G1 | Document subscription tiers, billing flows, and data/analytics behavior for internal and external stakeholders (update `docs/PRICING_MODEL.md` as needed) | Gemini | 4-6h | P2 |
 
 **Payments & Subscription Infrastructure**
 
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
 | 19.3 | Integrate Stripe (or chosen provider) for subscription creation, billing, and secure payment methods | Codex | 8-12h | P0 |
 | 19.4 | Implement webhook handlers to sync subscription status (active, trialing, past_due, canceled) into the backend user/account models | Codex | 4-6h | P0 |
 | 19.5 | Build a subscription management UI in Settings (view plan, change plan, update payment method, cancel) | Codex | 6-8h | P1 |
 
 **Feature Gating & Value-Add Features**
 
-| 19.6 | Implement an entitlement system (e.g., `canUseUnlimitedAI`, `hasRecurringTasks`, `hasAdvancedAnalytics`, `hasStreaks`) and enforce it across web + mobile | Codex | 6-8h | P1 |
-| 19.7 | Add recurring tasks and templates support in backend + UI, scoped to appropriate subscription tiers | Codex | 8-12h | P0 |
-| 19.8 | Implement basic analytics events (page views, key actions, Assistant usage) and a simple internal analytics dashboard | Codex | 4-6h | P1 |
-| 19.9 | Complete `UserStreak` model and streak calculation service; build streak display UI (navbar counter, details page, milestone animations) | Codex | 6-8h | P1 |
-| 19.10 | Implement streak reminder notifications ("Don't lose your 15-day streak!"), tied to subscription entitlements | Codex | 3-4h | P2 |
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 19.6 | Implement pricing page (`/pricing`) based on `docs/PRICING_MODEL.md`, including monthly/annual toggle | Codex | 8-12h | P0 |
+| 19.7 | Create an entitlement system (e.g., `canUseUnlimitedAI`, `hasRecurringTasks`, `hasAdvancedAnalytics`, `hasStreaks`) and enforce it across web + mobile | Codex | 6-8h | P1 |
+| 19.8 | Implement backend service for API usage tracking and "Flow Credits" deduction | Codex | 10-15h | P0 |
+| 19.9 | Develop UI components to display credit usage, limits, and overuse options in the user dashboard | Codex | 4-6h | P1 |
+| 19.10 | Add upgrade prompts and calls-to-action in UI where feature/credit limits are met | Codex | 4-6h | P1 |
+| 19.11 | Add recurring tasks and templates support in backend + UI, scoped to appropriate subscription tiers | Codex | 8-12h | P0 |
+| 19.12 | Implement basic analytics events (page views, key actions, Assistant usage) and a simple internal analytics dashboard | Codex | 4-6h | P1 |
+| 19.13 | Complete `UserStreak` model and streak calculation service; build streak display UI (navbar counter, details page, milestone animations) | Codex | 6-8h | P1 |
+| 19.14 | Implement streak reminder notifications ("Don't lose your 15-day streak!"), tied to subscription entitlements | Codex | 3-4h | P2 |
 | 19.C1 | Extend AI Assistant prompts to incorporate subscription context (e.g., suggesting upgrades when hitting limits, celebrating streaks/goals) | Claude | 4-6h | P1 |
-| 19.G1 | Document subscription tiers, billing flows, and data/analytics behavior for internal and external stakeholders | Gemini | 4-6h | P2 |
 
 **Scaling & Reliability for Public Launch**
 
-| 19.11 | Review and update API rate limits, circuit breakers, and backpressure strategies for expected public traffic | Codex | 4-6h | P1 |
-| 19.12 | Implement monitoring and alerting for key services (scheduler latency, error rates, payment failures, queue backlogs) | Codex | 4-6h | P1 |
-| 19.13 | Define and document SLOs/SLAs for uptime and response times; establish on-call and incident response runbooks | Reviewer | 4-6h | P1 |
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 19.15 | Review and update API rate limits, circuit breakers, and backpressure strategies for expected public traffic | Codex | 4-6h | P1 |
+| 19.16 | Implement monitoring and alerting for key services (scheduler latency, error rates, payment failures, queue backlogs) | Codex | 4-6h | P1 |
+| 19.17 | Define and document SLOs/SLAs for uptime and response times; establish on-call and incident response runbooks | Reviewer | 4-6h | P1 |
 
-#### Streaks & Gamification Feature (Reference for Sprint 19)
-
-**Streak Types**:
-| Streak | Description | Incentive |
-|--------|-------------|-----------|
-| Daily Active | Login/use app each day | Keep momentum, "X days in a row" |
-| Task Completion | Complete at least 1 task per day | Builds productivity habit |
-| Planning Ritual | Complete daily planning each morning | Encourages intentionality |
-| Habit Consistency | Complete scheduled habits | Reinforces habit formation |
-
-**Milestones & Badges**:
-- 🔥 **7-day streak** – "On Fire" badge
-- ⚡ **30-day streak** – "Unstoppable" badge
-- 🏆 **100-day streak** – "Centurion" badge
-- 🌟 **Personal best** – Celebrate when user beats their longest streak
-
-**UI Elements**:
-- Streak counter on dashboard/navbar (🔥 12)
-- Streak details in Settings or Profile
-- Celebratory animation when milestone reached
-- "Don't break your streak!" reminder notification (optional)
+#### Acceptance Criteria
+- [ ] Pricing page (`/pricing`) is live, accurate, and reflects all tiers and annual discounts per `docs/PRICING_MODEL.md`.
+- [ ] Users can subscribe, manage subscriptions, and see their plan details in the app.
+- [ ] AI Assistant and other gated features respect user's subscription tier and credit limits.
+- [ ] Overuse charges are correctly applied and reflected to the user.
+- [ ] Basic recurring tasks, templates, and streak tracking are functional and gated.
+- [ ] Core systems are ready for public scale with appropriate monitoring and error handling.
 
 ---
 
