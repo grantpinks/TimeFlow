@@ -916,7 +916,7 @@
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
-| 16.B7 | Add action-state inbox queues (`NeedsReply`, `ReadLater`, optional `NeedsAction`) with thread-level state, filters, and fast toggles. | Codex | 6-10h | P2 | ⬜ |
+| 16.B7 | Add action-state inbox queues (`NeedsReply`, `ReadLater`, optional `NeedsAction`) with thread-level state, filters, and fast toggles. | Codex | 6-10h | P2 | ✅ |
 | 16.B8 | Add aging nudges UI (e.g., “Needs Reply > X days”, “Unread important > X days”) as in-app indicators (no notifications yet). | Codex | 3-6h | P2 | ⬜ |
 | 16.B9 | Add AI thread assist: “Summarize” + “Extract tasks” + “Create tasks” (strict quotas + max tokens + friendly limit UX). | Codex | 8-12h | P2 | ⬜ |
 
