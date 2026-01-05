@@ -11,6 +11,7 @@ import * as habitService from '../services/habitService.js';
 import * as habitSuggestionService from '../services/habitSuggestionService.js';
 import * as habitCompletionService from '../services/habitCompletionService.js';
 import * as habitInsightsService from '../services/habitInsightsService.js';
+import { getSchedulingContext } from '../services/schedulingContextService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { HabitSkipReason, type DismissCoachSuggestionRequest } from '@timeflow/shared';
 
@@ -451,5 +452,23 @@ export async function dismissCoachSuggestion(
     return reply.status(500).send({
       error: error instanceof Error ? error.message : 'Failed to dismiss suggestion',
     });
+  }
+}
+
+/**
+ * GET /api/habits/scheduling-context
+ * Returns scheduling context for the Flow Coach banner.
+ */
+export async function getSchedulingContextHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  try {
+    const userId = request.user!.id;
+    const context = await getSchedulingContext(userId);
+    return reply.code(200).send(context);
+  } catch (error) {
+    request.log.error(error, 'Error getting scheduling context');
+    return reply.code(500).send({ error: 'Failed to get scheduling context' });
   }
 }

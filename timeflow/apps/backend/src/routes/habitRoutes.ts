@@ -6,6 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as habitController from '../controllers/habitController.js';
+import { getSchedulingContextHandler } from '../controllers/habitController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerHabitRoutes(server: FastifyInstance) {
@@ -42,6 +43,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/insights',
     { preHandler: requireAuth },
     habitController.getHabitInsights
+  );
+
+  // GET /api/habits/scheduling-context - Get scheduling context for Flow Coach banner
+  server.get(
+    '/habits/scheduling-context',
+    { preHandler: requireAuth },
+    getSchedulingContextHandler
   );
 
   // POST /api/habits - Create a new habit
