@@ -12,6 +12,7 @@ import * as habitSuggestionService from '../services/habitSuggestionService.js';
 import * as habitCompletionService from '../services/habitCompletionService.js';
 import * as habitInsightsService from '../services/habitInsightsService.js';
 import { getSchedulingContext } from '../services/schedulingContextService.js';
+import { generateBulkSchedule } from '../services/bulkScheduleService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { HabitSkipReason, type DismissCoachSuggestionRequest } from '@timeflow/shared';
 
@@ -470,5 +471,40 @@ export async function getSchedulingContextHandler(
   } catch (error) {
     request.log.error(error, 'Error getting scheduling context');
     return reply.code(500).send({ error: 'Failed to get scheduling context' });
+  }
+}
+
+/**
+ * POST /api/habits/bulk-schedule
+ * Generates bulk schedule suggestions for a date range.
+ */
+export async function generateBulkScheduleHandler(
+  request: FastifyRequest<{
+    Body: {
+      dateRangeStart: string;
+      dateRangeEnd: string;
+      customPrompt?: string;
+    };
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    const userId = request.user!.id;
+    const { dateRangeStart, dateRangeEnd, customPrompt } = request.body;
+
+    const result = await generateBulkSchedule({
+      userId,
+      dateRangeStart,
+      dateRangeEnd,
+      customPrompt,
+    });
+
+    return reply.code(200).send(result);
+  } catch (error) {
+    request.log.error(error, 'Error generating bulk schedule');
+    if (error instanceof Error && error.message.includes('exceed')) {
+      return reply.code(400).send({ error: error.message });
+    }
+    return reply.code(500).send({ error: 'Failed to generate schedule' });
   }
 }

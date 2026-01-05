@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as habitController from '../controllers/habitController.js';
-import { getSchedulingContextHandler } from '../controllers/habitController.js';
+import { getSchedulingContextHandler, generateBulkScheduleHandler } from '../controllers/habitController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerHabitRoutes(server: FastifyInstance) {
@@ -50,6 +50,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/scheduling-context',
     { preHandler: requireAuth },
     getSchedulingContextHandler
+  );
+
+  // POST /api/habits/bulk-schedule - Generate bulk schedule suggestions for a date range
+  server.post(
+    '/habits/bulk-schedule',
+    { preHandler: requireAuth },
+    generateBulkScheduleHandler
   );
 
   // POST /api/habits - Create a new habit
