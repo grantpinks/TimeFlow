@@ -8,73 +8,73 @@ datasource db {
 }
 
 model User {
-  id                         String                  @id @default(cuid())
-  email                      String                  @unique
-  name                       String?                 // NEW: User's full name
-  createdAt                  DateTime                @default(now())
-  updatedAt                  DateTime                @updatedAt
-  googleId                   String?                 @unique
+  id                         String    @id @default(cuid())
+  email                      String    @unique
+  name                       String? // NEW: User's full name
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
+  googleId                   String?   @unique
   googleRefreshToken         String?
   googleAccessToken          String?
   googleAccessTokenExpiry    DateTime?
-  timeZone                   String                  @default("America/Chicago")
-  wakeTime                   String                  @default("08:00")
-  sleepTime                  String                  @default("23:00")
-  defaultTaskDurationMinutes Int                     @default(30)
+  timeZone                   String    @default("America/Chicago")
+  wakeTime                   String    @default("08:00")
+  sleepTime                  String    @default("23:00")
+  defaultTaskDurationMinutes Int       @default(30)
   defaultCalendarId          String?
   dailySchedule              Json?
   dailyScheduleConstraints   Json?
-  sidebarNavOrder            String[]            @default([])
+  sidebarNavOrder            String[]  @default([])
   inboxViews                 Json?
-  habitsCoachState           Json?               // { dismissedSuggestions: [{type, habitId, dismissedAt, snoozedUntil}], lastPrimarySuggestion: {...} }
+  habitsCoachState           Json? // { dismissedSuggestions: [{type, habitId, dismissedAt, snoozedUntil}], lastPrimarySuggestion: {...} }
 
   // Meeting-specific availability preferences
-  meetingStartTime           String?             // HH:mm - default earliest meeting time
-  meetingEndTime             String?             // HH:mm - default latest meeting time
-  blockedDaysOfWeek          String[]            @default([])  // Days blocked for meetings
-  dailyMeetingSchedule       Json?               // Per-day meeting config
+  meetingStartTime     String? // HH:mm - default earliest meeting time
+  meetingEndTime       String? // HH:mm - default latest meeting time
+  blockedDaysOfWeek    String[] @default([]) // Days blocked for meetings
+  dailyMeetingSchedule Json? // Per-day meeting config
 
-  appliedSchedules           AppliedSchedule[]
-  AssistantMetric            AssistantMetric[]
-  categories                 Category[]
-  categoryTrainingProfiles   CategoryTrainingProfile[]
-  conversations              Conversation[]
-  emailCategoryConfigs       EmailCategoryConfig[]
-  emailCategoryOverrides     EmailCategoryOverride[]
-  emailActionStates          EmailActionState[]
-  eventCategorizations       EventCategorization[]
-  gmailLabelSyncState        GmailLabelSyncState?
-  habits                     Habit[]
-  scheduledHabits            ScheduledHabit[]
-  schedulingJobs             SchedulingJob[]
-  habitCompletions           HabitCompletion[]
-  habitActionHistory         HabitActionHistory[]
-  tasks                      Task[]
-  schedulingLinks            SchedulingLink[]
-  meetings                   Meeting[]
-  appleCalendarAccount       AppleCalendarAccount?
-  writingVoiceProfile        WritingVoiceProfile?
+  appliedSchedules         AppliedSchedule[]
+  AssistantMetric          AssistantMetric[]
+  categories               Category[]
+  categoryTrainingProfiles CategoryTrainingProfile[]
+  conversations            Conversation[]
+  emailCategoryConfigs     EmailCategoryConfig[]
+  emailCategoryOverrides   EmailCategoryOverride[]
+  emailActionStates        EmailActionState[]
+  eventCategorizations     EventCategorization[]
+  gmailLabelSyncState      GmailLabelSyncState?
+  habits                   Habit[]
+  scheduledHabits          ScheduledHabit[]
+  schedulingJobs           SchedulingJob[]
+  habitCompletions         HabitCompletion[]
+  habitActionHistory       HabitActionHistory[]
+  tasks                    Task[]
+  schedulingLinks          SchedulingLink[]
+  meetings                 Meeting[]
+  appleCalendarAccount     AppleCalendarAccount?
+  writingVoiceProfile      WritingVoiceProfile?
 }
 
 model Task {
-  id              String         @id @default(cuid())
-  userId          String
-  title           String
-  description     String?
-  durationMinutes Int            @default(30)
-  priority        Int            @default(2)
-  status          String         @default("unscheduled")
-  dueDate         DateTime?
-  sourceEmailId   String?
-  sourceThreadId  String?
+  id                  String         @id @default(cuid())
+  userId              String
+  title               String
+  description         String?
+  durationMinutes     Int            @default(30)
+  priority            Int            @default(2)
+  status              String         @default("unscheduled")
+  dueDate             DateTime?
+  sourceEmailId       String?
+  sourceThreadId      String?
   sourceEmailProvider String?
-  sourceEmailUrl  String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  categoryId      String?
-  scheduledTask   ScheduledTask?
-  category        Category?      @relation(fields: [categoryId], references: [id])
-  user            User           @relation(fields: [userId], references: [id])
+  sourceEmailUrl      String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  categoryId          String?
+  scheduledTask       ScheduledTask?
+  category            Category?      @relation(fields: [categoryId], references: [id])
+  user                User           @relation(fields: [userId], references: [id])
 }
 
 model ScheduledTask {
@@ -92,15 +92,15 @@ model ScheduledTask {
 }
 
 model Category {
-  id                   String                @id @default(cuid())
+  id                   String                   @id @default(cuid())
   userId               String
   name                 String
   color                String
-  isDefault            Boolean               @default(false)
-  order                Int                   @default(0)
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  user                 User                  @relation(fields: [userId], references: [id])
+  isDefault            Boolean                  @default(false)
+  order                Int                      @default(0)
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  user                 User                     @relation(fields: [userId], references: [id])
   tasks                Task[]
   eventCategorizations EventCategorization[]
   trainingProfile      CategoryTrainingProfile?
@@ -186,33 +186,41 @@ model ScheduledHabit {
   @@index([userId])
 }
 
+enum SchedulingJobStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
 model SchedulingJob {
-  id              String   @id @default(cuid())
+  id              String              @id @default(cuid())
   userId          String
-  status          String   // "in_progress" | "completed" | "cancelled" | "failed"
+  status          SchedulingJobStatus @default(IN_PROGRESS)
   totalBlocks     Int
-  completedBlocks Int      @default(0)
-  createdEventIds String[] // Array of Google Calendar event IDs for rollback
+  completedBlocks Int                 @default(0)
+  createdEventIds String[]            @default([])
   errorMessage    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([userId, status])
   @@map("scheduling_jobs")
 }
 
 model HabitCompletion {
-  id               String         @id @default(cuid())
+  id               String   @id @default(cuid())
   userId           String
   habitId          String
-  scheduledHabitId String         @unique
-  status           String         // 'completed' | 'skipped'
-  reasonCode       String?        // Required if skipped; from HabitSkipReason enum
-  completedAt      DateTime       @default(now())
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  scheduledHabitId String   @unique
+  status           String // 'completed' | 'skipped'
+  reasonCode       String? // Required if skipped; from HabitSkipReason enum
+  completedAt      DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   habit          Habit          @relation(fields: [habitId], references: [id], onDelete: Cascade)
   scheduledHabit ScheduledHabit @relation(fields: [scheduledHabitId], references: [id], onDelete: Cascade)
@@ -225,9 +233,9 @@ model HabitCompletion {
 model HabitActionHistory {
   id            String   @id @default(cuid())
   userId        String
-  actionType    String   // 'complete' | 'skip' | 'reschedule_block' | 'adjust_window'
-  entityId      String   // scheduledHabitId or habitId
-  previousState Json?    // For undo
+  actionType    String // 'complete' | 'skip' | 'reschedule_block' | 'adjust_window'
+  entityId      String // scheduledHabitId or habitId
+  previousState Json? // For undo
   newState      Json
   createdAt     DateTime @default(now())
   expiresAt     DateTime // Undo available for 24h
@@ -279,42 +287,42 @@ model ConversationMessage {
 }
 
 model EmailCategoryConfig {
-  id          String   @id @default(cuid())
-  userId      String
-  categoryId  String
-  color       String?
-  enabled     Boolean  @default(true)
-  name        String?
-  description String?
-  emoji       String?
+  id               String   @id @default(cuid())
+  userId           String
+  categoryId       String
+  color            String?
+  enabled          Boolean  @default(true)
+  name             String?
+  description      String?
+  emoji            String?
   gmailLabelId     String?
   gmailSyncEnabled Boolean  @default(false)
   gmailLabelName   String?
   gmailLabelColor  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  user        User     @relation(fields: [userId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, categoryId])
   @@index([userId])
 }
 
 model GmailLabelSyncState {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   lastSyncedAt        DateTime?
-  lastSyncThreadCount Int      @default(0)
+  lastSyncThreadCount Int       @default(0)
   lastSyncError       String?
   lastHistoryId       String?
-  watchEnabled        Boolean  @default(false)
+  watchEnabled        Boolean   @default(false)
   watchResourceId     String?
   watchTopicName      String?
   watchExpiration     DateTime?
-  backfillDays        Int      @default(7)
-  backfillMaxThreads  Int      @default(100)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  backfillDays        Int       @default(7)
+  backfillMaxThreads  Int       @default(100)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([userId])
 }
@@ -335,30 +343,30 @@ model AssistantMetric {
 }
 
 model SchedulingLink {
-  id                   String   @id @default(cuid())
-  userId               String
-  name                 String
-  slug                 String   @unique
-  isActive             Boolean  @default(true)
-  durationsMinutes     Int[]
-  bufferBeforeMinutes  Int      @default(10)
-  bufferAfterMinutes   Int      @default(10)
-  maxBookingHorizonDays Int     @default(60)
-  dailyCap             Int      @default(6)
-  calendarProvider     String
-  calendarId           String
-  googleMeetEnabled    Boolean  @default(true)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  userId                String
+  name                  String
+  slug                  String   @unique
+  isActive              Boolean  @default(true)
+  durationsMinutes      Int[]
+  bufferBeforeMinutes   Int      @default(10)
+  bufferAfterMinutes    Int      @default(10)
+  maxBookingHorizonDays Int      @default(60)
+  dailyCap              Int      @default(6)
+  calendarProvider      String
+  calendarId            String
+  googleMeetEnabled     Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id])
-  meetings  Meeting[]
+  user     User      @relation(fields: [userId], references: [id])
+  meetings Meeting[]
 
   @@index([userId])
 }
 
 model Meeting {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   schedulingLinkId String
   userId           String
   inviteeName      String
@@ -366,17 +374,17 @@ model Meeting {
   notes            String?
   startDateTime    DateTime
   endDateTime      DateTime
-  status           String   @default("scheduled")
+  status           String    @default("scheduled")
   googleEventId    String?
   googleMeetLink   String?
   appleEventUrl    String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   rescheduledAt    DateTime?
   cancelledAt      DateTime?
 
-  schedulingLink SchedulingLink        @relation(fields: [schedulingLinkId], references: [id], onDelete: Cascade)
-  user           User                  @relation(fields: [userId], references: [id])
+  schedulingLink SchedulingLink       @relation(fields: [schedulingLinkId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id])
   tokens         MeetingActionToken[]
 
   @@index([userId])
@@ -384,29 +392,29 @@ model Meeting {
 }
 
 model MeetingActionToken {
-  id         String   @id @default(cuid())
-  meetingId  String
-  type       String
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  usedAt     DateTime?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(cuid())
+  meetingId String
+  type      String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
-  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
 
   @@index([meetingId])
 }
 
 model AppleCalendarAccount {
-  id                 String   @id @default(cuid())
-  userId             String
-  email              String
+  id                   String   @id @default(cuid())
+  userId               String
+  email                String
   appPasswordEncrypted String
-  baseUrl            String   @default("https://caldav.icloud.com")
-  principalUrl       String?
-  calendarHomeUrl    String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  baseUrl              String   @default("https://caldav.icloud.com")
+  principalUrl         String?
+  calendarHomeUrl      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -414,14 +422,14 @@ model AppleCalendarAccount {
 }
 
 model EmailCategoryOverride {
-  id             String   @id @default(cuid())
-  userId         String
-  overrideType   String   // "sender" | "domain" | "threadId"
-  overrideValue  String   // email address, domain, or thread ID
-  categoryName   String   // Category to apply
-  reason         String?  // Optional user note
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  userId        String
+  overrideType  String // "sender" | "domain" | "threadId"
+  overrideValue String // email address, domain, or thread ID
+  categoryName  String // Category to apply
+  reason        String? // Optional user note
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -446,27 +454,27 @@ model EmailActionState {
 }
 
 model WritingVoiceProfile {
-  id                String   @id @default(cuid())
-  userId            String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Voice preferences (1-10 scale, 5 = neutral)
-  formality         Int      @default(5)  // 1=casual, 10=professional
-  length            Int      @default(5)  // 1=concise, 10=detailed
-  tone              Int      @default(5)  // 1=friendly, 10=formal
+  formality Int @default(5) // 1=casual, 10=professional
+  length    Int @default(5) // 1=concise, 10=detailed
+  tone      Int @default(5) // 1=friendly, 10=formal
 
   // Advanced: user writing samples
-  voiceSamples      String?  // Optional: 2-3 example emails
+  voiceSamples String? // Optional: 2-3 example emails
 
   // Usage tracking (for future quotas)
-  aiDraftsGenerated Int      @default(0)
+  aiDraftsGenerated Int @default(0)
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // TODO: Post-beta - Add monthly quota limits per subscription tier
   // TODO: Post-beta - Add profile variants (work/personal contexts)
+
+  @@index([userId])
 }
