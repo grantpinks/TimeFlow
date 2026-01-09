@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { DateTime } from 'luxon';
 import { FlowMascot } from '../FlowMascot';
 
 interface SchedulingContext {
@@ -20,6 +21,8 @@ export function FlowSchedulingBanner() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [context, setContext] = useState<SchedulingContext | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generatingSchedule, setGeneratingSchedule] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<string | null>(null);
 
   useEffect(() => {
     fetchContext();
@@ -68,6 +71,55 @@ export function FlowSchedulingBanner() {
     return 'Flow can schedule your habits for you';
   };
 
+  const handleQuickAction = async (range: 'tomorrow' | 'next-3-days' | 'this-week' | 'next-2-weeks') => {
+    setSelectedRange(range);
+    setGeneratingSchedule(true);
+
+    const now = DateTime.now();
+    let dateRangeStart: string;
+    let dateRangeEnd: string;
+
+    switch (range) {
+      case 'tomorrow':
+        dateRangeStart = now.plus({ days: 1 }).toISODate()!;
+        dateRangeEnd = now.plus({ days: 1 }).toISODate()!;
+        break;
+      case 'next-3-days':
+        dateRangeStart = now.plus({ days: 1 }).toISODate()!;
+        dateRangeEnd = now.plus({ days: 3 }).toISODate()!;
+        break;
+      case 'this-week':
+        dateRangeStart = now.plus({ days: 1 }).toISODate()!;
+        dateRangeEnd = now.endOf('week').toISODate()!;
+        break;
+      case 'next-2-weeks':
+        dateRangeStart = now.plus({ days: 1 }).toISODate()!;
+        dateRangeEnd = now.plus({ weeks: 2 }).toISODate()!;
+        break;
+    }
+
+    try {
+      const response = await fetch('/api/habits/bulk-schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({ dateRangeStart, dateRangeEnd }),
+      });
+
+      const data = await response.json();
+      console.log('Generated schedule:', data);
+
+      // TODO: Show preview in next phase
+
+    } catch (error) {
+      console.error('Failed to generate schedule:', error);
+    } finally {
+      setGeneratingSchedule(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-gradient-to-r from-primary-50 to-blue-50 border-2 border-primary-200 rounded-xl p-4 mb-6">
@@ -100,10 +152,63 @@ export function FlowSchedulingBanner() {
         </svg>
       </button>
 
-      {/* Expanded State - Placeholder */}
+      {/* Expanded State */}
       {isExpanded && (
-        <div className="p-6 pt-0 border-t border-primary-200">
-          <p className="text-slate-600">Expanded state coming soon...</p>
+        <div className="p-6 pt-4 border-t border-primary-200">
+          {!generatingSchedule ? (
+            <>
+              <p className="text-slate-700 font-medium mb-4">When should Flow schedule your habits?</p>
+
+              {/* Quick Action Chips */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                <button
+                  onClick={() => handleQuickAction('tomorrow')}
+                  className="px-4 py-2 bg-white border-2 border-primary-300 rounded-lg text-primary-700 font-medium hover:bg-primary-100 transition-colors"
+                >
+                  Tomorrow
+                </button>
+                <button
+                  onClick={() => handleQuickAction('next-3-days')}
+                  className="px-4 py-2 bg-white border-2 border-primary-300 rounded-lg text-primary-700 font-medium hover:bg-primary-100 transition-colors"
+                >
+                  Next 3 Days
+                </button>
+                <button
+                  onClick={() => handleQuickAction('this-week')}
+                  className="px-4 py-2 bg-white border-2 border-primary-300 rounded-lg text-primary-700 font-medium hover:bg-primary-100 transition-colors"
+                >
+                  This Week
+                </button>
+                <button
+                  onClick={() => handleQuickAction('next-2-weeks')}
+                  className="px-4 py-2 bg-white border-2 border-primary-300 rounded-lg text-primary-700 font-medium hover:bg-primary-100 transition-colors"
+                >
+                  Next 2 Weeks
+                </button>
+              </div>
+
+              {/* Optional Custom Prompt */}
+              <div className="mt-4">
+                <p className="text-sm text-slate-600 mb-2">Or tell Flow:</p>
+                <input
+                  type="text"
+                  placeholder="Skip Monday, I'm traveling"
+                  className="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-primary-400 focus:outline-none"
+                  disabled
+                />
+                <p className="text-xs text-slate-400 mt-1">Custom prompts coming soon</p>
+              </div>
+            </>
+          ) : (
+            // Loading State
+            <div className="flex flex-col items-center justify-center py-8">
+              <FlowMascot size="lg" expression="thinking" className="mb-4" />
+              <p className="text-slate-700 font-medium mb-2">Flow is finding the best times...</p>
+              <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-full bg-primary-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
