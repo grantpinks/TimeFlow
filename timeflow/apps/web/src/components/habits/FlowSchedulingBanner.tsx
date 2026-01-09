@@ -36,6 +36,7 @@ export function FlowSchedulingBanner() {
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [commitProgress, setCommitProgress] = useState<BlockProgress[]>([]);
   const [totalBlocks, setTotalBlocks] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchContext();
@@ -87,6 +88,7 @@ export function FlowSchedulingBanner() {
   const handleQuickAction = async (range: 'tomorrow' | 'next-3-days' | 'this-week' | 'next-2-weeks') => {
     setSelectedRange(range);
     setGeneratingSchedule(true);
+    setError(null);
 
     const now = DateTime.now();
     let dateRangeStart: string;
@@ -122,15 +124,16 @@ export function FlowSchedulingBanner() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate schedule');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to generate schedule');
       }
 
       const data = await response.json();
-      setSuggestions(data.suggestions);
+      setSuggestions(data.suggestions || []);
 
     } catch (error) {
       console.error('Failed to generate schedule:', error);
-      // TODO: Show error toast
+      setError(error instanceof Error ? error.message : 'Failed to generate schedule. Please try again.');
     } finally {
       setGeneratingSchedule(false);
     }
@@ -242,7 +245,41 @@ export function FlowSchedulingBanner() {
       {/* Expanded State */}
       {isExpanded && (
         <div className="p-6 pt-4 border-t border-primary-200">
-          {suggestions ? (
+          {error ? (
+            // Error State
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="text-4xl mb-3">⚠️</div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                Couldn't generate schedule
+              </h3>
+              <p className="text-sm text-slate-600 text-center mb-4 max-w-sm">
+                {error}
+              </p>
+              <button
+                onClick={() => selectedRange && handleQuickAction(selectedRange as any)}
+                className="px-6 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : suggestions && suggestions.length === 0 ? (
+            // Empty State
+            <div className="flex flex-col items-center justify-center py-8">
+              <FlowMascot size="lg" expression="thinking" className="mb-3" />
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                No available time slots
+              </h3>
+              <p className="text-sm text-slate-600 text-center mb-4 max-w-sm">
+                Flow couldn't find open slots for your habits. Try a longer time range or adjust your calendar.
+              </p>
+              <button
+                onClick={() => setError(null)}
+                className="px-6 py-2 text-primary-600 hover:bg-primary-50 rounded-lg font-medium transition-colors"
+              >
+                Try Different Range
+              </button>
+            </div>
+          ) : suggestions && suggestions.length > 0 ? (
             // Preview State
             <SchedulePreview
               suggestions={suggestions}
