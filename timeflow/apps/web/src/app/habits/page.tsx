@@ -14,6 +14,7 @@ import { useHabits } from '@/hooks/useHabits';
 import { HabitsInsights } from '@/components/habits/HabitsInsights';
 import { HabitCard } from '@/components/habits/HabitCard';
 import { FlowMascot } from '@/components/FlowMascot';
+import { FlowSchedulingBanner } from '@/components/habits/FlowSchedulingBanner';
 import { track } from '@/lib/analytics';
 import type { Habit, HabitFrequency, TimeOfDay } from '@timeflow/shared';
 
@@ -171,6 +172,9 @@ export default function HabitsPage() {
             </button>
           }
         />
+
+        {/* Flow Scheduling Banner */}
+        {habits.length > 0 && <FlowSchedulingBanner />}
 
         {/* Flow Coach Welcome (only show if user has habits) */}
         {habits.length > 0 && (
