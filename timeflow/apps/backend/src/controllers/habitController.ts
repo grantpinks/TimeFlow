@@ -13,6 +13,7 @@ import * as habitCompletionService from '../services/habitCompletionService.js';
 import * as habitInsightsService from '../services/habitInsightsService.js';
 import { getSchedulingContext } from '../services/schedulingContextService.js';
 import { generateBulkSchedule } from '../services/bulkScheduleService.js';
+import { commitSchedule } from '../services/commitScheduleService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { HabitSkipReason, type DismissCoachSuggestionRequest } from '@timeflow/shared';
 
@@ -506,5 +507,34 @@ export async function generateBulkScheduleHandler(
       return reply.code(400).send({ error: error.message });
     }
     return reply.code(500).send({ error: 'Failed to generate schedule' });
+  }
+}
+
+export async function commitScheduleHandler(
+  request: FastifyRequest<{
+    Body: {
+      acceptedBlocks: Array<{
+        habitId: string;
+        startDateTime: string;
+        endDateTime: string;
+      }>;
+    };
+  }>,
+  reply: FastifyReply
+) {
+  try {
+    const userId = request.user!.id;
+    const { acceptedBlocks } = request.body;
+
+    if (!acceptedBlocks || acceptedBlocks.length === 0) {
+      return reply.code(400).send({ error: 'No blocks provided' });
+    }
+
+    const result = await commitSchedule(userId, acceptedBlocks);
+
+    return reply.code(200).send(result);
+  } catch (error) {
+    request.log.error(error, 'Error committing schedule');
+    return reply.code(500).send({ error: 'Failed to commit schedule' });
   }
 }

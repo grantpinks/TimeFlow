@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as habitController from '../controllers/habitController.js';
-import { getSchedulingContextHandler, generateBulkScheduleHandler } from '../controllers/habitController.js';
+import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler } from '../controllers/habitController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerHabitRoutes(server: FastifyInstance) {
@@ -57,6 +57,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/bulk-schedule',
     { preHandler: requireAuth },
     generateBulkScheduleHandler
+  );
+
+  // POST /api/habits/commit-schedule - Commit accepted habit blocks to Google Calendar
+  server.post(
+    '/habits/commit-schedule',
+    { preHandler: requireAuth },
+    commitScheduleHandler
   );
 
   // POST /api/habits - Create a new habit
