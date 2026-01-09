@@ -75,4 +75,59 @@ describe('schedulingContextService', () => {
 
     expect(context.urgentHabits).toBe(1);
   });
+
+  it('should return zero unscheduled habits when all habits are scheduled', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-123',
+      timeZone: 'America/Chicago',
+    } as any);
+
+    vi.mocked(prisma.habit.findMany).mockResolvedValue([
+      { id: 'habit-1' },
+      { id: 'habit-2' },
+    ] as any);
+
+    // All habits have scheduled instances for the next 7 days
+    vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(2);
+    vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
+
+    const context = await getSchedulingContext('user-123');
+
+    expect(context.unscheduledHabitsCount).toBe(0);
+  });
+
+  it('should handle users with no active habits', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-123',
+      timeZone: 'America/Chicago',
+    } as any);
+
+    vi.mocked(prisma.habit.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(0);
+    vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
+
+    const context = await getSchedulingContext('user-123');
+
+    expect(context.unscheduledHabitsCount).toBe(0);
+    expect(context.urgentHabits).toBe(0);
+  });
+
+  it('should determine next relevant day based on day of week', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-123',
+      timeZone: 'America/Chicago',
+    } as any);
+
+    vi.mocked(prisma.habit.findMany).mockResolvedValue([
+      { id: 'habit-1' },
+    ] as any);
+
+    vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(0);
+    vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
+
+    const context = await getSchedulingContext('user-123');
+
+    // nextRelevantDay should be one of: 'today', 'tomorrow', 'next week'
+    expect(['today', 'tomorrow', 'next week']).toContain(context.nextRelevantDay);
+  });
 });

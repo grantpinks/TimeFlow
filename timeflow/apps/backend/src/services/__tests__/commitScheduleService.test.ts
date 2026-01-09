@@ -167,4 +167,162 @@ describe('commitScheduleService', () => {
       expect(result).toBeNull();
     });
   });
+
+  describe('commitSchedule - error handling', () => {
+    it('should handle Google Calendar API failures gracefully', async () => {
+      const mockUserId = 'user-123';
+      const mockBlocks = [
+        {
+          habitId: 'habit-1',
+          startDateTime: '2026-01-10T08:00:00.000Z',
+          endDateTime: '2026-01-10T08:30:00.000Z',
+        },
+      ];
+
+      vi.mocked(prisma.schedulingJob.create).mockResolvedValue({
+        id: 'job-123',
+        userId: mockUserId,
+        status: 'IN_PROGRESS',
+        totalBlocks: 1,
+        completedBlocks: 0,
+        createdEventIds: [],
+        errorMessage: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      vi.mocked(prisma.habit.findUnique).mockResolvedValue({
+        id: 'habit-1',
+        title: 'Morning Exercise',
+        userId: mockUserId,
+      } as any);
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        googleAccessToken: 'mock-token',
+      } as any);
+
+      // Simulate Calendar API failure
+      vi.mocked(createEvent).mockRejectedValue(new Error('Calendar API error'));
+
+      vi.mocked(prisma.schedulingJob.update).mockResolvedValue({} as any);
+
+      const result = await commitSchedule(mockUserId, mockBlocks);
+
+      expect(result).toHaveProperty('progress');
+      expect(result.progress[0].status).toBe('failed');
+    });
+
+    it('should handle partial success when some events fail', async () => {
+      const mockUserId = 'user-123';
+      const mockBlocks = [
+        {
+          habitId: 'habit-1',
+          startDateTime: '2026-01-10T08:00:00.000Z',
+          endDateTime: '2026-01-10T08:30:00.000Z',
+        },
+        {
+          habitId: 'habit-2',
+          startDateTime: '2026-01-10T09:00:00.000Z',
+          endDateTime: '2026-01-10T10:00:00.000Z',
+        },
+      ];
+
+      vi.mocked(prisma.schedulingJob.create).mockResolvedValue({
+        id: 'job-123',
+        userId: mockUserId,
+        status: 'IN_PROGRESS',
+        totalBlocks: 2,
+        completedBlocks: 0,
+        createdEventIds: [],
+        errorMessage: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      vi.mocked(prisma.habit.findUnique)
+        .mockResolvedValueOnce({
+          id: 'habit-1',
+          title: 'Morning Exercise',
+          userId: mockUserId,
+        } as any)
+        .mockResolvedValueOnce({
+          id: 'habit-2',
+          title: 'Reading',
+          userId: mockUserId,
+        } as any);
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        id: mockUserId,
+        googleAccessToken: 'mock-token',
+      } as any);
+
+      // First succeeds, second fails
+      vi.mocked(createEvent)
+        .mockResolvedValueOnce({ eventId: 'event-1' } as any)
+        .mockRejectedValueOnce(new Error('Calendar conflict'));
+
+      vi.mocked(prisma.scheduledHabit.create).mockResolvedValue({} as any);
+      vi.mocked(prisma.schedulingJob.update).mockResolvedValue({} as any);
+
+      const result = await commitSchedule(mockUserId, mockBlocks);
+
+      expect(result.progress).toHaveLength(2);
+      expect(result.progress[0].status).toBe('created');
+      expect(result.progress[1].status).toBe('failed');
+    });
+
+    it('should handle missing habit records', async () => {
+      const mockUserId = 'user-123';
+      const mockBlocks = [
+        {
+          habitId: 'nonexistent-habit',
+          startDateTime: '2026-01-10T08:00:00.000Z',
+          endDateTime: '2026-01-10T08:30:00.000Z',
+        },
+      ];
+
+      vi.mocked(prisma.schedulingJob.create).mockResolvedValue({
+        id: 'job-123',
+        userId: mockUserId,
+        status: 'IN_PROGRESS',
+        totalBlocks: 1,
+        completedBlocks: 0,
+        createdEventIds: [],
+        errorMessage: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      vi.mocked(prisma.habit.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.schedulingJob.update).mockResolvedValue({} as any);
+
+      const result = await commitSchedule(mockUserId, mockBlocks);
+
+      expect(result.progress[0].status).toBe('failed');
+      expect(result.progress[0].error).toContain('not found');
+    });
+
+    it('should create job even with empty blocks array', async () => {
+      const mockUserId = 'user-123';
+      const mockBlocks: any[] = [];
+
+      vi.mocked(prisma.schedulingJob.create).mockResolvedValue({
+        id: 'job-123',
+        userId: mockUserId,
+        status: 'COMPLETED',
+        totalBlocks: 0,
+        completedBlocks: 0,
+        createdEventIds: [],
+        errorMessage: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as any);
+
+      const result = await commitSchedule(mockUserId, mockBlocks);
+
+      expect(result.progress).toHaveLength(0);
+      expect(prisma.schedulingJob.create).toHaveBeenCalled();
+    });
+  });
 });
