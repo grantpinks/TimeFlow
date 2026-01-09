@@ -10,12 +10,20 @@ import { useState, useEffect } from 'react';
 import { DateTime } from 'luxon';
 import { FlowMascot } from '../FlowMascot';
 import { SchedulePreview, HabitBlock } from './SchedulePreview';
+import { SchedulingProgressModal } from './SchedulingProgressModal';
 
 interface SchedulingContext {
   unscheduledHabitsCount: number;
   nextRelevantDay: string;
   urgentHabits: number;
   calendarDensity: 'light' | 'moderate' | 'busy';
+}
+
+interface BlockProgress {
+  habitId: string;
+  status: 'pending' | 'creating' | 'created' | 'failed';
+  eventId?: string;
+  error?: string;
 }
 
 export function FlowSchedulingBanner() {
@@ -25,6 +33,9 @@ export function FlowSchedulingBanner() {
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [selectedRange, setSelectedRange] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<HabitBlock[] | null>(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [commitProgress, setCommitProgress] = useState<BlockProgress[]>([]);
+  const [totalBlocks, setTotalBlocks] = useState(0);
 
   useEffect(() => {
     fetchContext();
@@ -126,18 +137,74 @@ export function FlowSchedulingBanner() {
   };
 
   const handleAcceptAll = async (blocks: HabitBlock[]) => {
-    console.log('Accepting schedule with blocks:', blocks);
-    // TODO: Call commit schedule API (next phase)
-    // For now, just clear suggestions and collapse
-    setSuggestions(null);
-    setIsExpanded(false);
-    // TODO: Show success toast
-    // TODO: Refresh habit list
+    setTotalBlocks(blocks.length);
+    setShowProgressModal(true);
+
+    // Initialize progress for all blocks
+    const initialProgress: BlockProgress[] = blocks.map((block) => ({
+      habitId: block.habitId,
+      status: 'pending' as const,
+    }));
+    setCommitProgress(initialProgress);
+
+    try {
+      const response = await fetch('/api/habits/commit-schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          acceptedBlocks: blocks.map((b) => ({
+            habitId: b.habitId,
+            startDateTime: b.startDateTime,
+            endDateTime: b.endDateTime,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to commit schedule');
+      }
+
+      const data = await response.json();
+      setCommitProgress(data.progress);
+
+      // Clear suggestions on success
+      if (data.progress.every((p: BlockProgress) => p.status === 'created')) {
+        setSuggestions(null);
+      }
+    } catch (error) {
+      console.error('Failed to commit schedule:', error);
+      // Mark all as failed
+      setCommitProgress(
+        initialProgress.map((p) => ({
+          ...p,
+          status: 'failed' as const,
+          error: 'Failed to create calendar events',
+        }))
+      );
+    }
   };
 
   const handleCancel = () => {
     setSuggestions(null);
     // Keep expanded so user can try again
+  };
+
+  const handleProgressComplete = () => {
+    setShowProgressModal(false);
+    setCommitProgress([]);
+    setTotalBlocks(0);
+    setIsExpanded(false);
+    // Refresh context to show updated counts
+    fetchContext();
+  };
+
+  const handleViewCalendar = () => {
+    setShowProgressModal(false);
+    // Navigate to calendar page
+    window.location.href = '/calendar';
   };
 
   if (loading) {
@@ -239,6 +306,15 @@ export function FlowSchedulingBanner() {
           )}
         </div>
       )}
+
+      {/* Progress Modal */}
+      <SchedulingProgressModal
+        isOpen={showProgressModal}
+        progress={commitProgress}
+        totalBlocks={totalBlocks}
+        onComplete={handleProgressComplete}
+        onViewCalendar={handleViewCalendar}
+      />
     </div>
   );
 }
