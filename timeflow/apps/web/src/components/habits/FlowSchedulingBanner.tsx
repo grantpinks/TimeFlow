@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react';
 import { DateTime } from 'luxon';
 import { FlowMascot } from '../FlowMascot';
+import { SchedulePreview, HabitBlock } from './SchedulePreview';
 
 interface SchedulingContext {
   unscheduledHabitsCount: number;
@@ -23,6 +24,7 @@ export function FlowSchedulingBanner() {
   const [loading, setLoading] = useState(true);
   const [generatingSchedule, setGeneratingSchedule] = useState(false);
   const [selectedRange, setSelectedRange] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<HabitBlock[] | null>(null);
 
   useEffect(() => {
     fetchContext();
@@ -108,16 +110,34 @@ export function FlowSchedulingBanner() {
         body: JSON.stringify({ dateRangeStart, dateRangeEnd }),
       });
 
-      const data = await response.json();
-      console.log('Generated schedule:', data);
+      if (!response.ok) {
+        throw new Error('Failed to generate schedule');
+      }
 
-      // TODO: Show preview in next phase
+      const data = await response.json();
+      setSuggestions(data.suggestions);
 
     } catch (error) {
       console.error('Failed to generate schedule:', error);
+      // TODO: Show error toast
     } finally {
       setGeneratingSchedule(false);
     }
+  };
+
+  const handleAcceptAll = async (blocks: HabitBlock[]) => {
+    console.log('Accepting schedule with blocks:', blocks);
+    // TODO: Call commit schedule API (next phase)
+    // For now, just clear suggestions and collapse
+    setSuggestions(null);
+    setIsExpanded(false);
+    // TODO: Show success toast
+    // TODO: Refresh habit list
+  };
+
+  const handleCancel = () => {
+    setSuggestions(null);
+    // Keep expanded so user can try again
   };
 
   if (loading) {
@@ -155,7 +175,24 @@ export function FlowSchedulingBanner() {
       {/* Expanded State */}
       {isExpanded && (
         <div className="p-6 pt-4 border-t border-primary-200">
-          {!generatingSchedule ? (
+          {suggestions ? (
+            // Preview State
+            <SchedulePreview
+              suggestions={suggestions}
+              onAcceptAll={handleAcceptAll}
+              onCancel={handleCancel}
+            />
+          ) : generatingSchedule ? (
+            // Loading State
+            <div className="flex flex-col items-center justify-center py-8">
+              <FlowMascot size="lg" expression="thinking" className="mb-4" />
+              <p className="text-slate-700 font-medium mb-2">Flow is finding the best times...</p>
+              <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-full bg-primary-500 rounded-full animate-pulse" style={{ width: '60%' }} />
+              </div>
+            </div>
+          ) : (
+            // Prompt State
             <>
               <p className="text-slate-700 font-medium mb-4">When should Flow schedule your habits?</p>
 
@@ -199,15 +236,6 @@ export function FlowSchedulingBanner() {
                 <p className="text-xs text-slate-400 mt-1">Custom prompts coming soon</p>
               </div>
             </>
-          ) : (
-            // Loading State
-            <div className="flex flex-col items-center justify-center py-8">
-              <FlowMascot size="lg" expression="thinking" className="mb-4" />
-              <p className="text-slate-700 font-medium mb-2">Flow is finding the best times...</p>
-              <div className="w-48 h-1 bg-slate-200 rounded-full overflow-hidden">
-                <div className="h-full bg-primary-500 rounded-full animate-pulse" style={{ width: '60%' }} />
-              </div>
-            </div>
           )}
         </div>
       )}
