@@ -5,6 +5,11 @@
  */
 
 /**
+ * Source type for calendar events (task, habit, or external Google Calendar event)
+ */
+export type CalendarEventSource = 'task' | 'habit' | 'external';
+
+/**
  * A calendar event as returned by the API.
  */
 export interface CalendarEvent {
@@ -16,6 +21,10 @@ export interface CalendarEvent {
   attendees?: { email: string }[]; // For meeting detection (Sprint 13.7)
   isFixed?: boolean; // Optional metadata for fixed/movable classification (Sprint 13.7)
   transparency?: 'opaque' | 'transparent'; // For availability blocking (Sprint 15)
+  // Completion tracking (Sprint 17)
+  sourceType?: CalendarEventSource; // Identifies if this is a task, habit, or external event
+  sourceId?: string; // Task ID or ScheduledHabit ID for completion tracking
+  isCompleted?: boolean; // Completion status for tasks and habits
 }
 
 /**

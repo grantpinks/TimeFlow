@@ -8,6 +8,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import * as calendarService from '../services/googleCalendarService.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
+import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
 
 const eventQuerySchema = z.object({
   from: z.string().datetime(),
@@ -16,7 +17,8 @@ const eventQuerySchema = z.object({
 
 /**
  * GET /api/calendar/events
- * Returns events from the user's Google Calendar within the specified range.
+ * Returns events from the user's Google Calendar within the specified range,
+ * enriched with task and habit source information and completion status.
  */
 export async function getEvents(
   request: FastifyRequest<{ Querystring: { from: string; to: string } }>,
@@ -36,8 +38,85 @@ export async function getEvents(
 
   try {
     const calendarId = user.defaultCalendarId || 'primary';
-    const events = await calendarService.getEvents(user.id, calendarId, from, to);
-    return events;
+
+    // Fetch Google Calendar events (external events)
+    const googleEvents = await calendarService.getEvents(user.id, calendarId, from, to);
+
+    // Fetch scheduled tasks with completion status
+    const {prisma} = await import('../config/prisma.js');
+    const scheduledTasks = await prisma.scheduledTask.findMany({
+      where: {
+        task: { userId: user.id },
+        startDateTime: { gte: from },
+        endDateTime: { lte: to },
+      },
+      include: {
+        task: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    // Fetch scheduled habits with completion status
+    const scheduledHabits = await prisma.scheduledHabit.findMany({
+      where: {
+        habit: { userId: user.id },
+        startDateTime: { gte: from },
+        endDateTime: { lte: to },
+      },
+      include: {
+        habit: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+          },
+        },
+        completion: {
+          select: {
+            status: true,
+          },
+        },
+      },
+    });
+
+    // Convert tasks to calendar events
+    const taskEvents = scheduledTasks.map((st) => ({
+      id: st.eventId,
+      summary: st.task.title,
+      description: st.task.description || undefined,
+      start: st.startDateTime.toISOString(),
+      end: st.endDateTime.toISOString(),
+      sourceType: 'task' as const,
+      sourceId: st.task.id,
+      isCompleted: st.task.status === 'completed',
+    }));
+
+    // Convert habits to calendar events
+    const habitEvents = scheduledHabits.map((sh) => ({
+      id: sh.eventId,
+      summary: sh.habit.title,
+      description: sh.habit.description || undefined,
+      start: sh.startDateTime.toISOString(),
+      end: sh.endDateTime.toISOString(),
+      sourceType: 'habit' as const,
+      sourceId: sh.id, // Use scheduledHabit ID for completion API
+      isCompleted: sh.completion?.status === 'completed',
+    }));
+
+    // Mark Google Calendar events as external
+    const externalEvents = googleEvents.map((event) => ({
+      ...event,
+      sourceType: 'external' as const,
+    }));
+
+    // Merge and return all events
+    return [...externalEvents, ...taskEvents, ...habitEvents];
   } catch (error) {
     request.log.error(error, 'Failed to fetch calendar events');
     return reply.status(500).send({ error: 'Failed to fetch calendar events' });
@@ -99,12 +178,19 @@ export async function createHabitEvents(
     const createdEvents = [];
 
     for (const event of events) {
+      const habitEvent = buildTimeflowEventDetails({
+        title: event.title,
+        kind: 'habit',
+        prefixEnabled: user.eventPrefixEnabled,
+        prefix: user.eventPrefix,
+        description: 'Scheduled habit from TimeFlow',
+      });
       const calendarEvent = await calendarService.createEvent(
         user.id,
         calendarId,
         {
-          summary: `[TimeFlow Habit] ${event.title}`,
-          description: `Scheduled habit from TimeFlow`,
+          summary: habitEvent.summary,
+          description: habitEvent.description,
           start: event.start,
           end: event.end,
         }
@@ -122,4 +208,3 @@ export async function createHabitEvents(
     return reply.status(500).send({ error: 'Failed to create habit events' });
   }
 }
-
