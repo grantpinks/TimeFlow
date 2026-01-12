@@ -63,6 +63,8 @@ export interface UserProfile {
   dailyScheduleConstraints?: DailyScheduleConfig | null;
   defaultTaskDurationMinutes: number;
   defaultCalendarId?: string | null;
+  eventPrefixEnabled?: boolean;
+  eventPrefix?: string;
   sidebarNavOrder?: string[];
 
   // Meeting-specific preferences
@@ -70,6 +72,10 @@ export interface UserProfile {
   meetingEndTime?: string | null;          // Default latest meeting time
   blockedDaysOfWeek?: string[];            // Days where NO meetings allowed (e.g., ["saturday", "sunday"])
   dailyMeetingSchedule?: DailyMeetingConfig | null;  // Per-day meeting config
+
+  // Habit notification preferences (opt-in)
+  notifyStreakAtRisk?: boolean;            // Notify when streak will break if not completed today
+  notifyMissedHighPriority?: boolean;      // Notify when high-priority habit is missed
 }
 
 /**
@@ -83,6 +89,8 @@ export interface UserPreferencesUpdate {
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;
+  eventPrefixEnabled?: boolean;
+  eventPrefix?: string;
   sidebarNavOrder?: string[];
 
   // Meeting-specific preferences
@@ -90,6 +98,10 @@ export interface UserPreferencesUpdate {
   meetingEndTime?: string | null;
   blockedDaysOfWeek?: string[];
   dailyMeetingSchedule?: DailyMeetingConfig | null;
+
+  // Habit notification preferences
+  notifyStreakAtRisk?: boolean;
+  notifyMissedHighPriority?: boolean;
 }
 
 export type EmailAccountProvider = 'google';

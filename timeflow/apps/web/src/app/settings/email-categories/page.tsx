@@ -105,7 +105,6 @@ export default function EmailCategoriesSettingsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [syncPolling, setSyncPolling] = useState(false);
-  const [syncStartTime, setSyncStartTime] = useState<number | null>(null);
   const [syncElapsedSeconds, setSyncElapsedSeconds] = useState(0);
   const [removing, setRemoving] = useState(false);
   const [backfillDaysInput, setBackfillDaysInput] = useState(7);
@@ -223,7 +222,6 @@ export default function EmailCategoriesSettingsPage() {
       const result = await api.triggerGmailSync();
       if (result.status === 'in_progress') {
         const startedAt = Date.now();
-        setSyncStartTime(startedAt);
         setSyncInProgress(true);
         setSyncElapsedSeconds(0);
         setSuccessMessage('Gmail sync started. Status will update shortly.');
@@ -323,7 +321,6 @@ export default function EmailCategoriesSettingsPage() {
         if (lastSyncedAtMs >= startedAt - 1000) {
           setSyncInProgress(false);
           setSyncPolling(false);
-          setSyncStartTime(null);
           setSyncElapsedSeconds(0);
           if (status.lastSyncError) {
             setError(`Gmail sync completed with errors: ${status.lastSyncError}`);

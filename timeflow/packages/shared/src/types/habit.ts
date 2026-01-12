@@ -37,3 +37,12 @@ export interface UpdateHabitRequest {
   durationMinutes?: number;
   isActive?: boolean;
 }
+
+export interface ScheduledHabitInstance {
+  scheduledHabitId: string;
+  habitId: string;
+  title: string;
+  startDateTime: string;
+  endDateTime: string;
+  eventId?: string | null;
+}

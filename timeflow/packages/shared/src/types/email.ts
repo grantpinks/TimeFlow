@@ -73,6 +73,39 @@ export interface EmailAttachment {
   attachmentId: string;
 }
 
+export interface EmailThreadMessageInput {
+  id: string;
+  from: string;
+  subject: string;
+  receivedAt: string;
+  body: string;
+}
+
+export interface EmailThreadSummaryRequest {
+  threadId: string;
+  messages: EmailThreadMessageInput[];
+}
+
+export interface EmailThreadSummaryResponse {
+  threadId: string;
+  summary: string;
+}
+
+export interface EmailThreadTaskItem {
+  title: string;
+  details?: string;
+}
+
+export interface EmailThreadTasksRequest {
+  threadId: string;
+  messages: EmailThreadMessageInput[];
+}
+
+export interface EmailThreadTasksResponse {
+  threadId: string;
+  tasks: EmailThreadTaskItem[];
+}
+
 /**
  * Request to send an email
  */

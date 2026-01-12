@@ -11,7 +11,8 @@ export type RecommendationType =
   | 'low_adherence'
   | 'repeated_skip_no_time'
   | 'repeated_skip_forgot'
-  | 'duration_too_long';
+  | 'duration_too_long'
+  | 'duration_mismatch';
 
 /**
  * Recommendation action type
@@ -20,7 +21,8 @@ export type RecommendationAction =
   | 'schedule_rescue_block'
   | 'adjust_window'
   | 'reduce_duration'
-  | 'move_to_best_window';
+  | 'move_to_best_window'
+  | 'adjust_duration';
 
 /**
  * Individual habit recommendation

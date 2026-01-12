@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as habitController from '../controllers/habitController.js';
-import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler } from '../controllers/habitController.js';
+import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler, reorderHabits } from '../controllers/habitController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerHabitRoutes(server: FastifyInstance) {
@@ -15,6 +15,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/suggestions',
     { preHandler: requireAuth },
     habitController.getHabitSuggestions
+  );
+
+  // GET /api/habits/instances - Scheduled habit instances for a date range
+  server.get(
+    '/habits/instances',
+    { preHandler: requireAuth },
+    habitController.getScheduledHabitInstances
   );
 
   // POST /api/habits/suggestions/accept - Accept a habit suggestion
@@ -45,6 +52,20 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     habitController.getHabitInsights
   );
 
+  // GET /api/habits/missed - Get missed habit instances
+  server.get(
+    '/habits/missed',
+    { preHandler: requireAuth },
+    habitController.getMissedHabits
+  );
+
+  // GET /api/habits/notifications - Get habit notifications (streak-at-risk + missed high-priority)
+  server.get(
+    '/habits/notifications',
+    { preHandler: requireAuth },
+    habitController.getHabitNotifications
+  );
+
   // GET /api/habits/scheduling-context - Get scheduling context for Flow Coach banner
   server.get(
     '/habits/scheduling-context',
@@ -64,6 +85,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/commit-schedule',
     { preHandler: requireAuth },
     commitScheduleHandler
+  );
+
+  // POST /api/habits/reorder - Reorder habits by priority
+  server.post(
+    '/habits/reorder',
+    { preHandler: requireAuth },
+    reorderHabits
   );
 
   // POST /api/habits - Create a new habit

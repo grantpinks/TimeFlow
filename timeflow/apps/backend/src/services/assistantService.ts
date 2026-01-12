@@ -155,6 +155,189 @@ function detectRescheduleIntent(userMessage: string): boolean {
   );
 }
 
+const SINGLE_EVENT_KEYWORDS = [
+  'single event',
+  'single habit',
+  'one event',
+  'one habit',
+  'just one',
+  'only one',
+  'only the',
+  'just the',
+  'schedule only',
+  'focus on',
+  'schedule 1',
+  'one block',
+  'one session',
+  'only change',
+  'just schedule',
+  'just that',
+];
+
+const DAY_ALIASES: Record<string, string[]> = {
+  monday: ['monday', 'mon'],
+  tuesday: ['tuesday', 'tue'],
+  wednesday: ['wednesday', 'wed'],
+  thursday: ['thursday', 'thu'],
+  friday: ['friday', 'fri'],
+  saturday: ['saturday', 'sat'],
+  sunday: ['sunday', 'sun'],
+};
+
+const TIME_HINT_REGEX = /(?:at|around|by|from|for|to)?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
+
+function normalizeTextTokens(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter(Boolean);
+}
+
+function messageContainsTokens(messageTokens: string[], habitTokens: string[]): boolean {
+  if (habitTokens.length === 0) return false;
+  let cursor = 0;
+  for (const token of messageTokens) {
+    if (token === habitTokens[cursor]) {
+      cursor += 1;
+      if (cursor === habitTokens.length) {
+        return true;
+      }
+      continue;
+    }
+  }
+  return false;
+}
+
+function extractHabitIdsFromMessage(
+  message: string,
+  habits: { id: string; title: string }[]
+): Set<string> {
+  const mentioned = new Set<string>();
+  if (!message) return mentioned;
+  const messageTokens = normalizeTextTokens(message);
+  if (messageTokens.length === 0) {
+    return mentioned;
+  }
+  habits.forEach((habit) => {
+    const habitTokens = normalizeTextTokens(habit.title);
+    if (messageContainsTokens(messageTokens, habitTokens)) {
+      mentioned.add(habit.id);
+    }
+  });
+  return mentioned;
+}
+
+function hasSingleEventKeyword(message: string): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return SINGLE_EVENT_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
+function extractDayNameFromMessage(message: string): string | null {
+  if (!message) return null;
+  const normalized = message.toLowerCase();
+  for (const [day, aliases] of Object.entries(DAY_ALIASES)) {
+    if (aliases.some((alias) => normalized.includes(alias))) {
+      return day;
+    }
+  }
+  return null;
+}
+
+function extractTimesFromMessage(
+  message: string
+): Array<{ hour: number; minute: number }> {
+  if (!message) return [];
+  const matches: Array<{ hour: number; minute: number }> = [];
+  TIME_HINT_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TIME_HINT_REGEX.exec(message))) {
+    let hour = parseInt(match[1], 10);
+    const minute = match[2] ? parseInt(match[2], 10) : 0;
+    const suffix = (match[3] ?? '').toLowerCase();
+    if (suffix === 'pm' && hour < 12) {
+      hour += 12;
+    }
+    if (suffix === 'am' && hour === 12) {
+      hour = 0;
+    }
+    if (hour >= 0 && hour < 24) {
+      matches.push({ hour, minute });
+    }
+  }
+  return matches;
+}
+
+function shouldFocusSingleHabitRequest(
+  message: string,
+  targetedHabitIds: Set<string>,
+  wantsReschedule: boolean
+): boolean {
+  if (wantsReschedule && targetedHabitIds.size > 0) {
+    return true;
+  }
+  if (targetedHabitIds.size !== 1) {
+    return false;
+  }
+  if (hasSingleEventKeyword(message)) {
+    return true;
+  }
+  if (extractDayNameFromMessage(message)) {
+    return true;
+  }
+  if (extractTimesFromMessage(message).length > 0) {
+    return true;
+  }
+  return false;
+}
+
+function filterSchedulePreviewForFocusedHabits(
+  preview: SchedulePreview,
+  targetedHabitIds: Set<string>,
+  message: string,
+  timeZone: string
+): SchedulePreview {
+  if (targetedHabitIds.size === 0) {
+    return preview;
+  }
+  const blocks = preview.blocks.filter((block) => {
+    const blockHabitId = block.habitId ?? block.taskId;
+    return Boolean(blockHabitId && targetedHabitIds.has(blockHabitId));
+  });
+  if (blocks.length === 0) {
+    return preview;
+  }
+
+  const dayHint = extractDayNameFromMessage(message);
+  const timeHints = extractTimesFromMessage(message);
+
+  const scored = blocks.map((block) => {
+    let score = 0;
+    const local = DateTime.fromISO(block.start, { zone: timeZone });
+    if (dayHint && local.toFormat('cccc').toLowerCase() === dayHint) {
+      score += 20;
+    }
+    if (timeHints.length > 0) {
+      const blockMinutes = local.hour * 60 + local.minute;
+      const closest = Math.min(
+        ...timeHints.map((hint) => Math.abs(blockMinutes - (hint.hour * 60 + hint.minute)))
+      );
+      score -= closest;
+    }
+    return { block, score };
+  });
+
+  const best = scored.reduce((current, candidate) =>
+    candidate.score > current.score ? candidate : current
+  );
+
+  return {
+    ...preview,
+    blocks: [best.block],
+  };
+}
+
 /**
  * Detect if user intent is to get a daily plan summary.
  */
@@ -978,6 +1161,8 @@ export async function processMessage(
       meetingState,
       meetingWillAsk,
       meetingContext,
+      focusedHabitIds,
+      shouldFocusSingleHabit,
     } = await buildContextPrompt(
       userId,
       message,
@@ -985,11 +1170,15 @@ export async function processMessage(
       isPlanAdjustment,
       wantsReschedule,
       wantsDailyPlan,
+      wantsReschedule,
       previousPlanningState,
       previousMeetingState,
       meetingLinksOverride,
       meetingContextOverride
     );
+
+    const focusHabitSet = new Set(focusedHabitIds);
+    const isFocusedPreview = shouldFocusSingleHabit && focusHabitSet.size > 0;
 
     const userPrefs: UserPreferences = {
       wakeTime: user.wakeTime,
@@ -1096,6 +1285,14 @@ export async function processMessage(
     }
 
     if (effectiveMode === 'scheduling' && schedulePreview) {
+      if (isFocusedPreview) {
+        schedulePreview = filterSchedulePreviewForFocusedHabits(
+          schedulePreview,
+          focusHabitSet,
+          message,
+          user.timeZone || 'UTC'
+        );
+      }
       schedulePreview = sanitizeSchedulePreview(schedulePreview, taskIds, habitIds);
     }
 
@@ -1115,19 +1312,21 @@ export async function processMessage(
         `[AssistantService][Debug] Validation: ${validation.valid ? 'PASSED' : 'FAILED'} (errors=${validation.errors.length}, warnings=${validation.warnings.length})`
       );
 
-      // Auto-fill missing habit days when possible to reduce friction
-      schedulePreview = fillMissingHabitBlocks(
-        schedulePreview,
-        contextHabits,
-        calendarEvents,
-        userPrefs
-      );
+      if (!isFocusedPreview) {
+        // Auto-fill missing habit days when possible to reduce friction
+        schedulePreview = fillMissingHabitBlocks(
+          schedulePreview,
+          contextHabits,
+          calendarEvents,
+          userPrefs
+        );
 
-      schedulePreview = applyHabitFrequencyConflicts(
-        schedulePreview,
-        contextHabits,
-        user.timeZone
-      );
+        schedulePreview = applyHabitFrequencyConflicts(
+          schedulePreview,
+          contextHabits,
+          user.timeZone
+        );
+      }
     }
 
     // Detect appropriate mascot state
@@ -1212,6 +1411,26 @@ export async function runAssistantTask(
   return { draftText };
 }
 
+type ThreadAssistTask =
+  | { summary: string }
+  | { tasks: { title: string; details?: string | null }[] };
+
+function parseJsonResponse(raw: string): ThreadAssistTask {
+  const fencedMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  const payload = (fencedMatch ? fencedMatch[1] : raw).trim();
+  return JSON.parse(payload) as ThreadAssistTask;
+}
+
+export async function runThreadAssistTask(
+  mode: 'email-summary' | 'email-tasks',
+  options: { contextPrompt: string }
+): Promise<ThreadAssistTask> {
+  const systemPrompt = promptManager.getPrompt(mode);
+  const llmResponse = await callLocalLLM(options.contextPrompt, undefined, systemPrompt, mode);
+
+  return parseJsonResponse(llmResponse);
+}
+
 /**
  * Build a context-rich prompt with user data, tasks, and calendar events
  *
@@ -1232,6 +1451,7 @@ async function buildContextPrompt(
   isPlanAdjustment: boolean = false,
   includeScheduledTaskIds: boolean = false,
   dailyPlanRequest: boolean = false,
+  wantsReschedule: boolean = false,
   previousPlanningState: PlanningState | null = null,
   previousMeetingState: MeetingWorkflowState | null = null,
   meetingLinksOverride?: MeetingLinkSummary[],
@@ -1255,6 +1475,8 @@ async function buildContextPrompt(
     preferredTimeOfDay: string | null;
   }[];
   skippedHabitIds: Set<string>;
+  focusedHabitIds: string[];
+  shouldFocusSingleHabit: boolean;
 }> {
   // Fetch user with preferences
   const user = await prisma.user.findUnique({
@@ -1309,6 +1531,13 @@ async function buildContextPrompt(
 
   const skippedHabitIds = detectSkippedHabits(habits, userMessage);
   const activeHabits = habits.filter((habit) => !skippedHabitIds.has(habit.id));
+  const targetedHabitIds = extractHabitIdsFromMessage(userMessage, activeHabits);
+  const focusedHabitIds = Array.from(targetedHabitIds);
+  const shouldFocusSingleHabit = shouldFocusSingleHabitRequest(
+    userMessage,
+    targetedHabitIds,
+    wantsReschedule
+  );
 
   // Fetch Google Calendar events for the next 7 days
   const now = new Date();
@@ -1477,6 +1706,15 @@ async function buildContextPrompt(
     prompt += `- Schedule within the next 7 days, honoring frequency/daysOfWeek and preferred time of day when provided.\n`;
     prompt += `- Set start/end using the habit durationMinutes; one block per day for daily habits, and one per listed day for weekly habits.\n`;
     prompt += `- If there are no unscheduled tasks, it is OK to return only habit blocks.\n\n`;
+    if (shouldFocusSingleHabit && focusedHabitIds.length > 0) {
+      const focusedTitles = activeHabits
+        .filter((habit) => targetedHabitIds.has(habit.id))
+        .map((habit) => habit.title)
+        .join(', ');
+      if (focusedTitles) {
+        prompt += `**Single Habit Request**: Focus only on ${focusedTitles}. Return only the block that changes, highlight how that block shifts from the current schedule, and do not recreate the full week.\n\n`;
+      }
+    }
   } else {
     prompt += "**Active Habits**: None set up yet.\n\n";
   }
@@ -1631,6 +1869,8 @@ async function buildContextPrompt(
     meetingContext,
     habits: activeHabits,
     skippedHabitIds,
+    focusedHabitIds,
+    shouldFocusSingleHabit,
   };
 }
 
@@ -1644,7 +1884,15 @@ async function callLocalLLM(
   contextPrompt: string,
   conversationHistory: ChatMessage[] | undefined,
   systemPrompt: string,
-  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings' | 'email-draft'
+  mode:
+    | 'conversation'
+    | 'scheduling'
+    | 'availability'
+    | 'planning'
+    | 'meetings'
+    | 'email-draft'
+    | 'email-summary'
+    | 'email-tasks'
 ): Promise<string> {
   const provider = (env.LLM_PROVIDER || 'local').toLowerCase();
   const isOpenAI = provider === 'openai';
@@ -1692,6 +1940,8 @@ async function callLocalLLM(
         ? 0.4
         : mode === 'email-draft'
           ? 0.5
+          : mode === 'email-summary' || mode === 'email-tasks'
+            ? 0.3
           : 0.7;
   const parsedMaxTokens = parseInt(env.LLM_MAX_TOKENS || '4000', 10);
   const maxTokens = Number.isNaN(parsedMaxTokens) ? 4000 : parsedMaxTokens;
@@ -1937,11 +2187,25 @@ function applyHabitFrequencyConflicts(
     return preview;
   }
 
+  const habitIdsInPreview = new Set(
+    preview.blocks
+      .map((block) => block.habitId)
+      .filter((habitId): habitId is string => Boolean(habitId))
+  );
+  if (habitIdsInPreview.size === 0) {
+    return preview;
+  }
+
   const conflicts = [...preview.conflicts];
 
   // Helper to format a date key in the user's timezone
   const toDateKey = (iso: string) =>
     new Date(iso).toLocaleDateString('en-CA', { timeZone });
+
+  const previewDayKeys = new Set(preview.blocks.map((block) => toDateKey(block.start)));
+  if (previewDayKeys.size <= 1) {
+    return preview;
+  }
 
   // Next 7 days starting today (local to user)
   const today = new Date();
@@ -1954,7 +2218,9 @@ function applyHabitFrequencyConflicts(
 
   const weekdayMap = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-  habits.forEach((habit) => {
+  const targetHabits = habits.filter((habit) => habitIdsInPreview.has(habit.id));
+
+  targetHabits.forEach((habit) => {
     const blocks = preview.blocks.filter((b) => b.habitId === habit.id);
     const blockDays = new Set(blocks.map((b) => toDateKey(b.start)));
 
@@ -2047,6 +2313,13 @@ function fillMissingHabitBlocks(
   const fixedEvents = separateFixedAndMovable(calendarEvents).fixed;
   const blocks = [...preview.blocks];
   const conflicts = [...preview.conflicts];
+  const habitIdsInPreview = new Set(
+    blocks.map((block) => block.habitId).filter((habitId): habitId is string => Boolean(habitId))
+  );
+
+  if (habitIdsInPreview.size === 0) {
+    return preview;
+  }
 
   const dateKey = (iso: string) =>
     DateTime.fromISO(iso, { zone: userPrefs.timeZone }).toFormat('yyyy-LL-dd');
@@ -2089,7 +2362,9 @@ function fillMissingHabitBlocks(
   const overlapsBlocks = (start: string, end: string) =>
     blocks.some((b) => hasTimeOverlap(start, end, b.start, b.end));
 
-  habits.forEach((habit) => {
+  const targetHabits = habits.filter((habit) => habitIdsInPreview.has(habit.id));
+
+  targetHabits.forEach((habit) => {
     const habitBlocks = blocks.filter((b) => b.habitId === habit.id);
     const habitDayKeys = new Set(habitBlocks.map((b) => dateKey(b.start)));
     const requiredDays =
@@ -2301,4 +2576,9 @@ export const __test__ = {
   applyHabitFrequencyConflicts,
   fillMissingHabitBlocks,
   detectSkippedHabits,
+  extractHabitIdsFromMessage,
+  shouldFocusSingleHabitRequest,
+  filterSchedulePreviewForFocusedHabits,
+  extractDayNameFromMessage,
+  extractTimesFromMessage,
 };

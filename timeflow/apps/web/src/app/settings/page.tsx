@@ -25,6 +25,8 @@ export default function SettingsPage() {
   const [timeZone, setTimeZone] = useState('America/Chicago');
   const [defaultDuration, setDefaultDuration] = useState(30);
   const [defaultCalendarId, setDefaultCalendarId] = useState<string>('');
+  const [eventPrefixEnabled, setEventPrefixEnabled] = useState(true);
+  const [eventPrefix, setEventPrefix] = useState('TF|');
   const [aiDebugEnabled, setAiDebugEnabled] = useState(false);
   const showAiDebugToggle = canShowAiDebugToggle();
 
@@ -36,6 +38,10 @@ export default function SettingsPage() {
   const [useCustomMeetingSchedule, setUseCustomMeetingSchedule] = useState(false);
   const [dailyMeetingSchedule, setDailyMeetingSchedule] = useState<DailyMeetingConfig>({});
 
+  // Habit notification preferences (opt-in)
+  const [notifyStreakAtRisk, setNotifyStreakAtRisk] = useState(false);
+  const [notifyMissedHighPriority, setNotifyMissedHighPriority] = useState(false);
+
   // Initialize form from user data
   useEffect(() => {
     if (user) {
@@ -44,6 +50,8 @@ export default function SettingsPage() {
       setTimeZone(user.timeZone);
       setDefaultDuration(user.defaultTaskDurationMinutes);
       setDefaultCalendarId(user.defaultCalendarId || '');
+      setEventPrefixEnabled(user.eventPrefixEnabled ?? true);
+      setEventPrefix(user.eventPrefix || 'TF|');
 
       // Initialize daily schedule
       const schedule = user.dailyScheduleConstraints || user.dailySchedule;
@@ -69,6 +77,10 @@ export default function SettingsPage() {
         setUseCustomMeetingSchedule(true);
         setDailyMeetingSchedule(meetingSchedule);
       }
+
+      // Load habit notification preferences
+      setNotifyStreakAtRisk(user.notifyStreakAtRisk ?? false);
+      setNotifyMissedHighPriority(user.notifyMissedHighPriority ?? false);
     }
   }, [user]);
 
@@ -109,12 +121,18 @@ export default function SettingsPage() {
         timeZone,
         defaultTaskDurationMinutes: defaultDuration,
         defaultCalendarId: defaultCalendarId || undefined,
+        eventPrefixEnabled,
+        eventPrefix: eventPrefixEnabled ? eventPrefix.trim() || 'TF|' : eventPrefix,
 
         // Meeting preferences
         meetingStartTime: useMeetingHours ? meetingStartTime : null,
         meetingEndTime: useMeetingHours ? meetingEndTime : null,
         blockedDaysOfWeek: blockedDays.length > 0 ? blockedDays : [],
         dailyMeetingSchedule: useCustomMeetingSchedule ? dailyMeetingSchedule : null,
+
+        // Habit notification preferences
+        notifyStreakAtRisk,
+        notifyMissedHighPriority,
       });
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
     } catch (err) {
@@ -590,11 +608,97 @@ export default function SettingsPage() {
             )}
           </div>
 
+          {/* Event Prefix */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+              Calendar Event Prefix
+            </h2>
+            <p className="text-slate-600 mb-4">
+              Add a prefix to TimeFlow-created calendar events.
+            </p>
+
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={eventPrefixEnabled}
+                onChange={(e) => setEventPrefixEnabled(e.target.checked)}
+                className="w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+              />
+              <span className="text-sm font-medium text-slate-700">
+                Use prefix for TimeFlow events
+              </span>
+            </label>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Prefix text
+              </label>
+              <input
+                type="text"
+                value={eventPrefix}
+                onChange={(e) => setEventPrefix(e.target.value)}
+                disabled={!eventPrefixEnabled}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-slate-50 disabled:text-slate-400"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Example: TF| Deep Work
+              </p>
+            </div>
+          </div>
+
           {/* Scheduling Links */}
           <SchedulingLinksPanel />
 
           {/* Meeting Manager */}
           <MeetingManagerPanel />
+
+          {/* Habit Notifications */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-800 mb-2">
+              Habit Notifications
+            </h2>
+            <p className="text-sm text-slate-600 mb-6">
+              Get opt-in reminders to help maintain your habit streaks and stay on track.
+            </p>
+
+            <div className="space-y-4">
+              {/* Streak At Risk Notification */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifyStreakAtRisk}
+                  onChange={(e) => setNotifyStreakAtRisk(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                />
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-slate-700 block">
+                    Streak-at-risk reminders
+                  </span>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Get notified when a habit streak will break if not completed today
+                  </p>
+                </div>
+              </label>
+
+              {/* Missed High Priority Notification */}
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifyMissedHighPriority}
+                  onChange={(e) => setNotifyMissedHighPriority(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                />
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-slate-700 block">
+                    Missed high-priority habit reminders
+                  </span>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Get notified when you miss a high-priority habit
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
 
           {/* Categories */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">

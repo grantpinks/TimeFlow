@@ -40,6 +40,8 @@ export default function InboxPage() {
   const [searchMode, setSearchMode] = useState<'client' | 'server'>('client');
   const [serverSearchResults, setServerSearchResults] = useState<EmailMessage[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchRequestId = useRef(0);
 
@@ -106,15 +108,35 @@ export default function InboxPage() {
     }
   }, [emails, searchMode, serverSearchResults, searchQuery]);
 
-  async function fetchInbox() {
-    try {
+  async function fetchInbox(options?: { pageToken?: string; append?: boolean }) {
+    const { pageToken, append } = options ?? {};
+    if (append) {
+      setLoadingMore(true);
+    } else {
       setLoading(true);
-      const result = await api.getInboxEmails({ maxResults: 100 });
-      setEmails(result.messages);
-    } catch (error) {
+    }
+
+    try {
+      const result = await api.getInboxEmails({
+        maxResults: 100,
+        pageToken,
+      });
+
+      setNextPageToken(result.nextPageToken ?? null);
+      setEmails((prev) => (append ? [...prev, ...result.messages] : result.messages));
+    } catch (error: any) {
       console.error('Failed to fetch inbox:', error);
+      if (error instanceof Error && /rate limit|429/i.test(error.message)) {
+        toast.error('Gmail rate limit exceeded. Please try again in a few seconds.');
+      } else {
+        toast.error('Failed to load inbox. Please try again.');
+      }
     } finally {
-      setLoading(false);
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   }
 
@@ -125,6 +147,11 @@ export default function InboxPage() {
     } finally {
       setRefreshingInbox(false);
     }
+  }
+
+  async function handleLoadMore() {
+    if (!nextPageToken || loadingMore) return;
+    await fetchInbox({ pageToken: nextPageToken, append: true });
   }
 
   function ensureSelectedViewId(nextViews: InboxView[], preferredId: string) {
@@ -934,23 +961,39 @@ export default function InboxPage() {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[#e0e0e0]">
-                {displayEmails.map((email) => (
-                  <EmailListItem
-                    key={email.id}
-                    email={email}
-                    isSelected={selectedThreadId === email.threadId || selectedThreadId === email.id}
-                    onClick={() => fetchThread(email.threadId || email.id)}
-                    onToggleRead={handleToggleRead}
-                    onArchive={handleArchive}
-                    onUpdateActionState={handleUpdateActionState}
-                    categoryColor={getCategoryColor(email.category || '')}
-                    categoryLabel={getCategoryLabel(email.category)}
-                    formatTimestamp={formatTimestamp}
-                    needsResponse={email.needsResponse}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="divide-y divide-[#e0e0e0]">
+                  {displayEmails.map((email) => (
+                    <EmailListItem
+                      key={email.id}
+                      email={email}
+                      isSelected={selectedThreadId === email.threadId || selectedThreadId === email.id}
+                      onClick={() => fetchThread(email.threadId || email.id)}
+                      onToggleRead={handleToggleRead}
+                      onArchive={handleArchive}
+                      onUpdateActionState={handleUpdateActionState}
+                      categoryColor={getCategoryColor(email.category || '')}
+                      categoryLabel={getCategoryLabel(email.category)}
+                      formatTimestamp={formatTimestamp}
+                      needsResponse={email.needsResponse}
+                    />
+                  ))}
+                </div>
+                {nextPageToken && searchMode === 'client' && !searchQuery && (
+                  <div className="border-t border-[#e0e0e0] px-4 py-3 text-center bg-[#f9fafb]">
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loadingMore}
+                      className={`px-4 py-2 text-sm font-semibold rounded-lg border transition disabled:opacity-60 ${
+                        loadingMore ? 'border-[#9ca3af] text-[#9ca3af]' : 'border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10'
+                      }`}
+                      style={{ fontFamily: "'Manrope', sans-serif" }}
+                    >
+                      {loadingMore ? 'Loading more…' : 'Load more'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

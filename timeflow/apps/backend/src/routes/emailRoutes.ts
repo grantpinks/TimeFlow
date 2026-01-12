@@ -35,6 +35,7 @@ import {
   draftLabelExplanation,
 } from '../controllers/inboxAiController.js';
 import { updateEmailActionState } from '../controllers/emailActionStateController.js';
+import { extractTasksFromThread, summarizeEmailThread } from '../controllers/emailThreadAssistController.js';
 
 export async function registerEmailRoutes(server: FastifyInstance) {
   // Get inbox messages (list view)
@@ -89,4 +90,8 @@ export async function registerEmailRoutes(server: FastifyInstance) {
   server.post('/email/ai/task-draft', { preHandler: requireAuth }, draftTaskFromEmail);
   server.post('/email/ai/label-sync', { preHandler: requireAuth }, draftLabelSync);
   server.post('/email/ai/label-explain', { preHandler: requireAuth }, draftLabelExplanation);
+
+  // Inbox AI thread assist
+  server.post('/email/ai/thread-summary', { preHandler: requireAuth }, summarizeEmailThread);
+  server.post('/email/ai/thread-tasks', { preHandler: requireAuth }, extractTasksFromThread);
 }

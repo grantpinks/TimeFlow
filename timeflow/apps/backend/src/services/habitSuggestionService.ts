@@ -14,6 +14,7 @@ import {
 import type { DailyScheduleConfig } from '@timeflow/shared';
 import { prisma } from '../config/prisma.js';
 import * as calendarService from './googleCalendarService.js';
+import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
 
 /**
  * Extended habit suggestion with habit details
@@ -30,17 +31,21 @@ export interface EnrichedHabitSuggestion extends HabitSuggestionBlock {
 export async function getHabitSuggestionsForUser(
   userId: string,
   dateRangeStart: string,
-  dateRangeEnd: string
+  dateRangeEnd: string,
+  habitIds?: string[]
 ): Promise<EnrichedHabitSuggestion[]> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     throw new Error('User not found');
   }
 
-  // Only consider active habits
-  const habits = await prisma.habit.findMany({
-    where: { userId, isActive: true },
-  });
+  // Only consider active habits (optionally filtered by habitIds)
+  const where: any = { userId, isActive: true };
+  if (habitIds && habitIds.length > 0) {
+    where.id = { in: habitIds };
+  }
+
+  const habits = await prisma.habit.findMany({ where });
 
   if (habits.length === 0) {
     return [];
@@ -136,9 +141,16 @@ export async function acceptSuggestion(
 
   // Create Google Calendar event
   const calendarId = user.defaultCalendarId || 'primary';
+  const habitEvent = buildTimeflowEventDetails({
+    title: habit.title,
+    kind: 'habit',
+    prefixEnabled: user.eventPrefixEnabled,
+    prefix: user.eventPrefix,
+    description: habit.description,
+  });
   const { eventId } = await calendarService.createEvent(userId, calendarId, {
-    summary: `[Habit] ${habit.title}`,
-    description: habit.description || undefined,
+    summary: habitEvent.summary,
+    description: habitEvent.description || undefined,
     start,
     end,
   });

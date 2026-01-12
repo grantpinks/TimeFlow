@@ -75,23 +75,39 @@ async function getOrCreateSyncState(userId: string): Promise<GmailLabelSyncState
  *
  * @returns Gmail label ID or null if creation failed
  */
+export interface GmailLabelOptions {
+  prefix?: string | null;
+  prefixEnabled?: boolean | null;
+}
+
 export async function createOrUpdateGmailLabel(
   gmail: gmail_v1.Gmail,
   category: EmailCategoryConfig,
-  gmailColor: GmailColor
+  gmailColor: GmailColor,
+  options: GmailLabelOptions = {}
 ): Promise<string | null> {
   try {
-    const rawLabelName = (category.gmailLabelName ?? category.name ?? category.categoryId).trim();
-    const normalizedLabelName = rawLabelName.startsWith('TimeFlow/')
-      ? rawLabelName.slice('TimeFlow/'.length).trim()
-      : rawLabelName;
-    const labelName = normalizedLabelName.length > 0 ? normalizedLabelName : category.categoryId;
-    const legacyLabelName = `TimeFlow/${labelName}`;
+    const baseCategoryName = (category.name ?? category.categoryId).trim();
+    const fallbackBaseName = baseCategoryName.length > 0 ? baseCategoryName : category.categoryId;
+    const normalizedPrefixEnabled = options.prefixEnabled !== false;
+    const trimmedPrefix = options.prefix?.trim();
+    const normalizedPrefix =
+      normalizedPrefixEnabled && trimmedPrefix
+        ? trimmedPrefix
+        : normalizedPrefixEnabled
+          ? 'TF|'
+          : '';
+    const defaultLabelName = normalizedPrefix
+      ? `${normalizedPrefix} ${fallbackBaseName}`
+      : fallbackBaseName;
+    const customLabelName = category.gmailLabelName?.trim();
+    const labelName = customLabelName && customLabelName.length > 0 ? customLabelName : defaultLabelName;
+    const legacyLabelName = `TimeFlow/${fallbackBaseName}`;
     const safeColor =
       getGmailColorByBackground(gmailColor.backgroundColor) ??
       findClosestGmailColor(category.color ?? '#cfe2f3');
 
-    if (category.gmailLabelName && category.gmailLabelName !== labelName) {
+    if (customLabelName && customLabelName !== category.gmailLabelName) {
       await prisma.emailCategoryConfig.update({
         where: { id: category.id },
         data: { gmailLabelName: labelName },
@@ -175,7 +191,7 @@ export async function createOrUpdateGmailLabel(
       return response.data.id ?? legacyMatch.id;
     }
 
-    const existingMatch = labels.find((label) => label.name === labelName);
+      const existingMatch = labels.find((label) => label.name === labelName);
     if (existingMatch?.id) {
       const response = await gmail.users.labels.update({
         userId: 'me',
@@ -407,7 +423,10 @@ export async function syncGmailLabels(
           });
         }
 
-        const gmailLabelId = await createOrUpdateGmailLabel(gmail, category, gmailColor);
+        const gmailLabelId = await createOrUpdateGmailLabel(gmail, category, gmailColor, {
+          prefixEnabled: user.eventPrefixEnabled,
+          prefix: user.eventPrefix ?? null,
+        });
 
         if (gmailLabelId === null) {
           await prisma.emailCategoryConfig.update({

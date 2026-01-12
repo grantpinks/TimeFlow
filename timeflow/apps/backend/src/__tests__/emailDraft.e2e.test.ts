@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import * as assistantService from '../services/assistantService.js';
+import type { FullEmailMessage, SendEmailRequest, SendEmailResponse } from '@timeflow/shared';
 
 const prismaMock = {
   user: {
@@ -14,9 +15,9 @@ const prismaMock = {
 };
 
 const gmailServiceMock = {
-  getFullEmail: vi.fn(),
-  createGmailDraft: vi.fn(),
-  sendEmail: vi.fn(),
+  getFullEmail: vi.fn<Promise<FullEmailMessage>, [string, string]>(),
+  createGmailDraft: vi.fn<Promise<void>, [SendEmailRequest]>(),
+  sendEmail: vi.fn<Promise<SendEmailResponse>, [SendEmailRequest]>(),
 };
 
 vi.mock('../config/prisma.js', () => ({
@@ -26,7 +27,7 @@ vi.mock('../config/prisma.js', () => ({
 vi.mock('../services/gmailService.js', () => gmailServiceMock);
 
 vi.mock('../services/assistantService.js', () => ({
-  runAssistantTask: vi.fn(),
+  runAssistantTask: vi.fn<ReturnType<typeof assistantService.runAssistantTask>, Parameters<typeof assistantService.runAssistantTask>>(),
 }));
 
 let server: FastifyInstance;

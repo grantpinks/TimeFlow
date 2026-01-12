@@ -11,11 +11,13 @@ import * as habitService from '../services/habitService.js';
 import * as habitSuggestionService from '../services/habitSuggestionService.js';
 import * as habitCompletionService from '../services/habitCompletionService.js';
 import * as habitInsightsService from '../services/habitInsightsService.js';
+import * as habitNonAdherenceService from '../services/habitNonAdherenceService.js';
+import * as habitNotificationService from '../services/habitNotificationService.js';
 import { getSchedulingContext } from '../services/schedulingContextService.js';
 import { generateBulkSchedule } from '../services/bulkScheduleService.js';
 import { commitSchedule } from '../services/commitScheduleService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
-import { HabitSkipReason, type DismissCoachSuggestionRequest } from '@timeflow/shared';
+import { HabitSkipReason, type DismissCoachSuggestionRequest, type ScheduledHabitInstance } from '@timeflow/shared';
 
 const createHabitSchema = z.object({
   title: z.string().trim().min(1, 'Title is required').max(100, 'Title too long'),
@@ -39,6 +41,11 @@ const updateHabitSchema = z.object({
 const habitSuggestionQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
+});
+
+const habitInstancesQuerySchema = z.object({
+  from: z.string().datetime(),
+  to: z.string().datetime(),
 });
 
 /**
@@ -174,6 +181,61 @@ export async function getHabitSuggestions(
   }
 }
 
+/**
+ * GET /api/habits/instances
+ * Returns scheduled habit instances within the requested range
+ */
+export async function getScheduledHabitInstances(
+  request: FastifyRequest<{ Querystring: { from: string; to: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = habitInstancesQuerySchema.safeParse(request.query);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const { from, to } = parsed.data;
+
+  try {
+    const instances = await prisma.scheduledHabit.findMany({
+      where: {
+        userId: user.id,
+        startDateTime: {
+          gte: new Date(from),
+          lt: new Date(to),
+        },
+      },
+      include: {
+        habit: {
+          select: { title: true },
+        },
+      },
+      orderBy: {
+        startDateTime: 'asc',
+      },
+    });
+
+    const payload: ScheduledHabitInstance[] = instances.map((instance) => ({
+      scheduledHabitId: instance.id,
+      habitId: instance.habitId,
+      title: instance.habit?.title ?? 'Habit',
+      startDateTime: instance.startDateTime.toISOString(),
+      endDateTime: instance.endDateTime.toISOString(),
+      eventId: instance.eventId,
+    }));
+
+    return reply.send(payload);
+  } catch (error) {
+    request.log.error(error, 'Failed to fetch scheduled habits');
+    return reply.status(500).send({ error: 'Failed to fetch scheduled habits' });
+  }
+}
+
 const acceptSuggestionSchema = z.object({
   habitId: z.string(),
   start: z.string(),
@@ -245,6 +307,10 @@ const skipHabitSchema = z.object({
   reasonCode: z.nativeEnum(HabitSkipReason),
 });
 
+const completeHabitInstanceSchema = z.object({
+  actualDurationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
+});
+
 /**
  * POST /api/habits/instances/:scheduledHabitId/complete
  * Marks a scheduled habit instance as complete.
@@ -260,10 +326,22 @@ export async function completeHabitInstance(
 
   const { scheduledHabitId } = request.params;
 
+  // Parse and validate request body
+  const parsed = completeHabitInstanceSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: 'Invalid request',
+      details: formatZodError(parsed.error),
+    });
+  }
+
+  const { actualDurationMinutes } = parsed.data;
+
   try {
     const completion = await habitCompletionService.markScheduledHabitComplete(
       user.id,
-      scheduledHabitId
+      scheduledHabitId,
+      actualDurationMinutes
     );
     return reply.send({
       success: true,
@@ -271,6 +349,7 @@ export async function completeHabitInstance(
         id: completion.id,
         status: completion.status,
         completedAt: completion.completedAt.toISOString(),
+        actualDurationMinutes: completion.actualDurationMinutes,
       },
     });
   } catch (error) {
@@ -485,19 +564,21 @@ export async function generateBulkScheduleHandler(
       dateRangeStart: string;
       dateRangeEnd: string;
       customPrompt?: string;
+      habitIds?: string[];
     };
   }>,
   reply: FastifyReply
 ) {
   try {
     const userId = request.user!.id;
-    const { dateRangeStart, dateRangeEnd, customPrompt } = request.body;
+    const { dateRangeStart, dateRangeEnd, customPrompt, habitIds } = request.body;
 
     const result = await generateBulkSchedule({
       userId,
       dateRangeStart,
       dateRangeEnd,
       customPrompt,
+      habitIds,
     });
 
     return reply.code(200).send(result);
@@ -536,5 +617,163 @@ export async function commitScheduleHandler(
   } catch (error) {
     request.log.error(error, 'Error committing schedule');
     return reply.code(500).send({ error: 'Failed to commit schedule' });
+  }
+}
+
+const reorderHabitsSchema = z.object({
+  habitIds: z.array(z.string()).min(1, 'At least one habit ID required'),
+});
+
+/**
+ * POST /api/habits/reorder
+ * Reorders habits by priority based on the order of habit IDs in the request.
+ */
+export async function reorderHabits(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = reorderHabitsSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: 'Invalid request',
+      details: formatZodError(parsed.error),
+    });
+  }
+
+  const { habitIds } = parsed.data;
+
+  try {
+    // Verify all habits belong to the user
+    const habits = await prisma.habit.findMany({
+      where: {
+        id: { in: habitIds },
+        userId: user.id,
+      },
+    });
+
+    if (habits.length !== habitIds.length) {
+      return reply.status(400).send({
+        error: 'Some habits not found or do not belong to user',
+      });
+    }
+
+    // Update priority ranks in a transaction
+    await prisma.$transaction(
+      habitIds.map((habitId, index) =>
+        prisma.habit.update({
+          where: { id: habitId },
+          data: { priorityRank: index + 1 }, // 1-indexed priority
+        })
+      )
+    );
+
+    // Return updated habits
+    const updatedHabits = await habitService.getHabits(user.id);
+    return reply.send(updatedHabits);
+  } catch (error) {
+    request.log.error(error, 'Failed to reorder habits');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to reorder habits',
+    });
+  }
+}
+
+const missedHabitsQuerySchema = z.object({
+  priorityThreshold: z.coerce.number().int().positive().optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+
+/**
+ * GET /api/habits/missed
+ * Returns missed habit instances for the user.
+ * Query params:
+ * - priorityThreshold: Only return habits with priority <= threshold (default: all)
+ * - startDate: Start of date range (ISO string)
+ * - endDate: End of date range (ISO string)
+ */
+export async function getMissedHabits(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = missedHabitsQuerySchema.safeParse(request.query);
+  if (!parsed.success) {
+    return reply.status(400).send({
+      error: 'Invalid query parameters',
+      details: formatZodError(parsed.error),
+    });
+  }
+
+  const { priorityThreshold, startDate, endDate } = parsed.data;
+
+  try {
+    let missed;
+
+    if (startDate && endDate) {
+      // Range query
+      missed = await habitNonAdherenceService.detectMissedHabitsInRange(
+        user.id,
+        new Date(startDate),
+        new Date(endDate)
+      );
+
+      // Filter by priority if specified
+      if (priorityThreshold !== undefined) {
+        missed = missed.filter(
+          (m) => m.priorityRank !== null && m.priorityRank <= priorityThreshold
+        );
+      }
+    } else if (priorityThreshold !== undefined) {
+      // High priority only
+      missed = await habitNonAdherenceService.detectMissedHighPriorityHabits(
+        user.id,
+        priorityThreshold
+      );
+    } else {
+      // All missed
+      missed = await habitNonAdherenceService.detectMissedHabits(user.id);
+    }
+
+    return reply.send({ missed });
+  } catch (error) {
+    request.log.error(error, 'Failed to get missed habits');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to get missed habits',
+    });
+  }
+}
+
+/**
+ * GET /api/habits/notifications
+ * Returns all habit-related notifications for the user (streak-at-risk + missed high-priority).
+ * Only returns notifications if user has opted in to each type.
+ */
+export async function getHabitNotifications(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  try {
+    const notifications = await habitNotificationService.getAllHabitNotifications(user.id);
+    return reply.send(notifications);
+  } catch (error) {
+    request.log.error(error, 'Failed to get habit notifications');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to get habit notifications',
+    });
   }
 }

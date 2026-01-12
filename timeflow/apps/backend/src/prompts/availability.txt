@@ -127,11 +127,11 @@ Wake time: 08:00
 Sleep time: 23:00
 
 Calendar Events (Fixed and Movable):
-- Mon Dec 23, 9:00 AM - 10:00 AM: Morning Workout [TimeFlow]
+- Mon Dec 23, 9:00 AM - 10:00 AM: TF| Morning Workout
 - Mon Dec 23, 2:00 PM - 4:00 PM: CS 101 Lecture [FIXED: class]
 - Mon Dec 23, 5:00 PM - 6:00 PM: Team Meeting [FIXED: meeting]
 - Tue Dec 24, 10:00 AM - 11:00 AM: Dentist Appointment [FIXED: appointment]
-- Tue Dec 24, 3:00 PM - 4:00 PM: Study Session [TimeFlow]
+- Tue Dec 24, 3:00 PM - 4:00 PM: TF| Study Session
 ```
 
 **User Message**: "When am I free this week?"

@@ -73,7 +73,25 @@ export async function getHabitInsights(
 
     const adherenceRate = scheduled > 0 ? completed / scheduled : 0;
     const minutesScheduled = scheduled * habit.durationMinutes;
-    const minutesCompleted = completed * habit.durationMinutes;
+
+    // Calculate actual minutes completed (use actualDurationMinutes if available, otherwise planned duration)
+    const minutesCompleted = scheduledInstances
+      .filter((si) => si.completion?.status === 'completed')
+      .reduce((sum, si) => {
+        const actualDuration = si.completion?.actualDurationMinutes;
+        return sum + (actualDuration ?? habit.durationMinutes);
+      }, 0);
+
+    // Calculate planned vs actual delta (average difference across completed instances)
+    const completedWithActualDuration = scheduledInstances.filter(
+      (si) => si.completion?.status === 'completed' && si.completion?.actualDurationMinutes != null
+    );
+    const plannedVsActualDelta = completedWithActualDuration.length > 0
+      ? completedWithActualDuration.reduce((sum, si) => {
+          const delta = si.completion!.actualDurationMinutes! - habit.durationMinutes;
+          return sum + delta;
+        }, 0) / completedWithActualDuration.length
+      : undefined;
 
     totalScheduled += scheduled;
     totalCompleted += completed;
@@ -81,7 +99,15 @@ export async function getHabitInsights(
     totalMinutesCompleted += minutesCompleted;
 
     // Calculate streak
-    const streak = calculateStreak(habit.id, userId, userTz, scheduledInstances, endDate);
+    const streak = calculateStreak(
+      habit.id,
+      userId,
+      userTz,
+      scheduledInstances,
+      endDate,
+      habit.frequency,
+      habit.daysOfWeek
+    );
 
     // Calculate best window
     const bestWindow = calculateBestWindow(scheduledInstances, userTz);
@@ -106,6 +132,7 @@ export async function getHabitInsights(
       skipped,
       minutesScheduled,
       minutesCompleted,
+      plannedVsActualDelta,
       streak,
       bestWindow,
       adherenceSeries,
@@ -153,13 +180,17 @@ export async function getHabitInsights(
  * Calculate streak metrics for a habit
  * Streak = consecutive days with >= 1 completed instance
  * @param asOfDate - The date to use as "today" for streak calculation
+ * @param frequency - Habit frequency (daily, weekly, custom)
+ * @param daysOfWeek - Days of week when habit is scheduled (for weekly habits)
  */
 function calculateStreak(
   habitId: string,
   userId: string,
   userTz: string,
   scheduledInstances: any[],
-  asOfDate: Date
+  asOfDate: Date,
+  frequency: string,
+  daysOfWeek: string[]
 ): StreakMetrics {
   // Get all completions sorted by date (newest first)
   // Use completedAt to determine which day the completion counts for (handles 11:59pm vs 12:01am)
@@ -181,31 +212,21 @@ function calculateStreak(
   }
 
   const lastCompleted = completions[0].completedAt.toISOString();
+  const referenceDate = new Date(
+    Math.max(asOfDate.getTime(), completions[0].completedAt.getTime())
+  );
 
-  // Calculate current streak (consecutive days from today backwards)
-  const today = toUserDate(asOfDate, userTz);
+  // Calculate current streak (consecutive days ending at the last completion)
+  const today = toUserDate(referenceDate, userTz);
   const completedDates = new Set(completions.map((c) => c.date));
+  const lastCompletedDate = completions[0].date;
 
   let currentStreak = 0;
-  let checkDate = today;
+  let streakDate = lastCompletedDate;
 
-  // Check if today is completed
-  if (completedDates.has(today)) {
-    currentStreak = 1;
-    checkDate = subtractDays(today, 1);
-  } else {
-    // Check if yesterday was completed (grace period)
-    const yesterday = subtractDays(today, 1);
-    if (completedDates.has(yesterday)) {
-      currentStreak = 1;
-      checkDate = subtractDays(yesterday, 1);
-    }
-  }
-
-  // Continue streak backwards
-  while (completedDates.has(checkDate)) {
+  while (completedDates.has(streakDate)) {
     currentStreak++;
-    checkDate = subtractDays(checkDate, 1);
+    streakDate = subtractDays(streakDate, 1);
   }
 
   // Calculate best streak (longest consecutive sequence ever)
@@ -233,9 +254,15 @@ function calculateStreak(
 
   // Determine if streak is at risk
   // At risk if: not completed today AND (current streak > 0 OR yesterday was completed)
+  // BUT ONLY if today is a scheduled day for this habit
   const todayCompleted = completedDates.has(today);
   const yesterdayCompleted = completedDates.has(subtractDays(today, 1));
-  const atRisk = !todayCompleted && (currentStreak > 0 || yesterdayCompleted);
+
+  // Check if today should be scheduled based on habit frequency
+  const isTodayScheduled = isHabitScheduledForDate(referenceDate, frequency, daysOfWeek, userTz);
+
+  // Only mark at risk if today is actually a scheduled day
+  const atRisk = isTodayScheduled && !todayCompleted && (currentStreak > 0 || yesterdayCompleted);
 
   return {
     current: currentStreak,
@@ -243,6 +270,34 @@ function calculateStreak(
     lastCompleted,
     atRisk,
   };
+}
+
+/**
+ * Check if a habit should be scheduled on a given date based on its frequency
+ */
+function isHabitScheduledForDate(
+  date: Date,
+  frequency: string,
+  daysOfWeek: string[],
+  userTz: string
+): boolean {
+  // Daily habits are scheduled every day
+  if (frequency === 'daily') {
+    return true;
+  }
+
+  // Weekly habits are only scheduled on specified days
+  if (frequency === 'weekly' && daysOfWeek.length > 0) {
+    const dayOfWeek = date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      timeZone: userTz
+    }).toLowerCase(); // 'mon', 'tue', etc.
+
+    return daysOfWeek.includes(dayOfWeek);
+  }
+
+  // For custom frequency or unknown, assume it's scheduled (conservative approach)
+  return true;
 }
 
 /**

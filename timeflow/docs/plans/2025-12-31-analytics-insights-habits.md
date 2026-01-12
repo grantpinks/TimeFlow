@@ -1,6 +1,50 @@
 # Sprint Plan: Analytics & Insights (Habits-led) — North Star: Habit Consistency
 
-**Last Updated:** 2025-12-31  
+**Last Updated:** 2026-01-09  
+**Task Status:** For the current completion status of tasks, please refer to `ARCHITECT_ROADMAP_SPRINT1-17.md`.  
+
+---
+
+## Implementation Guide: What to Work On
+
+This section provides a clear starting point and a logical sequence for completing the remaining tasks in Sprint 17.
+
+### Remaining Tasks & Suggested Order:
+
+1.  **Complete the Data Model (Task 17.1):**
+    *   **Action:** Modify `apps/backend/prisma/schema.prisma`.
+    *   Add `priorityRank` to the `Habit` model.
+    *   Add `actualDurationMinutes` to the `HabitCompletion` model.
+    *   Run `pnpm prisma migrate dev` to apply the changes.
+    *   **Why:** This is a prerequisite for nearly all other remaining tasks.
+
+2.  **Implement Habit Priority (Task 17.10):**
+    *   **Backend:** Create an API endpoint (e.g., `POST /api/habits/reorder`) to update the `priorityRank` of habits.
+    *   **Frontend:** Implement a UI on the `/habits` page to allow users to reorder their habits (e.g., using drag-and-drop).
+
+3.  **Implement Actual Duration Capture (Task 17.13):**
+    *   **Backend:** Update the `POST /api/habits/instances/:id/complete` endpoint to accept an `actualDurationMinutes` payload.
+    *   **Frontend:** In the `EventDetailPopover.tsx` component, add an input field that appears during the habit completion flow to let users enter the actual time spent.
+
+4.  **Wire Up UI Actions (Tasks 17.4, 17.6):**
+    *   **Action:** In `HabitsInsights.tsx`, implement the `handleRecommendationAction` function.
+    *   Connect the "action" buttons in the `CoachCard` and `Recommendations` components to the appropriate backend API calls (e.g., scheduling a rescue block, adjusting a habit window).
+
+5.  **Implement Non-Adherence & Reminders (Tasks 17.11, 17.12, 17.8):**
+    *   **Backend:** Implement the logic to detect "missed" high-priority habits.
+    *   **Backend:** Create a service for sending opt-in notifications (in-app or email) for non-adherence and streaks at risk.
+    *   **Frontend:** Build the UI in the settings page for users to manage these notification preferences.
+
+6.  **Integrate Actual Duration into Analytics (Tasks 17.14, 17.15):**
+    *   **Backend:** Update the `habitInsightsService.ts` to calculate "planned vs. actual" duration deltas.
+    *   **Backend:** Add a new recommendation rule for significant planned vs. actual mismatches.
+    *   **Frontend:** Update the `HabitsInsights.tsx` dashboard to display these new analytics. Add clear copy explaining how this data improves recommendations.
+
+7.  **Finalize Analytics Instrumentation (Task 17.5):**
+    *   **Action:** Review all the newly implemented features and ensure that relevant user interactions are tracked with analytics events, as defined in Section 8 of this plan.
+
+---
+
 **Primary Surface:** Habits page (`/habits`)  
 **Secondary Surfaces:** Today (`/today`), Calendar (`/calendar`), Tasks (`/tasks`)  
 
@@ -89,7 +133,7 @@ Use neutral language:
 
 #### B) Habit Time Investment (supporting)
 - **Chart**: minutes/week by habit (stacked bar)
-- **Metric**: total habit minutes scheduled vs completed minutes (shows follow-through)
+- **Metric**: total habit minutes scheduled vs completed minutes (shows follow-through). **V2:** Will use `actualDurationMinutes`.
 
 #### C) Stability (supporting)
 - **Metric**: schedule stability (how often the habit happens in its “best window”)
@@ -164,6 +208,7 @@ Examples:
 - **Consistency windows**: completion probability by day-of-week and time-of-day bucket
 - **Suggestion funnel**: proposed → accepted → completed (where the drop-off is)
 - **Churn**: how often habit blocks are moved/cancelled
+- **Planned vs. Actual Duration:** Delta between scheduled minutes and `actualDurationMinutes`.
 
 ### 6.5. App usage
 - Feature adoption: Smart Schedule, Categorize Events
@@ -181,7 +226,8 @@ Start with rules-based insights (fast, explainable), then iterate.
 - **Low habit adherence**: if adherence < Y% → recommend shorter duration or different time-of-day
 - **Fragmentation**: if > N context switches/day → recommend grouping similar tasks
 - **Late scheduling**: if many tasks scheduled after 6pm → suggest earlier blocks or reduce scope
- - **Streak at risk**: if habit is usually completed by now but isn’t today → suggest the next best slot + “minimum viable” duration
+- **Streak at risk**: if habit is usually completed by now but isn’t today → suggest the next best slot + “minimum viable” duration
+- **Planned vs. Actual Mismatch**: if `actualDurationMinutes` is consistently much higher/lower than planned duration → recommend adjusting the default duration for the habit.
 
 ### 7.2. Recommendation output format
 - “What we noticed” (metric)
@@ -206,10 +252,13 @@ Examples:
 - `habit.create`
 - `habit.suggestion.accept`
 - `habit.suggestion.reject`
- - `habit.instance.complete`
- - `habit.instance.uncomplete`
- - `habit.instance.skip`
- - `habit.instance.reschedule` (if supported)
+- `habit.instance.complete`
+- `habit.instance.uncomplete`
+- `habit.instance.skip`
+- `habit.instance.reschedule` (if supported)
+- `habit.priority.reorder`
+- `habit.notification.send`
+- `habit.notification.dismiss`
 
 ### 8.2. Common properties
 - `user_id` (hashed or internal id)
@@ -218,6 +267,7 @@ Examples:
 - `source` (button/menu/shortcut)
 - `category_id` (if relevant)
 - `duration_minutes` (if relevant)
+- `actual_duration_minutes` (if relevant)
 - `confidence` (for AI categorization)
 
 ### 8.3. Privacy guardrails
@@ -231,7 +281,7 @@ Examples:
 
 Top-to-bottom:
 1) **Habits Dashboard (Insights)**: charts + 1–3 recommendation cards
-2) **Your Habits (CRUD)**: existing management list
+2) **Your Habits (CRUD)**: existing management list with UI for priority ranking (e.g., drag-and-drop reordering).
 3) Optional: “Habit Suggestions” feed (if useful) or link back to Today
 
 Key: analytics should feel like the “headline,” CRUD is still available but secondary.
@@ -250,12 +300,17 @@ Key: analytics should feel like the “headline,” CRUD is still available but 
     - Calendar event popover (preferred)
     - Habits page “Today’s habits” / “Due today” list (backup)
   - Completion state persists and is queryable by date range
+- **Actual Duration Capture:** UI in the completion flow to enter `actualDurationMinutes`.
+- **Habit Priority:** UI on the habits management page to set `priorityRank`.
+- **Non-Adherence Notifications:** Basic opt-in system for notifications on missed high-priority habits.
 - Data aggregation endpoints or client-side aggregation (depending on architecture)
 - Instrumentation events for:
   - page views
   - habit CRUD
   - habit suggestion accept/reject
   - habit instance complete/uncomplete/skip
+  - habit priority changes
+  - non-adherence notifications
 
 ### 10.2. Nice-to-have
 - Time allocation by category (week)
@@ -267,6 +322,8 @@ Key: analytics should feel like the “headline,” CRUD is still available but 
 - Users can open `/habits` and immediately see:
   - at least **2 charts** and **1 recommendation**
   - clear time range switching (e.g., 7d / 28d)
+- Users can set a priority for their habits.
+- Users can input the actual duration when completing a habit.
 - Charts render fast and remain readable in light/dark (when enabled)
 - No sensitive content is logged (no titles/subjects in analytics)
 - Recommendations are explainable (shows the “why”)
@@ -280,27 +337,32 @@ This sprint’s north star requires turning scheduled habit blocks into **tracka
 ### 12.1. Source of truth for “habit instances”
 We already create a `ScheduledHabit` when a suggestion is accepted (and it stores `eventId`, `startDateTime`, `endDateTime`).
 
-**Recommendation (MVP):** treat `ScheduledHabit` as the habit instance record and add completion fields.
+**Recommendation (MVP):** Use a separate `HabitCompletion` model to cleanly handle multiple completions, retroactive corrections, and actual duration.
 
 ### 12.2. Data model changes (MVP)
-Add to `ScheduledHabit`:
-- `status`: extend beyond `"scheduled"` to include `"completed"` and `"skipped"`
-- `completedAt`: DateTime? (set when completed)
-- `skippedAt`: DateTime? (optional)
-- `source`: string? (e.g., `calendar_popover`, `habits_page`, `auto`)
+Add to `Habit`:
+- `priorityRank`: Int (e.g., 1-5, for ordering and notification logic)
 
-If you want to support “multiple completions per day” or retroactive corrections cleanly, add a separate `HabitCompletion` table later. Start simple.
+Add `HabitCompletion` model:
+- `id`: CUID
+- `scheduledHabitId`: FK to `ScheduledHabit`
+- `status`: "completed" | "skipped"
+- `completedAt`: DateTime
+- `reasonCode`: String? (for skips)
+- `actualDurationMinutes`: Int? (optional, captured on completion)
 
 ### 12.3. API endpoints (MVP)
 - `GET /api/habits/instances?from=...&to=...` → returns scheduled habit instances in range
-- `POST /api/habits/instances/:id/complete` → marks completed (idempotent)
+- `POST /api/habits/instances/:id/complete` → marks completed (idempotent), optionally accepts `actualDurationMinutes`.
 - `POST /api/habits/instances/:id/uncomplete` → reverts completion
 - `POST /api/habits/instances/:id/skip` → marks skipped
+- `POST /api/habits/reorder` → accepts an array of `habitId`s in the new priority order.
 
 ### 12.4. Calendar integration (MVP UX)
 In Calendar event popover:
 - If event corresponds to a habit instance, show:
   - “Mark complete” / “Undo complete”
+  - An optional input field for "Actual time spent" upon clicking "Mark complete".
   - optional “Skip”
   - streak context (“This keeps your 6‑day streak alive”)
 
@@ -319,5 +381,24 @@ Add 1–2 of these if low effort:
 - **Best window**: completion rate by time-of-day bucket (morning/afternoon/evening)
 - **Habit drag**: how often a habit gets pushed later than its preferred time
 - **Sustainability**: average scheduled habit minutes/day and variance (too much variance predicts drop-off)
+
+---
+
+## 13. Non-Adherence & Priority (New Scope)
+
+### 13.1. Non-Adherence Detection
+- **Definition:** A habit instance is considered "missed" if its `endDateTime` has passed by a defined grace period (e.g., 2 hours) and it has no `HabitCompletion` record.
+- **Backend Logic:** A scheduled job (e.g., runs every hour) or a just-in-time check can be used to detect missed instances and update their status accordingly (e.g., a virtual `missed` status, or logging it).
+
+### 13.2. Non-Adherence Notifications
+- **Trigger:** When a "missed" habit instance is detected, check its `priorityRank`.
+- **Logic:** Only send notifications for high-priority habits (e.g., `priorityRank` 1 or 2).
+- **Delivery:**
+  - **In-App:** A subtle notification in the app's notification center or a banner on the "Today" page.
+  - **Email:** A daily summary of missed high-priority habits, or an immediate email (less desirable due to noise).
+- **Opt-In:** All non-adherence notifications must be opt-in, with granular controls in the user's settings page (global toggle and per-habit toggle).
+
+### 13.3. Priority in Coaching
+- The "Coach Card" and "Recommendations" should prioritize suggestions for habits with a higher `priorityRank`. For example, a "streak at risk" for a P1 habit is more important than for a P3 habit.
 
 

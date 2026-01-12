@@ -150,6 +150,48 @@ export function generateRecommendations(
         priority: 2,
       });
     }
+
+    // Rule 5: Planned vs actual duration mismatch → adjust duration
+    if (habit.plannedVsActualDelta !== undefined && habit.completed >= 5) {
+      // Only if we have enough actual duration data (5+ completions with actual duration)
+      const avgPlannedDuration = habit.minutesScheduled / habit.scheduled;
+      const deltaMinutes = Math.abs(habit.plannedVsActualDelta);
+
+      // If delta is significant (>= 10 minutes or >= 30% of planned duration)
+      const isSignificantDelta = deltaMinutes >= 10 || deltaMinutes >= avgPlannedDuration * 0.3;
+
+      if (isSignificantDelta) {
+        const isOverEstimate = habit.plannedVsActualDelta < 0; // Negative = under-planned
+        const direction = isOverEstimate ? 'shorter' : 'longer';
+        const suggestedDuration = Math.round(avgPlannedDuration + habit.plannedVsActualDelta);
+
+        recommendations.push({
+          type: 'duration_mismatch',
+          habitId: habit.habitId,
+          habitTitle: habit.habitTitle,
+          metric: {
+            label: isOverEstimate
+              ? `Usually takes ${Math.round(deltaMinutes)}min less`
+              : `Usually takes ${Math.round(deltaMinutes)}min more`,
+            value: Math.round(deltaMinutes),
+            context: `Avg: ${Math.round(avgPlannedDuration + habit.plannedVsActualDelta)}min actual vs ${Math.round(avgPlannedDuration)}min planned`,
+          },
+          insight: isOverEstimate
+            ? `You're consistently finishing this ${Math.round(deltaMinutes)} minutes faster than planned. Let's adjust the duration to better reflect reality and free up time for other things!`
+            : `This habit typically takes ${Math.round(deltaMinutes)} minutes longer than planned. Let's adjust the duration so your schedule stays realistic and achievable.`,
+          action: {
+            type: 'adjust_duration',
+            label: `Adjust to ${suggestedDuration}min`,
+            payload: {
+              habitId: habit.habitId,
+              currentDuration: Math.round(avgPlannedDuration),
+              suggestedDuration,
+            },
+          },
+          priority: 2,
+        });
+      }
+    }
   }
 
   // Sort by priority (1 = highest) and return top 3

@@ -9,19 +9,52 @@
 
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
-import { Panel, SectionHeader, EmptyState } from '@/components/ui';
+import { Panel, SectionHeader } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
 import { HabitsInsights } from '@/components/habits/HabitsInsights';
 import { HabitCard } from '@/components/habits/HabitCard';
+import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
 import { FlowMascot } from '@/components/FlowMascot';
 import { FlowSchedulingBanner } from '@/components/habits/FlowSchedulingBanner';
 import { track } from '@/lib/analytics';
+import { reorderHabits as reorderHabitsApi } from '@/lib/api';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import type { Habit, HabitFrequency, TimeOfDay } from '@timeflow/shared';
 
 export default function HabitsPage() {
   const { habits, loading, createHabit, updateHabit, deleteHabit } = useHabits();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  const [localHabits, setLocalHabits] = useState<Habit[]>([]);
+  const [isReordering, setIsReordering] = useState(false);
+
+  // Setup drag-and-drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Sync habits from hook to local state (sorted by priorityRank)
+  useEffect(() => {
+    const sorted = [...habits].sort((a, b) => (a.priorityRank || 0) - (b.priorityRank || 0));
+    setLocalHabits(sorted);
+  }, [habits]);
 
   // Track page view
   useEffect(() => {
@@ -138,12 +171,42 @@ export default function HabitsPage() {
     }
   };
 
-  const formatFrequency = (habit: Habit) => {
-    if (habit.frequency === 'daily') return 'Daily';
-    if (habit.frequency === 'weekly') {
-      return `Weekly (${habit.daysOfWeek.join(', ')})`;
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
     }
-    return 'Custom';
+
+    const oldIndex = localHabits.findIndex((h) => h.id === active.id);
+    const newIndex = localHabits.findIndex((h) => h.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    // Optimistically update local state
+    const reordered = arrayMove(localHabits, oldIndex, newIndex);
+    setLocalHabits(reordered);
+    setIsReordering(true);
+
+    try {
+      // Send new order to backend
+      const habitIds = reordered.map((h) => h.id);
+      await reorderHabitsApi(habitIds);
+
+      track('habits.reordered', {
+        from: oldIndex,
+        to: newIndex,
+      });
+    } catch (err) {
+      console.error('Failed to reorder habits:', err);
+      // Revert on error
+      setLocalHabits(habits);
+      alert('Failed to save new order. Please try again.');
+    } finally {
+      setIsReordering(false);
+    }
   };
 
   if (loading) {
@@ -351,151 +414,178 @@ export default function HabitsPage() {
 
         {/* Habits List */}
         {habits.length > 0 ? (
-          <div className="grid gap-4">
-            {habits.map((habit) =>
-              editing === habit.id ? (
-                <Panel key={habit.id} className="bg-slate-50">
-                  <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded"
-                  />
-
-                  <textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    rows={2}
-                    placeholder="Description..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded resize-none"
-                  />
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Frequency
-                      </label>
-                      <select
-                        value={editFrequency}
-                        onChange={(e) => setEditFrequency(e.target.value as HabitFrequency)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded"
-                      >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="custom">Custom</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Time of Day
-                      </label>
-                      <select
-                        value={editTimeOfDay}
-                        onChange={(e) => setEditTimeOfDay(e.target.value as TimeOfDay | '')}
-                        className="w-full px-3 py-2 border border-slate-300 rounded"
-                      >
-                        <option value="">Any time</option>
-                        <option value="morning">Morning</option>
-                        <option value="afternoon">Afternoon</option>
-                        <option value="evening">Evening</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {editFrequency === 'weekly' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Days of Week
-                      </label>
-                      <div className="flex gap-2">
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                          <button
-                            key={day}
-                            type="button"
-                            onClick={() =>
-                              toggleDayOfWeek(day.toLowerCase(), editDaysOfWeek, setEditDaysOfWeek)
-                            }
-                            className={`px-3 py-2 rounded border text-sm font-medium ${
-                              editDaysOfWeek.includes(day.toLowerCase())
-                                ? 'bg-primary-600 text-white border-primary-600'
-                                : 'bg-white text-slate-700 border-slate-300'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Duration (minutes)
-                      </label>
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                  Priority Order
+                </h3>
+              </div>
+              <p className="text-sm text-slate-500">
+                Drag to reorder by priority
+              </p>
+            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={localHabits.map((h) => h.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="grid gap-4 overflow-visible">
+                {localHabits.map((habit) =>
+                  editing === habit.id ? (
+                    <Panel key={habit.id} className="bg-slate-50">
+                      <div className="space-y-3">
                       <input
-                        type="number"
-                        value={editDuration}
-                        onChange={(e) => setEditDuration(Number(e.target.value))}
-                        min="5"
-                        max="240"
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
                         className="w-full px-3 py-2 border border-slate-300 rounded"
                       />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Status
-                      </label>
-                      <select
-                        value={editIsActive ? 'active' : 'inactive'}
-                        onChange={(e) => setEditIsActive(e.target.value === 'active')}
-                        className="w-full px-3 py-2 border border-slate-300 rounded"
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                  </div>
+                      <textarea
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                        rows={2}
+                        placeholder="Description..."
+                        className="w-full px-3 py-2 border border-slate-300 rounded resize-none"
+                      />
 
-                  {editError && <p className="text-sm text-red-600">{editError}</p>}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Frequency
+                          </label>
+                          <select
+                            value={editFrequency}
+                            onChange={(e) => setEditFrequency(e.target.value as HabitFrequency)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded"
+                          >
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="custom">Custom</option>
+                          </select>
+                        </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSaveEdit}
-                      className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditing(null);
-                        setEditError('');
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Time of Day
+                          </label>
+                          <select
+                            value={editTimeOfDay}
+                            onChange={(e) => setEditTimeOfDay(e.target.value as TimeOfDay | '')}
+                            className="w-full px-3 py-2 border border-slate-300 rounded"
+                          >
+                            <option value="">Any time</option>
+                            <option value="morning">Morning</option>
+                            <option value="afternoon">Afternoon</option>
+                            <option value="evening">Evening</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {editFrequency === 'weekly' && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">
+                            Days of Week
+                          </label>
+                          <div className="flex gap-2">
+                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() =>
+                                  toggleDayOfWeek(day.toLowerCase(), editDaysOfWeek, setEditDaysOfWeek)
+                                }
+                                className={`px-3 py-2 rounded border text-sm font-medium ${
+                                  editDaysOfWeek.includes(day.toLowerCase())
+                                    ? 'bg-primary-600 text-white border-primary-600'
+                                    : 'bg-white text-slate-700 border-slate-300'
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Duration (minutes)
+                          </label>
+                          <input
+                            type="number"
+                            value={editDuration}
+                            onChange={(e) => setEditDuration(Number(e.target.value))}
+                            min="5"
+                            max="240"
+                            className="w-full px-3 py-2 border border-slate-300 rounded"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">
+                            Status
+                          </label>
+                          <select
+                            value={editIsActive ? 'active' : 'inactive'}
+                            onChange={(e) => setEditIsActive(e.target.value === 'active')}
+                            className="w-full px-3 py-2 border border-slate-300 rounded"
+                          >
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {editError && <p className="text-sm text-red-600">{editError}</p>}
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditing(null);
+                            setEditError('');
+                          }}
+                          className="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      </div>
+                    </Panel>
+                  ) : (
+                    <SortableHabitCard
+                      key={habit.id}
+                      habit={habit}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onQuickSchedule={(habitId, time) => {
+                        // TODO: Implement quick schedule API call
+                        console.log('Quick schedule:', habitId, time);
+                        alert(`Scheduling ${habit.title} for ${time.toLocaleString()}`);
                       }}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                  </div>
-                </Panel>
-              ) : (
-                <HabitCard
-                  key={habit.id}
-                  habit={habit}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onQuickSchedule={(habitId, time) => {
-                    // TODO: Implement quick schedule API call
-                    console.log('Quick schedule:', habitId, time);
-                    alert(`Scheduling ${habit.title} for ${time.toLocaleString()}`);
-                  }}
-                />
-              )
-            )}
-          </div>
+                      isDisabled={isReordering}
+                    />
+                  )
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
+          </>
         ) : (
           <Panel>
             <div className="text-center py-12">

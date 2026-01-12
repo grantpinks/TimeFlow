@@ -37,6 +37,7 @@ export interface PerHabitInsights {
   skipped: number;        // Total instances skipped
   minutesScheduled: number;
   minutesCompleted: number;
+  plannedVsActualDelta?: number; // Average delta between planned and actual duration (positive = over, negative = under)
   streak: StreakMetrics;
   bestWindow: BestWindow | null;
   adherenceSeries: Array<{

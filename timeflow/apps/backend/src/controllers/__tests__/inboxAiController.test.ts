@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { draftTaskFromEmail } from '../inboxAiController.js';
+import {
+  createControllerReply,
+  createControllerRequest,
+} from './helpers/typedFastifyMocks.js';
 
 vi.mock('../../services/inboxAiService.js', () => ({
   draftTaskFromEmail: vi.fn().mockResolvedValue({
@@ -20,25 +24,20 @@ vi.mock('../../services/gmailService.js', () => ({
   }),
 }));
 
-function createReply() {
-  const reply: any = {
-    statusCode: 200,
-    status(code: number) {
-      this.statusCode = code;
-      return this;
-    },
-    send: vi.fn(),
-  };
-  return reply;
-}
+type InboxAiRequestBody = {
+  emailId: string;
+};
 
 describe('inboxAiController', () => {
   it('returns a task draft with confirmation CTA', async () => {
-    const request: any = {
+    const request = createControllerRequest<{
+      Body: InboxAiRequestBody;
+      User: { id: string };
+    }>({
       user: { id: 'user-1' },
       body: { emailId: 'email-1' },
-    };
-    const reply = createReply();
+    });
+    const reply = createControllerReply();
 
     await draftTaskFromEmail(request, reply);
 

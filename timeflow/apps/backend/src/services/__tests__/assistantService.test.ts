@@ -28,6 +28,11 @@ const {
   applyHabitFrequencyConflicts,
   fillMissingHabitBlocks,
   detectSkippedHabits,
+  extractHabitIdsFromMessage,
+  shouldFocusSingleHabitRequest,
+  filterSchedulePreviewForFocusedHabits,
+  extractDayNameFromMessage,
+  extractTimesFromMessage,
 } = __test__;
 
 describe('assistantService helpers', () => {
@@ -674,10 +679,39 @@ describe('assistantService helpers', () => {
       { id: 'h2', title: 'Weekly Tue', frequency: 'weekly', daysOfWeek: ['tue'], durationMinutes: 20, preferredTimeOfDay: null },
     ];
 
-    it('adds conflicts when daily habits are missing days', () => {
+    it('returns preview when no habit blocks are provided', () => {
+      const preview: SchedulePreview = {
+        blocks: [],
+        summary: '',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const validated = applyHabitFrequencyConflicts(preview, habits, 'UTC');
+      expect(validated.conflicts.length).toBe(0);
+      expect(validated.confidence).toBe('high');
+    });
+
+    it('returns preview when habit blocks only cover a single day', () => {
       const preview: SchedulePreview = {
         blocks: [
-          { habitId: 'h1', start: new Date().toISOString(), end: new Date(Date.now() + 30 * 60000).toISOString() },
+          { habitId: 'h1', start: '2026-01-05T15:00:00.000Z', end: '2026-01-05T15:30:00.000Z' },
+        ],
+        summary: '',
+        conflicts: [],
+        confidence: 'medium',
+      };
+
+      const validated = applyHabitFrequencyConflicts(preview, habits, 'UTC');
+      expect(validated.conflicts.length).toBe(0);
+      expect(validated.confidence).toBe('medium');
+    });
+
+    it('adds conflicts when daily habits are missing days across multiple preview days', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { habitId: 'h1', start: '2026-01-05T15:00:00.000Z', end: '2026-01-05T15:30:00.000Z' },
+          { habitId: 'h1', start: '2026-01-07T15:00:00.000Z', end: '2026-01-07T15:30:00.000Z' },
         ],
         summary: '',
         conflicts: [],
@@ -687,18 +721,6 @@ describe('assistantService helpers', () => {
       const validated = applyHabitFrequencyConflicts(preview, habits, 'UTC');
       expect(validated.conflicts.some((c) => c.includes('Daily Habit'))).toBe(true);
       expect(validated.confidence).toBe('medium');
-    });
-
-    it('adds conflicts when weekly habits are missing specified weekdays', () => {
-      const preview: SchedulePreview = {
-        blocks: [],
-        summary: '',
-        conflicts: [],
-        confidence: 'medium',
-      };
-
-      const validated = applyHabitFrequencyConflicts(preview, habits, 'UTC');
-      expect(validated.conflicts.some((c) => c.includes('Weekly Tue'))).toBe(true);
     });
   });
 
@@ -713,7 +735,7 @@ describe('assistantService helpers', () => {
       timeZone: 'UTC',
     } as const;
 
-    it('adds missing daily blocks using preferred time when empty', () => {
+    it('does not auto-fill when no habit blocks are provided', () => {
       const preview: SchedulePreview = {
         blocks: [],
         summary: '',
@@ -722,15 +744,29 @@ describe('assistantService helpers', () => {
       };
 
       const filled = fillMissingHabitBlocks(preview, habits, [], userPrefs);
-      const h1Blocks = filled.blocks.filter((b) => (b as any).habitId === 'h1');
-      expect(h1Blocks.length).toBe(7);
+      expect(filled.blocks.length).toBe(0);
+    });
+
+    it('does not add blocks for habits missing from the preview', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          { habitId: 'h1', start: new Date().toISOString(), end: new Date(Date.now() + 30 * 60000).toISOString() },
+        ],
+        summary: '',
+        conflicts: [],
+        confidence: 'high',
+      };
+
+      const filled = fillMissingHabitBlocks(preview, habits, [], userPrefs);
+      const h2Blocks = filled.blocks.filter((b) => (b as any).habitId === 'h2');
+      expect(h2Blocks.length).toBe(0);
     });
 
     it('keeps existing block time when cloning to other days', () => {
-      const today = new Date().toISOString();
+      const today = '2026-01-05T15:00:00.000Z';
       const preview: SchedulePreview = {
         blocks: [
-          { habitId: 'h1', start: today, end: new Date(Date.now() + 30 * 60000).toISOString() },
+          { habitId: 'h1', start: today, end: '2026-01-05T15:30:00.000Z' },
         ],
         summary: '',
         conflicts: [],
@@ -758,6 +794,165 @@ describe('assistantService helpers', () => {
     it('ignores when no skip keyword is present', () => {
       const skipped = detectSkippedHabits(habits as any, 'Plan my habits');
       expect(skipped.size).toBe(0);
+    });
+  });
+
+  describe('extractHabitIdsFromMessage', () => {
+    const habits = [
+      { id: 'h1', title: 'Deep Work' },
+      { id: 'h2', title: 'Stretch' },
+    ];
+
+    it('finds mentioned habit titles regardless of case', () => {
+      const mentioned = extractHabitIdsFromMessage('Please reschedule my deep work block.', habits);
+      expect(mentioned.has('h1')).toBe(true);
+      expect(mentioned.has('h2')).toBe(false);
+    });
+
+    it('captures habits even when extra words or punctuation surround the title', () => {
+      const mentioned = extractHabitIdsFromMessage('Can you schedule the deep work habit event, please?', habits);
+      expect(mentioned.has('h1')).toBe(true);
+      expect(mentioned.has('h2')).toBe(false);
+    });
+
+    it('returns empty set when no habit is mentioned', () => {
+      const mentioned = extractHabitIdsFromMessage('Help me plan my day.', habits);
+      expect(mentioned.size).toBe(0);
+    });
+  });
+
+  describe('shouldFocusSingleHabitRequest', () => {
+    it('returns true when reschedule intent and habit identified', () => {
+      const targeted = new Set(['h1']);
+      expect(shouldFocusSingleHabitRequest('Reschedule Deep Work to 1pm', targeted, true)).toBe(true);
+    });
+
+    it('returns true when a single habit is mentioned with focus keywords', () => {
+      const targeted = new Set(['h1']);
+      const message = 'Schedule one habit deep work at 1pm on Monday.';
+      expect(shouldFocusSingleHabitRequest(message, targeted, false)).toBe(true);
+    });
+
+    it('returns true when a single habit is mentioned with just a time or day hint', () => {
+      const targeted = new Set(['h1']);
+      const message = 'Move deep work to 1pm on Monday';
+      expect(shouldFocusSingleHabitRequest(message, targeted, false)).toBe(true);
+    });
+
+    it('returns false when multiple habits are mentioned', () => {
+      const targeted = new Set(['h1', 'h2']);
+      expect(shouldFocusSingleHabitRequest('Please schedule something', targeted, false)).toBe(false);
+    });
+  });
+
+  describe('filterSchedulePreviewForFocusedHabits', () => {
+    it('keeps only the block closest to the day hint and time', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          {
+            habitId: 'h1',
+            start: '2026-01-05T13:00:00.000Z',
+            end: '2026-01-05T13:30:00.000Z',
+          },
+          {
+            habitId: 'h1',
+            start: '2026-01-06T13:00:00.000Z',
+            end: '2026-01-06T13:30:00.000Z',
+          },
+        ],
+        summary: 'Weekly blocks',
+        conflicts: [],
+        confidence: 'high',
+      };
+      const filtered = filterSchedulePreviewForFocusedHabits(
+        preview,
+        new Set(['h1']),
+        'Move Deep Work on Tuesday at 1pm',
+        'UTC'
+      );
+      expect(filtered.blocks).toHaveLength(1);
+      expect(filtered.blocks[0].start).toBe('2026-01-06T13:00:00.000Z');
+    });
+
+    it('falls back to the earliest block when no day or time hint is present', () => {
+      const preview: SchedulePreview = {
+        blocks: [
+          {
+            habitId: 'h1',
+            start: '2026-01-05T13:00:00.000Z',
+            end: '2026-01-05T13:30:00.000Z',
+          },
+          {
+            habitId: 'h1',
+            start: '2026-01-07T13:00:00.000Z',
+            end: '2026-01-07T13:30:00.000Z',
+          },
+        ],
+        summary: 'Weekly blocks',
+        conflicts: [],
+        confidence: 'high',
+      };
+      const filtered = filterSchedulePreviewForFocusedHabits(
+        preview,
+        new Set(['h1']),
+        'Move deep work',
+        'UTC'
+      );
+      expect(filtered.blocks).toHaveLength(1);
+      expect(filtered.blocks[0].start).toBe('2026-01-05T13:00:00.000Z');
+    });
+
+    it('selects the focused block even when the habit ID is emitted in taskId', () => {
+      const response = [
+        'Here is the updated plan.',
+        '[STRUCTURED_OUTPUT]',
+        '```json',
+        '{',
+        '  "blocks": [',
+        '    { "taskId": "h-deep-work", "start": "2026-01-05T13:00:00.000Z", "end": "2026-01-05T13:30:00.000Z" },',
+        '    { "habitId": "h-stretch", "start": "2026-01-05T14:00:00.000Z", "end": "2026-01-05T14:20:00.000Z" }',
+        '  ],',
+        '  "summary": "Weekly schedule",',
+        '  "conflicts": [],',
+        '  "confidence": "high"',
+        '}',
+        '```',
+      ].join('\n');
+      const parsed = parseResponse(response);
+      expect(parsed.schedulePreview).toBeDefined();
+
+      const filtered = filterSchedulePreviewForFocusedHabits(
+        parsed.schedulePreview!,
+        new Set(['h-deep-work']),
+        'Reschedule Deep Work to 1pm Monday',
+        'UTC'
+      );
+
+      expect(filtered.blocks).toHaveLength(1);
+      expect(filtered.blocks[0].taskId ?? filtered.blocks[0].habitId).toBe('h-deep-work');
+    });
+  });
+
+  describe('extractDayNameFromMessage', () => {
+    it('returns the day name when present', () => {
+      expect(extractDayNameFromMessage('Schedule it for Thursday')).toBe('thursday');
+      expect(extractDayNameFromMessage('Can we do it on Fri?')).toBe('friday');
+    });
+
+    it('returns null when no day is mentioned', () => {
+      expect(extractDayNameFromMessage('Please move my habit')).toBeNull();
+    });
+  });
+
+  describe('extractTimesFromMessage', () => {
+    it('parses AM/PM hints into 24-hour minutes', () => {
+      const times = extractTimesFromMessage('Move it to 9am and also consider 1:30 PM');
+      expect(times).toContainEqual({ hour: 9, minute: 0 });
+      expect(times).toContainEqual({ hour: 13, minute: 30 });
+    });
+
+    it('returns empty array when no time is present', () => {
+      expect(extractTimesFromMessage('No time mentioned here')).toHaveLength(0);
     });
   });
 });

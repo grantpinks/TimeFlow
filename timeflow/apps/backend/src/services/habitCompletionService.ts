@@ -11,10 +11,12 @@ import { HabitSkipReason } from '@timeflow/shared';
  * - Idempotent: marking complete twice = no-op (returns existing)
  * - If existing skip → overwrite to completed
  * - Creates HabitActionHistory for undo (24h expiry)
+ * @param actualDurationMinutes - Optional actual time spent on the habit
  */
 export async function markScheduledHabitComplete(
   userId: string,
-  scheduledHabitId: string
+  scheduledHabitId: string,
+  actualDurationMinutes?: number
 ) {
   // Verify scheduled habit belongs to user
   const scheduledHabit = await prisma.scheduledHabit.findFirst({
@@ -50,6 +52,7 @@ export async function markScheduledHabitComplete(
           status: 'completed',
           reasonCode: null,
           completedAt: new Date(),
+          actualDurationMinutes: actualDurationMinutes ?? undefined,
         },
       });
 
@@ -75,6 +78,7 @@ export async function markScheduledHabitComplete(
         habitId: scheduledHabit.habitId,
         scheduledHabitId,
         status: 'completed',
+        actualDurationMinutes: actualDurationMinutes ?? undefined,
       },
     });
 

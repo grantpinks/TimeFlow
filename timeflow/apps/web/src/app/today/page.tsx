@@ -23,7 +23,7 @@ import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache';
-import type { CalendarEvent, HabitSuggestionBlock, EmailMessage, Task, FullEmailMessage, EmailCategory } from '@timeflow/shared';
+import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory } from '@timeflow/shared';
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -31,7 +31,7 @@ export default function TodayPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [showBanner, setShowBanner] = useState(true);
-  const [habitSuggestions, setHabitSuggestions] = useState<HabitSuggestionBlock[]>([]);
+  const [habitSuggestions, setHabitSuggestions] = useState<EnrichedHabitSuggestion[]>([]);
   const [habitSuggestionsLoading, setHabitSuggestionsLoading] = useState(true);
   const [habitSuggestionsError, setHabitSuggestionsError] = useState<string | null>(null);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
@@ -296,6 +296,15 @@ export default function TodayPage() {
       await refreshTasks();
     } catch (err) {
       console.error('Failed to complete task:', err);
+    }
+  };
+
+  const handleCompleteHabit = async (scheduledHabitId: string) => {
+    try {
+      await api.completeHabitInstance(scheduledHabitId);
+      await fetchTodayEvents(); // Refresh to get updated completion status
+    } catch (err) {
+      console.error('Failed to complete habit:', err);
     }
   };
 
@@ -656,6 +665,7 @@ export default function TodayPage() {
                     wakeTime={user.wakeTime || '08:00'}
                     sleepTime={user.sleepTime || '23:00'}
                     onCompleteTask={handleCompleteTask}
+                    onCompleteHabit={handleCompleteHabit}
                     enableDropTargets
                   />
                 </div>
@@ -1130,8 +1140,6 @@ const DraggableTaskCard = memo(function DraggableTaskCard({ task, accentClass, o
       ref={setNodeRef}
       style={style}
       className={`rounded-lg p-3 cursor-grab active:cursor-grabbing select-none transition-shadow focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${accentClass}`}
-      role="button"
-      tabIndex={0}
       aria-label={ariaLabel}
       aria-grabbed={isDragging}
       {...listeners}

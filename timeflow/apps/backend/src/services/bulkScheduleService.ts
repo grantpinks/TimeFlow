@@ -13,6 +13,7 @@ export interface BulkScheduleRequest {
   dateRangeStart: string; // ISO date
   dateRangeEnd: string;   // ISO date
   customPrompt?: string;
+  habitIds?: string[]; // Optional: filter to specific habits
 }
 
 export interface BulkScheduleSuggestion {
@@ -36,7 +37,7 @@ export interface BulkScheduleResponse {
 export async function generateBulkSchedule(
   request: BulkScheduleRequest
 ): Promise<BulkScheduleResponse> {
-  const { userId, dateRangeStart, dateRangeEnd, customPrompt } = request;
+  const { userId, dateRangeStart, dateRangeEnd, customPrompt, habitIds } = request;
 
   // Validate date range
   const start = DateTime.fromISO(dateRangeStart);
@@ -57,18 +58,24 @@ export async function generateBulkSchedule(
   const rawSuggestions = await getHabitSuggestionsForUser(
     userId,
     start.toISO()!,
-    end.toISO()!
+    end.toISO()!,
+    habitIds
   );
 
   // Transform to bulk schedule format
   const suggestions: BulkScheduleSuggestion[] = rawSuggestions.map((suggestion, index) => {
-    const startDT = DateTime.fromISO(suggestion.startDateTime);
+    const startValue = suggestion.start ?? (suggestion as { startDateTime?: string }).startDateTime;
+    const endValue = suggestion.end ?? (suggestion as { endDateTime?: string }).endDateTime;
+    if (!startValue || !endValue) {
+      throw new Error('Missing start or end time for habit suggestion');
+    }
+    const startDT = DateTime.fromISO(startValue);
     return {
       id: `suggestion-${index}`,
       habitId: suggestion.habitId,
       habitTitle: suggestion.habit.title,
-      startDateTime: suggestion.startDateTime,
-      endDateTime: suggestion.endDateTime,
+      startDateTime: startValue,
+      endDateTime: endValue,
       date: startDT.toISODate()!,
       dayOfWeek: startDT.toFormat('EEEE'), // "Monday", "Tuesday", etc.
     };

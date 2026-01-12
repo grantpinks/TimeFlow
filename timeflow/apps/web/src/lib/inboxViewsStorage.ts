@@ -1,5 +1,5 @@
-import type { InboxView } from '../../../../packages/shared/src/types/email.js';
-import { DEFAULT_INBOX_VIEWS } from '../../../../packages/shared/src/types/email.js';
+import type { InboxView } from '@timeflow/shared';
+import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
 
 const STORAGE_KEY = 'timeflow_inbox_views_v1';
 

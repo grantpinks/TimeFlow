@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Habit } from '@timeflow/shared';
 
 interface HabitCardProps {
@@ -19,6 +19,21 @@ interface HabitCardProps {
 export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCardProps) {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowTimePicker(false);
+      }
+    };
+
+    if (showTimePicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showTimePicker]);
 
   // Mock status data (will be replaced with real data from API)
   const status = {
@@ -162,7 +177,7 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
         {/* Action buttons */}
         <div className="flex items-center justify-between gap-3">
           {/* Quick schedule dropdown */}
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowTimePicker(!showTimePicker)}
               disabled={!habit.isActive}
@@ -180,7 +195,7 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
 
             {/* Time picker dropdown */}
             {showTimePicker && (
-              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-slate-200 z-10 overflow-hidden">
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden">
                 <button
                   onClick={() => handleQuickSchedule('now')}
                   className="w-full px-4 py-3 text-left text-sm hover:bg-primary-50 transition-colors flex items-center justify-between group"

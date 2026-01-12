@@ -22,11 +22,17 @@ model User {
   sleepTime                  String    @default("23:00")
   defaultTaskDurationMinutes Int       @default(30)
   defaultCalendarId          String?
+  eventPrefixEnabled         Boolean   @default(true)
+  eventPrefix                String    @default("TF|")
   dailySchedule              Json?
   dailyScheduleConstraints   Json?
   sidebarNavOrder            String[]  @default([])
   inboxViews                 Json?
   habitsCoachState           Json? // { dismissedSuggestions: [{type, habitId, dismissedAt, snoozedUntil}], lastPrimarySuggestion: {...} }
+
+  // Habit notification preferences (opt-in)
+  notifyStreakAtRisk         Boolean   @default(false) // Notify when streak will break if not completed today
+  notifyMissedHighPriority   Boolean   @default(false) // Notify when high-priority habit is missed
 
   // Meeting-specific availability preferences
   meetingStartTime     String? // HH:mm - default earliest meeting time
@@ -154,6 +160,7 @@ model Habit {
   daysOfWeek         String[]
   preferredTimeOfDay String?
   durationMinutes    Int               @default(30)
+  priorityRank       Int?              // Priority ranking (1 = highest priority, null = not set)
   isActive           Boolean           @default(true)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
@@ -162,6 +169,7 @@ model Habit {
   completions        HabitCompletion[]
 
   @@index([userId])
+  @@index([userId, priorityRank])
 }
 
 model ScheduledHabit {
@@ -212,15 +220,16 @@ model SchedulingJob {
 }
 
 model HabitCompletion {
-  id               String   @id @default(cuid())
-  userId           String
-  habitId          String
-  scheduledHabitId String   @unique
-  status           String // 'completed' | 'skipped'
-  reasonCode       String? // Required if skipped; from HabitSkipReason enum
-  completedAt      DateTime @default(now())
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  userId                String
+  habitId               String
+  scheduledHabitId      String   @unique
+  status                String // 'completed' | 'skipped'
+  reasonCode            String? // Required if skipped; from HabitSkipReason enum
+  actualDurationMinutes Int? // Actual time spent (optional, captured on completion)
+  completedAt           DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   habit          Habit          @relation(fields: [habitId], references: [id], onDelete: Cascade)
   scheduledHabit ScheduledHabit @relation(fields: [scheduledHabitId], references: [id], onDelete: Cascade)

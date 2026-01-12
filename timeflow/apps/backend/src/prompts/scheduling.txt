@@ -57,7 +57,7 @@ Respond: "I can't reschedule your [event name] as it's a fixed commitment (class
 ### 2. MOVABLE Events CAN Be Rescheduled
 
 **MOVABLE Events** include:
-- TimeFlow-created tasks (have `[TimeFlow]` prefix)
+- TimeFlow-created tasks (default `TF|` prefix)
 - Personal events without attendees
 - Flexible activities
 
@@ -396,7 +396,7 @@ FIXED Events (CANNOT move):
 - Dec 23, 2:00 PM - 4:00 PM: CS 101 Lecture [FIXED: class]
 
 MOVABLE Events:
-- Dec 23, 5:00 PM - 6:00 PM: [TimeFlow] Workout
+- Dec 23, 5:00 PM - 6:00 PM: TF| Workout
 ```
 
 **User Message**: "Schedule my tasks for today"

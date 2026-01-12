@@ -24,6 +24,7 @@ import {
   type UserPreferences as ValidationPreferences,
 } from '../utils/scheduleValidator.js';
 import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
+import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
 
 /**
  * Run smart scheduling for the given tasks.
@@ -49,11 +50,14 @@ export async function scheduleTasksForUser(
 
   const calendarId = user.defaultCalendarId || 'primary';
 
-  // 2. Fetch tasks
+  // 2. Fetch tasks with their scheduled task records
   const tasks = await prisma.task.findMany({
     where: {
       id: { in: taskIds },
       userId,
+    },
+    include: {
+      scheduledTask: true,
     },
   });
 
@@ -105,18 +109,57 @@ export async function scheduleTasksForUser(
     dateRangeEnd
   );
 
-  // 6. Create Google Calendar events and persist ScheduledTask records
+  // 6. Create or update Google Calendar events and persist ScheduledTask records
   for (const block of scheduledBlocks) {
     const task = tasks.find((t) => t.id === block.taskId);
     if (!task) continue;
 
-    // Create calendar event
-    const { eventId } = await calendarService.createEvent(userId, calendarId, {
-      summary: `[TimeFlow] ${task.title}`,
-      description: task.description || undefined,
-      start: block.start,
-      end: block.end,
+    const taskEvent = buildTimeflowEventDetails({
+      title: task.title,
+      kind: 'task',
+      prefixEnabled: user.eventPrefixEnabled,
+      prefix: user.eventPrefix,
+      description: task.description,
     });
+
+    let eventId: string;
+
+    // Check if task already has a scheduled event
+    if (task.scheduledTask?.eventId) {
+      // Update existing calendar event
+      try {
+        await calendarService.updateEvent(
+          userId,
+          calendarId,
+          task.scheduledTask.eventId,
+          {
+            summary: taskEvent.summary,
+            description: taskEvent.description || undefined,
+            start: block.start,
+            end: block.end,
+          }
+        );
+        eventId = task.scheduledTask.eventId;
+      } catch (error) {
+        // If update fails (event might have been deleted), create a new one
+        const result = await calendarService.createEvent(userId, calendarId, {
+          summary: taskEvent.summary,
+          description: taskEvent.description || undefined,
+          start: block.start,
+          end: block.end,
+        });
+        eventId = result.eventId;
+      }
+    } else {
+      // Create new calendar event
+      const result = await calendarService.createEvent(userId, calendarId, {
+        summary: taskEvent.summary,
+        description: taskEvent.description || undefined,
+        start: block.start,
+        end: block.end,
+      });
+      eventId = result.eventId;
+    }
 
     // Upsert ScheduledTask record
     await prisma.scheduledTask.upsert({
@@ -480,15 +523,21 @@ export async function applyScheduleBlocks(
     if (scheduledHabitKeys.has(habitKey) || seenHabitKeys.has(habitKey)) {
       continue;
     }
-    const summary = `[TimeFlow Habit] ${habitTitle}`;
-    const eventKey = `${summary}|${block.start}|${block.end}`;
+    const habitEvent = buildTimeflowEventDetails({
+      title: habitTitle,
+      kind: 'habit',
+      prefixEnabled: user.eventPrefixEnabled,
+      prefix: user.eventPrefix,
+      description: 'Scheduled habit from TimeFlow',
+    });
+    const eventKey = `${habitEvent.summary}|${block.start}|${block.end}`;
     if (existingEventKeys.has(eventKey)) {
       seenHabitKeys.add(habitKey);
       continue;
     }
     const { eventId } = await calendarService.createEvent(userId, calendarId, {
-      summary,
-      description: 'Scheduled habit from TimeFlow',
+      summary: habitEvent.summary,
+      description: habitEvent.description,
       start: block.start,
       end: block.end,
     });
@@ -574,9 +623,64 @@ export async function rescheduleTask(
     });
   } else {
     // Task is unscheduled - create new schedule
+    const taskEvent = buildTimeflowEventDetails({
+      title: task.title,
+      kind: 'task',
+      prefixEnabled: user.eventPrefixEnabled,
+      prefix: user.eventPrefix,
+      description: task.description,
+    });
+
+    // Clean up any orphaned calendar events for this task before creating a new one
+    // This handles cases where unschedule failed to delete the calendar event
+    console.log(`[RescheduleTask] Task ${taskId} - "${task.title}" is unscheduled, creating new schedule`);
+    console.log(`[RescheduleTask] Looking for orphaned events with summary: "${taskEvent.summary}"`);
+
+    try {
+      const now = new Date();
+      const searchStart = new Date(now);
+      searchStart.setDate(now.getDate() - 30); // Search back 30 days
+      const searchEnd = new Date(now);
+      searchEnd.setDate(now.getDate() + 90); // Search forward 90 days
+
+      const existingEvents = await calendarService.getEvents(
+        userId,
+        calendarId,
+        searchStart.toISOString(),
+        searchEnd.toISOString()
+      );
+
+      console.log(`[RescheduleTask] Found ${existingEvents.length} total calendar events in search window`);
+
+      // Find events matching this task's title (with prefix)
+      const orphanedEvents = existingEvents.filter(
+        (event) => event.summary === taskEvent.summary
+      );
+
+      console.log(`[RescheduleTask] Found ${orphanedEvents.length} orphaned events matching "${taskEvent.summary}"`);
+
+      if (orphanedEvents.length > 0) {
+        console.log(`[RescheduleTask] Orphaned event IDs:`, orphanedEvents.map(e => e.id));
+      }
+
+      // Delete orphaned events
+      for (const orphan of orphanedEvents) {
+        try {
+          await calendarService.deleteEvent(userId, calendarId, orphan.id);
+          console.log(`[RescheduleTask] ✓ Deleted orphaned event ${orphan.id} for task ${taskId}`);
+        } catch (error) {
+          console.error(`[RescheduleTask] ✗ Failed to delete orphaned event ${orphan.id}:`, error);
+          // Continue anyway - we'll create the new event regardless
+        }
+      }
+    } catch (error) {
+      console.error('[RescheduleTask] Failed to search for orphaned events:', error);
+      // Continue with creating new event anyway
+    }
+
     const { eventId } = await calendarService.createEvent(userId, calendarId, {
-      summary: `[TimeFlow] ${task.title}`,
-      description: task.description || undefined,
+      summary: taskEvent.summary,
+      description: taskEvent.description || undefined,
       start: startDateTime,
       end: endDateTime,
     });

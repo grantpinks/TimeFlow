@@ -212,7 +212,10 @@ export async function syncFromHistory(userId: string, incomingHistoryId: string)
 
     const gmailLabelId =
       categoryConfig.gmailLabelId ||
-      (await createOrUpdateGmailLabel(gmail, categoryConfig, gmailColor));
+      (await createOrUpdateGmailLabel(gmail, categoryConfig, gmailColor, {
+        prefixEnabled: user.eventPrefixEnabled,
+        prefix: user.eventPrefix ?? null,
+      }));
 
     if (!gmailLabelId) continue;
 

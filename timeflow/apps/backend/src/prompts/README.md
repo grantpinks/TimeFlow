@@ -117,9 +117,9 @@ The `eventClassifier.ts` utility separates calendar events:
 - Examples: "CS 101 Lecture", "Dentist Appointment", "Team Meeting"
 
 **MOVABLE Events** (can be rescheduled):
-- TimeFlow-created tasks (have `[TimeFlow]` prefix)
+- TimeFlow-created tasks (default `TF|` prefix)
 - Personal events without attendees
-- Examples: "[TimeFlow] Homework", "Personal Study Time"
+- Examples: "TF| Homework", "Personal Study Time"
 
 The scheduling and availability prompts receive classified events in their context:
 
@@ -131,7 +131,7 @@ These are immovable commitments (classes, appointments, meetings). Work AROUND t
 - Dec 21, 5:00 PM - 6:00 PM: Team Meeting [FIXED: Meeting with attendees]
 
 **MOVABLE Events** (can be rescheduled if needed):
-- Dec 21, 9:00 AM - 10:00 AM: [TimeFlow] Morning Workout
+- Dec 21, 9:00 AM - 10:00 AM: TF| Morning Workout
 ```
 
 ---

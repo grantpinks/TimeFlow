@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { generateEmailDraft } from '../emailDraftController.js';
 import * as assistantService from '../../services/assistantService.js';
 import { prisma } from '../../config/prisma.js';
+import {
+  createControllerReply,
+  createControllerRequest,
+} from './helpers/typedFastifyMocks.js';
 
 vi.mock('../../services/assistantService.js', () => ({
   runAssistantTask: vi.fn(),
@@ -30,17 +34,11 @@ vi.mock('../../config/prisma.js', () => ({
   },
 }));
 
-function createReply() {
-  const reply: any = {
-    statusCode: 200,
-    status(code: number) {
-      this.statusCode = code;
-      return this;
-    },
-    send: vi.fn(),
-  };
-  return reply;
-}
+type EmailDraftRequestBody = {
+  emailId: string;
+  voicePreferences?: { formality: number; length: number; tone: number };
+  additionalContext?: string;
+};
 
 describe('emailDraftController', () => {
   beforeEach(() => {
@@ -48,15 +46,18 @@ describe('emailDraftController', () => {
   });
 
   it('uses assistantService to generate drafts', async () => {
-    const request: any = {
+    const request = createControllerRequest<{
+      Body: EmailDraftRequestBody;
+      User: { id: string };
+    }>({
       user: { id: 'user-1' },
       body: {
         emailId: 'email-1',
         voicePreferences: { formality: 5, length: 5, tone: 5 },
         additionalContext: 'Keep it short',
       },
-    };
-    const reply = createReply();
+    });
+    const reply = createControllerReply();
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-1',
@@ -88,11 +89,14 @@ describe('emailDraftController', () => {
   });
 
   it('blocks draft generation when quota is exceeded', async () => {
-    const request: any = {
+    const request = createControllerRequest<{
+      Body: EmailDraftRequestBody;
+      User: { id: string };
+    }>({
       user: { id: 'user-1' },
       body: { emailId: 'email-1' },
-    };
-    const reply = createReply();
+    });
+    const reply = createControllerReply();
 
     process.env.AI_DRAFT_QUOTA_MAX = '1';
 
@@ -123,11 +127,14 @@ describe('emailDraftController', () => {
   });
 
   it('does not log raw email or draft content', async () => {
-    const request: any = {
+    const request = createControllerRequest<{
+      Body: EmailDraftRequestBody;
+      User: { id: string };
+    }>({
       user: { id: 'user-1' },
       body: { emailId: 'email-1' },
-    };
-    const reply = createReply();
+    });
+    const reply = createControllerReply();
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

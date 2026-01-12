@@ -31,6 +31,7 @@ import type {
   HabitSkipReason,
   HabitCompletionResponse,
   HabitInsightsSummary,
+  HabitNotificationsResponse,
   DismissCoachSuggestionRequest,
   EmailInboxResponse,
   FullEmailMessage,
@@ -47,6 +48,7 @@ import type {
   CreateDraftRequest,
   CreateDraftResponse,
   EmailActionState,
+  ScheduledHabitInstance,
   WritingVoiceProfile,
 } from '@timeflow/shared';
 import { getAiDebugEnabled } from './aiDebug';
@@ -77,38 +79,66 @@ const API_BASE = '/api';
  * TODO: Replace with proper session management.
  */
 function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('timeflow_token');
+  if (
+    typeof window === 'undefined' ||
+    typeof window.localStorage?.getItem !== 'function'
+  ) {
+    return null;
+  }
+  return window.localStorage.getItem('timeflow_token');
 }
 
 /**
  * Set auth token in localStorage.
  */
 export function setAuthToken(token: string): void {
-  localStorage.setItem('timeflow_token', token);
+  if (
+    typeof window === 'undefined' ||
+    typeof window.localStorage?.setItem !== 'function'
+  ) {
+    return;
+  }
+  window.localStorage.setItem('timeflow_token', token);
 }
 
 /**
  * Get refresh token from localStorage.
  */
 function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('timeflow_refresh_token');
+  if (
+    typeof window === 'undefined' ||
+    typeof window.localStorage?.getItem !== 'function'
+  ) {
+    return null;
+  }
+  return window.localStorage.getItem('timeflow_refresh_token');
 }
 
 /**
  * Set refresh token in localStorage.
  */
 export function setRefreshToken(token: string): void {
-  localStorage.setItem('timeflow_refresh_token', token);
+  if (
+    typeof window === 'undefined' ||
+    typeof window.localStorage?.setItem !== 'function'
+  ) {
+    return;
+  }
+  window.localStorage.setItem('timeflow_refresh_token', token);
 }
 
 /**
  * Clear auth token.
  */
 export function clearAuthToken(): void {
-  localStorage.removeItem('timeflow_token');
-  localStorage.removeItem('timeflow_refresh_token');
+  if (
+    typeof window === 'undefined' ||
+    typeof window.localStorage?.removeItem !== 'function'
+  ) {
+    return;
+  }
+  window.localStorage.removeItem('timeflow_token');
+  window.localStorage.removeItem('timeflow_refresh_token');
 }
 
 /**
@@ -384,6 +414,16 @@ export async function deleteHabit(id: string): Promise<void> {
 }
 
 /**
+ * Reorder habits by priority.
+ */
+export async function reorderHabits(habitIds: string[]): Promise<{ success: boolean; habits: Habit[] }> {
+  return request<{ success: boolean; habits: Habit[] }>('/habits/reorder', {
+    method: 'POST',
+    body: JSON.stringify({ habitIds }),
+  });
+}
+
+/**
  * Get proposed scheduling suggestions for habits.
  */
 export async function getHabitSuggestions(params?: { from?: string; to?: string }): Promise<HabitSuggestionsResponse> {
@@ -393,6 +433,20 @@ export async function getHabitSuggestions(params?: { from?: string; to?: string 
 
   const suffix = query.toString() ? `?${query.toString()}` : '';
   return request<HabitSuggestionsResponse>(`/habits/suggestions${suffix}`);
+}
+
+/**
+ * Fetch scheduled habit instances (committed to the calendar) for the given window.
+ */
+export async function getScheduledHabitInstances(
+  from: string,
+  to: string
+): Promise<ScheduledHabitInstance[]> {
+  const params = new URLSearchParams({
+    from,
+    to,
+  });
+  return request<ScheduledHabitInstance[]>(`/habits/instances?${params.toString()}`);
 }
 
 /**
@@ -421,9 +475,10 @@ export async function rejectHabitSuggestion(data: { habitId: string; start: stri
  * @note When calling this from a UI component, also track:
  * track('habit.instance.complete', { habit_id_hash: hashHabitId(habitId) })
  */
-export async function completeHabitInstance(scheduledHabitId: string): Promise<HabitCompletionResponse> {
+export async function completeHabitInstance(scheduledHabitId: string, actualDurationMinutes?: number): Promise<HabitCompletionResponse> {
   return request<HabitCompletionResponse>(`/habits/instances/${scheduledHabitId}/complete`, {
     method: 'POST',
+    body: actualDurationMinutes !== undefined ? JSON.stringify({ actualDurationMinutes }) : undefined,
   });
 }
 
@@ -460,6 +515,14 @@ export async function skipHabitInstance(
  */
 export async function getHabitInsights(days: 14 | 28 = 14): Promise<HabitInsightsSummary> {
   return request(`/habits/insights?days=${days}`);
+}
+
+/**
+ * Get habit notifications (streak-at-risk + missed high-priority).
+ * Returns empty arrays if user hasn't opted in to notifications.
+ */
+export async function getHabitNotifications(): Promise<HabitNotificationsResponse> {
+  return request('/habits/notifications');
 }
 
 /**

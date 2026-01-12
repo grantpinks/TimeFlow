@@ -14,7 +14,9 @@ export type AssistantMode =
   | 'availability'
   | 'planning'
   | 'meetings'
-  | 'email-draft';
+  | 'email-draft'
+  | 'email-summary'
+  | 'email-tasks';
 
 /**
  * Manages AI Assistant prompts across different modes
@@ -121,7 +123,16 @@ export class PromptManager {
    * Get all available modes
    */
   getAvailableModes(): AssistantMode[] {
-    return ['conversation', 'scheduling', 'availability', 'planning', 'meetings', 'email-draft'];
+    return [
+      'conversation',
+      'scheduling',
+      'availability',
+      'planning',
+      'meetings',
+      'email-draft',
+      'email-summary',
+      'email-tasks',
+    ];
   }
 
   /**

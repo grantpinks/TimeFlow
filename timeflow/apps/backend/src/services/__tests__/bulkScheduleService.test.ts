@@ -13,8 +13,8 @@ describe('bulkScheduleService', () => {
     const mockSuggestions = [
       {
         habitId: 'habit-1',
-        startDateTime: '2026-01-05T08:00:00Z',
-        endDateTime: '2026-01-05T08:30:00Z',
+        start: '2026-01-05T08:00:00Z',
+        end: '2026-01-05T08:30:00Z',
         habit: {
           id: 'habit-1',
           title: 'Morning Meditation',
@@ -63,8 +63,8 @@ describe('bulkScheduleService', () => {
     const mockSuggestions = [
       {
         habitId: 'habit-1',
-        startDateTime: '2026-01-05T08:00:00Z',
-        endDateTime: '2026-01-05T08:30:00Z',
+        start: '2026-01-05T08:00:00Z',
+        end: '2026-01-05T08:30:00Z',
         habit: {
           id: 'habit-1',
           title: 'Morning Meditation',
@@ -74,8 +74,8 @@ describe('bulkScheduleService', () => {
       },
       {
         habitId: 'habit-1',
-        startDateTime: '2026-01-06T08:00:00Z',
-        endDateTime: '2026-01-06T08:30:00Z',
+        start: '2026-01-06T08:00:00Z',
+        end: '2026-01-06T08:30:00Z',
         habit: {
           id: 'habit-1',
           title: 'Morning Meditation',
@@ -102,8 +102,8 @@ describe('bulkScheduleService', () => {
     const mockSuggestions = [
       {
         habitId: 'habit-1',
-        startDateTime: '2026-01-05T08:00:00Z',
-        endDateTime: '2026-01-05T08:30:00Z',
+        start: '2026-01-05T08:00:00Z',
+        end: '2026-01-05T08:30:00Z',
         habit: {
           id: 'habit-1',
           title: 'Morning Meditation',
@@ -113,8 +113,8 @@ describe('bulkScheduleService', () => {
       },
       {
         habitId: 'habit-2',
-        startDateTime: '2026-01-05T09:00:00Z',
-        endDateTime: '2026-01-05T10:00:00Z',
+        start: '2026-01-05T09:00:00Z',
+        end: '2026-01-05T10:00:00Z',
         habit: {
           id: 'habit-2',
           title: 'Exercise',
