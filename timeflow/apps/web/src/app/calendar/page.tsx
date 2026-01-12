@@ -19,6 +19,7 @@ import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import { filterExternalEvents } from './calendarEventFilters';
 import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary } from '@timeflow/shared';
+import { track, hashHabitId } from '@/lib/analytics';
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
@@ -442,11 +443,24 @@ export default function CalendarPage() {
 
   const handleCompleteHabitById = async (scheduledHabitId: string, actualDurationMinutes?: number) => {
     try {
+      // Find habitId for analytics
+      const habitInstance = scheduledHabitInstances.find(
+        inst => inst.scheduledHabitId === scheduledHabitId
+      );
+
       await api.completeHabitInstance(scheduledHabitId, actualDurationMinutes);
       await Promise.all([
         fetchExternalEvents(), // Refresh to get updated completion status
         fetchHabitInsights(), // Refresh streak data
       ]);
+
+      // Track completion (privacy-safe: hashed ID only, no title)
+      if (habitInstance) {
+        track('habit.instance.complete', {
+          habit_id_hash: hashHabitId(habitInstance.habitId)
+        });
+      }
+
       setMessage({
         type: 'success',
         text: 'Habit completed!',
@@ -461,11 +475,24 @@ export default function CalendarPage() {
 
   const handleUndoHabitById = async (scheduledHabitId: string) => {
     try {
+      // Find habitId for analytics
+      const habitInstance = scheduledHabitInstances.find(
+        inst => inst.scheduledHabitId === scheduledHabitId
+      );
+
       await api.undoHabitInstance(scheduledHabitId);
       await Promise.all([
         fetchExternalEvents(), // Refresh to get updated completion status
         fetchHabitInsights(), // Refresh streak data
       ]);
+
+      // Track undo (privacy-safe: hashed ID only)
+      if (habitInstance) {
+        track('habit.instance.undo', {
+          habit_id_hash: hashHabitId(habitInstance.habitId)
+        });
+      }
+
       setMessage({
         type: 'success',
         text: 'Habit completion undone',
@@ -480,11 +507,25 @@ export default function CalendarPage() {
 
   const handleSkipHabitById = async (scheduledHabitId: string, reasonCode: any) => {
     try {
+      // Find habitId for analytics
+      const habitInstance = scheduledHabitInstances.find(
+        inst => inst.scheduledHabitId === scheduledHabitId
+      );
+
       await api.skipHabitInstance(scheduledHabitId, reasonCode);
       await Promise.all([
         fetchExternalEvents(), // Refresh to get updated completion status
         fetchHabitInsights(), // Refresh streak data
       ]);
+
+      // Track skip (privacy-safe: hashed ID + preset reason code only)
+      if (habitInstance) {
+        track('habit.instance.skip', {
+          habit_id_hash: hashHabitId(habitInstance.habitId),
+          reason_code: reasonCode
+        });
+      }
+
       setMessage({
         type: 'success',
         text: 'Habit skipped',

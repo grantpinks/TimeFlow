@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
-import { getHabitInsights } from '@/lib/api';
+import { getHabitInsights, acceptHabitSuggestion } from '@/lib/api';
 import { CoachCard } from './CoachCard';
 import { Recommendations } from './Recommendations';
 import { StreakReminderBanner } from './StreakReminderBanner';
@@ -42,7 +42,7 @@ export function HabitsInsights() {
     }
   };
 
-  const handleRecommendationAction = (recommendation: HabitRecommendation) => {
+  const handleRecommendationAction = async (recommendation: HabitRecommendation) => {
     // Track recommendation action (privacy-safe - hashed ID, no title)
     track('habits.recommendation.action_taken', {
       recommendation_type: recommendation.type,
@@ -50,10 +50,154 @@ export function HabitsInsights() {
       habit_id_hash: hashHabitId(recommendation.habitId),
     });
 
-    // TODO: Implement action handlers in Task 5 (Coach Card + Next Actions)
-    // For now, just log the action
-    console.log('Recommendation action clicked:', recommendation);
-    alert(`Action "${recommendation.action.label}" will be implemented in Task 5`);
+    try {
+      if (recommendation.action.type === 'schedule_rescue_block') {
+        await handleScheduleRescueBlock(recommendation);
+      } else if (recommendation.action.type === 'adjust_window') {
+        await handleAdjustWindow(recommendation);
+      } else {
+        // Other actions not yet implemented
+        alert(`Action "${recommendation.action.label}" coming soon!`);
+      }
+    } catch (error) {
+      console.error('Failed to execute recommendation action:', error);
+      alert(error instanceof Error ? error.message : 'Action failed. Please try again.');
+    }
+  };
+
+  const handleScheduleRescueBlock = async (recommendation: HabitRecommendation) => {
+    // Find the habit in insights to get duration and best window
+    const habitInsight = insights?.habits.find(h => h.habitId === recommendation.habitId);
+    if (!habitInsight) {
+      throw new Error('Habit not found');
+    }
+
+    // Determine the time to schedule
+    let start: Date;
+    const duration = habitInsight.minutesScheduled / Math.max(habitInsight.scheduled, 1); // Average duration
+
+    if (habitInsight.bestWindow) {
+      // Use best window
+      const dayMap: Record<string, number> = {
+        'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+        'Thursday': 4, 'Friday': 5, 'Saturday': 6
+      };
+      const targetDay = dayMap[habitInsight.bestWindow.dayOfWeek];
+      const now = new Date();
+      const currentDay = now.getDay();
+
+      // Calculate days until target day
+      let daysUntil = targetDay - currentDay;
+      if (daysUntil <= 0) daysUntil += 7; // Next occurrence
+
+      // Parse time slot (e.g., "9am-10am" -> 9)
+      const timeMatch = habitInsight.bestWindow.timeSlot.match(/(\d+)(am|pm)/);
+      let hour = timeMatch ? parseInt(timeMatch[1]) : 9;
+      if (timeMatch && timeMatch[2] === 'pm' && hour !== 12) hour += 12;
+      if (timeMatch && timeMatch[2] === 'am' && hour === 12) hour = 0;
+
+      start = new Date(now);
+      start.setDate(start.getDate() + daysUntil);
+      start.setHours(hour, 0, 0, 0);
+    } else {
+      // No best window - schedule for tomorrow at 9am
+      start = new Date();
+      start.setDate(start.getDate() + 1);
+      start.setHours(9, 0, 0, 0);
+    }
+
+    const end = new Date(start.getTime() + duration * 60000);
+
+    // Accept the suggestion (schedule it)
+    await acceptHabitSuggestion({
+      habitId: recommendation.habitId,
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+
+    // Track coach action
+    track('habits.coach.action_taken', {
+      action_type: 'rescue_block'
+    });
+
+    // Reload insights to reflect the new schedule
+    await loadInsights();
+
+    alert(`✅ Rescue block scheduled for ${start.toLocaleDateString()} at ${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
+  };
+
+  const handleAdjustWindow = async (recommendation: HabitRecommendation) => {
+    // TODO: Implement window adjustment
+    // This would need a backend endpoint to update habit.preferredTimeOfDay
+    alert('Adjust window feature coming soon! This will let you change the preferred time for your habit.');
+  };
+
+  const handleRescueBlockFromBanner = async (habitId: string) => {
+    try {
+      // Find the habit in insights
+      const habitInsight = insights?.habits.find(h => h.habitId === habitId);
+      if (!habitInsight) {
+        throw new Error('Habit not found');
+      }
+
+      // Calculate rescue block time - schedule for today if possible, otherwise tomorrow
+      const now = new Date();
+      const currentHour = now.getHours();
+
+      let start: Date;
+      const duration = habitInsight.minutesScheduled / Math.max(habitInsight.scheduled, 1);
+
+      if (habitInsight.bestWindow) {
+        // Try to use best window today if it's still in the future
+        const timeMatch = habitInsight.bestWindow.timeSlot.match(/(\d+)(am|pm)/);
+        let hour = timeMatch ? parseInt(timeMatch[1]) : 18; // Default to 6pm
+        if (timeMatch && timeMatch[2] === 'pm' && hour !== 12) hour += 12;
+        if (timeMatch && timeMatch[2] === 'am' && hour === 12) hour = 0;
+
+        if (hour > currentHour) {
+          // Schedule today
+          start = new Date(now);
+          start.setHours(hour, 0, 0, 0);
+        } else {
+          // Schedule tomorrow
+          start = new Date(now);
+          start.setDate(start.getDate() + 1);
+          start.setHours(hour, 0, 0, 0);
+        }
+      } else {
+        // No best window - schedule later today (6pm) or tomorrow
+        const rescueHour = Math.max(currentHour + 2, 18); // At least 2 hours from now, or 6pm
+        start = new Date(now);
+        if (rescueHour >= 24) {
+          start.setDate(start.getDate() + 1);
+          start.setHours(18, 0, 0, 0);
+        } else {
+          start.setHours(rescueHour, 0, 0, 0);
+        }
+      }
+
+      const end = new Date(start.getTime() + duration * 60000);
+
+      // Schedule the rescue block
+      await acceptHabitSuggestion({
+        habitId,
+        start: start.toISOString(),
+        end: end.toISOString(),
+      });
+
+      // Track rescue block action
+      track('habits.coach.action_taken', {
+        action_type: 'rescue_block'
+      });
+
+      // Reload insights
+      await loadInsights();
+
+      alert(`✅ Rescue block scheduled for ${start.toLocaleDateString()} at ${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}!\n\nYour streak will be saved if you complete it then.`);
+    } catch (error) {
+      console.error('Failed to schedule rescue block:', error);
+      alert(error instanceof Error ? error.message : 'Failed to schedule rescue block. Please try again.');
+    }
   };
 
   if (loading) {
@@ -133,15 +277,10 @@ export function HabitsInsights() {
       {atRiskHabits.length > 0 && (
         <StreakReminderBanner
           atRiskHabits={atRiskHabits}
-          onScheduleRescue={(habitId) => {
-            // TODO: Implement schedule rescue block
-            console.log('Schedule rescue for habit:', habitId);
-            alert('Schedule rescue block feature coming soon!');
-          }}
+          onScheduleRescue={handleRescueBlockFromBanner}
           onCompleteNow={(habitId) => {
-            // TODO: Navigate to calendar/today page or open quick complete modal
-            console.log('Complete now for habit:', habitId);
-            alert('Quick complete feature coming soon!');
+            // Navigate to calendar or today page to complete the habit
+            window.location.href = '/calendar';
           }}
         />
       )}
@@ -220,6 +359,11 @@ function HabitInsightCard({ habit }: HabitInsightCardProps) {
                 {habit.completed}/{habit.scheduled} completed
               </span>
               <span>{habit.minutesCompleted} min</span>
+              {habit.plannedVsActualDelta !== undefined && (
+                <span className={habit.plannedVsActualDelta > 0 ? 'text-orange-600' : 'text-green-600'}>
+                  {habit.plannedVsActualDelta > 0 ? '+' : ''}{Math.round(habit.plannedVsActualDelta)} min avg
+                </span>
+              )}
             </div>
           </div>
           <div className="text-right">
