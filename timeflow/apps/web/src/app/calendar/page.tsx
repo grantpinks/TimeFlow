@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { Layout } from '@/components/Layout';
 import { CalendarView } from '@/components/CalendarView';
@@ -13,14 +13,20 @@ import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
+import { Button, Input, Select, Textarea, Label } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
+import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
-import type { CalendarEvent, Task } from '@timeflow/shared';
+import { filterExternalEvents } from './calendarEventFilters';
+import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary } from '@timeflow/shared';
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
   const { tasks, loading: tasksLoading, refresh: refreshTasks } = useTasks();
+  const { user } = useUser();
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
+  const [scheduledHabitInstances, setScheduledHabitInstances] = useState<ScheduledHabitInstance[]>([]);
+  const [habitInsights, setHabitInsights] = useState<HabitInsightsSummary | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventCategorizations, setEventCategorizations] = useState<Record<string, api.EventCategorization>>({});
   const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
@@ -33,27 +39,65 @@ export default function CalendarPage() {
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const [previewSlot, setPreviewSlot] = useState<{ start: Date; end: Date } | null>(null);
   const [isSchedulingFromPreview, setIsSchedulingFromPreview] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingState, setEditingState] = useState<{
+    title: string;
+    description: string;
+    durationMinutes: number;
+    priority: 1 | 2 | 3;
+    dueDate: string;
+    categoryId: string;
+  } | null>(null);
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
   // Filter state
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [showEvents, setShowEvents] = useState(true);
 
-  // Fetch calendar events for the current month
+  // Fetch calendar events for the current month (now includes tasks, habits, and external events from merged backend)
+  // The backend getEvents endpoint returns merged events with source tracking
   const fetchExternalEvents = async () => {
     try {
       setEventsLoading(true);
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 2, 0); // End of next month
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
 
-      const events = await api.getCalendarEvents(
-        start.toISOString(),
-        end.toISOString()
-      );
+      let events: CalendarEvent[] = [];
+      let habitInstances: ScheduledHabitInstance[] = [];
+
+      try {
+        events = await api.getCalendarEvents(startIso, endIso);
+      } catch (err) {
+        console.error('Failed to fetch calendar events:', err);
+      }
+
+      if (user?.id) {
+        try {
+          habitInstances = await api.getScheduledHabitInstances(startIso, endIso);
+        } catch (err) {
+          console.error('Failed to fetch scheduled habit instances:', err);
+        }
+      } else {
+        habitInstances = [];
+      }
+
+      setScheduledHabitInstances(habitInstances);
       setExternalEvents(events);
-    } catch (err) {
-      console.error('Failed to fetch calendar events:', err);
     } finally {
       setEventsLoading(false);
+    }
+  };
+
+  // Fetch habit insights for streak context
+  const fetchHabitInsights = async () => {
+    if (!user?.id) return;
+    try {
+      const insights = await api.getHabitInsights(14);
+      setHabitInsights(insights);
+    } catch (err) {
+      console.error('Failed to fetch habit insights:', err);
     }
   };
 
@@ -72,7 +116,8 @@ export default function CalendarPage() {
 
     fetchCategories();
     fetchExternalEvents();
-  }, []);
+    fetchHabitInsights();
+  }, [user?.id]);
 
   // Handle Escape key to cancel preview
   useEffect(() => {
@@ -87,28 +132,59 @@ export default function CalendarPage() {
   }, [previewTask]);
 
   const unscheduledTasks = tasks.filter((t) => t.status === 'unscheduled');
+
+  // Create mapping from habitId to streak metrics for popover display
+  const habitStreakMap = useMemo(() => {
+    if (!habitInsights) return new Map();
+    const map = new Map<string, { current: number; atRisk: boolean }>();
+    habitInsights.habits.forEach(habit => {
+      map.set(habit.habitId, {
+        current: habit.streak.current,
+        atRisk: habit.streak.atRisk,
+      });
+    });
+    return map;
+  }, [habitInsights]);
   const timeflowEventIds = useMemo(() => {
     const ids = new Set<string>();
+
+    // Add task event IDs
     tasks.forEach((task) => {
       if (task.scheduledTask?.eventId) {
         ids.add(task.scheduledTask.eventId);
       }
     });
-    return ids;
-  }, [tasks]);
-  const displayExternalEvents = useMemo(() => {
-    if (externalEvents.length === 0) return externalEvents;
-    return externalEvents.filter((event) => {
-      if (event.id && timeflowEventIds.has(event.id)) {
-        return false;
+
+    // Add habit event IDs from the scheduled habit API to ensure deduping even if backend data lags
+    scheduledHabitInstances.forEach((instance) => {
+      if (instance.eventId) {
+        ids.add(instance.eventId);
       }
-      const summary = event.summary?.trim().toLowerCase();
-      if (summary?.startsWith('[timeflow')) {
-        return false;
-      }
-      return true;
     });
-  }, [externalEvents, timeflowEventIds]);
+
+    // Add habit event IDs from merged backend response
+    // This prevents duplicates since habits exist both in our DB and in Google Calendar
+    externalEvents.forEach((event) => {
+      if (event.sourceType === 'habit' && event.id) {
+        ids.add(event.id);
+      }
+    });
+
+    return ids;
+  }, [tasks, externalEvents, scheduledHabitInstances]);
+  const displayExternalEvents = useMemo(() => {
+    return filterExternalEvents(externalEvents, timeflowEventIds, {
+      prefixEnabled: user?.eventPrefixEnabled ?? true,
+      prefix: user?.eventPrefix ?? null,
+      scheduledHabitInstances,
+    });
+  }, [
+    externalEvents,
+    timeflowEventIds,
+    user?.eventPrefixEnabled,
+    user?.eventPrefix,
+    scheduledHabitInstances,
+  ]);
 
   // Filtered events based on category selection and show events toggle
   const filteredExternalEvents = useMemo(() => {
@@ -211,6 +287,7 @@ export default function CalendarPage() {
 
     fetchCategorizations();
   }, [displayExternalEvents]);
+
 
   const handleSmartSchedule = async () => {
     const taskIds = unscheduledTasks.map((t) => t.id);
@@ -363,13 +440,116 @@ export default function CalendarPage() {
     }
   };
 
+  const handleCompleteHabitById = async (scheduledHabitId: string, actualDurationMinutes?: number) => {
+    try {
+      await api.completeHabitInstance(scheduledHabitId, actualDurationMinutes);
+      await Promise.all([
+        fetchExternalEvents(), // Refresh to get updated completion status
+        fetchHabitInsights(), // Refresh streak data
+      ]);
+      setMessage({
+        type: 'success',
+        text: 'Habit completed!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to complete habit',
+      });
+    }
+  };
+
+  const handleUndoHabitById = async (scheduledHabitId: string) => {
+    try {
+      await api.undoHabitInstance(scheduledHabitId);
+      await Promise.all([
+        fetchExternalEvents(), // Refresh to get updated completion status
+        fetchHabitInsights(), // Refresh streak data
+      ]);
+      setMessage({
+        type: 'success',
+        text: 'Habit completion undone',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to undo habit',
+      });
+    }
+  };
+
+  const handleSkipHabitById = async (scheduledHabitId: string, reasonCode: any) => {
+    try {
+      await api.skipHabitInstance(scheduledHabitId, reasonCode);
+      await Promise.all([
+        fetchExternalEvents(), // Refresh to get updated completion status
+        fetchHabitInsights(), // Refresh streak data
+      ]);
+      setMessage({
+        type: 'success',
+        text: 'Habit skipped',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to skip habit',
+      });
+    }
+  };
+
   const handleEditTaskById = (taskId: string) => {
-    // TODO: Navigate to task edit page or show edit modal
-    console.log('Edit task:', taskId);
-    setMessage({
-      type: 'success',
-      text: 'Edit functionality coming soon!',
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) {
+      setMessage({
+        type: 'error',
+        text: 'Task not found.',
+      });
+      return;
+    }
+    setEditingTask(task);
+    setEditingState({
+      title: task.title,
+      description: task.description ?? '',
+      durationMinutes: task.durationMinutes,
+      priority: task.priority as 1 | 2 | 3,
+      dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
+      categoryId: task.categoryId ?? '',
     });
+  };
+
+  const closeEditModal = () => {
+    setEditingTask(null);
+    setEditingState(null);
+    setEditingSubmitting(false);
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask || !editingState?.title.trim()) return;
+    setEditingSubmitting(true);
+
+    try {
+      await api.updateTask(editingTask.id, {
+        title: editingState.title.trim(),
+        description: editingState.description.trim() || undefined,
+        durationMinutes: editingState.durationMinutes,
+        priority: editingState.priority,
+        dueDate: editingState.dueDate || undefined,
+        categoryId: editingState.categoryId || undefined,
+      });
+      await Promise.all([refreshTasks(), fetchExternalEvents()]);
+      setMessage({
+        type: 'success',
+        text: 'Task updated successfully!',
+      });
+      closeEditModal();
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to update task',
+      });
+      setEditingSubmitting(false);
+    }
   };
 
   const handleUnscheduleTaskById = async (taskId: string) => {
@@ -725,9 +905,14 @@ export default function CalendarPage() {
                   externalEvents={filteredExternalEvents}
                   eventCategorizations={eventCategorizations}
                   categories={categories}
+                  habitStreakMap={habitStreakMap}
+                  scheduledHabitInstances={scheduledHabitInstances}
                   selectedDate={calendarDate}
                   onRescheduleTask={handleRescheduleTask}
                   onCompleteTask={handleCompleteTaskById}
+                  onCompleteHabit={handleCompleteHabitById}
+                  onUndoHabit={handleUndoHabitById}
+                  onSkipHabit={handleSkipHabitById}
                   onEditTask={handleEditTaskById}
                   onUnscheduleTask={handleUnscheduleTaskById}
                   onDeleteTask={handleDeleteTaskById}
@@ -762,6 +947,150 @@ export default function CalendarPage() {
           isScheduling={isSchedulingFromPreview}
         />
       )}
+
+      <AnimatePresence>
+        {editingTask && editingState && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+            initial={{ opacity: reduceMotion ? 1 : 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: reduceMotion ? 1 : 0 }}
+          >
+            <motion.div
+              className="w-full max-w-lg bg-white rounded-lg shadow-xl border border-slate-200"
+              initial={reduceMotion ? false : { y: 20, opacity: 0 }}
+              animate={reduceMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 1 } : { y: 10, opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: 'easeOut' }}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Edit task</p>
+                  <h3 className="text-lg font-semibold text-slate-800 truncate">{editingTask.title}</h3>
+                </div>
+                <button
+                  onClick={closeEditModal}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Close edit modal"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSubmit} className="px-5 py-4 space-y-4">
+                <div className="space-y-2">
+                  <Label required>Title</Label>
+                  <Input
+                    type="text"
+                    value={editingState.title}
+                    onChange={(e) =>
+                      setEditingState((prev) => prev && { ...prev, title: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label optional>Description</Label>
+                  <Textarea
+                    value={editingState.description}
+                    onChange={(e) =>
+                      setEditingState((prev) => prev && { ...prev, description: e.target.value })
+                    }
+                    rows={2}
+                    placeholder="Optional description"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Category</Label>
+                    <Select
+                      value={editingState.categoryId}
+                      onChange={(e) =>
+                        setEditingState((prev) => prev && { ...prev, categoryId: e.target.value })
+                      }
+                    >
+                      <option value="">No category</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </Select>
+                    <a href="/categories" className="text-xs text-primary-600 hover:text-primary-700 mt-1 inline-block">
+                      Manage categories
+                    </a>
+                  </div>
+
+                  <div>
+                    <Label>Duration</Label>
+                    <Select
+                      value={editingState.durationMinutes}
+                      onChange={(e) =>
+                        setEditingState(
+                          (prev) => prev && { ...prev, durationMinutes: Number(e.target.value) }
+                        )
+                      }
+                    >
+                      <option value={15}>15 min</option>
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>1 hour</option>
+                      <option value={90}>1.5 hours</option>
+                      <option value={120}>2 hours</option>
+                      <option value={180}>3 hours</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Priority</Label>
+                    <Select
+                      value={editingState.priority}
+                      onChange={(e) =>
+                        setEditingState(
+                          (prev) => prev && { ...prev, priority: Number(e.target.value) as 1 | 2 | 3 }
+                        )
+                      }
+                    >
+                      <option value={1}>High</option>
+                      <option value={2}>Medium</option>
+                      <option value={3}>Low</option>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Due Date</Label>
+                    <Input
+                      type="date"
+                      value={editingState.dueDate}
+                      onChange={(e) =>
+                        setEditingState((prev) => prev && { ...prev, dueDate: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button type="button" onClick={closeEditModal} variant="ghost">
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={editingSubmitting || !editingState.title.trim()}
+                    variant="primary"
+                    loading={editingSubmitting}
+                  >
+                    {editingSubmitting ? 'Saving...' : 'Save changes'}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <FloatingAssistantButton />
     </Layout>

@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { Calendar, luxonLocalizer, Views } from 'react-big-calendar';
-import { DndContext, DragOverlay, useDroppable, useDraggable, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
+import type { ComponentType } from 'react';
+import { Calendar, luxonLocalizer, Views, type View } from 'react-big-calendar';
+import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { DateTime } from 'luxon';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import type { Task, CalendarEvent, CategoryTrainingExampleSnapshot } from '@timeflow/shared';
+import type { Task, CalendarEvent, CategoryTrainingExampleSnapshot, HabitSkipReason } from '@timeflow/shared';
 import { EventDetailPopover } from './EventDetailPopover';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -32,12 +33,17 @@ interface CalendarViewProps {
   externalEvents: CalendarEvent[];
   eventCategorizations?: Record<string, EventCategorization>;
   categories?: Category[];
+  habitStreakMap?: Map<string, { current: number; atRisk: boolean }>;
+  scheduledHabitInstances?: Array<{ scheduledHabitId: string; habitId: string }>;
   selectedDate?: Date;
   onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void;
   onSelectEvent?: (event: CalendarEventItem) => void;
   onRescheduleTask?: (taskId: string, start: Date, end: Date) => Promise<void>;
   onResizeEvent?: (taskId: string, start: Date, end: Date) => Promise<void>;
   onCompleteTask?: (taskId: string) => Promise<void>;
+  onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => Promise<void>;
+  onUndoHabit?: (scheduledHabitId: string) => Promise<void>;
+  onSkipHabit?: (scheduledHabitId: string, reasonCode: HabitSkipReason) => Promise<void>;
   onEditTask?: (taskId: string) => void;
   onUnscheduleTask?: (taskId: string) => Promise<void>;
   onDeleteTask?: (taskId: string) => Promise<void>;
@@ -58,6 +64,13 @@ export interface CalendarEventItem {
   description?: string;
   overflowed?: boolean;
   categoryColor?: string;
+  isHabit?: boolean;
+  scheduledHabitId?: string;
+  eventId?: string;
+  // Completion tracking
+  sourceType?: 'task' | 'habit' | 'external';
+  sourceId?: string; // task ID or scheduledHabit ID
+  isCompleted?: boolean;
 }
 
 export function CalendarView({
@@ -65,18 +78,22 @@ export function CalendarView({
   externalEvents,
   eventCategorizations,
   categories,
+  habitStreakMap,
+  scheduledHabitInstances,
   selectedDate,
   onSelectSlot,
   onSelectEvent,
-  onRescheduleTask,
   onResizeEvent,
   onCompleteTask,
+  onCompleteHabit,
+  onUndoHabit,
+  onSkipHabit,
   onEditTask,
   onUnscheduleTask,
   onDeleteTask,
   onCategoryChange,
 }: CalendarViewProps) {
-  const [view, setView] = useState<'week' | 'day' | 'month'>(Views.WEEK);
+  const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(selectedDate || new Date());
 
   // Update internal date when selectedDate prop changes
@@ -85,10 +102,9 @@ export function CalendarView({
       setDate(selectedDate);
     }
   }, [selectedDate]);
-  const [isRescheduling, setIsRescheduling] = useState(false);
+  const isRescheduling = false;
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
-  const [hoverCard, setHoverCard] = useState<{ event: CalendarEventItem; rect: DOMRect } | null>(null);
   const [selectedEventForPopover, setSelectedEventForPopover] = useState<{
     id: string;
     title: string;
@@ -97,13 +113,23 @@ export function CalendarView({
     description?: string;
     isTask: boolean;
     task?: Task;
+    isHabit?: boolean;
+    scheduledHabitId?: string;
+    habitCompletion?: {
+      status: 'completed' | 'skipped';
+      reasonCode?: string;
+    };
+    habitStreak?: {
+      current: number;
+      atRisk: boolean;
+    };
     categoryColor?: string;
     categoryName?: string;
     categoryId?: string;
     overflowed?: boolean;
   } | null>(null);
 
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotion() ?? false;
 
   // Convert tasks and events to calendar format
   const events = useMemo(() => {
@@ -119,25 +145,35 @@ export function CalendarView({
           end: new Date(task.scheduledTask.endDateTime),
           isTask: true,
           taskId: task.id,
-          description: task.description,
+          description: task.description ?? undefined,
           overflowed: task.scheduledTask.overflowedDeadline,
           categoryColor: task.category?.color,
+          sourceType: 'task',
+          sourceId: task.id,
+          isCompleted: task.status === 'completed',
         });
       }
     }
 
-    // Add external events with categorization
+    // Add external events with categorization and completion tracking
     for (const event of externalEvents) {
-      const categorization = eventCategorizations?.[event.id];
+      const categorization = event.id ? eventCategorizations?.[event.id] : undefined;
+      const isHabitEvent = event.sourceType === 'habit';
 
       calendarEvents.push({
         id: `event-${event.id || Math.random().toString()}`,
         title: event.summary,
         start: new Date(event.start),
         end: new Date(event.end),
-        isTask: false,
+        isTask: event.sourceType === 'task', // Preserve task status from merged events
+        isHabit: isHabitEvent,
+        scheduledHabitId: isHabitEvent ? event.sourceId : undefined,
+        eventId: event.id ?? undefined,
         description: event.description,
         categoryColor: categorization?.categoryColor, // Use AI-assigned category color
+        sourceType: event.sourceType,
+        sourceId: event.sourceId,
+        isCompleted: event.isCompleted,
       });
     }
 
@@ -145,7 +181,10 @@ export function CalendarView({
   }, [tasks, externalEvents, eventCategorizations]);
 
   const eventStyleGetter = useCallback((event: CalendarEventItem) => {
-    if (event.isTask) {
+    // Base opacity: reduce for completed events
+    const baseOpacity = event.isCompleted ? 0.5 : 1;
+
+    if (event.isTask || event.sourceType === 'task') {
       // Brand Primary Teal for default tasks, or use category color
       let backgroundColor = event.categoryColor || '#0BAF9A'; // Brand Primary Teal
       let border = 'none';
@@ -163,12 +202,32 @@ export function CalendarView({
           border,
           color: 'white',
           fontWeight: '500',
+          opacity: baseOpacity,
+          textDecoration: event.isCompleted ? 'line-through' : 'none',
+        },
+      };
+    }
+
+    if (event.isHabit || event.sourceType === 'habit') {
+      // Purple/indigo for habits
+      const habitColor = '#6366F1'; // Indigo-500
+      return {
+        className: 'habit-event',
+        style: {
+          backgroundColor: habitColor,
+          borderRadius: '4px',
+          border: 'none',
+          color: 'white',
+          fontWeight: '500',
+          opacity: baseOpacity,
+          textDecoration: event.isCompleted ? 'line-through' : 'none',
         },
       };
     }
 
     // External events: Use category color if available, otherwise gray
     const backgroundColor = event.categoryColor || '#64748B'; // Use category color or fallback to gray
+    const eventOpacity = event.categoryColor ? 0.95 : 0.75;
 
     return {
       className: 'external-event',
@@ -178,7 +237,7 @@ export function CalendarView({
         border: `1px solid ${event.categoryColor ? event.categoryColor : '#475569'}`,
         color: 'white',
         fontWeight: '500',
-        opacity: event.categoryColor ? 0.95 : 0.75, // Higher opacity if categorized
+        opacity: baseOpacity * eventOpacity, // Combine completion and categorization opacity
       },
     };
   }, []);
@@ -187,7 +246,7 @@ export function CalendarView({
     setDate(newDate);
   }, []);
 
-  const handleViewChange = useCallback((newView: 'week' | 'day' | 'month') => {
+  const handleViewChange = useCallback((newView: View) => {
     setView(newView);
   }, []);
 
@@ -205,15 +264,35 @@ export function CalendarView({
       const eventIdForCategorization = event.id.replace('event-', '');
       const categorization = !event.isTask ? eventCategorizations?.[eventIdForCategorization] : undefined;
 
-      setHoverCard(null);
+      // Check if this is a habit event
+      const isHabit = event.sourceType === 'habit';
+      const scheduledHabitId = isHabit ? event.sourceId : undefined;
+      const habitCompletion = isHabit && event.isCompleted ? { status: 'completed' as const } : undefined;
+
+      // For habit events, look up streak information
+      let habitStreak: { current: number; atRisk: boolean } | undefined;
+      if (isHabit && scheduledHabitId && scheduledHabitInstances && habitStreakMap) {
+        // Find the habitId from scheduledHabitId
+        const habitInstance = scheduledHabitInstances.find(
+          inst => inst.scheduledHabitId === scheduledHabitId
+        );
+        if (habitInstance) {
+          habitStreak = habitStreakMap.get(habitInstance.habitId);
+        }
+      }
+
       setSelectedEventForPopover({
         id: taskId || eventIdForCategorization,
         title: event.title,
         start: event.start,
         end: event.end,
-        description: event.isTask ? task?.description : event.description,
+        description: event.isTask ? task?.description ?? undefined : event.description ?? undefined,
         isTask: event.isTask,
         task,
+        isHabit,
+        scheduledHabitId,
+        habitCompletion,
+        habitStreak,
         categoryColor: event.categoryColor,
         categoryName: event.isTask ? task?.category?.name : categorization?.categoryName,
         categoryId: event.isTask ? task?.category?.id : categorization?.categoryId,
@@ -226,30 +305,17 @@ export function CalendarView({
         onSelectEvent(event);
       }
     },
-    [tasks, eventCategorizations, onSelectEvent]
+    [tasks, eventCategorizations, onSelectEvent, externalEvents, scheduledHabitInstances, habitStreakMap]
   );
 
-  const handleEventHover = useCallback((event: CalendarEventItem, anchor: HTMLElement | null) => {
-    if (!anchor) return;
-    const rect = anchor.getBoundingClientRect();
-    setHoverCard({ event, rect });
-  }, []);
-
-  const handleEventHoverEnd = useCallback(() => {
-    setHoverCard(null);
-  }, []);
-
-  useEffect(() => {
-    if (!hoverCard) return;
-    const handleScroll = () => setHoverCard(null);
-    const handleResize = () => setHoverCard(null);
-    window.addEventListener('scroll', handleScroll, true);
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('scroll', handleScroll, true);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [hoverCard]);
+  const TimeSlotWrapper: ComponentType<any> = (slotProps: any) => {
+    const start = slotProps.value as Date;
+    return (
+      <DroppableSlot start={start} durationMinutes={15}>
+        {slotProps.children}
+      </DroppableSlot>
+    );
+  };
 
   return (
     <div className="h-full bg-white p-3 relative" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -284,37 +350,17 @@ export function CalendarView({
             timeGutterFormat: 'h a',
           }}
           components={{
-          event: (props) => (
-            <DraggableEvent
-              event={props.event as CalendarEventItem}
-              prefersReducedMotion={prefersReducedMotion}
-              onResize={onResizeEvent}
-              onHover={handleEventHover}
-              onHoverEnd={handleEventHoverEnd}
-            />
-          ),
-          timeSlotWrapper: (slotProps) => {
-            const start = slotProps.value as Date;
-            return (
-              <DroppableSlot start={start} durationMinutes={15}>
-                {slotProps.children}
-              </DroppableSlot>
-            );
-          },
-        }}
+            event: (props) => (
+              <DraggableEvent
+                event={props.event as CalendarEventItem}
+                prefersReducedMotion={prefersReducedMotion}
+                onResize={onResizeEvent}
+              />
+            ),
+            timeSlotWrapper: TimeSlotWrapper,
+          }}
         />
       </div>
-
-      <AnimatePresence>
-        {hoverCard && !popoverOpen && (
-          <EventHoverCard
-            key={hoverCard.event.id}
-            event={hoverCard.event}
-            anchorRect={hoverCard.rect}
-            prefersReducedMotion={prefersReducedMotion}
-          />
-        )}
-      </AnimatePresence>
 
       {/* Event Detail Popover */}
       <EventDetailPopover
@@ -328,6 +374,9 @@ export function CalendarView({
         onUnschedule={onUnscheduleTask}
         onDelete={onDeleteTask}
         onCategoryChange={onCategoryChange}
+        onHabitComplete={onCompleteHabit}
+        onHabitUndo={onUndoHabit}
+        onHabitSkip={onSkipHabit}
       />
     </div>
   );
@@ -394,13 +443,8 @@ function DraggableEvent({
     resizeStartY.current = e.clientY;
     initialEnd.current = event.end;
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const deltaY = moveEvent.clientY - resizeStartY.current;
-      const minutesDelta = Math.round(deltaY / 2); // Approx 2px per minute
-      const newDuration = Math.max(15, Math.round((initialEnd.current.getTime() - event.start.getTime()) / 60000) + minutesDelta);
-      const newEnd = new Date(event.start.getTime() + newDuration * 60000);
-
-      // Visual feedback (would need to update event state for real-time preview)
+    const handleMouseMove = () => {
+      // Visual feedback placeholder (no live preview yet).
     };
 
     const handleMouseUp = async (upEvent: MouseEvent) => {
