@@ -30,6 +30,9 @@ model User {
   inboxViews                 Json?
   habitsCoachState           Json? // { dismissedSuggestions: [{type, habitId, dismissedAt, snoozedUntil}], lastPrimarySuggestion: {...} }
 
+  // Action-state label sync settings
+  actionStateLabelSyncEnabled Boolean   @default(false) // Enable syncing action states to Gmail labels
+
   // Habit notification preferences (opt-in)
   notifyStreakAtRisk         Boolean   @default(false) // Notify when streak will break if not completed today
   notifyMissedHighPriority   Boolean   @default(false) // Notify when high-priority habit is missed
@@ -48,6 +51,7 @@ model User {
   emailCategoryConfigs     EmailCategoryConfig[]
   emailCategoryOverrides   EmailCategoryOverride[]
   emailActionStates        EmailActionState[]
+  inboxCache               InboxCache[]
   eventCategorizations     EventCategorization[]
   gmailLabelSyncState      GmailLabelSyncState?
   habits                   Habit[]
@@ -460,6 +464,21 @@ model EmailActionState {
   @@unique([userId, threadId])
   @@index([userId])
   @@index([threadId])
+}
+
+model InboxCache {
+  id        String   @id @default(cuid())
+  userId    String
+  cacheKey  String
+  data      Json
+  fetchedAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cacheKey])
+  @@index([userId])
 }
 
 model WritingVoiceProfile {

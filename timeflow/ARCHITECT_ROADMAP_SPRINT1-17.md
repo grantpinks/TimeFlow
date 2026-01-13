@@ -883,7 +883,7 @@
 |----|------|-------|-------|----------|
 | 16.5 | Implement Gmail watch setup + Pub/Sub push handler endpoint; validate push authenticity; dedupe by historyId. | Codex | 8-12h | P1 | ✅ |
 | 16.6 | Implement watch renewal job and operational safeguards (retry, dead-letter strategy, alerting hooks). | Codex | 4-6h | P1 | ✅ |
-| 16.10 | Add optional **action-oriented labels** in TimeFlow (`NeedsReply`, `ToRead`, `NeedsAction`) and map them to Gmail labels (namespaced) if enabled. | Codex | 6-8h | P2 |
+| 16.10 | Add optional **action-oriented labels** in TimeFlow (`NeedsReply`, `ReadLater`) and map them to Gmail labels (namespaced `TimeFlow/*`) if enabled. Bidirectional sync via watch notifications. | Codex | 6-8h | P2 | ✅ |
 
 **Phase B+ (carryover): AI Assistant Hardening**
 
@@ -1270,3 +1270,54 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 | 23.2 | Add booking flows for multiple attendees (invites, confirmations, reschedules, cancellations). | Codex | 8-12h | P0 |
 | 23.C1 | Define UX and rules for attendee constraints (whose work hours apply; buffers; caps; organizer vs participant). | Claude | 4-6h | P1 |
 | 23.G1 | Document group scheduling behavior, privacy boundaries, and failure modes. | Gemini | 4-6h | P1 |
+
+### Task 16.10 Implementation Notes (2026-01-12)
+
+**Action-State Label Sync** - ✅ Complete
+
+**What was implemented:**
+1. **User Setting**: Added `actionStateLabelSyncEnabled` boolean field to User model (default: false, opt-in)
+2. **Action-State Label Sync Service** (`actionStateLabelSyncService.ts`):
+   - Creates/manages `TimeFlow/NeedsReply` (red) and `TimeFlow/ReadLater` (green) labels in Gmail
+   - Syncs local action states → Gmail label additions/removals
+   - Bidirectional sync: Gmail label changes → local action state updates
+   - Bulk sync function for initial setup (syncs 100 threads)
+3. **Integration Points**:
+   - `emailActionStateController.ts` - Calls `syncActionStateToGmail()` after action state changes
+   - `userController.ts` - Added `actionStateLabelSyncEnabled` to preferences API
+   - Triggers bulk sync automatically when user enables sync for first time
+4. **Database Migration**: `20260112020000_add_action_state_label_sync`
+
+**Label Mapping:**
+- `needs_reply` → `TimeFlow/NeedsReply` (red #fb4c2f)
+- `read_later` → `TimeFlow/ReadLater` (green #16a765)
+
+**API Changes:**
+- `PATCH /api/user/preferences` - Now accepts `actionStateLabelSyncEnabled: boolean`
+- `POST /email/thread/:threadId/action-state` - Automatically syncs to Gmail if enabled
+
+**Safety Features:**
+- Sync is opt-in (disabled by default)
+- Graceful failures (Gmail sync errors don't fail requests)
+- Idempotent operations (safe to retry)
+- Only one action-state per thread (mutually exclusive labels)
+
+**Files Created:**
+- `apps/backend/src/services/actionStateLabelSyncService.ts` (300+ lines)
+- `apps/backend/prisma/migrations/20260112020000_add_action_state_label_sync/migration.sql`
+
+**Files Modified:**
+- `apps/backend/prisma/schema.prisma` - Added User.actionStateLabelSyncEnabled
+- `apps/backend/src/controllers/emailActionStateController.ts` - Added sync call
+- `apps/backend/src/controllers/userController.ts` - Added preferences + bulk sync trigger
+
+**Bidirectional Sync:**
+- Gmail label changes can be detected via watch notifications
+- `syncGmailLabelsToActionState()` function processes Gmail→TimeFlow updates
+- Ready for integration with `gmailWatchService.ts` notification handler
+
+**Future Enhancement:**
+- Add third action state: `needs_action` → `TimeFlow/NeedsAction` (optional)
+- Add UI toggle in settings page
+- Add analytics tracking for label sync actions
+

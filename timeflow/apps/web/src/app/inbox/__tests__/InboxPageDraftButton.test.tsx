@@ -87,7 +87,30 @@ vi.mock('@/components/inbox/InboxAiDraftPanel', () => ({
 }));
 
 describe('InboxPage AI draft button', () => {
+  const ensureLocalStorage = () => {
+    if (!window.localStorage || typeof window.localStorage.setItem !== 'function') {
+      const store = new Map<string, string>();
+      const localStorageMock = {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          store.set(key, value);
+        },
+        removeItem: (key: string) => {
+          store.delete(key);
+        },
+        clear: () => {
+          store.clear();
+        },
+      };
+      Object.defineProperty(window, 'localStorage', {
+        value: localStorageMock,
+        configurable: true,
+      });
+    }
+  };
+
   it('does not emit React DOM attribute warnings', () => {
+    ensureLocalStorage();
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<InboxPage />);
     const errors = errorSpy.mock.calls.flat().join(' ');
@@ -98,6 +121,7 @@ describe('InboxPage AI draft button', () => {
   });
 
   it('renders the AI draft button in the thread header', async () => {
+    ensureLocalStorage();
     render(<InboxPage />);
     expect(await screen.findByRole('button', { name: 'Draft Reply with AI' })).not.toBeNull();
   });

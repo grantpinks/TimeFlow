@@ -385,3 +385,25 @@ digest: "3614427735"
     at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
 digest: "3906946360"
  GET /inbox 500 in 47ms
+ ✓ Compiled /settings/email-categories in 414ms (3302 modules)
+ ✓ Compiled in 267ms (1293 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ GET /settings/email-categories 200 in 10ms
+ ✓ Compiled in 102ms (1293 modules)
+ ✓ Compiled in 85ms (1293 modules)
+ ✓ Compiled in 102ms (1293 modules)
+ ✓ Compiled in 80ms (1293 modules)
+ ✓ Compiled in 380ms (3311 modules)
+ ✓ Compiled in 159ms (1293 modules)
+ ✓ Compiled in 516ms (3296 modules)
+ ✓ Compiled in 505ms (3296 modules)
+ ✓ Compiled in 400ms (3313 modules)
+ ✓ Compiled in 104ms (1294 modules)
+ ✓ Compiled in 117ms (1294 modules)
+ ✓ Compiled in 127ms (1294 modules)
+ ✓ Compiled in 94ms (1294 modules)
+ ✓ Compiled in 105ms (1294 modules)
+ ✓ Compiled in 93ms (1294 modules)
+ ✓ Compiled in 485ms (3313 modules)
+ ✓ Compiled in 266ms (3313 modules)
+ ✓ Compiled in 274ms (3313 modules)

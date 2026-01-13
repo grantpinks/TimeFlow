@@ -1,7 +1,7 @@
 /**
  * Email Cache Utility
  *
- * Provides a 5-minute cache for inbox emails to reduce Gmail API calls.
+ * Provides a 2-minute cache for inbox emails to reduce Gmail API calls.
  */
 
 import type { EmailInboxResponse } from '@timeflow/shared';
@@ -12,10 +12,10 @@ interface CacheEntry {
 }
 
 const CACHE_KEY = 'timeflow_email_cache';
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
 /**
- * Get cached emails if they exist and are less than 5 minutes old.
+ * Get cached emails if they exist and are less than 2 minutes old.
  */
 export function getCachedEmails(): EmailInboxResponse | null {
   if (typeof window === 'undefined') return null;
@@ -27,7 +27,7 @@ export function getCachedEmails(): EmailInboxResponse | null {
     const entry: CacheEntry = JSON.parse(cached);
     const now = Date.now();
 
-    // Check if cache is still valid (less than 5 minutes old)
+    // Check if cache is still valid (less than 2 minutes old)
     if (now - entry.timestamp < CACHE_TTL_MS) {
       return entry.data;
     }

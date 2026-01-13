@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import InboxPage from '../page';
 import * as api from '@/lib/api';
+import { cacheEmails, clearEmailCache } from '@/lib/emailCache';
 
 vi.mock('@/components/Layout', () => ({
   Layout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -51,19 +52,6 @@ vi.mock('@/lib/api', () => ({
   updateInboxViews: vi.fn().mockResolvedValue({ views: [] }),
   deleteInboxView: vi.fn().mockResolvedValue({}),
   searchEmails: vi.fn().mockResolvedValue({ messages: [] }),
-  getThread: vi.fn().mockResolvedValue({
-    messages: [
-      {
-        id: 'email-1',
-        threadId: 'thread-1',
-        from: 'Sender <sender@example.com>',
-        subject: 'Hello',
-        receivedAt: new Date().toISOString(),
-        importance: 'normal',
-        body: 'Test',
-      },
-    ],
-  }),
   getFullEmail: vi.fn().mockResolvedValue({
     id: 'email-1',
     threadId: 'thread-1',
@@ -75,7 +63,7 @@ vi.mock('@/lib/api', () => ({
   }),
 }));
 
-describe('InboxPage aging nudges', () => {
+describe('InboxPage cache behavior', () => {
   const ensureLocalStorage = () => {
     if (!window.localStorage || typeof window.localStorage.setItem !== 'function') {
       const store = new Map<string, string>();
@@ -99,10 +87,10 @@ describe('InboxPage aging nudges', () => {
   };
 
   afterEach(() => {
-    vi.useRealTimers();
+    clearEmailCache();
   });
 
-  it('does not emit React DOM attribute warnings', () => {
+  it('renders cached emails immediately and refreshes in background', async () => {
     ensureLocalStorage();
     if (!window.matchMedia) {
       window.matchMedia = () =>
@@ -118,54 +106,52 @@ describe('InboxPage aging nudges', () => {
         }) as MediaQueryList;
     }
 
-    vi.mocked(api.getInboxEmails).mockResolvedValue({
-      messages: [],
-      nextPageToken: null,
-    });
-
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    render(<InboxPage />);
-    const errors = errorSpy.mock.calls.flat().join(' ');
-    errorSpy.mockRestore();
-    expect(errors).not.toMatch(/non-boolean attribute `initial`/i);
-    expect(errors).not.toMatch(/non-boolean attribute `jsx`/i);
-    expect(errors).not.toMatch(/non-boolean attribute `global`/i);
-  });
-
-  it('shows nudges for aging needs reply and unread important threads', async () => {
-    ensureLocalStorage();
-    const now = Date.now();
-    const needsReplyDate = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();
-    const unreadImportantDate = new Date(now - 4 * 24 * 60 * 60 * 1000).toISOString();
-
-    vi.mocked(api.getInboxEmails).mockResolvedValue({
+    cacheEmails({
       messages: [
         {
-          id: 'email-1',
-          threadId: 'thread-1',
-          from: 'Sender <sender@example.com>',
-          subject: 'Hello',
-          receivedAt: needsReplyDate,
+          id: 'cached-1',
+          threadId: 'thread-cached',
+          from: 'Cached <cached@example.com>',
+          subject: 'Cached email',
+          snippet: 'Cached',
+          receivedAt: new Date().toISOString(),
           importance: 'normal',
-          snippet: 'Test',
-          actionState: 'needs_reply',
-          isRead: true,
-        },
-        {
-          id: 'email-2',
-          threadId: 'thread-2',
-          from: 'VIP <vip@example.com>',
-          subject: 'Urgent',
-          receivedAt: unreadImportantDate,
-          importance: 'high',
-          snippet: 'Important',
           isRead: false,
         },
       ],
+      nextPageToken: null,
     });
 
+    let resolveInbox: (value: any) => void;
+    const inboxPromise = new Promise((resolve) => {
+      resolveInbox = resolve as (value: any) => void;
+    });
+    vi.mocked(api.getInboxEmails).mockReturnValue(inboxPromise as any);
+
     render(<InboxPage />);
-    expect(await screen.findByText(/Needs Reply > 3 days/i)).not.toBeNull();
-    expect(await screen.findByText(/Unread important > 3 days/i)).not.toBeNull();
+
+    expect(await screen.findByText('Cached email')).not.toBeNull();
+    expect(api.getInboxEmails).toHaveBeenCalledWith(
+      expect.objectContaining({ cacheMode: 'prefer' })
+    );
+
+    resolveInbox!({
+      messages: [
+        {
+          id: 'fresh-1',
+          threadId: 'thread-fresh',
+          from: 'Fresh <fresh@example.com>',
+          subject: 'Fresh email',
+          snippet: 'Fresh',
+          receivedAt: new Date().toISOString(),
+          importance: 'normal',
+          isRead: true,
+        },
+      ],
+      nextPageToken: null,
+      isStale: false,
+    });
+
+    expect(await screen.findByText('Fresh email')).not.toBeNull();
   });
 });

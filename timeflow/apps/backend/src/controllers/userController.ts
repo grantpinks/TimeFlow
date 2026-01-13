@@ -6,6 +6,7 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../config/prisma.js';
+import { bulkSyncActionStatesToGmail } from '../services/actionStateLabelSyncService.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import type { DailyMeetingConfig, EmailAccount } from '@timeflow/shared';
@@ -66,6 +67,9 @@ const preferencesSchema = z.object({
   // Habit notification preferences
   notifyStreakAtRisk: z.boolean().optional(),
   notifyMissedHighPriority: z.boolean().optional(),
+
+  // Action-state label sync
+  actionStateLabelSyncEnabled: z.boolean().optional(),
 });
 
 /**
@@ -107,6 +111,7 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     dailyMeetingSchedule: record.dailyMeetingSchedule || null,
     notifyStreakAtRisk: record.notifyStreakAtRisk,
     notifyMissedHighPriority: record.notifyMissedHighPriority,
+    actionStateLabelSyncEnabled: record.actionStateLabelSyncEnabled,
   };
 }
 
@@ -194,6 +199,9 @@ interface UpdatePreferencesBody {
   meetingEndTime?: string | null;
   blockedDaysOfWeek?: string[];
   dailyMeetingSchedule?: DailyMeetingScheduleConfig | null;
+  notifyStreakAtRisk?: boolean;
+  notifyMissedHighPriority?: boolean;
+  actionStateLabelSyncEnabled?: boolean;
 }
 
 /**
@@ -232,6 +240,7 @@ export async function updatePreferences(
     dailyMeetingSchedule,
     notifyStreakAtRisk,
     notifyMissedHighPriority,
+    actionStateLabelSyncEnabled,
   } =
     parsed.data;
 
@@ -263,8 +272,22 @@ export async function updatePreferences(
       // Habit notification preferences
       ...(notifyStreakAtRisk !== undefined && { notifyStreakAtRisk }),
       ...(notifyMissedHighPriority !== undefined && { notifyMissedHighPriority }),
+
+      // Action-state label sync
+      ...(actionStateLabelSyncEnabled !== undefined && { actionStateLabelSyncEnabled }),
     },
   });
+
+  // If enabling sync for the first time, trigger bulk sync
+  if (actionStateLabelSyncEnabled === true && !user.actionStateLabelSyncEnabled) {
+    try {
+      await bulkSyncActionStatesToGmail(user.id, 100);
+      console.log('[ActionStateSync] Initial bulk sync triggered for user:', user.id);
+    } catch (error: any) {
+      console.error('[ActionStateSync] Bulk sync failed:', error.message);
+      // Don't fail the request if bulk sync fails
+    }
+  }
 
   return {
     id: updated.id,

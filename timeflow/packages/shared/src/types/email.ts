@@ -39,6 +39,8 @@ export interface EmailMessage {
 export interface EmailInboxResponse {
   messages: EmailMessage[];
   nextPageToken?: string;
+  cacheAgeMs?: number;
+  isStale?: boolean;
 }
 
 export interface InboxView {

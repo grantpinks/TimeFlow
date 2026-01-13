@@ -13,10 +13,17 @@ import { formatZodError } from '../utils/errorFormatter.js';
 import * as categoryService from '../services/categoryService.js';
 import * as emailExplanationService from '../services/emailExplanationService.js';
 import { syncGmailLabelsOnInboxFetch } from '../services/gmailLabelSyncService.js';
+import {
+  getInboxCacheKey,
+  readInboxCache,
+  refreshInboxCache,
+  writeInboxCache,
+} from '../services/inboxCacheService.js';
 
 const inboxQuerySchema = z.object({
   maxResults: z.coerce.number().int().min(1).max(100).optional(),
   pageToken: z.string().optional(),
+  cacheMode: z.enum(['prefer', 'refresh', 'bypass']).optional(),
 });
 
 const sendEmailSchema = z.object({
@@ -55,10 +62,42 @@ export async function getInboxEmails(
   }
 
   try {
-    const { maxResults, pageToken } = parsed.data;
+    const { maxResults, pageToken, cacheMode } = parsed.data;
+    const mode = cacheMode ?? 'prefer';
+
+    if (pageToken || mode === 'bypass') {
+      const inbox = await gmailService.getInboxMessages(user.id, { maxResults, pageToken });
+      void syncGmailLabelsOnInboxFetch(user.id);
+      return reply.send(inbox);
+    }
+
+    const cacheKey = getInboxCacheKey(maxResults);
+
+    if (mode === 'prefer') {
+      const cached = await readInboxCache(user.id, cacheKey);
+      if (cached) {
+        if (cached.isStale) {
+          void refreshInboxCache(user.id, cacheKey, { maxResults }).catch((error) => {
+            request.log.error(error, 'Inbox cache refresh failed');
+          });
+        }
+
+        return reply.send({
+          ...cached.data,
+          cacheAgeMs: cached.ageMs,
+          isStale: cached.isStale,
+        });
+      }
+    }
+
     const inbox = await gmailService.getInboxMessages(user.id, { maxResults, pageToken });
     void syncGmailLabelsOnInboxFetch(user.id);
-    return reply.send(inbox);
+    await writeInboxCache(user.id, cacheKey, inbox);
+    return reply.send({
+      ...inbox,
+      cacheAgeMs: 0,
+      isStale: false,
+    });
   } catch (error) {
     if (error instanceof GmailRateLimitError) {
       return reply

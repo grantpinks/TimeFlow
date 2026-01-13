@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { setActionState } from '../services/emailActionStateService.js';
+import { syncActionStateToGmail } from '../services/actionStateLabelSyncService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import type { EmailActionState } from '@timeflow/shared';
 
@@ -28,7 +29,17 @@ export async function updateEmailActionState(
   }
 
   const actionState = parsed.data.actionState as EmailActionState | null;
+
+  // Update local state
   const updated = await setActionState(user.id, threadId, actionState);
+
+  // Sync to Gmail labels (if enabled)
+  try {
+    await syncActionStateToGmail(user.id, threadId, actionState);
+  } catch (error: any) {
+    // Log but don't fail the request if Gmail sync fails
+    console.error('[ActionState] Gmail sync failed:', error.message);
+  }
 
   return reply.send({ success: true, actionState: updated });
 }

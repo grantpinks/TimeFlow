@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InboxPage from '../page';
 import * as api from '@/lib/api';
@@ -74,7 +74,72 @@ vi.mock('@/lib/api', () => ({
 }));
 
 describe('InboxPage view switching', () => {
+  const ensureLocalStorage = () => {
+    if (!window.localStorage || typeof window.localStorage.setItem !== 'function') {
+      const store = new Map<string, string>();
+      const localStorageMock = {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          store.set(key, value);
+        },
+        removeItem: (key: string) => {
+          store.delete(key);
+        },
+        clear: () => {
+          store.clear();
+        },
+      };
+      Object.defineProperty(window, 'localStorage', {
+        value: localStorageMock,
+        configurable: true,
+      });
+    }
+  };
+
+  it('does not emit styled-jsx attribute warnings', () => {
+    ensureLocalStorage();
+    if (!window.matchMedia) {
+      window.matchMedia = () =>
+        ({
+          matches: false,
+          media: '',
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }) as MediaQueryList;
+    }
+
+    vi.mocked(api.getInboxEmails).mockResolvedValue({
+      messages: [],
+      nextPageToken: null,
+    });
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<InboxPage />);
+    const hasJsxWarning = errorSpy.mock.calls.some(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('non-boolean attribute') &&
+        call.includes('jsx')
+    );
+    const hasGlobalWarning = errorSpy.mock.calls.some(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('non-boolean attribute') &&
+        call.includes('global')
+    );
+    errorSpy.mockRestore();
+    cleanup();
+
+    expect(hasJsxWarning).toBe(false);
+    expect(hasGlobalWarning).toBe(false);
+  });
+
   it('clears the reading pane when the selected thread is filtered out', async () => {
+    ensureLocalStorage();
     if (!window.matchMedia) {
       window.matchMedia = () =>
         ({

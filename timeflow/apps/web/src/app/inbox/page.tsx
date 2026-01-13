@@ -19,12 +19,14 @@ import { DraftPanel } from '@/components/inbox/DraftPanel';
 import { InboxAiDraftPanel, type InboxAiDraft } from '@/components/inbox/InboxAiDraftPanel';
 import { loadInboxViews, saveInboxViews } from '@/lib/inboxViewsStorage';
 import { track } from '@/lib/analytics';
+import { cacheEmails, clearEmailCache, getCachedEmails } from '@/lib/emailCache';
 
 export default function InboxPage() {
   const { isAuthenticated, user } = useUser();
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshingInbox, setRefreshingInbox] = useState(false);
+  const [inboxCacheStale, setInboxCacheStale] = useState(false);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
   const [views, setViews] = useState<InboxView[]>(DEFAULT_INBOX_VIEWS);
   const [selectedViewId, setSelectedViewId] = useState<string>(
@@ -44,6 +46,7 @@ export default function InboxPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchRequestId = useRef(0);
+  const staleRefreshTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Thread detail state
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -96,6 +99,9 @@ export default function InboxPage() {
       if (searchDebounceTimer.current) {
         clearTimeout(searchDebounceTimer.current);
       }
+      if (staleRefreshTimer.current) {
+        clearTimeout(staleRefreshTimer.current);
+      }
     };
   }, []);
 
@@ -132,22 +138,62 @@ export default function InboxPage() {
     selectedThreadId,
   ]);
 
-  async function fetchInbox(options?: { pageToken?: string; append?: boolean }) {
-    const { pageToken, append } = options ?? {};
+  async function fetchInbox(options?: {
+    pageToken?: string;
+    append?: boolean;
+    forceRefresh?: boolean;
+  }) {
+    const { pageToken, append, forceRefresh } = options ?? {};
+    const isFirstPage = !pageToken && !append;
+    const cacheMode = isFirstPage ? (forceRefresh ? 'refresh' : 'prefer') : 'bypass';
+
     if (append) {
       setLoadingMore(true);
+    } else if (isFirstPage && !forceRefresh) {
+      const cached = getCachedEmails();
+      if (cached) {
+        setEmails(cached.messages);
+        setNextPageToken(cached.nextPageToken ?? null);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
     } else {
       setLoading(true);
     }
 
     try {
+      if (forceRefresh && isFirstPage) {
+        clearEmailCache();
+        setInboxCacheStale(false);
+      }
       const result = await api.getInboxEmails({
         maxResults: 100,
         pageToken,
+        cacheMode,
       });
 
       setNextPageToken(result.nextPageToken ?? null);
       setEmails((prev) => (append ? [...prev, ...result.messages] : result.messages));
+
+      if (isFirstPage) {
+        cacheEmails({
+          messages: result.messages,
+          nextPageToken: result.nextPageToken,
+        });
+        setInboxCacheStale(Boolean(result.isStale));
+        if (result.isStale && !forceRefresh) {
+          if (staleRefreshTimer.current) {
+            clearTimeout(staleRefreshTimer.current);
+          }
+          staleRefreshTimer.current = setTimeout(() => {
+            staleRefreshTimer.current = null;
+            fetchInbox().catch((error) => {
+              console.error('Failed to refresh inbox cache:', error);
+            });
+          }, 1500);
+        }
+      }
     } catch (error: any) {
       console.error('Failed to fetch inbox:', error);
       if (error instanceof Error && /rate limit|429/i.test(error.message)) {
@@ -167,7 +213,7 @@ export default function InboxPage() {
   async function handleRefreshInbox() {
     setRefreshingInbox(true);
     try {
-      await fetchInbox();
+      await fetchInbox({ forceRefresh: true });
     } finally {
       setRefreshingInbox(false);
     }
@@ -927,6 +973,14 @@ export default function InboxPage() {
                       <RefreshCw size={14} className={refreshingInbox ? 'animate-spin' : ''} />
                       {refreshingInbox ? 'Refreshing' : 'Refresh'}
                     </button>
+                    {inboxCacheStale && (
+                      <span
+                        className="inline-flex items-center px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#6B7280] bg-[#F3F4F6] border-l-2 border-[#E5E7EB]"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        Updating…
+                      </span>
+                    )}
                   </>
                 ) : (
                   <>
@@ -1118,7 +1172,7 @@ export default function InboxPage() {
       </div>
 
       {/* Web Fonts */}
-      <style jsx global>{`
+      <style jsx="true" global="true">{`
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 

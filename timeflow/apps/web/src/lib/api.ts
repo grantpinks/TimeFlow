@@ -677,10 +677,15 @@ export async function getChatHistory(): Promise<{ messages: ChatMessage[] }> {
 /**
  * Get recent inbox emails (Gmail, read-only).
  */
-export async function getInboxEmails(params?: { maxResults?: number; pageToken?: string }): Promise<EmailInboxResponse> {
+export async function getInboxEmails(params?: {
+  maxResults?: number;
+  pageToken?: string;
+  cacheMode?: 'prefer' | 'refresh' | 'bypass';
+}): Promise<EmailInboxResponse> {
   const query = new URLSearchParams();
   if (params?.maxResults) query.set('maxResults', String(params.maxResults));
   if (params?.pageToken) query.set('pageToken', params.pageToken);
+  if (params?.cacheMode) query.set('cacheMode', params.cacheMode);
 
   const suffix = query.toString() ? `?${query.toString()}` : '';
   return request<EmailInboxResponse>(`/email/inbox${suffix}`);

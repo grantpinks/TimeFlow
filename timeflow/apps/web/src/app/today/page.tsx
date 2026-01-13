@@ -137,7 +137,7 @@ export default function TodayPage() {
         }
 
         // No cache or expired - fetch from API
-        const res = await api.getInboxEmails({ maxResults: 50 });
+        const res = await api.getInboxEmails({ maxResults: 50, cacheMode: 'prefer' });
         setEmails(res.messages);
         setNextEmailPageToken(res.nextPageToken);
         setInboxError(null);
@@ -164,7 +164,8 @@ export default function TodayPage() {
       setLoadingMoreEmails(true);
       const res = await api.getInboxEmails({
         maxResults: 50,
-        pageToken: nextEmailPageToken
+        pageToken: nextEmailPageToken,
+        cacheMode: 'bypass',
       });
       setEmails(prev => [...prev, ...res.messages]);
       setNextEmailPageToken(res.nextPageToken);
@@ -180,7 +181,7 @@ export default function TodayPage() {
     try {
       setInboxLoading(true);
       clearEmailCache();
-      const res = await api.getInboxEmails({ maxResults: 50 });
+      const res = await api.getInboxEmails({ maxResults: 50, cacheMode: 'refresh' });
       setEmails(res.messages);
       setNextEmailPageToken(res.nextPageToken);
       setInboxError(null);
