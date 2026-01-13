@@ -511,6 +511,20 @@ export async function skipHabitInstance(
 }
 
 /**
+ * Reschedule a scheduled habit instance.
+ */
+export async function rescheduleHabitInstance(
+  scheduledHabitId: string,
+  startDateTime: string,
+  endDateTime: string
+): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/habits/instances/${scheduledHabitId}/reschedule`, {
+    method: 'PATCH',
+    body: JSON.stringify({ startDateTime, endDateTime }),
+  });
+}
+
+/**
  * Get habit insights for the user.
  */
 export async function getHabitInsights(days: 14 | 28 = 14): Promise<HabitInsightsSummary> {

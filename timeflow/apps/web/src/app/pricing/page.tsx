@@ -23,14 +23,14 @@ export default function PricingPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              onClick={() => track('pricing_nav_clicked', { destination: 'home' })}
+              onClick={() => track('homepage_navigation_clicked', { destination: 'home' })}
               className="text-gray-600 hover:text-teal-600 font-medium transition-colors"
             >
               Home
             </Link>
             <a
               href={getGoogleAuthUrl()}
-              onClick={() => track('pricing_cta_clicked', { cta_text: 'Join Beta', location: 'header' })}
+              onClick={() => track('homepage_cta_clicked', { cta_text: 'Join Beta', location: 'header' })}
               className="bg-teal-600 text-white px-5 py-2 rounded-lg hover:bg-teal-700 font-medium transition-colors"
             >
               Join the Beta
@@ -74,7 +74,7 @@ export default function PricingPage() {
 
             <a
               href={getGoogleAuthUrl()}
-              onClick={() => track('pricing_cta_clicked', { cta_text: 'Join Beta Free', location: 'beta-card' })}
+              onClick={() => track('homepage_cta_clicked', { cta_text: 'Join Beta Free', location: 'beta-card' })}
               className="block w-full text-center px-6 py-3 rounded-lg font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors"
             >
               Join the Beta — Free
@@ -98,7 +98,7 @@ export default function PricingPage() {
 
             <Link
               href="/contact"
-              onClick={() => track('pricing_cta_clicked', { cta_text: 'Contact', location: 'subscriptions-card' })}
+              onClick={() => track('homepage_cta_clicked', { cta_text: 'Contact', location: 'subscriptions-card' })}
               className="block w-full text-center px-6 py-3 rounded-lg font-semibold bg-gray-900 text-white hover:bg-black transition-colors"
             >
               Contact us
@@ -113,5 +113,3 @@ export default function PricingPage() {
     </div>
   );
 }
-
-

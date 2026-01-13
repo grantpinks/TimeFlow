@@ -1,44 +1,72 @@
 # Sprint 16 Phase B+: AI Email Draft Workflow (Design)
 
-**Date**: 2026-01-02  
-**Status**: Design Complete, Ready for Implementation  
-**Scope**: Generate Draft → Full Preview → (Send from TimeFlow) or (Create Gmail Draft) or (Open in Gmail to refine)  
+**Date**: 2026-01-02
+**Status**: Design Complete, Ready for Implementation
+**Scope**: Generate Draft → Edit → Full Preview → (Send from TimeFlow) or (Create Gmail Draft)
+
+**Design Session**: Completed with brainstorming validation
+**Beta Strategy**: Unified experience (all features available), future subscription tiering noted with TODOs
 
 ---
 
 ## Summary
 
-Add an **AI Email Draft** workflow inside `/inbox` thread detail that:
+Add an **AI Email Draft** workflow inside `/inbox` that:
 
-- Understands the **intent** of the selected email/thread
-- Drafts a reply in the user’s **voice and word choice**
-- Forces a **Full Preview** step before any Gmail write operation
-- Supports three end actions:
+- Opens an inline **Draft Panel** when user clicks "Draft Reply" on any email
+- Generates AI-powered replies using LLM with customizable **Writing Voice Profile**
+- Provides **Generate → Edit → Preview → Send/Draft** workflow with strict determinism
+- Forces a **Full Preview + Confirmation Checkbox** before any send operation
+- Supports two end actions:
   - **Send from TimeFlow** (after preview + confirmation checkbox)
-  - **Create Gmail Draft** (then open the draft in Gmail)
-  - **Open in Gmail to refine** (no server-side send)
+  - **Create Gmail Draft** (opens draft in Gmail for refinement)
 
-This is designed to be trust-first and cost-controlled: server-side quotas, token caps, redacted logs, and explicit permissioning for any “learn from Sent mail” feature.
+This is designed to be trust-first and cost-controlled: preview determinism (no regen after preview), server-side quotas (tracking only in beta), redacted logs, and explicit send confirmation.
 
 ---
 
 ## Key Decisions
 
-### Preview-first sending (must-have)
-**Decision**: Sending/drafting in Gmail is only allowed from a **frozen preview payload** (no hidden regeneration).  
-**Rationale**: Prevents “model drift” between preview and send, improves trust, reduces support risk.
+### 1. Inline Draft Panel (Contextual UX)
+**Decision**: Draft panel slides in from the right side of inbox (inline, not modal)
+**Rationale**: Keeps users in inbox flow, feels more integrated than switching context to full-screen modal
+**Alternative Considered**: Modal workflow (more immersive) - rejected as too disruptive
 
-### Reply default + reply-all toggle
-**Decision**: Default to **Reply (sender only)** with a clear **Reply all** toggle and recipient preview.  
-**Rationale**: Minimizes accidental broad replies, keeps power users fast.
+### 2. Preview Determinism (Maximum Safety)
+**Decision**: Strict determinism - no regeneration after preview. Preview locks draft state.
+**Rationale**: Prevents "model drift" between preview and send, ensures trust, reduces support risk
+**Implementation**: SHA-256 hash (determinismToken) validates preview payload before send
+**Alternative Considered**: Flexible regeneration - rejected due to accidental edit loss risk
 
-### Voice learning strategy
-**Decision**: Ship **B + C by default**, with **A as explicit opt-in** shown on first run (with warning).  
-**Rationale**: B/C provides immediate value with low privacy risk; A offers best quality but requires higher trust and careful permissions.
+### 3. Safe Send Confirmation (Option 4: Maximum Safety)
+**Decision**: Require BOTH preview viewed AND confirmation checkbox before send enabled
+**Rationale**: Prevents costly mistakes, especially important for email (can't undo)
+**UX**: Checkbox text: "☐ I confirm this draft matches the preview and is ready to send"
 
-### Output destinations (three options)
-**Decision**: Provide **Send from TimeFlow**, **Create Gmail Draft**, and **Open in Gmail to refine**.  
-**Rationale**: Covers different comfort levels and workflows; “Open in Gmail” remains an escape hatch.
+### 4. Reply-All Toggle (Contextual Display)
+**Decision**: Toggle only appears if original email has CC/multiple recipients
+**Rationale**: Cleaner UI for 1:1 emails, less cognitive load
+**Default**: Reply to sender only (safe default)
+
+### 5. Writing Voice Profile (Hybrid Approach)
+**Decision**: Default quick sliders + collapsible advanced section with voice samples
+**Rationale**: Start simple (formality/length/tone), level up when ready (paste writing examples)
+**Beta**: All features unified, no gating
+**Future**: Lock advanced features behind premium tiers (noted with TODOs)
+
+### 6. Quota Enforcement (Option 4: Beta Freedom)
+**Decision**: Track usage counter but don't block in beta
+**Rationale**: Gather real usage data to inform future pricing, maximize beta happiness
+**Implementation**: `aiDraftsGenerated` counter in WritingVoiceProfile, no hard limits
+
+### 7. Assistant Service Integration (Option 1: Unified AI)
+**Decision**: Extend existing assistantService.ts with new 'email-draft' mode
+**Rationale**: Consistent with existing AI patterns, reuses LLM infrastructure
+**Alternative Considered**: Dedicated emailDraftService - rejected as duplicates code
+
+### 8. Database Schema (Option 3: Start Simple, Scale Later)
+**Decision**: One WritingVoiceProfile per user, add TODO comments for multi-profile support
+**Rationale**: Simplest for beta, clear migration path to premium multi-profile feature
 
 ---
 
@@ -125,72 +153,253 @@ Implementation note: This runs as a background job; drafts can still work immedi
 
 ---
 
-## Data Model (Prisma)
+## Database Schema (Prisma)
 
-Add new models to `apps/backend/prisma/schema.prisma` (names can be adjusted, but intent should stay).
+### New Model: WritingVoiceProfile
 
-### `WritingVoiceProfile` (new)
-- `id`
-- `userId` (unique)
-- `styleJson` (JSON) — the B preferences
-- `fingerprintJson` (JSON, nullable) — derived from C and/or A
-- `sentMailLearningEnabled` (boolean)
-- `sentMailLearningConfigJson` (JSON, nullable) — sample size, excluded domains
-- `sentMailLastTrainedAt` (DateTime, nullable)
-- timestamps
+```prisma
+model WritingVoiceProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
 
-### `WritingSample` (optional new, only if storing raw samples)
-- `id`
-- `userId`
-- `encryptedBody` (string)
-- `source` enum: `user_paste` | `gmail_sent`
-- timestamps
+  // Voice preferences (1-10 scale, 5 = neutral)
+  formality         Int      @default(5)  // 1=casual, 10=professional
+  length            Int      @default(5)  // 1=concise, 10=detailed
+  tone              Int      @default(5)  // 1=friendly, 10=formal
 
-### `AiUsageCounter` (recommended new)
-Track per-user daily/monthly usage for email drafting and quick rewrites:
-- `userId`
-- `periodStart` (Date)
-- `periodType` enum: `day` | `month`
-- `draftRequests` (int)
-- `rewriteRequests` (int)
-- `tokensApprox` (int, optional)
+  // Advanced: user writing samples
+  voiceSamples      String?  // Optional: 2-3 example emails
+
+  // Usage tracking (for future quotas)
+  aiDraftsGenerated Int      @default(0)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+
+  // TODO: Post-beta - Add monthly quota limits per subscription tier
+  // TODO: Post-beta - Add profile variants (work/personal contexts)
+}
+```
+
+### User Model Update
+
+```prisma
+model User {
+  // ... existing fields
+  writingVoiceProfile WritingVoiceProfile?
+}
+```
+
+**Implementation Notes:**
+- Auto-create profile with defaults (5,5,5) if missing when generating first draft
+- Slider values map to prompt labels:
+  - Formality: 1-3=casual, 4-6=balanced, 7-10=professional
+  - Length: 1-3=concise (2-3 sentences), 4-6=moderate (3-5), 7-10=detailed (5-7)
+  - Tone: 1-3=friendly/warm, 4-6=professional/approachable, 7-10=formal/respectful
+- voiceSamples: Plain text, user-provided, optional
+- aiDraftsGenerated: Incremented on each draft generation, never decremented
+- Future: Add quotaResetAt field when implementing subscription tiers
+
+---
+
+## API Endpoints
+
+### 1. POST /email/draft/ai
+
+Generate AI email draft using LLM.
+
+**Request:**
+```typescript
+{
+  emailId: string;              // Original email to reply to
+  voicePreferences?: {          // Optional slider overrides
+    formality?: number;         // 1-10
+    length?: number;            // 1-10
+    tone?: number;              // 1-10
+  };
+  additionalContext?: string;   // User instructions: "mention the deadline"
+}
+```
+
+**Response:**
+```typescript
+{
+  draftText: string;            // Plain text draft
+  to: string;                   // Recipient email
+  subject: string;              // Re: [original subject]
+  cc?: string;                  // If reply-all (future)
+  metadata: {
+    generatedAt: string;        // ISO timestamp
+    modelUsed: string;          // "gpt-4o" or "llama3.2"
+  }
+}
+```
+
+**Errors:**
+- `404` - Email not found
+- `403` - Gmail not connected
+- `500` - LLM service unavailable
+- `429` - Quota exceeded (post-beta)
+
+---
+
+### 2. POST /email/draft/preview
+
+Generate deterministic preview and lock draft state.
+
+**Request:**
+```typescript
+{
+  draftText: string;            // User's edited draft (plain text)
+  to: string;
+  subject: string;
+  cc?: string;                  // Future: reply-all support
+  inReplyTo?: string;           // Original email ID
+  threadId?: string;            // Gmail thread ID
+}
+```
+
+**Response:**
+```typescript
+{
+  htmlPreview: string;          // Formatted HTML email
+  textPreview: string;          // Plain text version
+  determinismToken: string;     // SHA-256 hash of preview payload
+  previewedAt: string;          // ISO timestamp
+}
+```
+
+**Note:** This endpoint is deterministic - same inputs produce same token.
+
+---
+
+### 3. POST /email/drafts
+
+Send email or create Gmail draft (requires preview confirmation).
+
+**Request:**
+```typescript
+{
+  action: 'send' | 'create_draft';
+  htmlPreview: string;          // From preview response
+  textPreview: string;          // From preview response
+  determinismToken: string;     // Must match preview token
+  to: string;
+  subject: string;
+  cc?: string;
+  inReplyTo?: string;
+  threadId?: string;
+  confirmed: boolean;           // MUST be true (checkbox)
+}
+```
+
+**Response (send):**
+```typescript
+{
+  success: true;
+  messageId: string;            // Gmail message ID
+  threadId: string;             // Gmail thread ID
+}
+```
+
+**Response (create_draft):**
+```typescript
+{
+  success: true;
+  draftId: string;              // Gmail draft ID
+  gmailUrl: string;             // https://mail.google.com/mail/u/0/#drafts?compose=xyz
+}
+```
+
+**Errors:**
+- `400` - Confirmation checkbox not checked
+- `400` - Determinism token mismatch
+- `403` - Sensitive data detected (future security layer)
+- `429` - Gmail API rate limit
+
+---
+
+### 4. GET /user/writing-voice
+
+Get user's writing voice profile (auto-creates if missing).
+
+**Response:**
+```typescript
+{
+  formality: number;            // 1-10
+  length: number;               // 1-10
+  tone: number;                 // 1-10
+  voiceSamples: string | null;  // Writing examples
+  aiDraftsGenerated: number;    // Usage counter
+}
+```
+
+---
+
+### 5. PUT /user/writing-voice
+
+Update writing voice profile.
+
+**Request:**
+```typescript
+{
+  formality?: number;           // 1-10
+  length?: number;              // 1-10
+  tone?: number;                // 1-10
+  voiceSamples?: string;        // Writing examples
+}
+```
+
+**Response:**
+```typescript
+{
+  success: true;
+  profile: WritingVoiceProfile;
+}
+```
 
 ---
 
 ## Backend Architecture
 
-### Existing Gmail routes we will reuse/extend
-Current routes are in `apps/backend/src/routes/emailRoutes.ts` and include `POST /email/send`.
+### Service Integration
 
-### New endpoints (proposed)
-- `POST /email/draft/ai`
-  - Input: `{ emailId, threadId?, replyMode: "reply"|"reply_all", instructions?, voiceOverrides? }`
-  - Output: `{ intentSummary, keyPoints, questionsToAnswer, draftText, subject, recipients, safetyFlags, warnings }`
+**assistantService.ts** (extend existing)
+- Add new mode: `'email-draft'`
+- New EMAIL_DRAFT_SYSTEM_PROMPT in promptManager
+- Context builder: `buildEmailDraftContext()`
+- Maps voice preferences to prompt labels
 
-- `POST /email/draft/preview`
-  - Input: `{ emailId, threadId?, replyMode, draftText, subject?, includeQuotedOriginal? }`
-  - Output: `{ to, cc, subject, bodyHtml, bodyText, threadId?, inReplyTo? }`
-  - **This output is the only allowed payload** for send/create-draft.
+**gmailService.ts** (extend existing)
+- Add `createGmailDraft()` function
+- Build RFC 2822 multipart/alternative message
+- Call `gmail.users.drafts.create()`
+- Return draft ID + Gmail URL
 
-- `POST /email/drafts`
-  - Input: preview payload
-  - Output: `{ draftId, messageId, gmailUrl }`
+**emailDraftController.ts** (new)
+- Route handlers for 5 new endpoints
+- Validate inputs (email addresses, determinism tokens)
+- Enforce confirmation checkbox
+- Increment usage counters
 
-- `POST /email/send`
-  - Already exists
-  - For this feature: require `{ ...previewPayload, confirmed: true }`
-
-### Services (proposed)
-- `aiEmailDraftService.ts`
-  - Builds context (latest message + small thread context)
-  - Loads voice profile
-  - Calls the LLM with structured output
-- Extend `gmailService.ts`
-  - Add `createDraft(...)` using `gmail.users.drafts.create`
-  - Reuse MIME-building logic from `sendEmail(...)`
-- `voiceProfileService.ts`
-  - CRUD for voice profile (B/C)
-  - Background training job for A (Sent mail)
+**Determinism Token Generation:**
+```typescript
+function generateDeterminismToken(preview: PreviewPayload): string {
+  const crypto = require('crypto');
+  const payload = JSON.stringify({
+    html: preview.htmlPreview,
+    text: preview.textPreview,
+    to: preview.to,
+    subject: preview.subject,
+    cc: preview.cc || '',
+  });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+```
 
 ---
 

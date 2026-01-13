@@ -16,6 +16,7 @@ import * as habitNotificationService from '../services/habitNotificationService.
 import { getSchedulingContext } from '../services/schedulingContextService.js';
 import { generateBulkSchedule } from '../services/bulkScheduleService.js';
 import { commitSchedule } from '../services/commitScheduleService.js';
+import { rescheduleHabitInstance } from '../services/habitRescheduleService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { HabitSkipReason, type DismissCoachSuggestionRequest, type ScheduledHabitInstance } from '@timeflow/shared';
 
@@ -46,6 +47,11 @@ const habitSuggestionQuerySchema = z.object({
 const habitInstancesQuerySchema = z.object({
   from: z.string().datetime(),
   to: z.string().datetime(),
+});
+
+const rescheduleHabitSchema = z.object({
+  startDateTime: z.string().datetime(),
+  endDateTime: z.string().datetime(),
 });
 
 /**
@@ -617,6 +623,38 @@ export async function commitScheduleHandler(
   } catch (error) {
     request.log.error(error, 'Error committing schedule');
     return reply.code(500).send({ error: 'Failed to commit schedule' });
+  }
+}
+
+/**
+ * PATCH /api/habits/instances/:scheduledHabitId/reschedule
+ * Reschedules a scheduled habit instance.
+ */
+export async function rescheduleHabitInstanceHandler(
+  request: FastifyRequest<{ Params: { scheduledHabitId: string }; Body: { startDateTime: string; endDateTime: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = rescheduleHabitSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  try {
+    await rescheduleHabitInstance(
+      user.id,
+      request.params.scheduledHabitId,
+      parsed.data.startDateTime,
+      parsed.data.endDateTime
+    );
+    return reply.status(200).send({ success: true });
+  } catch (error) {
+    request.log.error(error, 'Failed to reschedule habit instance');
+    return reply.status(500).send({ error: 'Failed to reschedule habit instance' });
   }
 }
 

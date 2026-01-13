@@ -3,6 +3,10 @@ import { DateTime } from 'luxon';
 import { getAvailability } from '../availabilityController.js';
 import { prisma } from '../../config/prisma.js';
 import * as availabilityService from '../../services/meetingAvailabilityService.js';
+import {
+  createControllerReply,
+  createControllerRequest,
+} from './helpers/typedFastifyMocks.js';
 
 vi.mock('../../config/prisma.js', () => ({
   prisma: {
@@ -29,18 +33,6 @@ vi.mock('../../services/appleCalendarService.js', () => ({
 vi.mock('../../services/meetingAvailabilityService.js', () => ({
   buildAvailabilitySlots: vi.fn(),
 }));
-
-function createReply() {
-  const reply: any = {
-    statusCode: 200,
-    status(code: number) {
-      this.statusCode = code;
-      return this;
-    },
-    send: vi.fn(),
-  };
-  return reply;
-}
 
 describe('availabilityController', () => {
   beforeEach(() => {
@@ -84,15 +76,18 @@ describe('availabilityController', () => {
     ];
     (availabilityService.buildAvailabilitySlots as any).mockReturnValue(slots);
 
-    const request: any = {
+    const request = createControllerRequest<{
+      Params: { slug: string };
+      Querystring: { from?: string; to?: string };
+    }>({
       params: { slug: 'team' },
       query: {
         from: '2026-01-10T00:00:00.000Z',
         to: '2026-01-20T23:59:59.999Z',
       },
-    };
+    });
 
-    const reply = createReply();
+    const reply = createControllerReply();
 
     await getAvailability(request, reply);
 
@@ -117,9 +112,17 @@ describe('availabilityController', () => {
   });
 
   it('returns 400 when required params are missing', async () => {
-    const reply = createReply();
+    const request = createControllerRequest<{
+      Params: { slug: string };
+      Querystring: Record<string, never>;
+    }>({
+      params: { slug: 'missing' },
+      query: {},
+    });
 
-    await getAvailability({ params: { slug: 'missing' }, query: {} } as any, reply);
+    const reply = createControllerReply();
+
+    await getAvailability(request, reply);
 
     expect(reply.statusCode).toBe(400);
     expect(reply.send).toHaveBeenCalledWith(expect.objectContaining({ error: expect.stringContaining('from') }));

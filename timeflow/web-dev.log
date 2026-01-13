@@ -11,83 +11,46 @@
   - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1290ms
- ○ Compiling /inbox ...
- ✓ Compiled /inbox in 2s (1191 modules)
- GET /inbox 200 in 2203ms
- ✓ Compiled in 120ms (601 modules)
-(node:93076) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+ ✓ Ready in 1331ms
+ ○ Compiling /habits ...
+ ✓ Compiled /habits in 2.4s (1246 modules)
+ GET /habits 200 in 2545ms
+ ✓ Compiled in 133ms (628 modules)
+(node:8496) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
 (Use `node --trace-deprecation ...` to show where the warning was created)
- ✓ Compiled /today in 299ms (1227 modules)
- ✓ Compiled /tasks in 180ms (1266 modules)
- ✓ Compiled /habits in 132ms (1260 modules)
- ✓ Compiled /settings in 137ms (1270 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 770ms (1225 modules)
+ GET /apple-touch-icon.png 404 in 799ms
+ GET /apple-touch-icon-precomposed.png 404 in 801ms
+ GET /og-image.png 404 in 796ms
+ GET /habits 200 in 95ms
+ GET /habits 200 in 22ms
+ ✓ Compiled in 179ms (628 modules)
+ ✓ Compiled in 82ms (628 modules)
+ ✓ Compiled /tasks in 350ms (1265 modules)
+ ✓ Compiled in 139ms (1266 modules)
+ ✓ Compiled / in 231ms (1285 modules)
+ GET / 200 in 316ms
+ ✓ Compiled /categories in 244ms (1275 modules)
+ GET /habits 200 in 115ms
  ○ Compiling /calendar ...
- ✓ Compiled /calendar in 864ms (2028 modules)
- ✓ Compiled /_not-found in 381ms (2017 modules)
- GET /_next/static/css/app/calendar/react-big-calendar.css.map 404 in 432ms
- ✓ Compiled in 547ms (2029 modules)
- ✓ Compiled in 182ms (2029 modules)
- ✓ Compiled in 237ms (2029 modules)
- ✓ Compiled in 178ms (2029 modules)
- ✓ Compiled in 239ms (2029 modules)
- ✓ Compiled in 97ms (1027 modules)
- ✓ Compiled in 231ms (2029 modules)
- ✓ Compiled in 240ms (2029 modules)
- ✓ Compiled in 192ms (2029 modules)
- ✓ Compiled in 374ms (2029 modules)
- ✓ Compiled in 265ms (2031 modules)
- ✓ Compiled in 410ms (2016 modules)
- ✓ Compiled in 89ms (1028 modules)
- ✓ Compiled in 85ms (1028 modules)
- ✓ Compiled in 102ms (1028 modules)
- ✓ Compiled in 134ms (1028 modules)
- ✓ Compiled /_not-found in 294ms (2019 modules)
- GET /_next/static/css/app/calendar/react-big-calendar.css.map 404 in 348ms
- ✓ Compiled in 88ms (1030 modules)
- ✓ Compiled in 82ms (1030 modules)
- ✓ Compiled in 86ms (1030 modules)
- GET /inbox 200 in 43ms
- ✓ Compiled in 311ms (2042 modules)
- ✓ Compiled in 91ms (1032 modules)
- ✓ Compiled in 135ms (2039 modules)
- ✓ Compiled /tasks in 151ms (1020 modules)
- ✓ Compiled in 94ms (1032 modules)
- ✓ Compiled in 159ms (2052 modules)
- ✓ Compiled in 92ms (1032 modules)
- ✓ Compiled in 86ms (1032 modules)
- ✓ Compiled in 121ms (1032 modules)
- ✓ Compiled in 182ms (2044 modules)
- ✓ Compiled in 130ms (1032 modules)
- ✓ Compiled /_not-found in 433ms (2032 modules)
- GET /_next/static/webpack/f114067ba9d8f018.webpack.hot-update.json 404 in 529ms
- GET /inbox 200 in 4ms
- GET /inbox 200 in 14ms
- ✓ Compiled in 164ms (1032 modules)
- ✓ Compiled in 174ms (2044 modules)
- ✓ Compiled /categories in 266ms (2037 modules)
+ ✓ Compiled /calendar in 1005ms (2047 modules)
  ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
- GET /categories 200 in 280ms
- GET /settings 200 in 14ms
- ✓ Compiled /_not-found in 150ms (2040 modules)
- GET /settings/email-catgeories 404 in 177ms
- GET /settings 200 in 30ms
- ✓ Compiled in 315ms (2047 modules)
- GET /settings 200 in 43ms
- ✓ Compiled /settings/email-categories in 248ms (2038 modules)
- ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
- GET /settings/email-categories 200 in 264ms
- GET /settings 200 in 14ms
- GET /settings/email-categories 200 in 20ms
- ✓ Compiled /categories in 79ms (1016 modules)
- ✓ Compiled in 439ms (2048 modules)
- ✓ Compiled in 268ms (2048 modules)
- ✓ Compiled /meetings in 193ms (2039 modules)
- ✓ Compiled in 243ms (2048 modules)
- ✓ Compiled in 195ms (2048 modules)
- ✓ Compiled in 71ms (1039 modules)
- GET /inbox 200 in 103ms
-Failed to proxy http://localhost:3001/api/email/inbox?maxResults=100 Error: socket hang up
+ GET /calendar 200 in 1058ms
+ GET /habits 200 in 81ms
+Failed to proxy http://localhost:3001/api/events/categorize-all Error: socket hang up
+    at Socket.socketCloseListener (node:_http_client:548:27)
+    at Socket.emit (node:events:520:35)
+    at TCP.<anonymous> (node:net:346:12) {
+  code: 'ECONNRESET'
+}
+Error: socket hang up
+    at Socket.socketCloseListener (node:_http_client:548:27)
+    at Socket.emit (node:events:520:35)
+    at TCP.<anonymous> (node:net:346:12) {
+  code: 'ECONNRESET'
+}
+Failed to proxy http://localhost:3001/api/events/categorize-all Error: socket hang up
     at Socket.socketCloseListener (node:_http_client:548:27)
     at Socket.emit (node:events:520:35)
     at TCP.<anonymous> (node:net:346:12) {
@@ -100,117 +63,325 @@ Error: socket hang up
   code: 'ECONNRESET'
 }
  ○ Compiling /_error ...
- ✓ Compiled /_error in 610ms (2267 modules)
- ✓ Compiled in 308ms (2280 modules)
- ✓ Compiled in 218ms (2280 modules)
- ✓ Compiled in 370ms (2280 modules)
- ✓ Compiled in 288ms (2280 modules)
- ✓ Compiled /today in 128ms (1057 modules)
- ✓ Compiled /settings in 177ms (685 modules)
- ✓ Compiled /_not-found in 269ms (1892 modules)
- GET /_next/static/css/app/calendar/react-big-calendar.css.map 404 in 316ms
-Failed to proxy http://localhost:3001/api/user/me AggregateError [ECONNREFUSED]: 
-    at internalConnectMultiple (node:net:1134:18)
-    at afterConnectMultiple (node:net:1715:7) {
-  code: 'ECONNREFUSED',
-  [errors]: [
-    Error: connect ECONNREFUSED ::1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '::1',
-      port: 3001
-    },
-    Error: connect ECONNREFUSED 127.0.0.1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '127.0.0.1',
-      port: 3001
-    }
-  ]
+Failed to proxy http://localhost:3001/api/events/categorize-all Error: socket hang up
+    at Socket.socketCloseListener (node:_http_client:548:27)
+    at Socket.emit (node:events:520:35)
+    at TCP.<anonymous> (node:net:346:12) {
+  code: 'ECONNRESET'
 }
-AggregateError [ECONNREFUSED]: 
-    at internalConnectMultiple (node:net:1134:18)
-    at afterConnectMultiple (node:net:1715:7) {
-  code: 'ECONNREFUSED',
-  [errors]: [
-    Error: connect ECONNREFUSED ::1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '::1',
-      port: 3001
-    },
-    Error: connect ECONNREFUSED 127.0.0.1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '127.0.0.1',
-      port: 3001
-    }
-  ]
+Error: socket hang up
+    at Socket.socketCloseListener (node:_http_client:548:27)
+    at Socket.emit (node:events:520:35)
+    at TCP.<anonymous> (node:net:346:12) {
+  code: 'ECONNRESET'
 }
-Failed to proxy http://localhost:3001/api/tasks AggregateError [ECONNREFUSED]: 
-    at internalConnectMultiple (node:net:1134:18)
-    at afterConnectMultiple (node:net:1715:7) {
-  code: 'ECONNREFUSED',
-  [errors]: [
-    Error: connect ECONNREFUSED ::1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '::1',
-      port: 3001
-    },
-    Error: connect ECONNREFUSED 127.0.0.1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '127.0.0.1',
-      port: 3001
-    }
-  ]
-}
-AggregateError [ECONNREFUSED]: 
-    at internalConnectMultiple (node:net:1134:18)
-    at afterConnectMultiple (node:net:1715:7) {
-  code: 'ECONNREFUSED',
-  [errors]: [
-    Error: connect ECONNREFUSED ::1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '::1',
-      port: 3001
-    },
-    Error: connect ECONNREFUSED 127.0.0.1:3001
-        at createConnectionError (node:net:1678:14)
-        at afterConnectMultiple (node:net:1708:16) {
-      errno: -61,
-      code: 'ECONNREFUSED',
-      syscall: 'connect',
-      address: '127.0.0.1',
-      port: 3001
-    }
-  ]
-}
- ✓ Compiled in 267ms (1907 modules)
- ✓ Compiled /_error in 220ms (1894 modules)
- GET /today 200 in 72ms
- GET /today 200 in 18ms
- ✓ Compiled in 354ms (1904 modules)
+ ✓ Compiled /_error in 630ms (2267 modules)
+ ✓ Compiled in 325ms (2282 modules)
+ ✓ Compiled in 294ms (2282 modules)
+ ✓ Compiled in 435ms (2280 modules)
+ ✓ Compiled in 177ms (2280 modules)
+ ✓ Compiled in 220ms (2280 modules)
+ ✓ Compiled in 238ms (2280 modules)
+ GET /calendar 200 in 129ms
+ ✓ Compiled in 335ms (1230 modules)
+ ✓ Compiled in 125ms (1230 modules)
+ ✓ Compiled in 104ms (1230 modules)
+ ✓ Compiled in 867ms (2265 modules)
+ ✓ Compiled in 3.9s (2280 modules)
+ ✓ Compiled in 432ms (2280 modules)
+ ✓ Compiled in 243ms (2280 modules)
+ ✓ Compiled in 185ms (2280 modules)
+ ✓ Compiled in 198ms (2280 modules)
+ ✓ Compiled in 175ms (2280 modules)
+ ✓ Compiled in 347ms (2280 modules)
+ ✓ Compiled in 184ms (2280 modules)
+ ✓ Compiled in 211ms (2280 modules)
+ GET /categories 200 in 83ms
+ ○ Compiling /inbox ...
+ ✓ Compiled /inbox in 1644ms (3316 modules)
+ ✓ Compiled in 118ms (1285 modules)
+ ✓ Compiled in 506ms (3331 modules)
+ ✓ Compiled in 329ms (3331 modules)
+ ✓ Compiled in 218ms (3331 modules)
+ ✓ Compiled in 334ms (1285 modules)
+ ✓ Compiled in 319ms (3331 modules)
+ ✓ Compiled in 263ms (3331 modules)
+ ✓ Compiled /settings in 494ms (3326 modules)
+ ✓ Compiled /settings/writing-voice in 394ms (3332 modules)
+ GET /calendar 200 in 129ms
+ ✓ Compiled in 274ms (1291 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 148ms
+ ✓ Compiled in 641ms (3311 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 39ms
+ ✓ Compiled in 93ms (1291 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 15ms
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 21ms
+ ✓ Compiled in 113ms (1291 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 15ms
+ ✓ Compiled in 252ms (1291 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 15ms
+ ✓ Compiled in 510ms (3311 modules)
+ GET /inbox 200 in 152ms
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 32ms
+ ✓ Compiled in 415ms (3311 modules)
+ ✓ Compiled in 94ms (1291 modules)
+ ✓ Compiled in 257ms (3311 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3614427735"
+ ⨯ Error: ENOENT: no such file or directory, open '/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/browser/default-stylesheet.css'
+    at Object.readFileSync (node:fs:435:20)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/components/inbox/DraftPanel.tsx:11:78)
+    at (ssr)/./src/components/inbox/DraftPanel.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:423:1)
+    at __webpack_require__ (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+    at eval (./src/app/inbox/page.tsx:39:87)
+    at (ssr)/./src/app/inbox/page.tsx (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/app/inbox/page.js:346:1)
+    at Object.__webpack_require__ [as require] (/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/.next/server/webpack-runtime.js:33:43)
+digest: "3906946360"
+ GET /inbox 500 in 47ms

@@ -144,6 +144,9 @@
   - `/security`
   - `/privacy`
   - `/terms`
+- **Pricing stance (locked for Sprint 18)**:
+  - “**Beta is free / pricing coming soon**” (subscriptions land in Sprint 19)
+  - Ensure Pricing page CTAs still work: “Join beta” (Google auth) and “Contact”
 - **Fix homepage/footer correctness**:
   - remove/replace links we are **not shipping yet** (Blog/Careers/Press)
   - ensure the “mobile menu” button is functional or removed
@@ -151,6 +154,12 @@
 - **Analytics**:
   - instrument page views + CTA clicks for these marketing pages
   - ensure analytics is privacy-safe (no sensitive content)
+ - **Documentation**:
+  - add a short “Marketing Pages Checklist” section to your beta ops docs:
+    - list of routes that must exist
+    - CTA destinations (no dead links)
+    - analytics event names for key CTAs
+    - where to update copy (single source of truth)
 
 ### 9) In-app UX polish (Categories + Meetings) (P0/P1)
 **Goal**: key management pages feel cohesive with the design system and are usable for real users.

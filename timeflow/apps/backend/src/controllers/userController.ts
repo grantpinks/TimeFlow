@@ -53,6 +53,8 @@ const preferencesSchema = z.object({
   timeZone: z.string().min(1, 'timeZone is required').optional(),
   defaultTaskDurationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
   defaultCalendarId: z.string().min(1).optional(),
+  eventPrefixEnabled: z.boolean().optional(),
+  eventPrefix: z.string().min(1).optional(),
   sidebarNavOrder: z.array(z.string().min(1)).optional(),
 
   // Meeting-specific preferences
@@ -60,6 +62,10 @@ const preferencesSchema = z.object({
   meetingEndTime: z.string().regex(/^\d{2}:\d{2}$/, 'meetingEndTime must be HH:mm').optional().nullable(),
   blockedDaysOfWeek: z.array(z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'])).optional(),
   dailyMeetingSchedule: dailyMeetingScheduleSchema,
+
+  // Habit notification preferences
+  notifyStreakAtRisk: z.boolean().optional(),
+  notifyMissedHighPriority: z.boolean().optional(),
 });
 
 /**
@@ -92,11 +98,15 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     dailyScheduleConstraints: record.dailyScheduleConstraints || null,
     defaultTaskDurationMinutes: record.defaultTaskDurationMinutes,
     defaultCalendarId: record.defaultCalendarId,
+    eventPrefixEnabled: record.eventPrefixEnabled,
+    eventPrefix: record.eventPrefix,
     sidebarNavOrder: record.sidebarNavOrder || [],
     meetingStartTime: record.meetingStartTime,
     meetingEndTime: record.meetingEndTime,
     blockedDaysOfWeek: record.blockedDaysOfWeek || [],
     dailyMeetingSchedule: record.dailyMeetingSchedule || null,
+    notifyStreakAtRisk: record.notifyStreakAtRisk,
+    notifyMissedHighPriority: record.notifyMissedHighPriority,
   };
 }
 
@@ -177,6 +187,8 @@ interface UpdatePreferencesBody {
   timeZone?: string;
   defaultTaskDurationMinutes?: number;
   defaultCalendarId?: string;
+  eventPrefixEnabled?: boolean;
+  eventPrefix?: string;
   sidebarNavOrder?: string[];
   meetingStartTime?: string | null;
   meetingEndTime?: string | null;
@@ -211,11 +223,15 @@ export async function updatePreferences(
     timeZone,
     defaultTaskDurationMinutes,
     defaultCalendarId,
+    eventPrefixEnabled,
+    eventPrefix,
     sidebarNavOrder,
     meetingStartTime,
     meetingEndTime,
     blockedDaysOfWeek,
     dailyMeetingSchedule,
+    notifyStreakAtRisk,
+    notifyMissedHighPriority,
   } =
     parsed.data;
 
@@ -234,6 +250,8 @@ export async function updatePreferences(
       ...(timeZone && { timeZone }),
       ...(defaultTaskDurationMinutes && { defaultTaskDurationMinutes }),
       ...(defaultCalendarId && { defaultCalendarId }),
+      ...(eventPrefixEnabled !== undefined && { eventPrefixEnabled }),
+      ...(eventPrefix && { eventPrefix }),
       ...(sidebarNavOrder !== undefined && { sidebarNavOrder }),
 
       // Meeting preferences
@@ -241,6 +259,10 @@ export async function updatePreferences(
       ...(meetingEndTime !== undefined && { meetingEndTime }),
       ...(blockedDaysOfWeek && { blockedDaysOfWeek }),
       ...(dailyMeetingSchedule !== undefined && { dailyMeetingSchedule }),
+
+      // Habit notification preferences
+      ...(notifyStreakAtRisk !== undefined && { notifyStreakAtRisk }),
+      ...(notifyMissedHighPriority !== undefined && { notifyMissedHighPriority }),
     },
   });
 
@@ -255,10 +277,14 @@ export async function updatePreferences(
     dailyScheduleConstraints: updated.dailyScheduleConstraints || null,
     defaultTaskDurationMinutes: updated.defaultTaskDurationMinutes,
     defaultCalendarId: updated.defaultCalendarId,
+    eventPrefixEnabled: updated.eventPrefixEnabled,
+    eventPrefix: updated.eventPrefix,
     sidebarNavOrder: updated.sidebarNavOrder,
     meetingStartTime: updated.meetingStartTime,
     meetingEndTime: updated.meetingEndTime,
     blockedDaysOfWeek: updated.blockedDaysOfWeek || [],
     dailyMeetingSchedule: updated.dailyMeetingSchedule || null,
+    notifyStreakAtRisk: updated.notifyStreakAtRisk,
+    notifyMissedHighPriority: updated.notifyMissedHighPriority,
   };
 }

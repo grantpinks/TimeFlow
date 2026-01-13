@@ -102,11 +102,35 @@ export default function InboxPage() {
   // Auto-select first email when list changes
   useEffect(() => {
     const displayEmails = getDisplayEmails();
-    if (displayEmails.length > 0 && !selectedThreadId) {
+    if (displayEmails.length === 0) {
+      if (selectedThreadId) {
+        setSelectedThreadId(null);
+        setThreadMessages([]);
+      }
+      return;
+    }
+
+    const hasSelected = selectedThreadId
+      ? displayEmails.some(
+          (email) => email.threadId === selectedThreadId || email.id === selectedThreadId
+        )
+      : false;
+
+    if (!hasSelected) {
       const firstEmail = displayEmails[0];
       fetchThread(firstEmail.threadId || firstEmail.id);
     }
-  }, [emails, searchMode, serverSearchResults, searchQuery]);
+  }, [
+    emails,
+    searchMode,
+    serverSearchResults,
+    searchQuery,
+    selectedViewId,
+    selectedCategoryId,
+    needsResponseOnly,
+    queueFilter,
+    selectedThreadId,
+  ]);
 
   async function fetchInbox(options?: { pageToken?: string; append?: boolean }) {
     const { pageToken, append } = options ?? {};
@@ -999,7 +1023,7 @@ export default function InboxPage() {
 
           {/* Right Pane - Reading Pane */}
           <div className="flex-1 bg-[#FFFEF7] overflow-hidden flex flex-col">
-            {!selectedThreadId || threadMessages.length === 0 ? (
+            {!selectedThreadId || threadMessages.length === 0 || !selectedEmail ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                   <Image

@@ -98,16 +98,25 @@ export async function getEvents(
     }));
 
     // Convert habits to calendar events
-    const habitEvents = scheduledHabits.map((sh) => ({
-      id: sh.eventId,
-      summary: sh.habit.title,
-      description: sh.habit.description || undefined,
-      start: sh.startDateTime.toISOString(),
-      end: sh.endDateTime.toISOString(),
-      sourceType: 'habit' as const,
-      sourceId: sh.id, // Use scheduledHabit ID for completion API
-      isCompleted: sh.completion?.status === 'completed',
-    }));
+    const habitEvents = scheduledHabits.map((sh) => {
+      const habitDetails = buildTimeflowEventDetails({
+        title: sh.habit.title,
+        kind: 'habit',
+        prefixEnabled: user.eventPrefixEnabled,
+        prefix: user.eventPrefix,
+        description: sh.habit.description || undefined,
+      });
+      return {
+        id: sh.eventId,
+        summary: habitDetails.summary,
+        description: habitDetails.description,
+        start: sh.startDateTime.toISOString(),
+        end: sh.endDateTime.toISOString(),
+        sourceType: 'habit' as const,
+        sourceId: sh.id, // Use scheduledHabit ID for completion API
+        isCompleted: sh.completion?.status === 'completed',
+      };
+    });
 
     // Mark Google Calendar events as external
     const externalEvents = googleEvents.map((event) => ({

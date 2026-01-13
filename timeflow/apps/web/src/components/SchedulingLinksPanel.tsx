@@ -204,7 +204,7 @@ function SchedulingLinkModal({ link, onClose, onSuccess }: SchedulingLinkModalPr
   const [maxBookingHorizonDays, setMaxBookingHorizonDays] = useState(link?.maxBookingHorizonDays || 60);
   const [dailyCap, setDailyCap] = useState(link?.dailyCap || 6);
   const [calendarProvider, setCalendarProvider] = useState<'google' | 'apple'>(link?.calendarProvider || 'google');
-  const [calendarId, setCalendarId] = useState(link?.calendarId || 'primary');
+  const [calendarId] = useState(link?.calendarId || 'primary');
   const [googleMeetEnabled, setGoogleMeetEnabled] = useState(link?.googleMeetEnabled ?? true);
 
   // Duration checkboxes

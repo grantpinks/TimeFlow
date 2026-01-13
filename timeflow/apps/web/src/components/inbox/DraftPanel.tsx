@@ -789,7 +789,7 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
 
             {panelState !== 'success' && panelState !== 'error' && (
               <div className="flex items-center justify-between gap-3 p-6 border-t border-slate-200 bg-slate-50">
-                {(panelState === 'generate' || panelState === 'setup') && (
+                {(panelState === 'generate' || panelState === 'setup' || panelState === 'generating') && (
                   <>
                     <button
                       onClick={handleClose}
@@ -799,7 +799,7 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
                       Cancel
                     </button>
                     <button
-                      onClick={handleGenerate}
+                      onClick={() => handleGenerate()}
                       disabled={panelState === 'generating'}
                       className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
                     >
@@ -831,14 +831,14 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
                     </button>
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={handleGenerate}
+                        onClick={() => handleGenerate()}
                         disabled={previewing}
                         className="px-5 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 font-medium transition-colors disabled:opacity-50"
                       >
                         Regenerate
                       </button>
                       <button
-                        onClick={handlePreview}
+                        onClick={() => handlePreview()}
                         disabled={previewing || !draftText.trim()}
                         className="px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
                       >
@@ -855,7 +855,7 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
                   </>
                 )}
 
-                {panelState === 'preview' && (
+                {(panelState === 'preview' || panelState === 'sending') && (
                   <>
                     <button
                       onClick={handleBack}

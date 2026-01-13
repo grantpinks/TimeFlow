@@ -25,18 +25,6 @@ interface TaskListProps {
   onToggleSelect?: (taskId: string) => void;
 }
 
-const priorityLabels: Record<number, string> = {
-  1: 'High',
-  2: 'Medium',
-  3: 'Low',
-};
-
-const priorityColors: Record<number, string> = {
-  1: 'bg-red-100 text-red-700',
-  2: 'bg-yellow-100 text-yellow-700',
-  3: 'bg-green-100 text-green-700',
-};
-
 export function TaskList({
   tasks,
   onCreateTask,
@@ -150,21 +138,6 @@ export function TaskList({
       console.error('Failed to update task:', err);
       setEditingSubmitting(false);
     }
-  };
-
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
   // Template handlers

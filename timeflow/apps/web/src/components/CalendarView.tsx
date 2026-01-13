@@ -44,6 +44,7 @@ interface CalendarViewProps {
   onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => Promise<void>;
   onUndoHabit?: (scheduledHabitId: string) => Promise<void>;
   onSkipHabit?: (scheduledHabitId: string, reasonCode: HabitSkipReason) => Promise<void>;
+  onHabitReschedule?: (scheduledHabitId: string, start: Date, end: Date) => Promise<void>;
   onEditTask?: (taskId: string) => void;
   onUnscheduleTask?: (taskId: string) => Promise<void>;
   onDeleteTask?: (taskId: string) => Promise<void>;
@@ -83,11 +84,13 @@ export function CalendarView({
   selectedDate,
   onSelectSlot,
   onSelectEvent,
+  onRescheduleTask,
   onResizeEvent,
   onCompleteTask,
   onCompleteHabit,
   onUndoHabit,
   onSkipHabit,
+  onHabitReschedule,
   onEditTask,
   onUnscheduleTask,
   onDeleteTask,
@@ -377,6 +380,8 @@ export function CalendarView({
         onHabitComplete={onCompleteHabit}
         onHabitUndo={onUndoHabit}
         onHabitSkip={onSkipHabit}
+        onHabitReschedule={onHabitReschedule}
+        onTaskReschedule={onRescheduleTask}
       />
     </div>
   );
@@ -431,8 +436,23 @@ function DraggableEvent({
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: event.id,
-    data: { task: event.isTask ? { id: event.taskId, durationMinutes: (event.end.getTime() - event.start.getTime()) / 60000 } : null },
-    disabled: !event.isTask || isResizing,
+    data: {
+      task: event.isTask
+        ? {
+            id: event.taskId,
+            durationMinutes: (event.end.getTime() - event.start.getTime()) / 60000,
+          }
+        : null,
+      calendarEvent: {
+        title: event.title,
+        sourceType: event.sourceType,
+        taskId: event.taskId,
+        scheduledHabitId: event.scheduledHabitId,
+        start: event.start,
+        end: event.end,
+      },
+    },
+    disabled: (!event.isTask && !event.isHabit) || isResizing,
   });
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {

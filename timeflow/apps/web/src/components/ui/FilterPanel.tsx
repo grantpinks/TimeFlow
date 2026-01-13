@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button, Input, Select, Label } from '@/components/ui';
+import { Button, Input, Label } from '@/components/ui';
 import type { Category } from '@timeflow/shared';
 
 export interface TaskFilters {

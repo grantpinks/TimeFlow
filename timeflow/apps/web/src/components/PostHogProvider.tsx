@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { initAnalytics, trackPageView } from '@/lib/analytics';
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   // Initialize PostHog on mount
   useEffect(() => {
@@ -16,10 +15,11 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   // Track page views on route changes
   useEffect(() => {
     if (pathname) {
-      const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      const url = `${pathname}${search}`;
       trackPageView(url);
     }
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return <>{children}</>;
 }

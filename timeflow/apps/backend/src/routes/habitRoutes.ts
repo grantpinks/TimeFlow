@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as habitController from '../controllers/habitController.js';
-import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler, reorderHabits } from '../controllers/habitController.js';
+import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler, reorderHabits, rescheduleHabitInstanceHandler } from '../controllers/habitController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerHabitRoutes(server: FastifyInstance) {
@@ -134,6 +134,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/instances/:scheduledHabitId/skip',
     { preHandler: requireAuth },
     habitController.skipHabitInstance
+  );
+
+  // PATCH /api/habits/instances/:scheduledHabitId/reschedule - Reschedule a habit instance
+  server.patch(
+    '/habits/instances/:scheduledHabitId/reschedule',
+    { preHandler: requireAuth },
+    rescheduleHabitInstanceHandler
   );
 
   // POST /api/habits/coach/dismiss - Dismiss or snooze a coach suggestion

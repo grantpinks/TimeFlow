@@ -1,0 +1,556 @@
+{
+  "summary": {
+    "total": 30,
+    "ok": 24,
+    "failed": 6,
+    "previews": 0,
+    "turnsTotal": 32,
+    "turnsPreviews": 0,
+    "expectationFailures": 6,
+    "timestamp": "2026-01-03T02:35:38.314Z",
+    "endpoint": "http://localhost:3001/api/assistant/chat"
+  },
+  "results": [
+    {
+      "prompt": "What tasks do I have?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5732,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my tasks for tomorrow.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 15454,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "When am I free this week?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 750,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Here are your open slots for this week:\n- Fri, Jan 2: 9:30 AM - 11:00 PM\n- Sat, Jan 3: 9:30 AM - 11:00 PM\n- Sun, Jan 4: 9:30 AM - 11:00 PM\n- Mon, Jan 5: 9:30 AM - 11:00 PM\n- Tue, Jan 6: 9:30 AM - 11:00 PM\n- Wed, Jan 7: 9:30 AM - 11:00 PM\n- ",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I'd like to schedule these tasks tomorrow from 9am-12pm and 1pm-5pm.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 19469,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Can we schedule it?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 21896,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Add my tasks to my calendar.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 15023,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Help me schedule my homework and laundry for today.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 2371,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "What is due today?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 4518,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my high priority tasks first.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 8174,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "When can I fit in a 2 hour study block?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5770,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Please organize my tasks around my fixed events.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 24400,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my tasks but keep evenings free.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 19744,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Can you make a schedule for next week?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 16396,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Show me open slots tomorrow.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 734,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Here are your open slots for tomorrow:\n- Sat, Jan 3: 9:30 AM - 11:00 PM",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "What is on my calendar?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 5504,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my habits for this week.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 12131,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Plan my tasks and avoid my CS 101 lecture.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 16415,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule these tasks for tomorrow morning.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 8113,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I have no tasks. Can you schedule anyway?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 9539,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "flow": "Conversation -> Scheduling",
+      "ok": false,
+      "status": 200,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "turns": [
+        {
+          "prompt": "What tasks do I have?",
+          "status": 200,
+          "ok": true,
+          "durationMs": 9028,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+          "expectation": {
+            "status": 200,
+            "preview": false
+          },
+          "expectationOk": true,
+          "expectationFailures": []
+        },
+        {
+          "prompt": "Schedule my tasks for tomorrow.",
+          "status": 200,
+          "ok": false,
+          "durationMs": 12151,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+          "expectation": {
+            "status": 200,
+            "preview": true
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "preview false != true"
+          ]
+        }
+      ]
+    },
+    {
+      "flow": "Availability -> Scheduling",
+      "ok": false,
+      "status": 200,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "turns": [
+        {
+          "prompt": "When am I free this week?",
+          "status": 200,
+          "ok": true,
+          "durationMs": 799,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "Here are your open slots for this week:\n- Fri, Jan 2: 9:30 AM - 11:00 PM\n- Sat, Jan 3: 9:30 AM - 11:00 PM\n- Sun, Jan 4: 9:30 AM - 11:00 PM\n- Mon, Jan 5: 9:30 AM - 11:00 PM\n- Tue, Jan 6: 9:30 AM - 11:00 PM\n- Wed, Jan 7: 9:30 AM - 11:00 PM\n- ",
+          "expectation": {
+            "status": 200,
+            "preview": false
+          },
+          "expectationOk": true,
+          "expectationFailures": []
+        },
+        {
+          "prompt": "Schedule my tasks for tomorrow.",
+          "status": 200,
+          "ok": false,
+          "durationMs": 10542,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+          "expectation": {
+            "status": 200,
+            "preview": true
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "preview false != true"
+          ]
+        }
+      ]
+    },
+    {
+      "prompt": "My day feels chaotic—can you help me plan today?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 680,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Which priority should I focus on first?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I'm not sure what to work on next. What's the best use of my time?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 656,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "What time window should I plan for, and which priority matters most?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I have a deadline tomorrow and a bunch of small tasks. How should I prioritize?",
+      "status": 200,
+      "ok": false,
+      "durationMs": 5333,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": false,
+        "cta": true,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "cta false != true"
+      ]
+    },
+    {
+      "prompt": "Plan my day today and focus on the most important tasks.",
+      "status": 200,
+      "ok": false,
+      "durationMs": 7753,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": false,
+        "cta": true,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "cta false != true"
+      ]
+    },
+    {
+      "prompt": "Help me plan. I have about 3 hours this afternoon.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 734,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Which priority should I focus on first?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Help me plan. I need to focus on urgent items.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 712,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "What time window should I plan for?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule a meeting with Alex.",
+      "status": 200,
+      "ok": false,
+      "durationMs": 771,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "question false != true"
+      ]
+    },
+    {
+      "prompt": "Create a meeting link for 30 min calls.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 181,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I can create a scheduling link once you connect a calendar. Open Settings → Calendar to finish setup.",
+      "expectation": {
+        "status": 200,
+        "preview": false
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Send a meeting request to alex@company.com",
+      "status": 200,
+      "ok": false,
+      "durationMs": 657,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "question false != true"
+      ]
+    }
+  ]
+}

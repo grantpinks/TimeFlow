@@ -15,9 +15,9 @@ const prismaMock = {
 };
 
 const gmailServiceMock = {
-  getFullEmail: vi.fn<Promise<FullEmailMessage>, [string, string]>(),
-  createGmailDraft: vi.fn<Promise<void>, [SendEmailRequest]>(),
-  sendEmail: vi.fn<Promise<SendEmailResponse>, [SendEmailRequest]>(),
+  getFullEmail: vi.fn(),
+  createGmailDraft: vi.fn(),
+  sendEmail: vi.fn(),
 };
 
 vi.mock('../config/prisma.js', () => ({
@@ -27,7 +27,7 @@ vi.mock('../config/prisma.js', () => ({
 vi.mock('../services/gmailService.js', () => gmailServiceMock);
 
 vi.mock('../services/assistantService.js', () => ({
-  runAssistantTask: vi.fn<ReturnType<typeof assistantService.runAssistantTask>, Parameters<typeof assistantService.runAssistantTask>>(),
+  runAssistantTask: vi.fn(),
 }));
 
 let server: FastifyInstance;

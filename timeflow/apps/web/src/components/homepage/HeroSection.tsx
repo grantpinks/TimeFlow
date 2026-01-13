@@ -2,7 +2,6 @@
 
 import { motion, useAnimation } from 'framer-motion';
 import Image from 'next/image';
-import Link from 'next/link';
 import { getGoogleAuthUrl } from '@/lib/api';
 import { useState, useCallback, useEffect } from 'react';
 import { track } from '@/lib/analytics';

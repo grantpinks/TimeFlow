@@ -120,4 +120,4 @@ apps/backend/
 | `pnpm lint`     | Run ESLint                           |
 | `pnpm test`     | Run tests                            |
 | `pnpm prisma`   | Prisma CLI commands                  |
-
+| `pnpm rename-timeflow-events` | Rename existing Google events to match current TimeFlow prefix (supports `--dry-run`) |

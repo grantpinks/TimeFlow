@@ -34,7 +34,8 @@ export default function CalendarPage() {
   const [scheduling, setScheduling] = useState(false);
   const [categorizingEvents, setCategorizingEvents] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [activeDragTask, setActiveDragTask] = useState<any | null>(null);
+  const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
+  const [activeDragHabit, setActiveDragHabit] = useState<{ title: string; durationMinutes: number } | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
@@ -48,6 +49,8 @@ export default function CalendarPage() {
     priority: 1 | 2 | 3;
     dueDate: string;
     categoryId: string;
+    scheduledStart?: string;
+    scheduledEnd?: string;
   } | null>(null);
   const [editingSubmitting, setEditingSubmitting] = useState(false);
   // Filter state
@@ -419,6 +422,26 @@ export default function CalendarPage() {
     }
   };
 
+  const handleRescheduleHabitInstance = async (scheduledHabitId: string, start: Date, end: Date) => {
+    try {
+      await api.rescheduleHabitInstance(scheduledHabitId, start.toISOString(), end.toISOString());
+      await Promise.all([
+        fetchExternalEvents(),
+        fetchHabitInsights(),
+      ]);
+      setMessage({
+        type: 'success',
+        text: 'Habit rescheduled successfully!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to reschedule habit',
+      });
+      throw error;
+    }
+  };
+
   const handleCompleteTaskById = async (taskId: string) => {
     // Clear preview if this task is being previewed
     if (previewTask?.id === taskId) {
@@ -547,6 +570,14 @@ export default function CalendarPage() {
       });
       return;
     }
+    const formatDateTimeLocal = (value?: string | null) => {
+      if (!value) return '';
+      const date = new Date(value);
+      const pad = (num: number) => num.toString().padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+        date.getHours()
+      )}:${pad(date.getMinutes())}`;
+    };
     setEditingTask(task);
     setEditingState({
       title: task.title,
@@ -555,6 +586,8 @@ export default function CalendarPage() {
       priority: task.priority as 1 | 2 | 3,
       dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
       categoryId: task.categoryId ?? '',
+      scheduledStart: formatDateTimeLocal(task.scheduledTask?.startDateTime ?? null),
+      scheduledEnd: formatDateTimeLocal(task.scheduledTask?.endDateTime ?? null),
     });
   };
 
@@ -570,6 +603,23 @@ export default function CalendarPage() {
     setEditingSubmitting(true);
 
     try {
+      const hasScheduleUpdate =
+        editingTask.scheduledTask &&
+        editingState.scheduledStart &&
+        editingState.scheduledEnd &&
+        (new Date(editingState.scheduledStart).toISOString() !==
+          new Date(editingTask.scheduledTask.startDateTime).toISOString() ||
+          new Date(editingState.scheduledEnd).toISOString() !==
+            new Date(editingTask.scheduledTask.endDateTime).toISOString());
+
+      if (hasScheduleUpdate) {
+        await api.rescheduleTask(
+          editingTask.id,
+          new Date(editingState.scheduledStart!).toISOString(),
+          new Date(editingState.scheduledEnd!).toISOString()
+        );
+      }
+
       await api.updateTask(editingTask.id, {
         title: editingState.title.trim(),
         description: editingState.description.trim() || undefined,
@@ -640,10 +690,28 @@ export default function CalendarPage() {
   );
 
   const handleDragStart = (event: any) => {
+    const activeData = event.active.data?.current;
+    const calendarEvent = activeData?.calendarEvent;
+    if (calendarEvent?.sourceType === 'habit') {
+      const durationMinutes = Math.max(
+        15,
+        Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
+      );
+      setActiveDragTask(null);
+      setActiveDragHabit({ title: calendarEvent.title, durationMinutes });
+      return;
+    }
+
     // Find the task being dragged
     const taskId = event.active.id.replace('task-', '');
-    const task = tasks.find((t) => t.id === taskId) || event.active.data?.current?.task;
+    const taskFromList = tasks.find((t) => t.id === taskId);
+    const taskFromDrag =
+      activeData?.task && typeof activeData.task === 'object' && 'title' in activeData.task
+        ? (activeData.task as Task)
+        : null;
+    const task = taskFromList || taskFromDrag;
     if (task) {
+      setActiveDragHabit(null);
       setActiveDragTask(task);
     }
   };
@@ -696,27 +764,56 @@ export default function CalendarPage() {
 
     if (!over) {
       setActiveDragTask(null);
+      setActiveDragHabit(null);
       return;
     }
 
     const slotData = over.data?.current;
 
     if (slotData?.slotStart) {
-      const taskId = active.id.replace('task-', '');
-      const task = activeDragTask || tasks.find((t) => t.id === taskId);
+      const slotStart = slotData.slotStart as Date;
+      const activeData = active.data?.current;
+      const calendarEvent = activeData?.calendarEvent;
 
-      if (task) {
-        const durationMinutes = task.durationMinutes || 30;
-        const slotStart = slotData.slotStart;
+      if (calendarEvent?.sourceType === 'habit' && calendarEvent.scheduledHabitId) {
+        const durationMinutes = Math.max(
+          15,
+          Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
+        );
         const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+        try {
+          await handleRescheduleHabitInstance(calendarEvent.scheduledHabitId, slotStart, slotEnd);
+        } catch (error) {
+          console.error('Failed to reschedule habit:', error);
+        }
+      } else if (calendarEvent?.sourceType === 'task' && calendarEvent.taskId) {
+        const durationMinutes = Math.max(
+          15,
+          Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
+        );
+        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+        try {
+          await handleRescheduleTask(calendarEvent.taskId, slotStart, slotEnd);
+        } catch (error) {
+          console.error('Failed to reschedule task:', error);
+        }
+      } else {
+        const taskId = active.id.replace('task-', '');
+        const task = activeDragTask || tasks.find((t) => t.id === taskId);
 
-        // Set preview state instead of immediately scheduling
-        setPreviewTask(task);
-        setPreviewSlot({ start: slotStart, end: slotEnd });
+        if (task) {
+          const durationMinutes = task.durationMinutes || 30;
+          const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+
+          // Set preview state instead of immediately scheduling
+          setPreviewTask(task);
+          setPreviewSlot({ start: slotStart, end: slotEnd });
+        }
       }
     }
 
     setActiveDragTask(null);
+    setActiveDragHabit(null);
   };
 
   return (
@@ -891,7 +988,7 @@ export default function CalendarPage() {
             <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full overflow-y-auto bg-white">
               <div className="p-4 space-y-6">
                 {/* Remove border-b from child components via CSS override */}
-                <style jsx>{`
+                <style jsx="true">{`
                   div :global(.border-b) {
                     border-bottom: none !important;
                   }
@@ -954,6 +1051,7 @@ export default function CalendarPage() {
                   onCompleteHabit={handleCompleteHabitById}
                   onUndoHabit={handleUndoHabitById}
                   onSkipHabit={handleSkipHabitById}
+                  onHabitReschedule={handleRescheduleHabitInstance}
                   onEditTask={handleEditTaskById}
                   onUnscheduleTask={handleUnscheduleTaskById}
                   onDeleteTask={handleDeleteTaskById}
@@ -971,6 +1069,13 @@ export default function CalendarPage() {
                 <p className="text-xs text-slate-600 mt-1">
                   {activeDragTask.durationMinutes} min{' '}
                   {activeDragTask.category ? `• ${activeDragTask.category.name}` : ''}
+                </p>
+              </div>
+            ) : activeDragHabit ? (
+              <div className="rounded-lg border border-indigo-200 bg-white shadow-xl px-4 py-3 w-64">
+                <p className="text-sm font-semibold text-slate-800">{activeDragHabit.title}</p>
+                <p className="text-xs text-slate-600 mt-1">
+                  {activeDragHabit.durationMinutes} min • Habit
                 </p>
               </div>
             ) : null}
@@ -1113,6 +1218,35 @@ export default function CalendarPage() {
                     />
                   </div>
                 </div>
+
+                {editingTask?.scheduledTask && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Scheduled start</Label>
+                      <Input
+                        type="datetime-local"
+                        value={editingState.scheduledStart || ''}
+                        onChange={(e) =>
+                          setEditingState((prev) =>
+                            prev ? { ...prev, scheduledStart: e.target.value } : prev
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Scheduled end</Label>
+                      <Input
+                        type="datetime-local"
+                        value={editingState.scheduledEnd || ''}
+                        onChange={(e) =>
+                          setEditingState((prev) =>
+                            prev ? { ...prev, scheduledEnd: e.target.value } : prev
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-3 pt-2">
                   <Button type="button" onClick={closeEditModal} variant="ghost">

@@ -42,7 +42,12 @@
       "Bash(xargs kill -9)",
       "Skill(superpowers:subagent-driven-development)",
       "Bash(pnpm build:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Skill(frontend-design)",
+      "Skill(superpowers:using-git-worktrees)",
+      "Bash(find:*)",
+      "Bash(psql:*)",
+      "Bash(pnpm add:web @dnd-kit/sortable)"
     ],
     "deny": [],
     "ask": []

@@ -247,7 +247,7 @@ export function ProblemStatement() {
               <div className="flex-1 overflow-hidden">
                 {/* Day labels */}
                 <div className="grid" style={{ gridTemplateColumns: `repeat(${positionedSchedule.length}, minmax(0, 1fr))` }}>
-                  {positionedSchedule.map((day, idx) => (
+                  {positionedSchedule.map((day) => (
                     <div key={day.label} className="px-2 py-2 text-xs font-semibold text-gray-600 border-b border-gray-200 text-center">
                       <span className="text-gray-800">{day.label}</span> <span className="text-gray-500">{day.date}</span>
                     </div>
@@ -278,7 +278,7 @@ export function ProblemStatement() {
                     className="absolute inset-0 grid"
                     style={{ gridTemplateColumns: `repeat(${positionedSchedule.length}, minmax(0, 1fr))` }}
                   >
-                    {positionedSchedule.map((day, dayIndex) => (
+                    {positionedSchedule.map((day) => (
                       <div
                         key={day.label}
                         className="relative border-l border-gray-100 first:border-l-0 px-1"

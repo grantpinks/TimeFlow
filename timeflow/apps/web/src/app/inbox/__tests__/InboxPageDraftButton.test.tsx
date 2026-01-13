@@ -87,6 +87,16 @@ vi.mock('@/components/inbox/InboxAiDraftPanel', () => ({
 }));
 
 describe('InboxPage AI draft button', () => {
+  it('does not emit React DOM attribute warnings', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<InboxPage />);
+    const errors = errorSpy.mock.calls.flat().join(' ');
+    errorSpy.mockRestore();
+    expect(errors).not.toMatch(/non-boolean attribute `initial`/i);
+    expect(errors).not.toMatch(/non-boolean attribute `jsx`/i);
+    expect(errors).not.toMatch(/non-boolean attribute `global`/i);
+  });
+
   it('renders the AI draft button in the thread header', async () => {
     render(<InboxPage />);
     expect(await screen.findByRole('button', { name: 'Draft Reply with AI' })).not.toBeNull();

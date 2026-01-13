@@ -1,4 +1,4 @@
-# TimeFlow Sprint Roadmap (Sprints 1-21)
+# TimeFlow Sprint Roadmap (Sprints 1-23)
 
 **Project**: TimeFlow
 **Duration**: 32 weeks (2 weeks per sprint)
@@ -899,7 +899,7 @@
 | 16.BH3 | Add Needs Response signal (rules + AI fallback) and expose as a filter toggle in Inbox UI. | Codex | 4-6h | P1 | ✅ |
 | 16.BH4 | Add email categorization eval set and regression tests (privacy-safe). | Codex | 3-5h | P1 | ✅ |
 
-**Phase B+ (carryover): AI Email Draft Workflow (Inbox)**
+**Phase B+ (carryover): AI Email Draft Workflow (Inbox)** ✅ **COMPLETE & VERIFIED (2026-01-12)**
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
@@ -908,9 +908,21 @@
 | 16.B6c | Add backend endpoints: `POST /email/draft/ai`, `POST /email/draft/preview`, `POST /email/drafts`, and safe send (confirmed checkbox required). | Codex | 4-6h | **P1** | ✅ |
 | 16.B6d | Add Gmail draft creation (`gmail.users.drafts.create`) and ensure preview payload determinism (no regen after preview). | Codex | 3-5h | P1 | ✅ |
 | 16.B6e | Add Inbox UI: Draft Panel with Generate → Edit → Full Preview + actions (Send, Create Gmail Draft, Open in Gmail to refine) + Reply-all toggle. | Codex | 6-10h | **P1** | ✅ |
-| 16.B6f | Add “Writing & Voice” settings (B sliders/toggles + C paste samples + A opt-in w/ warning; revoke controls). | Codex | 4-8h | P1 | ✅ |
+| 16.B6f | Add "Writing & Voice" settings (B sliders/toggles + C paste samples + A opt-in w/ warning; revoke controls). | Codex | 4-8h | P1 | ✅ |
 | 16.B6g | Add tests + guardrails: quotas enforced, no raw email/draft logging, send requires checkbox, and e2e route coverage. | Codex | 4-6h | P1 | ✅ |
 | 16.B6h | Add assistant email-draft mode + prompt formatting + tests; wire draft generation to assistant service. | Codex | 2-4h | P1 | ✅ |
+| 16.B6i | **VERIFICATION**: Fixed 13 TypeScript errors, verified end-to-end integration, manual testing successful. Full report in `AI_DRAFT_TESTING_REPORT.md`. | Claude | 2-3h | **P0** | ✅ |
+
+**Verification Completion Notes** (2026-01-12):
+- ✅ All 5 backend API endpoints verified functional
+- ✅ DraftPanel component fully implemented (905 lines, complete state machine: setup → generating → edit → preview → sending → success/error)
+- ✅ Integration in inbox page verified working ("Draft Reply with AI" button)
+- ✅ Fixed 10 TypeScript errors in `DraftPanel.tsx` (type narrowing conflicts in conditional rendering)
+- ✅ Fixed 3 TypeScript errors in `emailDraft.e2e.test.ts` (vi.fn generic type syntax)
+- ✅ Assistant service 'email-draft' mode verified operational (line 1401 in assistantService.ts)
+- ✅ Security features confirmed: determinism tokens, confirmation checkboxes, privacy-safe logging, quota enforcement
+- ✅ Manual end-to-end testing successful - workflow ready for production use
+- 📄 **Full verification report**: `AI_DRAFT_TESTING_REPORT.md`
 
 **Phase B+ (carryover): Inbox Queues + AI Thread Assist (moved from Sprint 17)**
 
@@ -939,38 +951,118 @@
 
 ### Sprint 17: Analytics & Insights — Habit Consistency (Streaks + Adherence)
 **Duration**: Week 33-34  
+**Status**: 🟡 In Progress
 **Focus**: Turn scheduled habits into **trackable, completable instances** and ship an Insights dashboard on `/habits` that drives retention via streaks and actionable recommendations.
 
 #### Goals
-- [ ] Users can **mark habit blocks complete** (calendar-first) and see streaks/adherence update reliably.
-- [ ] Habits page becomes an **Insights hub**: consistency charts + best windows + 1–3 explainable recommendations.
-- [ ] Habits feels like a **Coach**: a “Next Action” card drives daily behavior (not just charts).
-- [ ] Insights are **actionable**: every insight includes a 1-click “Do this now” action (**A/B/D**: schedule rescue block, adjust habit window, snooze/skip with reason).
+- [x] 🟡 Users can **mark habit blocks complete** (calendar-first) and see streaks/adherence update reliably.
+- [ ] Users can record **actual time spent** on a habit block when completing it, so analytics/recommendations reflect reality (not just planned duration).
+- [x] ✅ Habits page becomes an **Insights hub**: consistency charts + best windows + 1–3 explainable recommendations.
+- [x] 🟡 Habits feels like a **Coach**: a “Next Action” card drives daily behavior (not just charts).
+- [x] 🟡 Insights are **actionable**: every insight includes a 1-click “Do this now” action (**A/B/D**: schedule rescue block, adjust habit window, snooze/skip with reason).
 - [ ] Retention loop: users get an optional, privacy-safe **streak-at-risk reminder** (opt-in) with a clear call-to-action.
-- [ ] Trust: insights have clear “why/how calculated” explanations and are robust to edge cases (timezone/DST/missed days).
-- [ ] Establish privacy-safe analytics instrumentation (no sensitive content logging).
+- [x] ✅ Trust: insights have clear “why/how calculated” explanations and are robust to edge cases (timezone/DST/missed days).
+- [x] 🟡 Establish privacy-safe analytics instrumentation (no sensitive content logging).
 
 #### Tasks
 
-| ID | Task | Agent | Hours | Priority|
-|----|------|-------|-------|----------|
-| 17.1 | Extend habit scheduling data model to support completion tracking (habit instances + complete/uncomplete/skip). | Codex | 6-10h | **P0** |
-| 17.2 | Calendar popover: mark habit instance complete/undo; show streak context (“keeps your streak alive”). | Codex | 6-10h | **P0** |
-| 17.3 | Habits page: add Insights dashboard (14/28d adherence chart, minutes/week, streaks, best window). | Codex | 8-12h | **P0** |
-| 17.4 | Recommendations MVP (rules-based): 1–3 cards tied to metrics (best window, streak at risk, duration too long). | Claude/Codex | 4-8h | P1 |
-| 17.5 | Instrumentation + privacy guardrails: define events and ensure no sensitive content is logged. | Codex | 3-6h | P1 |
-| 17.6 | Coach + Next Actions: add a top “Coach Card” + “Next Actions” stack with **A/B/D** actions (rescue block, adjust window, snooze/skip with **preset reason codes**). | Codex | 4-8h | **P0** |
-| 17.7 | Streak-at-risk detection + UX: define “at risk” rules and surface a clear banner/CTA when a streak will break soon. | Codex | 3-6h | **P0** |
-| 17.8 | Minimal reminders (opt-in): streak-at-risk reminder notification (email or in-app) with unsubscribe/disable controls. | Codex | 4-8h | P1 |
-| 17.9 | Insight trust + edge cases: add “why/how calculated” explanations + tests for timezone/DST/missed-day handling. | Codex | 4-8h | P1 |
+| ID | Task | Agent | Hours | Priority| Status |
+|----|------|-------|-------|----------|--------|
+| 17.1 | Extend habit scheduling data model to support completion tracking (habit instances + complete/uncomplete/skip). Added `priorityRank` to Habit and `actualDurationMinutes` to HabitCompletion. | Codex | 6-10h | **P0** | ✅ |
+| 17.2 | Calendar popover: mark habit instance complete/undo; show streak context (“keeps your streak alive”). | Codex | 6-10h | **P0** | ✅ |
+| 17.3 | Habits page: add Insights dashboard (14/28d adherence chart, minutes/week, streaks, best window). | Codex | 8-12h | **P0** | ✅ |
+| 17.4 | Recommendations MVP (rules-based): 1–3 cards tied to metrics (best window, streak at risk, duration too long). | Claude/Codex | 4-8h | P1 | 🟡 |
+| 17.5 | Instrumentation + privacy guardrails: define events and ensure no sensitive content is logged. | Codex | 3-6h | P1 | 🟡 |
+| 17.6 | Coach + Next Actions: add a top “Coach Card” + “Next Actions” stack with **A/B/D** actions (rescue block, adjust window, snooze/skip with **preset reason codes**). | Codex | 4-8h | **P0** | 🟡 |
+| 17.7 | Streak-at-risk detection + UX: define “at risk” rules and surface a clear banner/CTA when a streak will break soon. | Codex | 3-6h | **P0** | ✅ |
+| 17.8 | Minimal reminders (opt-in): streak-at-risk reminder notification (email or in-app) with unsubscribe/disable controls. Backend completed with habitNotificationService.ts, GET /api/habits/notifications endpoint, and user preference fields (notifyStreakAtRisk). | Codex | 4-8h | P1 | 🟡 |
+| 17.9 | Insight trust + edge cases: add “why/how calculated” explanations + tests for timezone/DST/missed-day handling. | Codex | 4-8h | P1 | ✅ |
+| 17.10 | Habit priority ranking: add `priorityRank` (or similar) to habits, plus UI to set/reorder priorities (and ensure scheduling/coach uses it). Backend API completed with POST /api/habits/reorder endpoint. | Codex | 4-8h | **P0** | ✅ |
+| 17.11 | Non-adherence detection: define "missed" rules (e.g., block ended + not completed within grace window) and persist missed instances. Completed with habitNonAdherenceService.ts and GET /api/habits/missed endpoint. | Codex | 4-8h | **P0** | ✅ |
+| 17.12 | Non-adherence notifications (opt-in): notify when a high-priority habit is missed (in-app + email/push channel as available), with per-habit and global controls. Backend completed with habitNotificationService.ts, GET /api/habits/notifications endpoint, and user preference fields (notifyMissedHighPriority). | Codex | 4-8h | P1 | 🟡 |
+| 17.13 | Actual-duration capture: allow users to enter `actualDurationMinutes` when completing a habit instance (and edit it later), defaulting to planned duration. Backend API completed with actualDurationMinutes parameter in complete endpoint. | Codex | 4-8h | **P0** | ✅ |
+| 17.14 | Analytics + insights: incorporate actual duration into adherence minutes/week, "planned vs actual" deltas, and recommendations (e.g., suggest shorter default duration if user consistently runs over). Backend completed with plannedVsActualDelta calculation in habitInsightsService. | Codex | 4-8h | **P0** | ✅ |
+| 17.15 | Trust UX: show clear copy that actual duration improves recommendations; ensure data is privacy-safe and not shared externally. Completed with trust-building copy in EventDetailPopover showing privacy guarantee and recommendation benefits. | Codex | 2-4h | P1 | ✅ |
+
+#### Acceptance Criteria
+- [ ] Users can complete/uncomplete/skip habit blocks reliably; streaks/adherence update correctly.
+- [ ] Users can enter (and later edit) **actual time spent** for a habit instance; analytics uses actual durations for minutes/week and insights.
+- [ ] Habit priority ranking exists and is used by Coach/Next Actions (and any reminder selection logic).
+- [ ] Non-adherence (“missed”) is detected with a documented grace window; notifications are opt-in and configurable.
+- [ ] Insights and recommendations include “why” explanations and are robust to timezone/DST edge cases.
 
 **Plan doc**: See **[`docs/plans/2025-12-31-analytics-insights-habits.md`](./docs/plans/2025-12-31-analytics-insights-habits.md)** for full scope, metrics, and acceptance criteria.
 **Action-loop add-on plan**: See **[`docs/plans/2026-01-02-sprint-17-habits-retention-loop.md`](./docs/plans/2026-01-02-sprint-17-habits-retention-loop.md)**.
 
+#### Add-on: Habit Priority + “Non-Adherence” Notifications
+- **Priority**: Users can rank habits so coaching and reminders focus on what matters most.
+- **Notify when you don’t adhere**: When a high-priority habit is missed, TimeFlow can surface a respectful nudge (opt-in) with a suggested next action (reschedule rescue block / adjust window / mark skipped w/ reason).
+
 ---
 
-### Sprint 18: Public Beta Launch (Web + Mobile) — SaaS Readiness
+### Sprint 18: Subscriptions, Payments & Scale
 **Duration**: Week 35-36  
+**Focus**: Introduce subscription-based pricing and payments, wire value-adding features into tiers, and prepare the platform for public scale.
+
+#### Goals
+- [ ] Pricing plans (Free, Pro, Flow State) are defined and implemented.
+- [ ] Users can start, manage, and cancel subscriptions via a secure payment provider (e.g., Stripe).
+- [ ] Key premium features (recurring tasks, templates, streaks, analytics, AI usage) are gated and stable.
+- [ ] Core systems (API, scheduling, queues) are monitored and scaled for public traffic.
+
+#### Tasks
+
+**Pricing & Plan Design**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 18.1 | Define and implement subscription tiers (Free, Pro, Flow State) with pricing, limits, and feature entitlements based on `docs/PRICING_MODEL.md` | Architect | 4-6h | P0 |
+| 18.2 | Design upgrade/downgrade flows and in-app messaging for plan changes (including trial to paid, grace periods) | Claude | 4-6h | P1 |
+| 18.G1 | Document subscription tiers, billing flows, and data/analytics behavior for internal and external stakeholders (update `docs/PRICING_MODEL.md` as needed) | Gemini | 4-6h | P2 |
+
+**Payments & Subscription Infrastructure**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 18.3 | Integrate Stripe (or chosen provider) for subscription creation, billing, and secure payment methods | Codex | 8-12h | P0 |
+| 18.4 | Implement webhook handlers to sync subscription status (active, trialing, past_due, canceled) into the backend user/account models | Codex | 4-6h | P0 |
+| 18.5 | Build a subscription management UI in Settings (view plan, change plan, update payment method, cancel) | Codex | 6-8h | P1 |
+
+**Feature Gating & Value-Add Features**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 18.6 | Implement pricing page (`/pricing`) based on `docs/PRICING_MODEL.md`, including monthly/annual toggle | Codex | 8-12h | P0 |
+| 18.7 | Create an entitlement system (e.g., `canUseUnlimitedAI`, `hasRecurringTasks`, `hasAdvancedAnalytics`, `hasStreaks`) and enforce it across web + mobile | Codex | 6-8h | P1 |
+| 18.8 | Implement backend service for API usage tracking and "Flow Credits" deduction | Codex | 10-15h | P0 |
+| 18.9 | Develop UI components to display credit usage, limits, and overuse options in the user dashboard | Codex | 4-6h | P1 |
+| 18.10 | Add upgrade prompts and calls-to-action in UI where feature/credit limits are met | Codex | 4-6h | P1 |
+| 18.11 | Add recurring tasks and templates support in backend + UI, scoped to appropriate subscription tiers | Codex | 8-12h | P0 |
+| 18.12 | Implement basic analytics events (page views, key actions, Assistant usage) and a simple internal analytics dashboard | Codex | 4-6h | P1 |
+| 18.13 | Complete `UserStreak` model and streak calculation service; build streak display UI (navbar counter, details page, milestone animations) | Codex | 6-8h | P1 |
+| 18.14 | Implement streak reminder notifications ("Don't lose your 15-day streak!"), tied to subscription entitlements | Codex | 3-4h | P2 |
+| 18.C1 | Extend AI Assistant prompts to incorporate subscription context (e.g., suggesting upgrades when hitting limits, celebrating streaks/goals) | Claude | 4-6h | P1 |
+
+**Scaling & Reliability for Public Launch**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 18.15 | Review and update API rate limits, circuit breakers, and backpressure strategies for expected public traffic | Codex | 4-6h | P1 |
+| 18.16 | Implement monitoring and alerting for key services (scheduler latency, error rates, payment failures, queue backlogs) | Codex | 4-6h | P1 |
+| 18.17 | Define and document SLOs/SLAs for uptime and response times; establish on-call and incident response runbooks | Reviewer | 4-6h | P1 |
+
+#### Acceptance Criteria
+- [ ] Pricing page (`/pricing`) is live, accurate, and reflects all tiers and annual discounts per `docs/PRICING_MODEL.md`.
+- [ ] Users can subscribe, manage subscriptions, and see their plan details in the app.
+- [ ] AI Assistant and other gated features respect user's subscription tier and credit limits.
+- [ ] Overuse charges are correctly applied and reflected to the user.
+- [ ] Basic recurring tasks, templates, and streak tracking are functional and gated.
+- [ ] Core systems are ready for public scale with appropriate monitoring and error handling.
+
+---
+
+### Sprint 19: Public Beta Launch (Web + Mobile) — SaaS Readiness
+**Duration**: Week 37-38  
 **Focus**: Ship a **public beta** that runs like a typical SaaS: production hosting (Vercel + Render + Supabase), Google-only auth, beta gating, AI cost controls, onboarding, docs, and mobile distribution readiness.
 
 #### Goals
@@ -989,37 +1081,37 @@
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 18.1 | Unblock Render backend deployment: fix Supabase connection string (session pooler 5432 + correct username), ensure logs + port binding work, `/health` passes. | Codex | 8-12h | **P0** |
-| 18.2 | Fix web production API routing: update Next.js rewrite/proxy so `/api/*` targets `NEXT_PUBLIC_API_URL` in production (no localhost). | Codex | 2-4h | **P0** |
-| 18.3 | Production OAuth hardening: ensure Google OAuth redirect URIs and `APP_BASE_URL` are correct for Vercel + Render. | Codex | 3-6h | **P0** |
-| 18.4 | Beta gating: add email allowlist for access + “Heavy beta” allowlist override for elevated entitlements. | Codex | 3-6h | **P0** |
-| 18.5 | AI cost controls foundation: per-user monthly quotas + global cap; graceful “limit reached” UX; future-ready plan/entitlement plumbing for Sprint 19. | Codex | 6-10h | **P0** |
-| 18.6 | Beta operations pack: smoke test checklist + rollback steps + support/feedback workflow (docs + lightweight tooling). | Codex | 3-6h | P1 |
+| 19.1 | Unblock Render backend deployment: fix Supabase connection string (session pooler 5432 + correct username), ensure logs + port binding work, `/health` passes. | Codex | 8-12h | **P0** |
+| 19.2 | Fix web production API routing: update Next.js rewrite/proxy so `/api/*` targets `NEXT_PUBLIC_API_URL` in production (no localhost). | Codex | 2-4h | **P0** |
+| 19.3 | Production OAuth hardening: ensure Google OAuth redirect URIs and `APP_BASE_URL` are correct for Vercel + Render. | Codex | 3-6h | **P0** |
+| 19.4 | Beta gating: add email allowlist for access + “Heavy beta” allowlist override for elevated entitlements. | Codex | 3-6h | **P0** |
+| 19.5 | AI cost controls foundation: per-user monthly quotas + global cap; graceful “limit reached” UX; future-ready plan/entitlement plumbing for Sprint 19. | Codex | 6-10h | **P0** |
+| 19.6 | Beta operations pack: smoke test checklist + rollback steps + support/feedback workflow (docs + lightweight tooling). | Codex | 3-6h | P1 |
 
 **Web Launch Polish (Marketing + Core Management Pages)**
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 18.15 | Build real public marketing routes: `/features`, `/pricing`, `/about`, `/contact`, `/help`, `/status`, `/security`, `/privacy`, `/terms` (branded content + clear CTAs). | Codex | 8-14h | **P0** |
-| 18.16 | Fix homepage/nav correctness: remove/replace dead links (e.g., Blog/Careers/Press for now), ensure mobile menu works or is removed, and all footer links resolve. | Codex | 4-6h | **P0** |
-| 18.17 | Pricing page “beta-safe” posture: **Beta is free / pricing coming soon** (subscriptions ship Sprint 19), build real `/pricing`, and ensure all CTAs work (Join Beta + Contact). | Claude/Codex | 4-6h | **P0** |
-| 18.18 | Categories UX polish: upgrade task categories page (`/categories`) to match brand (layout, empty states, guidance, analytics) and ensure training UI feels premium. | Codex | 4-8h | P1 |
-| 18.19 | Email Categories UX polish: upgrade Settings → Email Categories to be branded, explanatory, and user-friendly (especially Gmail sync status + backfill) without “internal tool” vibes. | Codex | 6-10h | P1 |
-| 18.20 | Meetings page UX rebuild: make `/meetings` match app shell, add clear actions (view scheduling links, manage bookings, download ICS, join link), and instrument analytics. | Codex | 6-10h | **P0** |
+| 19.15 | Build real public marketing routes: `/features`, `/pricing`, `/about`, `/contact`, `/help`, `/status`, `/security`, `/privacy`, `/terms` (branded content + clear CTAs). | Codex | 8-14h | **P0** |
+| 19.16 | Fix homepage/nav correctness: remove/replace dead links (e.g., Blog/Careers/Press for now), ensure mobile menu works or is removed, and all footer links resolve. | Codex | 4-6h | **P0** |
+| 19.17 | Pricing page “beta-safe” posture: **Beta is free / pricing coming soon** (subscriptions ship Sprint 19), build real `/pricing`, and ensure all CTAs work (Join Beta + Contact). | Claude/Codex | 4-6h | **P0** |
+| 19.18 | Categories UX polish: upgrade task categories page (`/categories`) to match brand (layout, empty states, guidance, analytics) and ensure training UI feels premium. | Codex | 4-8h | P1 |
+| 19.19 | Email Categories UX polish: upgrade Settings → Email Categories to be branded, explanatory, and user-friendly (especially Gmail sync status + backfill) without “internal tool” vibes. | Codex | 6-10h | P1 |
+| 19.20 | Meetings page UX rebuild: make `/meetings` match app shell, add clear actions (view scheduling links, manage bookings, download ICS, join link), and instrument analytics. | Codex | 6-10h | **P0** |
 
 **Mobile UX, Visual System & Distribution**
 
-| 18.7 | Align `/today`, Tasks, Calendar, and Assistant mobile screens with updated Phase 2 designs (layout, sections, typography, color). | Codex | 6-8h | P0 |
-| 18.8 | Audit and refine mobile navigation patterns (tabs, stacks, modals) to ensure smooth transitions between core screens. | Codex | 4-6h | P1 |
-| 18.9 | Implement deep links/shortcuts for key flows (e.g., open Today, open specific task). | Codex | 4-6h | P1 |
-| 18.10 | App icons, splash screens, and launch screens for iOS and Android following brand guidelines. | Codex | 4-6h | P1 |
-| 18.11 | Prepare App Store / Play Store metadata: descriptions, screenshots, preview videos, privacy policy links. | Gemini | 4-6h | P1 |
-| 18.12 | Integrate basic analytics + crash reporting aligned with web events (privacy-safe). | Codex | 4-6h | P1 |
+| 19.7 | Align `/today`, Tasks, Calendar, and Assistant mobile screens with updated Phase 2 designs (layout, sections, typography, color). | Codex | 6-8h | P0 |
+| 19.8 | Audit and refine mobile navigation patterns (tabs, stacks, modals) to ensure smooth transitions between core screens. | Codex | 4-6h | P1 |
+| 19.9 | Implement deep links/shortcuts for key flows (e.g., open Today, open specific task). | Codex | 4-6h | P1 |
+| 19.10 | App icons, splash screens, and launch screens for iOS and Android following brand guidelines. | Codex | 4-6h | P1 |
+| 19.11 | Prepare App Store / Play Store metadata: descriptions, screenshots, preview videos, privacy policy links. | Gemini | 4-6h | P1 |
+| 19.12 | Integrate basic analytics + crash reporting aligned with web events (privacy-safe). | Codex | 4-6h | P1 |
 
 **Stability & Performance**
 
-| 18.13 | Profile mobile app performance (startup time, navigation latency, memory usage) and address top issues. | Codex | 4-6h | P1 |
-| 18.14 | Implement offline-friendly behaviors for core flows (task creation/editing, viewing Today and Calendar snapshots). | Codex | 4-6h | P1 |
+| 19.13 | Profile mobile app performance (startup time, navigation latency, memory usage) and address top issues. | Codex | 4-6h | P1 |
+| 19.14 | Implement offline-friendly behaviors for core flows (task creation/editing, viewing Today and Calendar snapshots). | Codex | 4-6h | P1 |
 
 #### Acceptance Criteria
 - Backend is deployed on Render and stable; `/health` returns OK; web can call production APIs successfully.
@@ -1031,67 +1123,6 @@
 - Categories and Meetings pages feel cohesive with the design system (not “elementary”), with clear empty states and basic analytics instrumentation.
 
 **Plan doc**: See **[`docs/plans/2026-01-01-sprint-18-public-beta-launch.md`](./docs/plans/2026-01-01-sprint-18-public-beta-launch.md)** for the full checklist and gates.
-
----
-
-### Sprint 19: Subscriptions, Payments & Scale
-**Duration**: Week 37-38  
-**Focus**: Introduce subscription-based pricing and payments, wire value-adding features into tiers, and prepare the platform for public scale.
-
-#### Goals
-- [ ] Pricing plans (Free, Pro, Flow State) are defined and implemented.
-- [ ] Users can start, manage, and cancel subscriptions via a secure payment provider (e.g., Stripe).
-- [ ] Key premium features (recurring tasks, templates, streaks, analytics, AI usage) are gated and stable.
-- [ ] Core systems (API, scheduling, queues) are monitored and scaled for public traffic.
-
-#### Tasks
-
-**Pricing & Plan Design**
-
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 19.1 | Define and implement subscription tiers (Free, Pro, Flow State) with pricing, limits, and feature entitlements based on `docs/PRICING_MODEL.md` | Architect | 4-6h | P0 |
-| 19.2 | Design upgrade/downgrade flows and in-app messaging for plan changes (including trial to paid, grace periods) | Claude | 4-6h | P1 |
-| 19.G1 | Document subscription tiers, billing flows, and data/analytics behavior for internal and external stakeholders (update `docs/PRICING_MODEL.md` as needed) | Gemini | 4-6h | P2 |
-
-**Payments & Subscription Infrastructure**
-
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 19.3 | Integrate Stripe (or chosen provider) for subscription creation, billing, and secure payment methods | Codex | 8-12h | P0 |
-| 19.4 | Implement webhook handlers to sync subscription status (active, trialing, past_due, canceled) into the backend user/account models | Codex | 4-6h | P0 |
-| 19.5 | Build a subscription management UI in Settings (view plan, change plan, update payment method, cancel) | Codex | 6-8h | P1 |
-
-**Feature Gating & Value-Add Features**
-
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 19.6 | Implement pricing page (`/pricing`) based on `docs/PRICING_MODEL.md`, including monthly/annual toggle | Codex | 8-12h | P0 |
-| 19.7 | Create an entitlement system (e.g., `canUseUnlimitedAI`, `hasRecurringTasks`, `hasAdvancedAnalytics`, `hasStreaks`) and enforce it across web + mobile | Codex | 6-8h | P1 |
-| 19.8 | Implement backend service for API usage tracking and "Flow Credits" deduction | Codex | 10-15h | P0 |
-| 19.9 | Develop UI components to display credit usage, limits, and overuse options in the user dashboard | Codex | 4-6h | P1 |
-| 19.10 | Add upgrade prompts and calls-to-action in UI where feature/credit limits are met | Codex | 4-6h | P1 |
-| 19.11 | Add recurring tasks and templates support in backend + UI, scoped to appropriate subscription tiers | Codex | 8-12h | P0 |
-| 19.12 | Implement basic analytics events (page views, key actions, Assistant usage) and a simple internal analytics dashboard | Codex | 4-6h | P1 |
-| 19.13 | Complete `UserStreak` model and streak calculation service; build streak display UI (navbar counter, details page, milestone animations) | Codex | 6-8h | P1 |
-| 19.14 | Implement streak reminder notifications ("Don't lose your 15-day streak!"), tied to subscription entitlements | Codex | 3-4h | P2 |
-| 19.C1 | Extend AI Assistant prompts to incorporate subscription context (e.g., suggesting upgrades when hitting limits, celebrating streaks/goals) | Claude | 4-6h | P1 |
-
-**Scaling & Reliability for Public Launch**
-
-| ID | Task | Agent | Hours | Priority |
-|----|------|-------|-------|----------|
-| 19.15 | Review and update API rate limits, circuit breakers, and backpressure strategies for expected public traffic | Codex | 4-6h | P1 |
-| 19.16 | Implement monitoring and alerting for key services (scheduler latency, error rates, payment failures, queue backlogs) | Codex | 4-6h | P1 |
-| 19.17 | Define and document SLOs/SLAs for uptime and response times; establish on-call and incident response runbooks | Reviewer | 4-6h | P1 |
-
-#### Acceptance Criteria
-- [ ] Pricing page (`/pricing`) is live, accurate, and reflects all tiers and annual discounts per `docs/PRICING_MODEL.md`.
-- [ ] Users can subscribe, manage subscriptions, and see their plan details in the app.
-- [ ] AI Assistant and other gated features respect user's subscription tier and credit limits.
-- [ ] Overuse charges are correctly applied and reflected to the user.
-- [ ] Basic recurring tasks, templates, and streak tracking are functional and gated.
-- [ ] Core systems are ready for public scale with appropriate monitoring and error handling.
 
 ---
 
@@ -1162,8 +1193,68 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 
 ---
 
-### Sprint 22: Group Scheduling & Multi-Attendee Availability
+### Sprint 22: Integrations Expansion — Calendar-First → Tasks/Projects → Comms
 **Duration**: Week 43-44  
+**Focus**: Expand TimeFlow’s reach by supporting the **top non-Google calendar ecosystems** and the **top task sources**, then add lightweight comms capture loops that feed the Inbox/Tasks.
+
+#### Goals
+- [ ] Users can connect **at least one non-Google calendar source** and TimeFlow scheduling respects it (availability is accurate).
+- [ ] Users can connect **one major task system** and import tasks into TimeFlow with safe idempotency.
+- [ ] Users can connect **one comms system** to convert messages into tasks (opt-in, minimal permissions).
+- [ ] The Integrations UI becomes a stable hub: connect, configure, status, last sync, and disconnect flows are consistent.
+
+#### Tasks (sequenced by integration: finish one fully before starting the next)
+
+**Foundation (shared across integrations)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 22.1 | Land the unified `Account` model (migrate Google tokens into `Account`, update auth + services to read from accounts). | Codex | 10-16h | **P0** |
+| 22.2 | Build “Integrations Hub” in Settings: list connected accounts, status (connected/errored), last sync, disconnect, and per-integration configuration panels. | Codex | 8-12h | **P0** |
+| 22.3 | Add integration sync telemetry: lastSuccessAt/lastErrorAt/lastErrorCode + admin/debug view (internal) for support. | Codex | 4-8h | P1 |
+
+**Calendar: CalDAV (read-only)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 22.4 | CalDAV integration MVP: connect, list calendars, select included calendars, fetch events (read-only). | Codex | 10-16h | **P0** |
+| 22.5 | Normalize + merge multi-source calendar events into one availability feed for scheduling (Google + Microsoft + CalDAV). | Codex | 6-10h | **P0** |
+
+**Calendar: iOS EventKit (read-only)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 22.6 | iOS EventKit MVP: permission, select included calendars, show events in mobile availability (read-only). | Codex | 10-16h | **P0** |
+| 22.7 | Decide + implement EventKit→backend story: either ship “busy interval snapshots” to backend or explicitly scope as mobile-only with clear UX copy. | Architect/Codex | 6-12h | **P0** |
+
+**Tasks/Projects: Todoist (one-way import MVP)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 22.8 | Add external task metadata (provider + externalId + sourceProject) to support safe re-sync. | Codex | 4-8h | **P0** |
+| 22.9 | Todoist integration MVP: connect, select projects, import open tasks (one-way), map fields, prevent duplicates. | Codex | 10-16h | **P0** |
+
+**Comms: Slack (message → task capture MVP)**
+
+| ID | Task | Agent | Hours | Priority |
+|----|------|-------|-------|----------|
+| 22.10 | Slack integration MVP: message action → create task, plus minimal install/connect UI. | Codex | 10-16h | P1 |
+
+#### Decision Gate / Acceptance Criteria (per-integration DoD)
+- [ ] **Foundation complete**: Integrations Hub works; accounts + telemetry model is live; Google integration still works post-migration.
+- [ ] **CalDAV complete**: can connect, select calendars, and scheduling respects CalDAV events.
+- [ ] **EventKit complete**: iOS can read selected calendars and compute/show availability; web impact is either shipped (snapshots) or explicitly communicated.
+- [ ] **Todoist complete**: import is idempotent and field mapping + delete/complete policy is documented.
+- [ ] **Slack complete**: message→task works end-to-end with least-privilege scopes.
+- [ ] Provider scopes/permissions are documented and least-privilege for MVP.
+- [ ] Basic monitoring exists: last sync timestamps + error capture for each integration.
+
+**Plan doc**: See **[`docs/plans/2026-01-05-sprint-22-integrations-expansion.md`](./docs/plans/2026-01-05-sprint-22-integrations-expansion.md)**.
+
+---
+
+### Sprint 23: Group Scheduling & Multi-Attendee Availability
+**Duration**: Week 45-46  
 **Focus**: Multi-attendee scheduling that respects constraints, time zones, and conflict safety.
 
 #### Goals
@@ -1175,7 +1266,7 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 22.1 | Add multi-attendee availability computation (intersection of free/busy windows; timezone-safe). | Codex | 8-12h | P0 |
-| 22.2 | Add booking flows for multiple attendees (invites, confirmations, reschedules, cancellations). | Codex | 8-12h | P0 |
-| 22.C1 | Define UX and rules for attendee constraints (whose work hours apply; buffers; caps; organizer vs participant). | Claude | 4-6h | P1 |
-| 22.G1 | Document group scheduling behavior, privacy boundaries, and failure modes. | Gemini | 4-6h | P1 |
+| 23.1 | Add multi-attendee availability computation (intersection of free/busy windows; timezone-safe). | Codex | 8-12h | P0 |
+| 23.2 | Add booking flows for multiple attendees (invites, confirmations, reschedules, cancellations). | Codex | 8-12h | P0 |
+| 23.C1 | Define UX and rules for attendee constraints (whose work hours apply; buffers; caps; organizer vs participant). | Claude | 4-6h | P1 |
+| 23.G1 | Document group scheduling behavior, privacy boundaries, and failure modes. | Gemini | 4-6h | P1 |

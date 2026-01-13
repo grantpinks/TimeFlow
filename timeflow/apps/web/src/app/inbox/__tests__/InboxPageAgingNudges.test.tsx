@@ -80,6 +80,35 @@ describe('InboxPage aging nudges', () => {
     vi.useRealTimers();
   });
 
+  it('does not emit React DOM attribute warnings', () => {
+    if (!window.matchMedia) {
+      window.matchMedia = () =>
+        ({
+          matches: false,
+          media: '',
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        }) as MediaQueryList;
+    }
+
+    vi.mocked(api.getInboxEmails).mockResolvedValue({
+      messages: [],
+      nextPageToken: null,
+    });
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<InboxPage />);
+    const errors = errorSpy.mock.calls.flat().join(' ');
+    errorSpy.mockRestore();
+    expect(errors).not.toMatch(/non-boolean attribute `initial`/i);
+    expect(errors).not.toMatch(/non-boolean attribute `jsx`/i);
+    expect(errors).not.toMatch(/non-boolean attribute `global`/i);
+  });
+
   it('shows nudges for aging needs reply and unread important threads', async () => {
     const now = Date.now();
     const needsReplyDate = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();

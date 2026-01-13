@@ -1,4 +1,4 @@
-import { DateTime } from 'luxon';
+import { fromJSDate } from './luxonHelpers.js';
 
 interface ICSEventData {
   summary: string;
@@ -19,7 +19,7 @@ interface ICSEventData {
 export function generateICS(event: ICSEventData): string {
   const formatDate = (date: Date): string => {
     // Format as YYYYMMDDTHHMMSSZ (UTC)
-    return DateTime.fromJSDate(date).toUTC().toFormat("yyyyMMdd'T'HHmmss'Z'");
+    return fromJSDate(date).toUTC().toFormat("yyyyMMdd'T'HHmmss'Z'");
   };
 
   const now = formatDate(new Date());

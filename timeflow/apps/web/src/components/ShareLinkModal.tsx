@@ -148,7 +148,7 @@ export function ShareLinkModal({
       const baseUrl = window.location.origin;
       const bookingUrl = `${baseUrl}/book/${selectedLinkData.slug}`;
 
-      const result = await api.sendMeetingLinkEmail({
+      await api.sendMeetingLinkEmail({
         recipients: recipientList,
         subject: subject.trim(),
         message: message.trim(),

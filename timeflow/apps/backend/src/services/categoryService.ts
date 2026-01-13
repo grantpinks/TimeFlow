@@ -11,7 +11,8 @@ const DEFAULT_CATEGORIES = [
   { name: 'Professional', color: '#3B82F6', order: 0 },
   { name: 'Schoolwork', color: '#8B5CF6', order: 1 },
   { name: 'Personal', color: '#10B981', order: 2 },
-  { name: 'Misc', color: '#6B7280', order: 3 },
+  { name: 'Habits', color: '#F97316', order: 3 },
+  { name: 'Misc', color: '#6B7280', order: 4 },
 ];
 
 /**
@@ -19,11 +20,12 @@ const DEFAULT_CATEGORIES = [
  * Called on first login to seed default categories
  */
 export async function ensureDefaultCategories(userId: string): Promise<void> {
-  // Check if user has any categories
-  const count = await prisma.category.count({ where: { userId } });
+  const existing = await prisma.category.findMany({
+    where: { userId },
+    select: { id: true, name: true, isDefault: true, order: true },
+  });
 
-  if (count === 0) {
-    // Create default categories
+  if (existing.length === 0) {
     await prisma.category.createMany({
       data: DEFAULT_CATEGORIES.map((cat) => ({
         ...cat,
@@ -31,7 +33,37 @@ export async function ensureDefaultCategories(userId: string): Promise<void> {
         isDefault: true,
       })),
     });
+    return;
   }
+
+  const existingByName = new Map(existing.map((cat) => [cat.name, cat]));
+  const missingDefaults = DEFAULT_CATEGORIES.filter(
+    (cat) => !existingByName.has(cat.name)
+  );
+
+  if (missingDefaults.length === 0) {
+    return;
+  }
+
+  const misc = existingByName.get('Misc');
+  if (
+    missingDefaults.some((cat) => cat.name === 'Habits') &&
+    misc?.isDefault &&
+    misc.order === 3
+  ) {
+    await prisma.category.update({
+      where: { id: misc.id },
+      data: { order: 4 },
+    });
+  }
+
+  await prisma.category.createMany({
+    data: missingDefaults.map((cat) => ({
+      ...cat,
+      userId,
+      isDefault: true,
+    })),
+  });
 }
 
 /**

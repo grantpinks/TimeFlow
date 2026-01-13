@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '@timeflow/shared';
 
 export interface TaskCardProps {
@@ -66,7 +65,7 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
 
     const dragStyle = transform
       ? {
-          transform: CSS.Translate.toString(transform),
+          transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
           opacity: isDragging ? 0.5 : 1,
           cursor: draggable ? 'grab' : 'default',
         }

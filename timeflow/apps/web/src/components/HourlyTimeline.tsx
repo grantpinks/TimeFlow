@@ -13,7 +13,7 @@ import type { Task, CalendarEvent } from '@timeflow/shared';
 
 interface TimelineItem {
   id: string;
-  type: 'task' | 'event';
+  type: 'task' | 'event' | 'habit';
   title: string;
   start: Date;
   end: Date;
@@ -22,6 +22,9 @@ interface TimelineItem {
   status?: string;
   isOverdue?: boolean;
   categoryColor?: string;
+  sourceType?: 'task' | 'habit' | 'external';
+  sourceId?: string;
+  isCompleted?: boolean;
 }
 
 interface TimeSlot {
@@ -36,6 +39,7 @@ interface HourlyTimelineProps {
   wakeTime?: string; // HH:mm format, default 08:00
   sleepTime?: string; // HH:mm format, default 23:00
   onCompleteTask?: (taskId: string) => void;
+  onCompleteHabit?: (scheduledHabitId: string) => void;
   enableDropTargets?: boolean;
 }
 
@@ -45,6 +49,7 @@ export function HourlyTimeline({
   wakeTime = '08:00',
   sleepTime = '23:00',
   onCompleteTask,
+  onCompleteHabit,
   enableDropTargets = false,
 }: HourlyTimelineProps) {
   const now = new Date();
@@ -84,19 +89,22 @@ export function HourlyTimeline({
         }
       });
 
-    // Add calendar events
+    // Add calendar events (includes tasks, habits, and external events from merged backend)
     events.forEach((event) => {
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
 
       if (eventStart >= startOfDay && eventStart < endOfDay) {
         items.push({
-          id: event.id,
-          type: 'event',
+          id: event.id ?? `event-${eventStart.getTime()}-${eventEnd.getTime()}`,
+          type: event.sourceType === 'habit' ? 'habit' : event.sourceType === 'task' ? 'task' : 'event',
           title: event.summary,
           start: eventStart,
           end: eventEnd,
           description: event.description,
+          sourceType: event.sourceType,
+          sourceId: event.sourceId,
+          isCompleted: event.isCompleted,
         });
       }
     });
@@ -145,6 +153,7 @@ export function HourlyTimeline({
           slot={slot}
           isCurrent={slot.hour === currentHour}
           onCompleteTask={onCompleteTask}
+          onCompleteHabit={onCompleteHabit}
           enableDropTargets={enableDropTargets}
           formatHour={formatHour}
           formatTime={formatTime}
@@ -164,6 +173,7 @@ type TimelineSlotProps = {
   slot: TimeSlot;
   isCurrent: boolean;
   onCompleteTask?: (taskId: string) => void;
+  onCompleteHabit?: (scheduledHabitId: string) => void;
   enableDropTargets: boolean;
   formatHour: (hour: number) => string;
   formatTime: (date: Date) => string;
@@ -173,6 +183,7 @@ const TimelineSlot = memo(function TimelineSlot({
   slot,
   isCurrent,
   onCompleteTask,
+  onCompleteHabit,
   enableDropTargets,
   formatHour,
   formatTime,
@@ -215,7 +226,13 @@ const TimelineSlot = memo(function TimelineSlot({
         ) : (
           <div className="space-y-2">
             {slot.items.map((item) => (
-              <TimelineCard key={item.id} item={item} onCompleteTask={onCompleteTask} formatTime={formatTime} />
+              <TimelineCard
+                key={item.id}
+                item={item}
+                onCompleteTask={onCompleteTask}
+                onCompleteHabit={onCompleteHabit}
+                formatTime={formatTime}
+              />
             ))}
           </div>
         )}
@@ -227,26 +244,35 @@ const TimelineSlot = memo(function TimelineSlot({
 const TimelineCard = memo(function TimelineCard({
   item,
   onCompleteTask,
+  onCompleteHabit,
   formatTime,
 }: {
   item: TimelineItem;
   onCompleteTask?: (taskId: string) => void;
+  onCompleteHabit?: (scheduledHabitId: string) => void;
   formatTime: (date: Date) => string;
 }) {
   const prefersReducedMotion = useReducedMotion();
 
-  // Brand Primary Teal for default tasks, or use category color
-  const defaultTaskColor = '#0BAF9A'; // Brand Primary Teal
+  // Color scheme
+  const defaultTaskColor = '#0BAF9A'; // Brand Primary Teal for tasks
+  const habitColor = '#6366F1'; // Indigo-500 for habits
   const externalEventColor = '#64748b'; // Gray for external events
 
+  // Background color based on type and category
   const bgColor = item.categoryColor
     ? `${item.categoryColor}20` // Light version of category color
+    : item.type === 'habit'
+    ? '#EEF2FF' // Light indigo background for habits
     : item.type === 'task'
-    ? '#E6F9F6' // Light teal background
+    ? '#E6F9F6' // Light teal background for tasks
     : '#f1f5f9'; // Light gray for external events
 
+  // Border color
   const borderColor = item.categoryColor
     ? item.categoryColor
+    : item.type === 'habit'
+    ? habitColor
     : item.type === 'task'
     ? defaultTaskColor
     : externalEventColor;
@@ -254,12 +280,28 @@ const TimelineCard = memo(function TimelineCard({
   // Overflowed tasks get Coral border
   const finalBorderColor = item.isOverdue ? '#F97316' : borderColor;
 
+  // Opacity for completed items
+  const opacity = item.isCompleted ? 0.5 : 1;
+
+  // Determine if we should show completion checkbox
+  const canComplete = (item.type === 'task' && !item.isCompleted && onCompleteTask) ||
+                      (item.type === 'habit' && !item.isCompleted && onCompleteHabit);
+
+  const handleComplete = () => {
+    if (item.type === 'task' && onCompleteTask) {
+      onCompleteTask(item.id);
+    } else if (item.type === 'habit' && item.sourceId && onCompleteHabit) {
+      onCompleteHabit(item.sourceId);
+    }
+  };
+
   return (
     <div
       className="flex items-start gap-2 py-2 px-3 rounded-lg border-l-4"
       style={{
         backgroundColor: bgColor,
         borderLeftColor: finalBorderColor,
+        opacity,
       }}
     >
       <div className="flex-1 min-w-0">
@@ -270,19 +312,27 @@ const TimelineCard = memo(function TimelineCard({
           {item.type === 'task' && item.priority === 1 && (
             <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">HIGH</span>
           )}
+          {item.type === 'habit' && (
+            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">HABIT</span>
+          )}
           {item.isOverdue && (
             <span className="text-xs bg-red-200 text-red-800 px-2 py-0.5 rounded">OVERDUE</span>
           )}
+          {item.isCompleted && (
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">✓ DONE</span>
+          )}
         </div>
-        <h4 className="font-medium text-slate-800 text-sm mt-1">{item.title}</h4>
+        <h4 className={`font-medium text-slate-800 text-sm mt-1 ${item.isCompleted ? 'line-through' : ''}`}>
+          {item.title}
+        </h4>
         {item.description && (
           <p className="text-xs text-slate-600 mt-1 line-clamp-1">{item.description}</p>
         )}
       </div>
-      {item.type === 'task' && item.status !== 'completed' && onCompleteTask && (
+      {canComplete && (
         <motion.button
           type="button"
-          onClick={() => onCompleteTask(item.id)}
+          onClick={handleComplete}
           className="text-slate-400 hover:text-green-600 transition-colors flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded"
           title="Mark complete"
           aria-label={`Mark ${item.title} as complete`}

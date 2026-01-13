@@ -1,0 +1,557 @@
+{
+  "summary": {
+    "total": 30,
+    "ok": 23,
+    "failed": 7,
+    "previews": 0,
+    "turnsTotal": 32,
+    "turnsPreviews": 0,
+    "expectationFailures": 6,
+    "timestamp": "2026-01-03T02:55:15.752Z",
+    "endpoint": "http://localhost:3002/api/assistant/chat"
+  },
+  "results": [
+    {
+      "prompt": "What tasks do I have?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 6726,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my tasks for tomorrow.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 24896,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "When am I free this week?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 811,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Here are your open slots for this week:\n- Fri, Jan 2: 9:30 AM - 11:00 PM\n- Sat, Jan 3: 9:30 AM - 11:00 PM\n- Sun, Jan 4: 9:30 AM - 11:00 PM\n- Mon, Jan 5: 9:30 AM - 11:00 PM\n- Tue, Jan 6: 9:30 AM - 11:00 PM\n- Wed, Jan 7: 9:30 AM - 11:00 PM\n- ",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I'd like to schedule these tasks tomorrow from 9am-12pm and 1pm-5pm.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 30598,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I couldn't reach the scheduling model just now, so I didn't make changes. Please try again in a moment or refresh the assistant.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Can we schedule it?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 19328,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Add my tasks to my calendar.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 27820,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Help me schedule my homework and laundry for today.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 2946,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "What is due today?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 4606,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my high priority tasks first.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 19828,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "When can I fit in a 2 hour study block?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 8425,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Please organize my tasks around my fixed events.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 30816,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I couldn't reach the scheduling model just now, so I didn't make changes. Please try again in a moment or refresh the assistant.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my tasks but keep evenings free.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 16110,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Can you make a schedule for next week?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 30889,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I couldn't reach the scheduling model just now, so I didn't make changes. Please try again in a moment or refresh the assistant.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Show me open slots tomorrow.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 813,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Here are your open slots for tomorrow:\n- Sat, Jan 3: 9:30 AM - 11:00 PM",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "What is on my calendar?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 4038,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule my habits for this week.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 17600,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Plan my tasks and avoid my CS 101 lecture.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 125854,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I couldn't reach the scheduling model just now, so I didn't make changes. Please try again in a moment or refresh the assistant.",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule these tasks for tomorrow morning.",
+      "status": 0,
+      "ok": false,
+      "durationMs": 2,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "error": "TypeError: fetch failed",
+      "messagePreview": null,
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I have no tasks. Can you schedule anyway?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 76065,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": null,
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "flow": "Conversation -> Scheduling",
+      "ok": false,
+      "status": 200,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "turns": [
+        {
+          "prompt": "What tasks do I have?",
+          "status": 200,
+          "ok": true,
+          "durationMs": 3918,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+          "expectation": {
+            "status": 200,
+            "preview": false
+          },
+          "expectationOk": true,
+          "expectationFailures": []
+        },
+        {
+          "prompt": "Schedule my tasks for tomorrow.",
+          "status": 200,
+          "ok": false,
+          "durationMs": 7975,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+          "expectation": {
+            "status": 200,
+            "preview": true
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "preview false != true"
+          ]
+        }
+      ]
+    },
+    {
+      "flow": "Availability -> Scheduling",
+      "ok": false,
+      "status": 200,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "turns": [
+        {
+          "prompt": "When am I free this week?",
+          "status": 200,
+          "ok": true,
+          "durationMs": 689,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "Here are your open slots for this week:\n- Fri, Jan 2: 9:30 AM - 11:00 PM\n- Sat, Jan 3: 9:30 AM - 11:00 PM\n- Sun, Jan 4: 9:30 AM - 11:00 PM\n- Mon, Jan 5: 9:30 AM - 11:00 PM\n- Tue, Jan 6: 9:30 AM - 11:00 PM\n- Wed, Jan 7: 9:30 AM - 11:00 PM\n- ",
+          "expectation": {
+            "status": 200,
+            "preview": false
+          },
+          "expectationOk": true,
+          "expectationFailures": []
+        },
+        {
+          "prompt": "Schedule my tasks for tomorrow.",
+          "status": 200,
+          "ok": false,
+          "durationMs": 14043,
+          "preview": false,
+          "blocksCount": 0,
+          "conflictsCount": 0,
+          "confidence": null,
+          "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+          "expectation": {
+            "status": 200,
+            "preview": true
+          },
+          "expectationOk": false,
+          "expectationFailures": [
+            "preview false != true"
+          ]
+        }
+      ]
+    },
+    {
+      "prompt": "My day feels chaotic—can you help me plan today?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 801,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Which priority should I focus on first?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I'm not sure what to work on next. What's the best use of my time?",
+      "status": 200,
+      "ok": true,
+      "durationMs": 603,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "What time window should I plan for, and which priority matters most?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "I have a deadline tomorrow and a bunch of small tasks. How should I prioritize?",
+      "status": 200,
+      "ok": false,
+      "durationMs": 5393,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": false,
+        "cta": true,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "cta false != true"
+      ]
+    },
+    {
+      "prompt": "Plan my day today and focus on the most important tasks.",
+      "status": 200,
+      "ok": false,
+      "durationMs": 4928,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": false,
+        "cta": true,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "cta false != true"
+      ]
+    },
+    {
+      "prompt": "Help me plan. I have about 3 hours this afternoon.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 584,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "Which priority should I focus on first?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Help me plan. I need to focus on urgent items.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 616,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "What time window should I plan for?",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true,
+        "cta": false,
+        "noScheduleLanguage": true
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Schedule a meeting with Alex.",
+      "status": 200,
+      "ok": false,
+      "durationMs": 732,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "question false != true"
+      ]
+    },
+    {
+      "prompt": "Create a meeting link for 30 min calls.",
+      "status": 200,
+      "ok": true,
+      "durationMs": 196,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I can create a scheduling link once you connect a calendar. Open Settings → Calendar to finish setup.",
+      "expectation": {
+        "status": 200,
+        "preview": false
+      },
+      "expectationOk": true,
+      "expectationFailures": []
+    },
+    {
+      "prompt": "Send a meeting request to alex@company.com",
+      "status": 200,
+      "ok": false,
+      "durationMs": 677,
+      "preview": false,
+      "blocksCount": 0,
+      "conflictsCount": 0,
+      "confidence": null,
+      "messagePreview": "I'm having trouble right now. Please try again in a moment.\n\n[debug] meetingState is not defined",
+      "expectation": {
+        "status": 200,
+        "preview": false,
+        "question": true
+      },
+      "expectationOk": false,
+      "expectationFailures": [
+        "question false != true"
+      ]
+    }
+  ]
+}

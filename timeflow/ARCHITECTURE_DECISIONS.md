@@ -399,3 +399,36 @@ Add two new models to the Prisma schema: `Conversation` and `ConversationMessage
 
 **Last Updated**: 2025-12-11
 
+---
+
+## ADR-012: Pricing Model & Tier Structure
+
+**Date**: 2026-01-03
+**Status**: Accepted
+
+### Context
+
+As TimeFlow transitions beyond its beta phase and solidifies its commercial strategy, a formal pricing model is required to monetize the advanced features, manage API costs, and provide clear value propositions to different user segments. The current "pricing" page is a placeholder for beta access.
+
+### Decision
+
+Implement a three-tiered pricing model: **Starter (Free), Pro ($5/month), and Flow State ($11.99/month)**. This model incorporates a credit-based system ("Flow Credits") for API usage, with defined overuse charges for paid tiers, and offers a discount for annual subscriptions.
+
+For comprehensive details on features per tier, Flow Credit costs, monthly allotments, and overuse charges, refer to the `docs/PRICING_MODEL.md` document.
+
+### Rationale
+
+-   **Monetization:** Establishes clear revenue streams to support ongoing development and infrastructure costs.
+-   **Scalability & Cost Management:** The credit-based system and overuse charges allow for flexible API usage while mitigating runaway costs associated with resource-intensive features (e.g., AI).
+-   **User Acquisition & Retention:** A robust free tier attracts new users, while distinct paid tiers provide compelling reasons to upgrade, catering to different user needs and budgets.
+-   **Value Alignment:** Features are carefully distributed to ensure each tier offers a clear value proposition, encouraging users to find the plan that best fits their productivity requirements.
+-   **Market Competitiveness:** The pricing structure is designed to be competitive within the productivity software market, offering advanced AI features at compelling price points.
+
+### Consequences
+
+-   Requires significant development effort for implementing the pricing page, subscription management, and billing system integration.
+-   Mandates the development of robust API usage tracking and credit deduction mechanisms.
+-   Impacts UI/UX, as the application will need to clearly communicate current credit usage, tier benefits, and upgrade paths.
+-   Requires legal review for terms of service related to billing, overuse, and subscriptions.
+-   The `timeflow/apps/web/src/app/pricing/page.tsx` will need to be entirely re-designed and implemented based on the `docs/PRICING_MODEL.md` specifications.
+

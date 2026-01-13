@@ -1,4 +1,5 @@
 import type { CalendarEvent } from '@timeflow/shared';
+import { isTimeflowEvent } from './timeflowEventPrefix.js';
 
 /**
  * Classification result for a calendar event
@@ -20,7 +21,7 @@ export interface SeparatedEvents {
  * Classify a calendar event as fixed (immovable) or movable
  *
  * Uses heuristic-based rules to determine if an event can be rescheduled:
- * - TimeFlow-created events are movable (have `[TimeFlow]` prefix)
+ * - TimeFlow-created events are movable (TimeFlow marker or prefix)
  * - Events with multiple attendees are fixed (meetings with others)
  * - Events with fixed keywords (class, lecture, appointment) are fixed
  * - Default: movable (conservative)
@@ -44,10 +45,10 @@ export function classifyEvent(event: CalendarEvent): EventClassification {
   }
 
   // Rule 1: TimeFlow-created events are movable
-  if (summary.startsWith('[TimeFlow]')) {
+  if (isTimeflowEvent(event)) {
     return {
       isFixed: false,
-      reason: 'TimeFlow-created task',
+      reason: 'TimeFlow-managed event',
     };
   }
 

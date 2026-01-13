@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Button, Input, Label } from '@/components/ui';
+import { Button } from '@/components/ui';
 import type { TaskTemplate } from '@/utils/taskTemplates';
 import {
   getTaskTemplates,
   getDefaultTemplates,
-  saveTaskTemplate,
   deleteTaskTemplate,
 } from '@/utils/taskTemplates';
 import type { Category } from '@timeflow/shared';
@@ -27,9 +26,6 @@ export function TemplateModal({
 }: TemplateModalProps) {
   const prefersReducedMotion = useReducedMotion();
   const [customTemplates, setCustomTemplates] = useState<TaskTemplate[]>([]);
-  const [showSaveForm, setShowSaveForm] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState('');
-
   // Load custom templates
   useEffect(() => {
     if (isOpen) {

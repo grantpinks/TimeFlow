@@ -1,20 +1,27 @@
-import { DateTime } from 'luxon';
 import type { CalendarEvent, DailyScheduleConfig } from '@timeflow/shared';
 import type { UserPreferences } from './scheduleValidator';
+import {
+  fromISO,
+  fromJSDate,
+  fromMillis,
+  maxDateTime,
+  minDateTime,
+  SafeDateTime,
+} from './luxonHelpers.js';
 
 type TimeInterval = { start: number; end: number };
 
 type AvailabilityRange = {
-  start: DateTime;
-  end: DateTime;
+  start: SafeDateTime;
+  end: SafeDateTime;
   label: string;
 };
 
 function roundToIncrement(
-  dateTime: DateTime,
+  dateTime: SafeDateTime,
   incrementMinutes: number,
   direction: 'ceil' | 'floor'
-): DateTime {
+): SafeDateTime {
   const totalMinutes = dateTime.hour * 60 + dateTime.minute;
   const roundedMinutes =
     direction === 'ceil'
@@ -28,60 +35,43 @@ function roundToIncrement(
 function resolveAvailabilityRange(
   message: string,
   timeZone: string,
-  now: DateTime
+  now: SafeDateTime
 ): AvailabilityRange {
   const lower = message.toLowerCase();
 
+  const buildRange = (start: SafeDateTime, spanDays: number, label: string): AvailabilityRange => {
+    const end = start.plus({ days: spanDays }).endOf('day');
+    return { start, end, label };
+  };
+
+  const todayStart = now.startOf('day');
+
   if (lower.includes('tomorrow')) {
-    const start = now.plus({ days: 1 }).startOf('day');
-    return {
-      start,
-      end: start.endOf('day'),
-      label: 'tomorrow',
-    };
+    const tomorrowStart = now.plus({ days: 1 }).startOf('day');
+    return buildRange(tomorrowStart, 0, 'tomorrow');
   }
 
   if (lower.includes('today')) {
-    return {
-      start: now.startOf('day'),
-      end: now.endOf('day'),
-      label: 'today',
-    };
+    return buildRange(todayStart, 0, 'today');
   }
 
   if (lower.includes('next week')) {
-    const start = now.plus({ weeks: 1 }).startOf('week');
-    return {
-      start,
-      end: start.plus({ days: 6 }).endOf('day'),
-      label: 'next week',
-    };
+    const startOfNextWeek = now.plus({ weeks: 1 }).startOf('week');
+    return buildRange(startOfNextWeek, 6, 'next week');
   }
 
   if (lower.includes('this week') || lower.includes('week')) {
-    return {
-      start: now.startOf('day'),
-      end: now.plus({ days: 6 }).endOf('day'),
-      label: 'this week',
-    };
+    return buildRange(todayStart, 6, 'this week');
   }
 
-  return {
-    start: now.startOf('day'),
-    end: now.plus({ days: 6 }).endOf('day'),
-    label: 'the next 7 days',
-  };
+  return buildRange(todayStart, 6, 'the next 7 days');
 }
 
 function buildBusyIntervals(events: CalendarEvent[], timeZone: string): TimeInterval[] {
   return events
     .map((event) => {
-      const start = DateTime.fromISO(event.start, { zone: timeZone });
-      const end = DateTime.fromISO(event.end, { zone: timeZone });
-
-      if (!start.isValid || !end.isValid) {
-        return null;
-      }
+      const start = fromISO(event.start, { zone: timeZone });
+      const end = fromISO(event.end, { zone: timeZone });
 
       return {
         start: start.toMillis(),
@@ -93,8 +83,8 @@ function buildBusyIntervals(events: CalendarEvent[], timeZone: string): TimeInte
 }
 
 function buildFreeSlots(
-  rangeStart: DateTime,
-  rangeEnd: DateTime,
+  rangeStart: SafeDateTime,
+  rangeEnd: SafeDateTime,
   preferences: UserPreferences
 ): TimeInterval[] {
   const slots: TimeInterval[] = [];
@@ -114,7 +104,7 @@ function buildFreeSlots(
   let currentDay = rangeStart.startOf('day');
   const endDay = rangeEnd.endOf('day');
 
-  while (currentDay <= endDay) {
+  while (currentDay.valueOf() <= endDay.valueOf()) {
     const dayOfWeek = currentDay.weekday;
     const dayName = dayNames[dayOfWeek];
     const daySchedule = dailySchedule?.[dayName];
@@ -128,11 +118,11 @@ function buildFreeSlots(
     const dayStart = currentDay.set({ hour: wakeHour, minute: wakeMin, second: 0, millisecond: 0 });
     const dayEnd = currentDay.set({ hour: sleepHour, minute: sleepMin, second: 0, millisecond: 0 });
 
-    if (dayEnd > dayStart) {
-      const slotStart = DateTime.max(dayStart, rangeStart);
-      const slotEnd = DateTime.min(dayEnd, rangeEnd);
+    if (dayEnd.valueOf() > dayStart.valueOf()) {
+      const slotStart = maxDateTime(dayStart, rangeStart);
+      const slotEnd = minDateTime(dayEnd, rangeEnd);
 
-      if (slotEnd > slotStart) {
+      if (slotEnd.valueOf() > slotStart.valueOf()) {
         slots.push({
           start: slotStart.toMillis(),
           end: slotEnd.toMillis(),
@@ -180,15 +170,15 @@ export function buildAvailabilitySummary(options: {
   now?: Date;
   maxSlotsPerDay?: number;
 }): string {
-  const now = DateTime.fromJSDate(options.now ?? new Date(), {
+  const now = fromJSDate(options.now ?? new Date(), {
     zone: options.userPrefs.timeZone,
   });
   const range = resolveAvailabilityRange(options.message, options.userPrefs.timeZone, now);
   const maxSlotsPerDay = options.maxSlotsPerDay ?? 4;
 
   const inRangeEvents = options.calendarEvents.filter((event) => {
-    const start = DateTime.fromISO(event.start, { zone: options.userPrefs.timeZone });
-    const end = DateTime.fromISO(event.end, { zone: options.userPrefs.timeZone });
+    const start = fromISO(event.start, { zone: options.userPrefs.timeZone });
+    const end = fromISO(event.end, { zone: options.userPrefs.timeZone });
     if (!start.isValid || !end.isValid) {
       return false;
     }
@@ -205,13 +195,15 @@ export function buildAvailabilitySummary(options: {
 
   const grouped = new Map<string, TimeInterval[]>();
   openSlots.forEach((slot) => {
-    const dayLabel = DateTime.fromMillis(slot.start, { zone: options.userPrefs.timeZone }).toFormat(
+    const dayLabel = fromMillis(slot.start, { zone: options.userPrefs.timeZone }).toFormat(
       'ccc, MMM d'
     );
-    if (!grouped.has(dayLabel)) {
-      grouped.set(dayLabel, []);
+    const bucket = grouped.get(dayLabel);
+    if (bucket) {
+      bucket.push(slot);
+    } else {
+      grouped.set(dayLabel, [slot]);
     }
-    grouped.get(dayLabel)!.push(slot);
   });
 
   const lines: string[] = [];
@@ -220,8 +212,8 @@ export function buildAvailabilitySummary(options: {
       .sort((a, b) => a.start - b.start)
       .slice(0, maxSlotsPerDay)
       .map((slot) => {
-        const start = DateTime.fromMillis(slot.start, { zone: options.userPrefs.timeZone });
-        const end = DateTime.fromMillis(slot.end, { zone: options.userPrefs.timeZone });
+        const start = fromMillis(slot.start, { zone: options.userPrefs.timeZone });
+        const end = fromMillis(slot.end, { zone: options.userPrefs.timeZone });
         const roundedStart = roundToIncrement(start, 5, 'ceil');
         const roundedEnd = roundToIncrement(end, 5, 'floor');
         if (roundedEnd <= roundedStart) {

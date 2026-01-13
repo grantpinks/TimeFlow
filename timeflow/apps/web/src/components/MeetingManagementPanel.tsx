@@ -80,7 +80,6 @@ export function MeetingManagementPanel() {
   }
 
   function handleShareSuccess() {
-    const recipientCount = 1; // Could be passed from ShareLinkModal
     showToast(`Email sent successfully!`, 'success');
     fetchData();
   }

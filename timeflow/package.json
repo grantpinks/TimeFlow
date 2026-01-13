@@ -16,6 +16,8 @@
     "test": "pnpm -r test",
     "ai:regression": "pnpm -C apps/backend ai:regression",
     "format": "pnpm -r format"
+  },
+  "devDependencies": {
+    "typescript-eslint": "^8.52.0"
   }
 }
-

@@ -81,7 +81,9 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
 
 ## Today Page
 - DND Tasks into calendar doesn't stay in calendar or update anything. Must implement  
-  - [ ] Sprint 11 – Task 11.10 (DnD persistence + backend + Google Calendar updates) — Status: TODO
+  - [x] Sprint 11 – Task 11.10 (DnD persistence + backend + Google Calendar updates) — Status: DONE
+- Calendar drag-and-drop reschedule now fails with a “reschedule error” (DnD flow broken)  
+  - [x] Investigate regression + fix reschedule endpoint/flow (client → API → Google Calendar) — Status: DONE
 - Habit Suggestion Buttons don't say for what habit it is scheduling and buttons don't actually start a scheduling workflow  
   - [ ] Sprint 11 – Task 11.11 (wire habit suggestion buttons into scheduling workflow with clear labels) — Status: TODO
 -

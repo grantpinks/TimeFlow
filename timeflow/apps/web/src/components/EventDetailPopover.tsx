@@ -54,9 +54,11 @@ interface EventDetailPopoverProps {
     categoryId: string,
     training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot }
   ) => Promise<void>;
-  onHabitComplete?: (scheduledHabitId: string) => Promise<void>;
+  onHabitComplete?: (scheduledHabitId: string, actualDurationMinutes?: number) => Promise<void>;
   onHabitUndo?: (scheduledHabitId: string) => Promise<void>;
   onHabitSkip?: (scheduledHabitId: string, reasonCode: HabitSkipReason) => Promise<void>;
+  onHabitReschedule?: (scheduledHabitId: string, start: Date, end: Date) => Promise<void>;
+  onTaskReschedule?: (taskId: string, start: Date, end: Date) => Promise<void>;
 }
 
 export function EventDetailPopover({
@@ -73,6 +75,8 @@ export function EventDetailPopover({
   onHabitComplete,
   onHabitUndo,
   onHabitSkip,
+  onHabitReschedule,
+  onTaskReschedule,
 }: EventDetailPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -84,6 +88,12 @@ export function EventDetailPopover({
   const [habitActionLoading, setHabitActionLoading] = useState(false);
   const [showSkipReasons, setShowSkipReasons] = useState(false);
   const [habitError, setHabitError] = useState<string | null>(null);
+  const [showActualDurationInput, setShowActualDurationInput] = useState(false);
+  const [actualDurationMinutes, setActualDurationMinutes] = useState<string>('');
+  const [rescheduleStart, setRescheduleStart] = useState('');
+  const [rescheduleEnd, setRescheduleEnd] = useState('');
+  const [taskRescheduleStart, setTaskRescheduleStart] = useState('');
+  const [taskRescheduleEnd, setTaskRescheduleEnd] = useState('');
 
   // Close on Escape key
   useEffect(() => {
@@ -120,6 +130,25 @@ export function EventDetailPopover({
       setShowSkipReasons(false);
       setHabitError(null);
       setHabitActionLoading(false);
+      setShowActualDurationInput(false);
+      setActualDurationMinutes('');
+      if (event?.start && event?.end) {
+        const formatDateTimeLocal = (value: Date) => {
+          const pad = (num: number) => num.toString().padStart(2, '0');
+          return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(
+            value.getHours()
+          )}:${pad(value.getMinutes())}`;
+        };
+        setRescheduleStart(formatDateTimeLocal(event.start));
+        setRescheduleEnd(formatDateTimeLocal(event.end));
+        setTaskRescheduleStart(formatDateTimeLocal(event.start));
+        setTaskRescheduleEnd(formatDateTimeLocal(event.end));
+      } else {
+        setRescheduleStart('');
+        setRescheduleEnd('');
+        setTaskRescheduleStart('');
+        setTaskRescheduleEnd('');
+      }
     }
   }, [isOpen, event?.id]);
 
@@ -129,7 +158,8 @@ export function EventDetailPopover({
     setHabitActionLoading(true);
     setHabitError(null);
     try {
-      await onHabitComplete(event.scheduledHabitId);
+      const duration = actualDurationMinutes.trim() ? parseInt(actualDurationMinutes, 10) : undefined;
+      await onHabitComplete(event.scheduledHabitId, duration);
       onClose();
     } catch (error) {
       setHabitError(error instanceof Error ? error.message : 'Failed to complete habit');
@@ -162,6 +192,64 @@ export function EventDetailPopover({
       onClose();
     } catch (error) {
       setHabitError(error instanceof Error ? error.message : 'Failed to skip habit');
+    } finally {
+      setHabitActionLoading(false);
+    }
+  };
+
+  const handleHabitReschedule = async () => {
+    if (!event?.scheduledHabitId || !onHabitReschedule) return;
+    if (!rescheduleStart || !rescheduleEnd) {
+      setHabitError('Please provide both start and end times.');
+      return;
+    }
+    const start = new Date(rescheduleStart);
+    const end = new Date(rescheduleEnd);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      setHabitError('Invalid date or time.');
+      return;
+    }
+    if (end <= start) {
+      setHabitError('End time must be after start time.');
+      return;
+    }
+
+    setHabitActionLoading(true);
+    setHabitError(null);
+    try {
+      await onHabitReschedule(event.scheduledHabitId, start, end);
+      onClose();
+    } catch (error) {
+      setHabitError(error instanceof Error ? error.message : 'Failed to reschedule habit');
+    } finally {
+      setHabitActionLoading(false);
+    }
+  };
+
+  const handleTaskReschedule = async () => {
+    if (!event?.isTask || !event?.task || !onTaskReschedule) return;
+    if (!taskRescheduleStart || !taskRescheduleEnd) {
+      setHabitError('Please provide both start and end times.');
+      return;
+    }
+    const start = new Date(taskRescheduleStart);
+    const end = new Date(taskRescheduleEnd);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      setHabitError('Invalid date or time.');
+      return;
+    }
+    if (end <= start) {
+      setHabitError('End time must be after start time.');
+      return;
+    }
+
+    setHabitActionLoading(true);
+    setHabitError(null);
+    try {
+      await onTaskReschedule(event.task.id, start, end);
+      onClose();
+    } catch (error) {
+      setHabitError(error instanceof Error ? error.message : 'Failed to reschedule task');
     } finally {
       setHabitActionLoading(false);
     }
@@ -363,8 +451,8 @@ export function EventDetailPopover({
               </div>
             )}
 
-            {/* Category Override (for external events) */}
-            {!event.isTask && categories && categories.length > 0 && onCategoryChange && (
+            {/* Category Override (for external events only, not habits) */}
+            {!event.isTask && !event.isHabit && categories && categories.length > 0 && onCategoryChange && (
               <div className="pt-2 border-t border-slate-100">
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">
                   Category
@@ -537,9 +625,50 @@ export function EventDetailPopover({
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Complete or Undo button */}
-                  {event.habitCompletion?.status === 'completed' || event.habitCompletion?.status === 'skipped' ? (
+                <>
+                  {/* Actual duration input (optional, shown before completing) */}
+                  {!event.habitCompletion && (
+                    <div className="mb-3">
+                      <button
+                        onClick={() => setShowActualDurationInput(!showActualDurationInput)}
+                        className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        {showActualDurationInput ? 'Hide' : 'Track actual time spent'}
+                      </button>
+                      {showActualDurationInput && (
+                        <div className="mt-2">
+                          <label htmlFor="actual-duration" className="block text-xs font-medium text-slate-700 mb-1">
+                            Actual time spent (minutes)
+                          </label>
+                          <input
+                            id="actual-duration"
+                            type="number"
+                            min="1"
+                            max="1440"
+                            value={actualDurationMinutes}
+                            onChange={(e) => setActualDurationMinutes(e.target.value)}
+                            placeholder="e.g., 25"
+                            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                            <p className="text-xs text-blue-800 font-medium">
+                              💡 Why track actual time?
+                            </p>
+                            <p className="mt-1 text-xs text-blue-700">
+                              TimeFlow uses your actual durations to suggest better habit lengths and identify patterns. Your data stays private and is never shared.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Complete or Undo button */}
+                    {event.habitCompletion?.status === 'completed' || event.habitCompletion?.status === 'skipped' ? (
                     <button
                       onClick={handleHabitUndo}
                       disabled={habitActionLoading}
@@ -576,8 +705,93 @@ export function EventDetailPopover({
                       Skip
                     </button>
                   )}
-                </div>
+                  </div>
+                </>
               )}
+            </div>
+          )}
+
+          {event.isHabit && event.scheduledHabitId && onHabitReschedule && (
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="habit-reschedule-start" className="text-xs font-medium text-slate-700">
+                      Reschedule start
+                    </label>
+                    <input
+                      id="habit-reschedule-start"
+                      type="datetime-local"
+                      value={rescheduleStart}
+                      onChange={(e) => setRescheduleStart(e.target.value)}
+                      disabled={habitActionLoading}
+                      className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-primary-400 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="habit-reschedule-end" className="text-xs font-medium text-slate-700">
+                      Reschedule end
+                    </label>
+                    <input
+                      id="habit-reschedule-end"
+                      type="datetime-local"
+                      value={rescheduleEnd}
+                      onChange={(e) => setRescheduleEnd(e.target.value)}
+                      disabled={habitActionLoading}
+                      className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-primary-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleHabitReschedule}
+                  disabled={habitActionLoading}
+                  className="w-full px-3 py-2 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors disabled:opacity-60"
+                >
+                  Reschedule habit
+                </button>
+              </div>
+            </div>
+          )}
+
+          {event.isTask && event.task && onTaskReschedule && (
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-200">
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1">
+                    <label htmlFor="task-reschedule-start" className="text-xs font-medium text-slate-700">
+                      Reschedule task start
+                    </label>
+                    <input
+                      id="task-reschedule-start"
+                      type="datetime-local"
+                      value={taskRescheduleStart}
+                      onChange={(e) => setTaskRescheduleStart(e.target.value)}
+                      disabled={habitActionLoading}
+                      className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-primary-400 focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label htmlFor="task-reschedule-end" className="text-xs font-medium text-slate-700">
+                      Reschedule task end
+                    </label>
+                    <input
+                      id="task-reschedule-end"
+                      type="datetime-local"
+                      value={taskRescheduleEnd}
+                      onChange={(e) => setTaskRescheduleEnd(e.target.value)}
+                      disabled={habitActionLoading}
+                      className="w-full rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-primary-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleTaskReschedule}
+                  disabled={habitActionLoading}
+                  className="w-full px-3 py-2 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors disabled:opacity-60"
+                >
+                  Reschedule task
+                </button>
+              </div>
             </div>
           )}
         </motion.div>

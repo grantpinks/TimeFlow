@@ -1,4 +1,4 @@
-import { DateTime } from 'luxon';
+import { fromObject } from './luxonHelpers.js';
 
 export function normalizeDateOnlyToEndOfDay(date: Date, timeZone: string): Date {
   const isUtcMidnight =
@@ -15,7 +15,7 @@ export function normalizeDateOnlyToEndOfDay(date: Date, timeZone: string): Date 
   const month = date.getUTCMonth() + 1;
   const day = date.getUTCDate();
 
-  const endOfDay = DateTime.fromObject(
+  const endOfDay = fromObject(
     { year, month, day, hour: 23, minute: 59, second: 59, millisecond: 999 },
     { zone: timeZone }
   ).toUTC();
