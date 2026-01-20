@@ -1,9 +1,9 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// For CommonJS compatibility: __dirname is available natively in CJS
+// In ESM builds, this would need fileURLToPath(import.meta.url)
+const __dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(require?.main?.filename || process.cwd());
 
 /**
  * AI Assistant mode types

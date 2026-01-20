@@ -7,13 +7,10 @@ await esbuild.build({
   bundle: true,
   platform: 'node',
   target: 'node20',
-  format: 'esm',
+  format: 'cjs',
   outfile: 'dist/index.js',
   // Only externalize @prisma/client (has native binaries that can't be bundled)
   external: ['@prisma/client'],
-  banner: {
-    js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`
-  },
   logLevel: 'info',
   minify: false,
   sourcemap: false,

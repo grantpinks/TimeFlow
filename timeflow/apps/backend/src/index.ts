@@ -4,6 +4,17 @@
  * Bootstraps the Fastify server and listens on the configured port.
  */
 
+// Critical error handlers - MUST be at the very top before any imports
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+  process.exit(1);
+});
+
 // Log startup immediately - this runs BEFORE imports in ESM
 console.log('🚀 TimeFlow backend starting...');
 console.log('📋 Environment check:');
