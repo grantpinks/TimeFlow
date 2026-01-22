@@ -16,6 +16,7 @@ import * as categoryTrainingService from '../services/categoryTrainingService.js
 const getCategorizationsSchema = z.object({
   eventIds: z.array(z.string()),
   provider: z.string().optional().default('google'),
+  eventSummaries: z.record(z.string()).optional(),
 });
 
 /**
@@ -36,7 +37,7 @@ export async function getEventCategorizations(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const { eventIds, provider } = parsed.data;
+  const { eventIds, provider, eventSummaries } = parsed.data;
 
   try {
     const categorizations = await eventCategorizationService.getEventCategorizations(
@@ -44,6 +45,56 @@ export async function getEventCategorizations(
       eventIds,
       provider
     );
+
+    if (eventSummaries && Object.keys(eventSummaries).length > 0) {
+      const trainingProfiles = await categoryTrainingService.getTrainingProfiles(user.id);
+      const normalizeTitle = (value: string) =>
+        value.toLowerCase().replace(/\s+/g, ' ').trim();
+      const exactTitleOverrides = new Map<string, string>();
+      for (const profile of trainingProfiles) {
+        const snapshots = Array.isArray(profile.exampleEventsSnapshot)
+          ? profile.exampleEventsSnapshot
+          : [];
+        for (const example of snapshots) {
+          if (!example.summary) continue;
+          const normalized = normalizeTitle(example.summary);
+          if (!normalized) continue;
+          if (exactTitleOverrides.has(normalized)) {
+            continue;
+          }
+          exactTitleOverrides.set(normalized, profile.categoryId);
+        }
+      }
+
+      const categories = await categoryService.getCategories(user.id);
+      const categoryLookup = new Map(categories.map((category) => [category.id, category]));
+
+      for (const eventId of eventIds) {
+        const existing = categorizations.get(eventId);
+        if (existing?.isManual) {
+          continue;
+        }
+        const summary = eventSummaries[eventId];
+        if (!summary) continue;
+        const normalized = normalizeTitle(summary);
+        const overrideCategoryId = normalized ? exactTitleOverrides.get(normalized) : undefined;
+        if (!overrideCategoryId) continue;
+        if (existing && existing.categoryId === overrideCategoryId) {
+          continue;
+        }
+
+        const category = categoryLookup.get(overrideCategoryId);
+        if (!category) continue;
+
+        categorizations.set(eventId, {
+          categoryId: category.id,
+          categoryName: category.name,
+          categoryColor: category.color,
+          confidence: 1.0,
+          isManual: true,
+        });
+      }
+    }
 
     // Convert Map to object for JSON response
     return Object.fromEntries(categorizations);
@@ -106,21 +157,6 @@ export async function categorizeAllEvents(
       console.log('[categorizeAllEvents] Cleaned up', deletedCount, 'stale categorizations');
     }
 
-    // Filter to uncategorized events only
-    const uncategorized = await eventCategorizationService.getUncategorizedEvents(
-      user.id,
-      allEvents
-    );
-    console.log('[categorizeAllEvents] Uncategorized events:', uncategorized.length);
-
-    if (uncategorized.length === 0) {
-      return {
-        categorized: 0,
-        total: allEvents.length,
-        message: 'All events are already categorized',
-      };
-    }
-
     const trainingProfiles = await categoryTrainingService.getTrainingProfiles(user.id);
     const trainingContexts = Object.fromEntries(
       trainingProfiles.map((profile) => {
@@ -146,19 +182,98 @@ export async function categorizeAllEvents(
       })
     );
 
-    // Categorize with AI
+    const normalizeTitle = (value: string) =>
+      value.toLowerCase().replace(/\s+/g, ' ').trim();
+    const exactTitleOverrides = new Map<string, string>();
+    for (const profile of trainingProfiles) {
+      const snapshots = Array.isArray(profile.exampleEventsSnapshot)
+        ? profile.exampleEventsSnapshot
+        : [];
+      for (const example of snapshots) {
+        if (!example.summary) continue;
+        const normalized = normalizeTitle(example.summary);
+        if (!normalized) continue;
+        if (exactTitleOverrides.has(normalized)) {
+          continue;
+        }
+        exactTitleOverrides.set(normalized, profile.categoryId);
+      }
+    }
+
+    const existingCategorizations = await eventCategorizationService.getEventCategorizations(
+      user.id,
+      allEvents.map((event) => event.id).filter((id): id is string => Boolean(id)),
+      'google'
+    );
+    const exactMatchCategorizations = [];
+    for (const event of allEvents) {
+      const normalized = normalizeTitle(event.summary || '');
+      const overrideCategoryId = normalized ? exactTitleOverrides.get(normalized) : undefined;
+      if (overrideCategoryId) {
+        const existing = event.id ? existingCategorizations.get(event.id) : undefined;
+        if (existing?.isManual) {
+          continue;
+        }
+        if (existing?.categoryId === overrideCategoryId) {
+          continue;
+        }
+        exactMatchCategorizations.push({
+          eventId: event.id,
+          calendarId,
+          provider: 'google',
+          categoryId: overrideCategoryId,
+          eventSummary: event.summary,
+          confidence: 1.0,
+          isManual: true,
+        });
+      }
+    }
+
+    if (exactMatchCategorizations.length > 0) {
+      console.log(
+        '[categorizeAllEvents] Applying exact-title overrides:',
+        exactMatchCategorizations.length
+      );
+      await eventCategorizationService.batchUpsertCategorizations(
+        user.id,
+        exactMatchCategorizations
+      );
+    }
+
+    // Filter to uncategorized events only after applying exact-title overrides
+    const uncategorized = await eventCategorizationService.getUncategorizedEvents(
+      user.id,
+      allEvents
+    );
+    console.log('[categorizeAllEvents] Uncategorized events:', uncategorized.length);
+
+    if (uncategorized.length === 0) {
+      return {
+        categorized: exactMatchCategorizations.length,
+        total: allEvents.length,
+        uncategorizedCount: 0,
+        message: exactMatchCategorizations.length > 0
+          ? `Applied ${exactMatchCategorizations.length} exact-title overrides`
+          : 'All events are already categorized',
+      };
+    }
+
+    const exactMatchIds = new Set(exactMatchCategorizations.map((cat) => cat.eventId));
+    const remainingForAi = uncategorized.filter((event) => !exactMatchIds.has(event.id));
+
+    // Categorize remaining with AI
     console.log('[categorizeAllEvents] Starting AI categorization...');
     const aiResults = await aiCategorizationService.batchCategorizeEvents(
-      uncategorized,
+      remainingForAi,
       userCategories,
       trainingContexts
     );
     console.log('[categorizeAllEvents] AI categorization complete:', aiResults.size);
 
-    // Save categorizations to database
+    // Save AI categorizations to database
     const categorizationsToSave = [];
     for (const [eventId, result] of aiResults.entries()) {
-      const event = uncategorized.find((e) => e.id === eventId);
+      const event = remainingForAi.find((e) => e.id === eventId);
       if (event) {
         categorizationsToSave.push({
           eventId: event.id,
@@ -173,17 +288,20 @@ export async function categorizeAllEvents(
     }
 
     console.log('[categorizeAllEvents] Saving categorizations:', categorizationsToSave.length);
-    await eventCategorizationService.batchUpsertCategorizations(
-      user.id,
-      categorizationsToSave
-    );
+    if (categorizationsToSave.length > 0) {
+      await eventCategorizationService.batchUpsertCategorizations(
+        user.id,
+        categorizationsToSave
+      );
+    }
 
     console.log('[categorizeAllEvents] Categorization complete!');
+    const totalCategorized = exactMatchCategorizations.length + categorizationsToSave.length;
     return {
-      categorized: categorizationsToSave.length,
+      categorized: totalCategorized,
       total: allEvents.length,
       uncategorizedCount: uncategorized.length,
-      message: `Successfully categorized ${categorizationsToSave.length} events`,
+      message: `Successfully categorized ${totalCategorized} events`,
     };
   } catch (error) {
     console.error('[categorizeAllEvents] ERROR:', error);
@@ -207,6 +325,7 @@ const updateCategorizationSchema = z.object({
   categoryId: z.string(),
   train: z.boolean().optional(),
   example: trainingExampleSchema.optional(),
+  eventSummary: z.string().optional(),
 });
 
 /**
@@ -216,7 +335,12 @@ const updateCategorizationSchema = z.object({
 export async function updateEventCategorization(
   request: FastifyRequest<{
     Params: { eventId: string };
-    Body: { categoryId: string; train?: boolean; example?: z.infer<typeof trainingExampleSchema> };
+    Body: {
+      categoryId: string;
+      train?: boolean;
+      example?: z.infer<typeof trainingExampleSchema>;
+      eventSummary?: string;
+    };
     Querystring: { provider?: string };
   }>,
   reply: FastifyReply
@@ -232,7 +356,7 @@ export async function updateEventCategorization(
   }
 
   const { eventId } = request.params;
-  const { categoryId, train, example } = parsed.data;
+  const { categoryId, train, example, eventSummary } = parsed.data;
   const provider = request.query.provider || 'google';
 
   try {
@@ -240,7 +364,8 @@ export async function updateEventCategorization(
       user.id,
       eventId,
       provider,
-      categoryId
+      categoryId,
+      { eventSummary }
     );
 
     if (train && example) {
@@ -253,11 +378,72 @@ export async function updateEventCategorization(
 
     return updated;
   } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      const summary = eventSummary || example?.summary;
+      const calendarId = example?.calendarId || user.defaultCalendarId || 'primary';
+      if (!summary) {
+        return reply.status(404).send({ error: error.message });
+      }
+
+      try {
+        const created = await eventCategorizationService.upsertEventCategorization(
+          user.id,
+          eventId,
+          calendarId,
+          provider,
+          categoryId,
+          summary,
+          { confidence: 1.0, isManual: true }
+        );
+
+        if (train && example) {
+          try {
+            await categoryTrainingService.addTrainingExample(user.id, categoryId, example);
+          } catch (trainError) {
+            request.log.error(trainError, 'Failed to save training example');
+          }
+        }
+
+        return created;
+      } catch (createError) {
+        request.log.error(createError, 'Failed to create event categorization');
+        return reply.status(500).send({ error: 'Failed to update event categorization' });
+      }
+    }
+
     request.log.error(error, 'Failed to update event categorization');
+    return reply.status(500).send({ error: 'Failed to update event categorization' });
+  }
+}
+
+/**
+ * DELETE /api/events/:eventId/categorization
+ * Delete event categorization (reset to uncategorized)
+ */
+export async function deleteEventCategorization(
+  request: FastifyRequest<{
+    Params: { eventId: string };
+    Querystring: { provider?: string };
+  }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const { eventId } = request.params;
+  const provider = request.query.provider || 'google';
+
+  try {
+    await eventCategorizationService.deleteEventCategorization(user.id, eventId, provider);
+    return { success: true };
+  } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
       return reply.status(404).send({ error: error.message });
     }
-    return reply.status(500).send({ error: 'Failed to update event categorization' });
+    request.log.error(error, 'Failed to delete event categorization');
+    return reply.status(500).send({ error: 'Failed to delete event categorization' });
   }
 }
 

@@ -18,6 +18,22 @@ type PubSubPushBody = {
 };
 
 const oidcClient = getOAuth2Client();
+const syncInFlightByUser = new Map<string, boolean>();
+const pendingHistoryByUser = new Map<string, string>();
+
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return 'Unknown error';
+  }
+}
 
 async function isAuthorized(request: FastifyRequest): Promise<boolean> {
   const secret = env.GMAIL_PUBSUB_PUSH_SECRET;
@@ -57,23 +73,40 @@ export async function handleGmailPush(
 ) {
   const authorized = await isAuthorized(request);
   if (!authorized) {
-    return reply.status(401).send({ error: 'Unauthorized' });
+    request.log.warn(
+      { headers: request.headers },
+      'Gmail push rejected: unauthorized'
+    );
+    return reply.status(204).send();
   }
 
   const rawData = request.body?.message?.data;
   if (!rawData) {
-    return reply.status(400).send({ error: 'Missing Pub/Sub message data' });
+    request.log.warn('Gmail push skipped: missing Pub/Sub message data');
+    return reply.status(204).send();
   }
 
   let payload: { emailAddress?: string; historyId?: string };
   try {
     payload = JSON.parse(Buffer.from(rawData, 'base64').toString('utf8'));
   } catch {
-    return reply.status(400).send({ error: 'Invalid Pub/Sub payload' });
+    request.log.warn('Gmail push skipped: invalid Pub/Sub payload');
+    return reply.status(204).send();
   }
 
-  if (!payload.emailAddress || !payload.historyId) {
-    return reply.status(400).send({ error: 'Missing emailAddress or historyId' });
+  const normalizedHistoryId =
+    typeof payload.historyId === 'string'
+      ? payload.historyId
+      : typeof payload.historyId === 'number'
+        ? String(payload.historyId)
+        : null;
+
+  if (!payload.emailAddress || !normalizedHistoryId) {
+    request.log.warn(
+      { payload },
+      'Gmail push skipped: missing emailAddress or historyId'
+    );
+    return reply.status(204).send();
   }
 
   const user = await prisma.user.findUnique({ where: { email: payload.emailAddress } });
@@ -81,10 +114,15 @@ export async function handleGmailPush(
     return reply.status(204).send();
   }
 
+  if (syncInFlightByUser.get(user.id)) {
+    pendingHistoryByUser.set(user.id, normalizedHistoryId);
+    return reply.status(204).send();
+  }
+
   const syncState = await prisma.gmailLabelSyncState.findUnique({ where: { userId: user.id } });
   if (syncState?.lastHistoryId) {
     try {
-      if (BigInt(payload.historyId) <= BigInt(syncState.lastHistoryId)) {
+      if (BigInt(normalizedHistoryId) <= BigInt(syncState.lastHistoryId)) {
         return reply.status(204).send();
       }
     } catch {
@@ -93,10 +131,25 @@ export async function handleGmailPush(
   }
 
   try {
-    await syncFromHistory(user.id, payload.historyId);
+    syncInFlightByUser.set(user.id, true);
+    let historyIdToProcess: string | undefined = normalizedHistoryId;
+
+    while (historyIdToProcess) {
+      pendingHistoryByUser.delete(user.id);
+      await syncFromHistory(user.id, historyIdToProcess);
+      historyIdToProcess = pendingHistoryByUser.get(user.id);
+    }
     return reply.status(204).send();
   } catch (error) {
     request.log.error({ error }, 'Failed to sync Gmail history');
-    return reply.status(500).send({ error: 'Failed to process Gmail push' });
+    if (env.NODE_ENV === 'development') {
+      request.log.error(
+        { details: extractErrorMessage(error) },
+        'Gmail push error details'
+      );
+    }
+    return reply.status(204).send();
+  } finally {
+    syncInFlightByUser.delete(user.id);
   }
 }

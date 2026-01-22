@@ -33,6 +33,7 @@
     "googleapis": "^144.0.0",
     "luxon": "^3.4.4",
     "openai": "^6.15.0",
+    "stripe": "^20.2.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

@@ -34,10 +34,10 @@ export function CoachCard({ primary, onActionClick, onDismiss }: CoachCardProps)
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-green-900 text-lg mb-1">
-              You're doing great!
+              You&apos;re doing great!
             </h3>
             <p className="text-green-800 text-sm leading-relaxed">
-              <span className="font-medium">Flow says:</span> Keep up the excellent work on your habits. I'll let you know if I notice any patterns that could help you improve.
+              <span className="font-medium">Flow says:</span> Keep up the excellent work on your habits. I&apos;ll let you know if I notice any patterns that could help you improve.
             </p>
           </div>
         </div>
@@ -104,7 +104,7 @@ export function CoachCard({ primary, onActionClick, onDismiss }: CoachCardProps)
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-bold text-amber-900 text-lg">
-                Flow's Priority Recommendation
+                Flow&apos;s Priority Recommendation
               </h3>
               <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
                 Action Needed

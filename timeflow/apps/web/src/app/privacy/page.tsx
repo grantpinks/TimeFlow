@@ -42,7 +42,7 @@ export default function PrivacyPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">1. Introduction</h2>
             <p className="text-gray-700 leading-relaxed">
-              TimeFlow ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy
+              TimeFlow (&quot;we,&quot; &quot;our,&quot; or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy
               explains how we collect, use, disclose, and safeguard your information when you use our
               AI scheduling assistant service.
             </p>
@@ -164,7 +164,7 @@ export default function PrivacyPage() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">9. Children's Privacy</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">9. Children&apos;s Privacy</h2>
             <p className="text-gray-700 leading-relaxed">
               TimeFlow is not intended for users under 13. We do not knowingly collect data from children.
               If you believe we have collected data from a child, contact us immediately.
@@ -174,7 +174,7 @@ export default function PrivacyPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">10. Changes to This Policy</h2>
             <p className="text-gray-700 leading-relaxed">
-              We may update this Privacy Policy. We'll notify you via email or app notification for
+              We may update this Privacy Policy. We&apos;ll notify you via email or app notification for
               significant changes. Continued use after changes constitutes acceptance.
             </p>
           </section>

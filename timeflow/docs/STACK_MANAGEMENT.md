@@ -127,6 +127,19 @@ npx kill-port 3000
 
 Then restart the service.
 
+### Gmail Pub/Sub Push (Local Dev)
+
+Background sync needs a public HTTPS endpoint (use ngrok).
+
+```bash
+ngrok http 3001
+```
+
+Notes:
+- Update the Pub/Sub subscription push URL to the current ngrok URL.
+- If using OIDC auth, update the audience to match the exact ngrok URL.
+- Inspect push requests at `http://127.0.0.1:4040`.
+
 ### Backend won't start
 
 **Check database connection:**

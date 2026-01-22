@@ -34,4 +34,5 @@ The command updates both the summary and description using `buildTimeflowEventDe
 
 ## Resolved
 
+- External event categorizations could revert after save because Google Calendar fetches only the first page of events, so the cleanup step treated valid events as stale and deleted their categorizations. Added pagination to `getEvents` so cleanup sees the full event set.
 - Gmail label colors were not applying because we used a non-Gmail palette; updated to Gmail’s allowed color set and confirmed sync works.

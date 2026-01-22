@@ -1,4 +1,4 @@
-# Sprint 16 Phase A: Gmail Label Sync Setup & Troubleshooting
+# Sprint 16 Phase A/B: Gmail Label Sync Setup & Troubleshooting
 
 **Purpose:** Document setup requirements, OAuth scopes, limitations, and troubleshooting steps.
 
@@ -15,13 +15,26 @@
    - Profile: `userinfo.email`, `userinfo.profile`
 
 ## Gmail Label Sync Behavior (Phase A)
-- Manual sync only (Settings → Gmail Label Sync → Sync Now).
+- Manual sync (Settings → Gmail Label Sync → Sync Now).
 - Optional sync-on-inbox-fetch via env flag:
   - `GMAIL_SYNC_ON_INBOX_FETCH=true`
 
+## Background Sync (Phase B: Watch + Pub/Sub)
+Requires Pub/Sub setup and a public HTTPS push endpoint.
+
+Env vars (backend):
+- `GMAIL_PUBSUB_TOPIC="projects/<project-id>/topics/<topic>"`
+- `GMAIL_PUBSUB_OIDC_AUDIENCE="https://<public-host>/api/integrations/gmail/push"`
+- `GMAIL_PUBSUB_OIDC_EMAIL_ALLOWLIST="service-account@project.iam.gserviceaccount.com"`
+
+Local dev:
+- Use `ngrok http 3001` for a public HTTPS endpoint.
+- Update the Pub/Sub subscription audience to the current ngrok URL.
+- Verify pushes in the ngrok inspector at `http://127.0.0.1:4040`.
+
 ## Known Limitations
 - Gmail supports a fixed palette of label colors (25 total).
-- Manual sync only (no background watch or Pub/Sub).
+- Background sync requires Pub/Sub + watch; local dev needs a public HTTPS tunnel.
 - Thread-level operations are rate-limited (conservative 500ms delay).
 - Label deletions in Gmail disable sync until the user re-enables it.
 
@@ -54,3 +67,7 @@
 - Manual sync adds `TimeFlow/<CategoryName>` labels in Gmail.
 - Deleting a Gmail label disables sync for that category.
 - Backfill settings update via `/api/gmail-sync/settings`.
+- Background sync labels new mail within minutes (watch + Pub/Sub).
+
+## Recent Verification
+- 2026-01-16: Background sync verified end-to-end in local dev (ngrok + Pub/Sub).

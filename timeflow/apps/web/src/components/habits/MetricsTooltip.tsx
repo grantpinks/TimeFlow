@@ -24,7 +24,7 @@ export function MetricsTooltip({ type }: MetricsTooltipProps) {
             A streak counts consecutive days where you completed your habit at least once.
           </p>
           <p>
-            <strong>We use your timezone</strong> to determine "days," so if you complete a habit at 11:59pm in your timezone, it counts for that day.
+            <strong>We use your timezone</strong> to determine &quot;days,&quot; so if you complete a habit at 11:59pm in your timezone, it counts for that day.
           </p>
           <p>
             <strong>Grace period:</strong> If you completed yesterday but not today yet, your streak continues until end of day.
@@ -43,7 +43,7 @@ export function MetricsTooltip({ type }: MetricsTooltipProps) {
             Adherence = (completions / scheduled instances) × 100%
           </p>
           <p>
-            If you scheduled a habit 10 times and completed it 8 times, that's 80% adherence.
+            If you scheduled a habit 10 times and completed it 8 times, that&apos;s 80% adherence.
           </p>
           <p>
             <strong>Why it matters:</strong> Adherence helps you see patterns—low adherence might mean the habit needs a better time slot or shorter duration.
@@ -62,13 +62,13 @@ export function MetricsTooltip({ type }: MetricsTooltipProps) {
             We analyze when you successfully complete habits and identify patterns.
           </p>
           <p>
-            <strong>For example:</strong> If you complete "Morning Exercise" 90% of the time on Monday mornings but only 50% on Tuesday afternoons, Monday morning is your best window.
+            <strong>For example:</strong> If you complete &quot;Morning Exercise&quot; 90% of the time on Monday mornings but only 50% on Tuesday afternoons, Monday morning is your best window.
           </p>
           <p>
             <strong>Minimum data:</strong> We need at least 3 completions in a time slot to recommend it.
           </p>
           <p className="text-slate-600 italic">
-            This helps you schedule habits when you're most likely to succeed.
+            This helps you schedule habits when you&apos;re most likely to succeed.
           </p>
         </div>
       ),

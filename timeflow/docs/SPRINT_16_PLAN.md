@@ -41,7 +41,7 @@ This prevents the highest-risk failure mode: incorrect labels showing up inside 
 
 - [ ] Create/ensure Gmail labels for TimeFlow email categories (namespaced like `TimeFlow/Work`).
 - [ ] Apply labels at the **thread level** using Gmail API.
-- [ ] Background sync for new mail via Gmail **watch + Pub/Sub** (with a safe fallback to sync-on-inbox-fetch).
+- [x] Background sync for new mail via Gmail **watch + Pub/Sub** (with a safe fallback to sync-on-inbox-fetch).
 - [ ] User controls in Settings: enable/disable, per-category label name + color mapping, manual “Sync now”, status/health.
 
 ---
@@ -249,7 +249,7 @@ Extend it to include:
 
 - [ ] Can a consumer user enable sync and see `TimeFlow/*` labels created in Gmail?
 - [ ] **Phase A**: Can the user run “Sync now” (or on inbox fetch) and see threads labeled correctly, and can they correct mistakes?
-- [ ] **Phase B** (if shipped): Are new threads labeled within minutes via watch + Pub/Sub?
+- [x] **Phase B** (if shipped): Are new threads labeled within minutes via watch + Pub/Sub?
 - [ ] Are operations safe/idempotent under retries and rate limits?
 - [ ] Are docs sufficient for on-call/troubleshooting?
 

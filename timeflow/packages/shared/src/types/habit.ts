@@ -14,6 +14,7 @@ export interface Habit {
   daysOfWeek: string[]; // e.g., ["mon", "tue", "wed"]
   preferredTimeOfDay?: TimeOfDay | null;
   durationMinutes: number;
+  priorityRank?: number | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

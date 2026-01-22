@@ -42,7 +42,7 @@ export function Recommendations({ recommendations, onActionClick }: Recommendati
           <FlowMascot size="md" expression="happy" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-slate-800">Flow's Recommendations</h2>
+          <h2 className="text-lg font-semibold text-slate-800">Flow&apos;s Recommendations</h2>
           <p className="text-sm text-slate-600">Your AI habits coach</p>
         </div>
       </div>

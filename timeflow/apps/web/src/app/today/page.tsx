@@ -18,12 +18,14 @@ import { HourlyTimeline } from '@/components/HourlyTimeline';
 import { EmailViewer } from '@/components/EmailViewer';
 import { EmailComposer } from '@/components/EmailComposer';
 import { Panel, SectionHeader } from '@/components/ui';
+import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
+import { buildRescueBlockForAtRisk } from '@/lib/habitRescue';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache';
-import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory } from '@timeflow/shared';
+import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification } from '@timeflow/shared';
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -34,6 +36,7 @@ export default function TodayPage() {
   const [habitSuggestions, setHabitSuggestions] = useState<EnrichedHabitSuggestion[]>([]);
   const [habitSuggestionsLoading, setHabitSuggestionsLoading] = useState(true);
   const [habitSuggestionsError, setHabitSuggestionsError] = useState<string | null>(null);
+  const [streakNotifications, setStreakNotifications] = useState<StreakAtRiskNotification[]>([]);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [focusedEmailsOnly, setFocusedEmailsOnly] = useState(false);
   const [inboxLoading, setInboxLoading] = useState(true);
@@ -94,6 +97,22 @@ export default function TodayPage() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchTodayEvents();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    async function fetchStreakNotifications() {
+      try {
+        const res = await api.getHabitNotifications();
+        setStreakNotifications(res.streakAtRisk ?? []);
+      } catch (err) {
+        console.error('Failed to load habit notifications:', err);
+        setStreakNotifications([]);
+      }
+    }
+
+    if (isAuthenticated) {
+      fetchStreakNotifications();
     }
   }, [isAuthenticated]);
 
@@ -240,6 +259,34 @@ export default function TodayPage() {
   const handleEmailSent = () => {
     // Refresh inbox to show sent email (if it's a reply)
     refreshInbox();
+  };
+
+  const handleRescueBlockFromBanner = async (habitId: string) => {
+    try {
+      const insights = await api.getHabitInsights(14);
+      const habitInsight = insights.habits.find((habit) => habit.habitId === habitId);
+      if (!habitInsight) {
+        throw new Error('Habit not found');
+      }
+
+      const { start, end } = buildRescueBlockForAtRisk(habitInsight);
+
+      await api.acceptHabitSuggestion({
+        habitId,
+        start: start.toISOString(),
+        end: end.toISOString(),
+      });
+
+      alert(
+        `✅ Rescue block scheduled for ${start.toLocaleDateString()} at ${start.toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+        })}`
+      );
+    } catch (error) {
+      console.error('Failed to schedule rescue block:', error);
+      alert(error instanceof Error ? error.message : 'Failed to schedule rescue block. Please try again.');
+    }
   };
 
   // Handle email search
@@ -499,6 +546,17 @@ export default function TodayPage() {
           </div>
         ) : (
           <>
+          {streakNotifications.length > 0 && (
+            <div className="mb-6">
+              <StreakReminderBanner
+                atRiskHabits={streakNotifications}
+                onScheduleRescue={handleRescueBlockFromBanner}
+                onCompleteNow={() => {
+                  window.location.href = '/calendar';
+                }}
+              />
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* LEFT COLUMN: To Do & Habits (3 columns of 12) */}
             <div className="lg:col-span-3 space-y-5">

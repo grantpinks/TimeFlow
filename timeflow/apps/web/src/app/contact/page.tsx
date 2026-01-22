@@ -28,7 +28,7 @@ export default function ContactPage() {
             </span>
             <h1 className="text-5xl font-bold text-gray-900 mt-4 mb-6">Get in Touch</h1>
             <p className="text-xl text-gray-600 leading-relaxed">
-              We're a small team, but we read every message. Reach out for support, partnerships, or press.
+              We&apos;re a small team, but we read every message. Reach out for support, partnerships, or press.
             </p>
           </div>
           <div className="bg-gradient-to-br from-teal-50 to-orange-50 rounded-3xl p-8 shadow-xl border border-teal-100">
@@ -71,7 +71,7 @@ export default function ContactPage() {
           <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100 shadow-sm">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">General Inquiries</h2>
             <p className="text-gray-600 mb-6">
-              Questions about pricing, partnerships, or press? We'd love to hear from you.
+              Questions about pricing, partnerships, or press? We&apos;d love to hear from you.
             </p>
             <div className="space-y-4">
               <a
@@ -92,7 +92,7 @@ export default function ContactPage() {
             {[
               {
                 q: 'Is TimeFlow really free during beta?',
-                a: 'Yes! Beta users get full access to all features at no cost. We\'ll announce pricing before charging anyone.',
+                a: 'Yes! Beta users get full access to all features at no cost. We&apos;ll announce pricing before charging anyone.',
               },
               {
                 q: 'What happens to my data?',

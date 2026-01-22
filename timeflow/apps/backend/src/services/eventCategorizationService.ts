@@ -119,7 +119,8 @@ export async function updateEventCategorization(
   userId: string,
   eventId: string,
   provider: string,
-  categoryId: string
+  categoryId: string,
+  options: { eventSummary?: string; isManual?: boolean; confidence?: number } = {}
 ) {
   // Verify categorization exists
   const existing = await getEventCategorization(userId, eventId, provider);
@@ -146,8 +147,9 @@ export async function updateEventCategorization(
     },
     data: {
       categoryId,
-      isManual: true, // Mark as manually set
-      confidence: 1.0, // User choice is 100% confident
+      ...(options.eventSummary ? { eventSummary: options.eventSummary } : {}),
+      isManual: options.isManual ?? true, // Mark as manually set
+      confidence: options.confidence ?? 1.0, // User choice is 100% confident
     },
     include: {
       category: true,

@@ -12,7 +12,6 @@ import { Layout } from '@/components/Layout';
 import { Panel, SectionHeader } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
 import { HabitsInsights } from '@/components/habits/HabitsInsights';
-import { HabitCard } from '@/components/habits/HabitCard';
 import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
 import { FlowMascot } from '@/components/FlowMascot';
 import { FlowSchedulingBanner } from '@/components/habits/FlowSchedulingBanner';
@@ -253,7 +252,7 @@ export default function HabitsPage() {
                 </h3>
                 <p className="text-primary-800 text-sm leading-relaxed mb-3">
                   I analyze your habit patterns and provide personalized recommendations to help you build consistency.
-                  Check my recommendations below and let's work together to strengthen your routines.
+                  Check my recommendations below and let&apos;s work together to strengthen your routines.
                 </p>
                 <div className="flex items-center gap-2 text-xs text-primary-700">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">

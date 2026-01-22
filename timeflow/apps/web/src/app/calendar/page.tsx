@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
 import { Layout } from '@/components/Layout';
@@ -13,6 +13,7 @@ import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
+import { SchedulePreviewOverlay } from '@/components/calendar/SchedulePreviewOverlay';
 import { Button, Input, Select, Textarea, Label } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
@@ -56,6 +57,14 @@ export default function CalendarPage() {
   // Filter state
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [showEvents, setShowEvents] = useState(true);
+  const categorizationUpdateTokenRef = useRef(0);
+
+  const buildEventSummaryMap = (events: CalendarEvent[]) =>
+    Object.fromEntries(
+      events
+        .filter((event) => Boolean(event.id))
+        .map((event) => [event.id as string, event.summary])
+    );
 
   // Fetch calendar events for the current month (now includes tasks, habits, and external events from merged backend)
   // The backend getEvents endpoint returns merged events with source tracking
@@ -207,10 +216,12 @@ export default function CalendarPage() {
   // Fetch event categorizations with caching and background auto-categorization
   useEffect(() => {
     async function fetchCategorizations() {
+      const requestToken = categorizationUpdateTokenRef.current;
       if (displayExternalEvents.length === 0) return;
 
       const eventIds = displayExternalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
       if (eventIds.length === 0) return;
+      const eventSummaries = buildEventSummaryMap(displayExternalEvents);
 
       // Check cache
       const cacheKey = 'categorizations_cache';
@@ -232,6 +243,9 @@ export default function CalendarPage() {
 
             if (allCovered) {
               console.log('[Cache] Using cached categorizations');
+              if (requestToken !== categorizationUpdateTokenRef.current) {
+                return;
+              }
               setEventCategorizations(cached);
 
               // Background auto-categorize: Check for new uncategorized events
@@ -241,7 +255,10 @@ export default function CalendarPage() {
                 // Don't await - run in background
                 api.categorizeAllEvents().then(() => {
                   // Refresh categorizations after background categorization
-                  api.getEventCategorizations(eventIds).then(freshCats => {
+                  api.getEventCategorizations(eventIds, 'google', eventSummaries).then(freshCats => {
+                    if (requestToken !== categorizationUpdateTokenRef.current) {
+                      return;
+                    }
                     setEventCategorizations(freshCats);
                     sessionStorage.setItem(cacheKey, JSON.stringify(freshCats));
                     sessionStorage.setItem(cacheTimestampKey, Date.now().toString());
@@ -259,7 +276,10 @@ export default function CalendarPage() {
 
         // Cache miss or stale - fetch from API
         console.log('[Cache] Fetching fresh categorizations');
-        const cats = await api.getEventCategorizations(eventIds);
+        const cats = await api.getEventCategorizations(eventIds, 'google', eventSummaries);
+        if (requestToken !== categorizationUpdateTokenRef.current) {
+          return;
+        }
         setEventCategorizations(cats);
 
         // Update cache
@@ -273,9 +293,12 @@ export default function CalendarPage() {
           console.log('[Background] Auto-categorizing', uncategorizedIds.length, 'new events');
           // Don't await - run in background
           api.categorizeAllEvents().then(() => {
-            // Refresh categorizations after background categorization
-            api.getEventCategorizations(eventIds).then(freshCats => {
-              setEventCategorizations(freshCats);
+                  // Refresh categorizations after background categorization
+                  api.getEventCategorizations(eventIds, 'google', eventSummaries).then(freshCats => {
+                    if (requestToken !== categorizationUpdateTokenRef.current) {
+                      return;
+                    }
+                    setEventCategorizations(freshCats);
               sessionStorage.setItem(cacheKey, JSON.stringify(freshCats));
               sessionStorage.setItem(cacheTimestampKey, Date.now().toString());
               console.log('[Background] Auto-categorization complete');
@@ -355,11 +378,22 @@ export default function CalendarPage() {
       // Clear cache and refresh categorizations
       clearCategorizationCache();
       const eventIds = displayExternalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
-      const cats = await api.getEventCategorizations(eventIds);
-      setEventCategorizations(cats);
+      const cats = await api.getEventCategorizations(
+        eventIds,
+        'google',
+        buildEventSummaryMap(displayExternalEvents)
+      );
+      setEventCategorizations((prev) => {
+        const merged = { ...prev, ...cats };
+        return merged;
+      });
 
       // Update cache with fresh data
-      sessionStorage.setItem('categorizations_cache', JSON.stringify(cats));
+      const cached = sessionStorage.getItem('categorizations_cache');
+      const cachedObj =
+        cached && cached.length > 0 ? (JSON.parse(cached) as Record<string, api.EventCategorization>) : {};
+      const nextCache = { ...cachedObj, ...cats };
+      sessionStorage.setItem('categorizations_cache', JSON.stringify(nextCache));
       sessionStorage.setItem('categorizations_timestamp', Date.now().toString());
     } catch (err) {
       setMessage({
@@ -374,15 +408,47 @@ export default function CalendarPage() {
   const handleCategoryChange = async (
     eventId: string,
     categoryId: string,
-    training?: { useForTraining?: boolean; example?: api.CategoryTrainingExampleSnapshot }
+    training?: { useForTraining?: boolean; example?: api.CategoryTrainingExampleSnapshot },
+    eventSummary?: string
   ) => {
     try {
-      await api.updateEventCategorization(eventId, categoryId, 'google', training as any);
+      categorizationUpdateTokenRef.current += 1;
+      setEventCategorizations((prev) => {
+        const next = { ...prev };
+        if (!categoryId) {
+          delete next[eventId];
+          return next;
+        }
+        const category = categories.find((cat) => cat.id === categoryId);
+        next[eventId] = {
+          categoryId,
+          categoryName: category?.name ?? prev[eventId]?.categoryName ?? 'Uncategorized',
+          categoryColor: category?.color ?? prev[eventId]?.categoryColor ?? '#64748B',
+          confidence: 1.0,
+          isManual: true,
+        };
+        return next;
+      });
 
+      if (!categoryId) {
+        await api.deleteEventCategorization(eventId, 'google');
+      } else {
+        await api.updateEventCategorization(
+          eventId,
+          categoryId,
+          'google',
+          training as any,
+          eventSummary
+        );
+      }
       // Clear cache and refresh categorizations to get updated data
       clearCategorizationCache();
       const eventIds = displayExternalEvents.map(e => e.id).filter((id): id is string => Boolean(id));
-      const cats = await api.getEventCategorizations(eventIds);
+      const cats = await api.getEventCategorizations(
+        eventIds,
+        'google',
+        buildEventSummaryMap(displayExternalEvents)
+      );
       setEventCategorizations(cats);
 
       // Update cache with fresh data
@@ -437,6 +503,26 @@ export default function CalendarPage() {
       setMessage({
         type: 'error',
         text: error instanceof Error ? error.message : 'Failed to reschedule habit',
+      });
+      throw error;
+    }
+  };
+
+  const handleResizeTask = async (taskId: string, start: Date, end: Date) => {
+    try {
+      await api.rescheduleTask(taskId, start.toISOString(), end.toISOString());
+      await Promise.all([
+        refreshTasks(),
+        fetchExternalEvents(),
+      ]);
+      setMessage({
+        type: 'success',
+        text: 'Task duration updated!',
+      });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to resize task',
       });
       throw error;
     }
@@ -988,7 +1074,7 @@ export default function CalendarPage() {
             <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full overflow-y-auto bg-white">
               <div className="p-4 space-y-6">
                 {/* Remove border-b from child components via CSS override */}
-                <style jsx="true">{`
+                <style jsx>{`
                   div :global(.border-b) {
                     border-bottom: none !important;
                   }
@@ -1047,6 +1133,7 @@ export default function CalendarPage() {
                   scheduledHabitInstances={scheduledHabitInstances}
                   selectedDate={calendarDate}
                   onRescheduleTask={handleRescheduleTask}
+                  onResizeEvent={handleResizeTask}
                   onCompleteTask={handleCompleteTaskById}
                   onCompleteHabit={handleCompleteHabitById}
                   onUndoHabit={handleUndoHabitById}

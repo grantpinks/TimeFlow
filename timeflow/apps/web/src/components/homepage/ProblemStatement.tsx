@@ -379,7 +379,7 @@ export function ProblemStatement() {
         </motion.div>
       </div>
 
-      <style jsx="true">{`
+      <style jsx>{`
         @keyframes pulse-animation {
           0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
           50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }

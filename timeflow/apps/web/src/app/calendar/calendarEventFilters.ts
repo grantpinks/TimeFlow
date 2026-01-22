@@ -45,7 +45,7 @@ export function filterExternalEvents(
     const isLegacyHabit = summary ? isLegacyTimeflowHabit(summary) : false;
 
     if (scheduledIds.has(event.id ?? '')) {
-      return true;
+      return Boolean(event.sourceType && event.sourceType !== 'external');
     }
 
     if (event.sourceType && event.sourceType !== 'external') {

@@ -176,20 +176,29 @@ export async function getEvents(
   timeMax: string
 ): Promise<CalendarEvent[]> {
   const calendar = await getCalendarClient(userId);
+  const events: calendar_v3.Schema$Event[] = [];
+  let pageToken: string | undefined;
 
-  const response = await withRetry(
-    () =>
-      calendar.events.list({
-        calendarId: calendarId || 'primary',
-        timeMin,
-        timeMax,
-        singleEvents: true,
-        orderBy: 'startTime',
-      }),
-    `getEvents(${calendarId}, ${timeMin} - ${timeMax})`
-  );
+  do {
+    const response = await withRetry(
+      () =>
+        calendar.events.list({
+          calendarId: calendarId || 'primary',
+          timeMin,
+          timeMax,
+          singleEvents: true,
+          orderBy: 'startTime',
+          maxResults: 2500,
+          pageToken,
+        }),
+      `getEvents(${calendarId}, ${timeMin} - ${timeMax})`
+    );
 
-  const events = response.data.items || [];
+    if (response.data.items?.length) {
+      events.push(...response.data.items);
+    }
+    pageToken = response.data.nextPageToken ?? undefined;
+  } while (pageToken);
 
   return events
     .filter((event) => event.start?.dateTime && event.end?.dateTime)

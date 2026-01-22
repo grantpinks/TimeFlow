@@ -10,6 +10,8 @@
     "build": "pnpm -r build",
     "dev": "pnpm dev:backend",
     "dev:backend": "pnpm -C apps/backend dev",
+    "dev:full": "bash scripts/dev-with-ngrok.sh",
+    "dev:stop": "bash scripts/dev-stop.sh",
     "dev:web": "pnpm -C apps/web dev",
     "dev:mobile": "pnpm -C apps/mobile start",
     "lint": "pnpm -r lint",

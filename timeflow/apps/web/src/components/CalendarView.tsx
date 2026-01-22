@@ -6,7 +6,6 @@ import { Calendar, luxonLocalizer, Views, type View } from 'react-big-calendar';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { DateTime } from 'luxon';
 import { motion, useReducedMotion } from 'framer-motion';
-import { createPortal } from 'react-dom';
 import type { Task, CalendarEvent, CategoryTrainingExampleSnapshot, HabitSkipReason } from '@timeflow/shared';
 import { EventDetailPopover } from './EventDetailPopover';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -51,7 +50,8 @@ interface CalendarViewProps {
   onCategoryChange?: (
     eventId: string,
     categoryId: string,
-    training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot }
+    training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot },
+    eventSummary?: string
   ) => Promise<void>;
 }
 
@@ -137,10 +137,20 @@ export function CalendarView({
   // Convert tasks and events to calendar format
   const events = useMemo(() => {
     const calendarEvents: CalendarEventItem[] = [];
+    const categoryLookup = new Map(
+      (categories ?? []).map((category) => [category.id, category])
+    );
+    const habitCategory = (categories ?? []).find(
+      (category) => category.name.trim().toLowerCase() === 'habits'
+    );
 
     // Add scheduled tasks
     for (const task of tasks) {
       if (task.scheduledTask) {
+        const categoryFromId = task.categoryId
+          ? categoryLookup.get(task.categoryId)
+          : undefined;
+        const categoryColor = task.category?.color ?? categoryFromId?.color;
         calendarEvents.push({
           id: `task-${task.id}`,
           title: task.title,
@@ -150,7 +160,7 @@ export function CalendarView({
           taskId: task.id,
           description: task.description ?? undefined,
           overflowed: task.scheduledTask.overflowedDeadline,
-          categoryColor: task.category?.color,
+          categoryColor,
           sourceType: 'task',
           sourceId: task.id,
           isCompleted: task.status === 'completed',
@@ -161,7 +171,11 @@ export function CalendarView({
     // Add external events with categorization and completion tracking
     for (const event of externalEvents) {
       const categorization = event.id ? eventCategorizations?.[event.id] : undefined;
+      const categoryFromId = categorization?.categoryId
+        ? categoryLookup.get(categorization.categoryId)
+        : undefined;
       const isHabitEvent = event.sourceType === 'habit';
+      const habitColor = habitCategory?.color;
 
       calendarEvents.push({
         id: `event-${event.id || Math.random().toString()}`,
@@ -173,7 +187,9 @@ export function CalendarView({
         scheduledHabitId: isHabitEvent ? event.sourceId : undefined,
         eventId: event.id ?? undefined,
         description: event.description,
-        categoryColor: categorization?.categoryColor, // Use AI-assigned category color
+        categoryColor: isHabitEvent
+          ? habitColor
+          : (categoryFromId?.color ?? categorization?.categoryColor),
         sourceType: event.sourceType,
         sourceId: event.sourceId,
         isCompleted: event.isCompleted,
@@ -181,7 +197,7 @@ export function CalendarView({
     }
 
     return calendarEvents;
-  }, [tasks, externalEvents, eventCategorizations]);
+  }, [tasks, externalEvents, eventCategorizations, categories]);
 
   const eventStyleGetter = useCallback((event: CalendarEventItem) => {
     // Base opacity: reduce for completed events
@@ -212,8 +228,7 @@ export function CalendarView({
     }
 
     if (event.isHabit || event.sourceType === 'habit') {
-      // Purple/indigo for habits
-      const habitColor = '#6366F1'; // Indigo-500
+      const habitColor = event.categoryColor || '#6366F1'; // Indigo-500 fallback
       return {
         className: 'habit-event',
         style: {
@@ -262,10 +277,19 @@ export function CalendarView({
       // Find the full task details if this is a task event
       const taskId = event.taskId;
       const task = taskId ? tasks.find((t) => t.id === taskId) : undefined;
+      const categoryFromId = task?.categoryId
+        ? categories?.find((category) => category.id === task.categoryId)
+        : undefined;
+      const habitCategory = categories?.find(
+        (category) => category.name.trim().toLowerCase() === 'habits'
+      );
 
       // For external events, get categorization
       const eventIdForCategorization = event.id.replace('event-', '');
       const categorization = !event.isTask ? eventCategorizations?.[eventIdForCategorization] : undefined;
+      const categorizationCategory = categorization?.categoryId
+        ? categories?.find((category) => category.id === categorization.categoryId)
+        : undefined;
 
       // Check if this is a habit event
       const isHabit = event.sourceType === 'habit';
@@ -297,8 +321,16 @@ export function CalendarView({
         habitCompletion,
         habitStreak,
         categoryColor: event.categoryColor,
-        categoryName: event.isTask ? task?.category?.name : categorization?.categoryName,
-        categoryId: event.isTask ? task?.category?.id : categorization?.categoryId,
+        categoryName: event.isHabit
+          ? habitCategory?.name
+          : event.isTask
+          ? (task?.category?.name ?? categoryFromId?.name)
+          : (categorizationCategory?.name ?? categorization?.categoryName),
+        categoryId: event.isHabit
+          ? habitCategory?.id
+          : event.isTask
+          ? (task?.category?.id ?? categoryFromId?.id)
+          : (categorizationCategory?.id ?? categorization?.categoryId),
         overflowed: event.overflowed,
       });
       setPopoverOpen(true);
@@ -308,7 +340,7 @@ export function CalendarView({
         onSelectEvent(event);
       }
     },
-    [tasks, eventCategorizations, onSelectEvent, externalEvents, scheduledHabitInstances, habitStreakMap]
+    [tasks, eventCategorizations, onSelectEvent, externalEvents, scheduledHabitInstances, habitStreakMap, categories]
   );
 
   const TimeSlotWrapper: ComponentType<any> = (slotProps: any) => {
@@ -573,70 +605,5 @@ function DraggableEvent({
   );
 }
 
-function EventHoverCard({
-  event,
-  anchorRect,
-  prefersReducedMotion,
-}: {
-  event: CalendarEventItem;
-  anchorRect: DOMRect;
-  prefersReducedMotion: boolean;
-}) {
-  if (typeof document === 'undefined') return null;
-
-  const cardWidth = 280;
-  const cardMaxHeight = 200;
-  const offset = 12;
-  const padding = 12;
-
-  let left = anchorRect.right + offset;
-  if (left + cardWidth > window.innerWidth - padding) {
-    left = anchorRect.left - cardWidth - offset;
-  }
-  if (left < padding) {
-    left = padding;
-  }
-
-  let top = anchorRect.top + 6;
-  const maxTop = window.innerHeight - cardMaxHeight - padding;
-  if (top > maxTop) {
-    top = maxTop;
-  }
-  if (top < padding) {
-    top = padding;
-  }
-
-  const startLabel = DateTime.fromJSDate(event.start).toFormat('h:mm a');
-  const endLabel = DateTime.fromJSDate(event.end).toFormat('h:mm a');
-  const dateLabel = DateTime.fromJSDate(event.start).toFormat('ccc, LLL d');
-  const description = event.description?.trim();
-  const accentColor = event.categoryColor || (event.isTask ? '#0BAF9A' : '#64748B');
-
-  return createPortal(
-    <motion.div
-      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 8, scale: 0.98 }}
-      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.98 }}
-      transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: 'easeOut' }}
-      style={{ left, top, width: cardWidth, maxHeight: cardMaxHeight }}
-      className="fixed z-[60] rounded-xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-sm px-4 py-3 text-slate-900"
-    >
-      <div className="flex items-center gap-2 text-[11px] text-slate-600">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
-          {event.isTask ? 'Task' : 'Event'}
-        </span>
-        <span className="text-slate-300">|</span>
-        <span>{dateLabel}</span>
-      </div>
-      <div className="mt-2 text-sm font-semibold leading-snug line-clamp-2">{event.title}</div>
-      <div className="mt-1 text-xs text-slate-600">
-        {startLabel} - {endLabel}
-      </div>
-      <div className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-5">
-        {description || 'No description provided.'}
-      </div>
-    </motion.div>,
-    document.body
-  );
-}
+// NOTE: EventHoverCard component removed - unused as of Sprint 19
+// If hover cards are needed in future, consider using EventDetailPopover instead

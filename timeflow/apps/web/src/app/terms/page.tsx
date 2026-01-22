@@ -41,8 +41,8 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">1. Acceptance of Terms</h2>
             <p className="text-gray-700 leading-relaxed">
-              By accessing or using TimeFlow ("Service"), you agree to be bound by these Terms of Service
-              ("Terms"). If you do not agree, do not use the Service.
+              By accessing or using TimeFlow (&quot;Service&quot;), you agree to be bound by these Terms of Service
+              (&quot;Terms&quot;). If you do not agree, do not use the Service.
             </p>
           </section>
 
@@ -129,14 +129,14 @@ export default function TermsPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">8. Third-Party Integrations</h2>
             <p className="text-gray-700 leading-relaxed">
               TimeFlow integrates with Google Calendar and Gmail. Your use of these services is
-              governed by Google's Terms of Service and Privacy Policy, not ours.
+              governed by Google&apos;s Terms of Service and Privacy Policy, not ours.
             </p>
           </section>
 
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">9. Disclaimers</h2>
             <p className="text-gray-700 leading-relaxed mb-4">
-              THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND:
+              THE SERVICE IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTIES OF ANY KIND:
             </p>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
               <li>We do not guarantee uninterrupted or error-free service</li>
@@ -166,7 +166,7 @@ export default function TermsPage() {
           <section className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">12. Changes to Terms</h2>
             <p className="text-gray-700 leading-relaxed">
-              We may modify these Terms at any time. We'll notify you of significant changes via
+              We may modify these Terms at any time. We&apos;ll notify you of significant changes via
               email or app notification. Continued use after changes constitutes acceptance.
             </p>
           </section>

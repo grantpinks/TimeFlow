@@ -19,6 +19,13 @@ cd ~/Desktop/Time<TAB>/TimeFlow/timeflow
 
 ## 🚀 Start Development Servers
 
+### Start Backend + Web + ngrok
+
+```bash
+cd ~/Desktop/Time\ Flow/TimeFlow/timeflow
+pnpm dev:full
+```
+
 ### Start Both Servers (Recommended)
 
 From the project root, open **two terminal tabs/windows**:
@@ -35,6 +42,20 @@ cd ~/Desktop/Time\ Flow/TimeFlow/timeflow
 pnpm dev:web
 ```
 
+### Stop Backend + Web + ngrok
+
+```bash
+cd ~/Desktop/Time\ Flow/TimeFlow/timeflow
+pnpm dev:stop
+```
+
+### Start Backend + Web + ngrok
+
+```bash
+cd ~/Desktop/Time\ Flow/TimeFlow/timeflow
+pnpm dev:full
+```
+
 ### What You'll See
 
 **Backend (Port 3001):**
@@ -47,6 +68,20 @@ Server listening at http://0.0.0.0:3001
 - Local:   http://localhost:3000
 - Network: http://192.168.x.x:3000
 ```
+
+---
+
+## 🌐 ngrok Tunnel (Gmail Pub/Sub Push)
+
+Use this when testing Gmail background sync in local development.
+
+```bash
+ngrok http 3001
+```
+
+Notes:
+- Use the public URL printed by ngrok as the Pub/Sub push endpoint.
+- ngrok inspector runs at `http://127.0.0.1:4040` for request debugging.
 
 ---
 

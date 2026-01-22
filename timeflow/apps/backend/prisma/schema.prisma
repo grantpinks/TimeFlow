@@ -31,17 +31,32 @@ model User {
   habitsCoachState           Json? // { dismissedSuggestions: [{type, habitId, dismissedAt, snoozedUntil}], lastPrimarySuggestion: {...} }
 
   // Action-state label sync settings
-  actionStateLabelSyncEnabled Boolean   @default(false) // Enable syncing action states to Gmail labels
+  actionStateLabelSyncEnabled Boolean @default(false) // Enable syncing action states to Gmail labels
 
   // Habit notification preferences (opt-in)
-  notifyStreakAtRisk         Boolean   @default(false) // Notify when streak will break if not completed today
-  notifyMissedHighPriority   Boolean   @default(false) // Notify when high-priority habit is missed
+  notifyStreakAtRisk       Boolean @default(false) // Notify when streak will break if not completed today
+  notifyMissedHighPriority Boolean @default(false) // Notify when high-priority habit is missed
 
   // Meeting-specific availability preferences
   meetingStartTime     String? // HH:mm - default earliest meeting time
   meetingEndTime       String? // HH:mm - default latest meeting time
   blockedDaysOfWeek    String[] @default([]) // Days blocked for meetings
   dailyMeetingSchedule Json? // Per-day meeting config
+
+  // Subscription & Billing (Sprint 18)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  planTier             String    @default("FREE") // FREE | PRO | FLOW_STATE
+  subscriptionStatus   String? // active | trialing | past_due | canceled | incomplete
+  billingCycleStart    DateTime?
+  billingCycleEnd      DateTime?
+  trialEndsAt          DateTime?
+  betaTierOverride     String? // For beta users: HEAVY (higher AI quotas)
+
+  // Flow Credits (Sprint 18)
+  flowCreditsUsed  Int       @default(0)
+  flowCreditsLimit Int       @default(200) // FREE: 200, PRO: 2000, FLOW_STATE: 8000
+  creditsResetAt   DateTime?
 
   appliedSchedules         AppliedSchedule[]
   AssistantMetric          AssistantMetric[]
@@ -64,6 +79,8 @@ model User {
   meetings                 Meeting[]
   appleCalendarAccount     AppleCalendarAccount?
   writingVoiceProfile      WritingVoiceProfile?
+  subscriptions            Subscription[]
+  usageLogs                UsageLog[]
 }
 
 model Task {
@@ -164,7 +181,7 @@ model Habit {
   daysOfWeek         String[]
   preferredTimeOfDay String?
   durationMinutes    Int               @default(30)
-  priorityRank       Int?              // Priority ranking (1 = highest priority, null = not set)
+  priorityRank       Int? // Priority ranking (1 = highest priority, null = not set)
   isActive           Boolean           @default(true)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
@@ -505,4 +522,42 @@ model WritingVoiceProfile {
   // TODO: Post-beta - Add profile variants (work/personal contexts)
 
   @@index([userId])
+}
+
+// ============================================================================
+// Sprint 18: Subscription & Payment Models
+// ============================================================================
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String
+  stripeSubscriptionId String    @unique
+  stripePriceId        String // Price ID from Stripe (links to plan)
+  status               String // active | trialing | past_due | canceled | incomplete
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean   @default(false)
+  canceledAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([stripeSubscriptionId])
+  @@index([status])
+}
+
+model UsageLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String // SIMPLE_AI_COMMAND | COMPLEX_AI_COMMAND | EMAIL_DRAFT | SYNC | PROACTIVE_SUGGESTION
+  creditCost Int // Credits deducted for this action
+  timestamp  DateTime @default(now())
+  metadata   Json? // Additional context (feature used, endpoint called, etc.)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([action])
 }

@@ -52,7 +52,8 @@ interface EventDetailPopoverProps {
   onCategoryChange?: (
     eventId: string,
     categoryId: string,
-    training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot }
+    training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot },
+    eventSummary?: string
   ) => Promise<void>;
   onHabitComplete?: (scheduledHabitId: string, actualDurationMinutes?: number) => Promise<void>;
   onHabitUndo?: (scheduledHabitId: string) => Promise<void>;
@@ -83,6 +84,8 @@ export function EventDetailPopover({
   const [changingCategory, setChangingCategory] = useState(false);
   const [useTraining, setUseTraining] = useState(false);
   const [showTrainingInfo, setShowTrainingInfo] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   // Habit completion state
   const [habitActionLoading, setHabitActionLoading] = useState(false);
@@ -122,6 +125,10 @@ export function EventDetailPopover({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    setSelectedCategoryId(event?.categoryId || '');
+  }, [event?.categoryId, event?.id]);
 
   useEffect(() => {
     if (isOpen) {
@@ -334,8 +341,14 @@ export function EventDetailPopover({
 
   const priority = event.task ? getPriorityLabel(event.task.priority) : null;
 
-  const handleCategoryChange = async (newCategoryId: string) => {
+  const handleCategorySave = async () => {
     if (!onCategoryChange || !event) return;
+    const newCategoryId = selectedCategoryId;
+
+    if (!newCategoryId && useTraining) {
+      setCategoryError('Select a category to train the AI.');
+      return;
+    }
 
     const shouldTrain = useTraining && !event.isTask && Boolean(newCategoryId);
     const trainingPayload = shouldTrain
@@ -352,13 +365,15 @@ export function EventDetailPopover({
       : undefined;
 
     setChangingCategory(true);
+    setCategoryError(null);
     try {
-      await onCategoryChange(event.id, newCategoryId, trainingPayload);
+      await onCategoryChange(event.id, newCategoryId, trainingPayload, event.title);
       if (shouldTrain) {
         setUseTraining(false);
       }
     } catch (error) {
       console.error('Failed to change category:', error);
+      setCategoryError(error instanceof Error ? error.message : 'Failed to update category');
     } finally {
       setChangingCategory(false);
     }
@@ -458,8 +473,8 @@ export function EventDetailPopover({
                   Category
                 </label>
                 <select
-                  value={event.categoryId || ''}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  value={selectedCategoryId}
+                  onChange={(e) => setSelectedCategoryId(e.target.value)}
                   disabled={changingCategory}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -495,6 +510,22 @@ export function EventDetailPopover({
                     When enabled, we save this event as a training example so similar events auto-categorize.
                   </p>
                 )}
+                {categoryError && (
+                  <p className="mt-1 text-xs text-red-600">{categoryError}</p>
+                )}
+                <div className="mt-2 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCategorySave}
+                    disabled={
+                      changingCategory ||
+                      (!useTraining && selectedCategoryId === (event.categoryId || ''))
+                    }
+                    className="px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Save
+                  </button>
+                </div>
                 {changingCategory && (
                   <p className="text-xs text-slate-500 mt-1">Updating category...</p>
                 )}

@@ -1172,7 +1172,7 @@ export default function InboxPage() {
       </div>
 
       {/* Web Fonts */}
-      <style jsx="true" global="true">{`
+      <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap');
       `}</style>
 

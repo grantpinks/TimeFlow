@@ -73,6 +73,7 @@ export type AnalyticsEvent =
   | { name: 'habits.coach.dismissed'; properties: { suggestion_type: string; habit_id_hash: string } }
   | { name: 'habits.coach.undo'; properties: { action_type: string } }
   | { name: 'habits.streak.milestone_reached'; properties: { streak_length: 7 | 14 | 30 | 100 } }
+  | { name: 'habits.reordered'; properties: { from: number; to: number; count: number } }
   // Category events
   | { name: 'category_created'; properties: { category_name: string } }
   | { name: 'category_edited'; properties: { category_id: string } }

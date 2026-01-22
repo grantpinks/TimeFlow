@@ -35,6 +35,8 @@ export async function buildServer(): Promise<FastifyInstance> {
     logger: {
       level: env.NODE_ENV === 'development' ? 'info' : 'warn',
     },
+    // Trust proxy headers so rate limiting can distinguish clients behind ngrok/proxies.
+    trustProxy: true,
   });
 
   // Register plugins
@@ -54,8 +56,17 @@ export async function buildServer(): Promise<FastifyInstance> {
   await server.register(rateLimit, {
     max: env.RATE_LIMIT_MAX ?? 100,
     timeWindow: env.RATE_LIMIT_WINDOW ?? '1 minute',
-    keyGenerator: (request) => request.ip,
-    allowList: (req) => req.url?.startsWith('/health') || false,
+    keyGenerator: (request) => {
+      const forwardedFor = request.headers['x-forwarded-for'];
+      const forwardedIp = Array.isArray(forwardedFor)
+        ? forwardedFor[0]
+        : forwardedFor?.split(',')[0]?.trim();
+      return forwardedIp || request.ip;
+    },
+    allowList: (req) =>
+      req.url?.startsWith('/health') ||
+      req.url?.startsWith('/api/integrations/gmail/push') ||
+      false,
   });
 
   // Health check

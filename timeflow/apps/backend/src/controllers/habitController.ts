@@ -333,7 +333,7 @@ export async function completeHabitInstance(
   const { scheduledHabitId } = request.params;
 
   // Parse and validate request body
-  const parsed = completeHabitInstanceSchema.safeParse(request.body);
+  const parsed = completeHabitInstanceSchema.safeParse(request.body ?? {});
   if (!parsed.success) {
     return reply.status(400).send({
       error: 'Invalid request',

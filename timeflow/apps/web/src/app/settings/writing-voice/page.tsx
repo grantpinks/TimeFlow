@@ -9,7 +9,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import * as api from '@/lib/api';
-import type { WritingVoiceProfile } from '@timeflow/shared';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function WritingVoiceSettingsPage() {
@@ -208,7 +207,7 @@ export default function WritingVoiceSettingsPage() {
               <div className="text-left">
                 <h2 className="text-xl font-semibold text-slate-900">Advanced: Teach AI Your Voice</h2>
                 <p className="text-sm text-slate-600 mt-1">
-                  Paste examples of emails you've written to personalize your voice
+                  Paste examples of emails you&apos;ve written to personalize your voice
                 </p>
               </div>
               <svg
@@ -274,7 +273,7 @@ Best,
             </div>
             <p className="text-sm text-slate-500 mt-2">
               {/* TODO: Post-beta - Add quota enforcement and tier-based limits */}
-              You're using AI email drafts to save time. Keep it up!
+              You&apos;re using AI email drafts to save time. Keep it up!
             </p>
           </div>
 

@@ -41,7 +41,7 @@ export function FlowSchedulingBanner() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [selectedHabitIds, setSelectedHabitIds] = useState<Set<string>>(new Set());
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('timeflow_token');
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
@@ -311,7 +311,7 @@ export function FlowSchedulingBanner() {
             <div className="flex flex-col items-center justify-center py-8">
               <div className="text-4xl mb-3">⚠️</div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                Couldn't generate schedule
+                Couldn&apos;t generate schedule
               </h3>
               <p className="text-sm text-slate-600 text-center mb-4 max-w-sm">
                 {error}
@@ -331,7 +331,7 @@ export function FlowSchedulingBanner() {
                 No available time slots
               </h3>
               <p className="text-sm text-slate-600 text-center mb-4 max-w-sm">
-                Flow couldn't find open slots for your habits. Try a longer time range or adjust your calendar.
+                Flow couldn&apos;t find open slots for your habits. Try a longer time range or adjust your calendar.
               </p>
               <button
                 onClick={() => setError(null)}

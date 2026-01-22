@@ -59,7 +59,7 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
 
 ---
 
-## Wake/Bedtime Per-Day Constraints
+## Wake/Bedtime Per-Day Constraints - FIXED
 
 ### Current State
 - Single wake/sleep time for all days of the week
@@ -88,6 +88,8 @@ P0 **MAJOR FIND: Ai Assistant has no ability to update your schedule if you allo
   - [ ] Sprint 11 – Task 11.11 (wire habit suggestion buttons into scheduling workflow with clear labels) — Status: TODO
 -
 
+## Calendar Page
+- There is no color coding sync for Timeflow and Google Calendar events. While there is color categorization in Timeflow there is zero difference in color in Google Calendar.
 
 ## Task Page
 - In Editing a task changes in category don't save and there is also no seperator visually when this category is set.  

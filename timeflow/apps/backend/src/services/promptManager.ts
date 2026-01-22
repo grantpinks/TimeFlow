@@ -1,9 +1,12 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// For CommonJS compatibility: __dirname is available natively in CJS
-// In ESM builds, this would need fileURLToPath(import.meta.url)
-const __dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(require?.main?.filename || process.cwd());
+// Resolve module directory in ESM without shadowing __dirname.
+const moduleDir =
+  typeof __dirname !== 'undefined'
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * AI Assistant mode types
@@ -37,7 +40,7 @@ export class PromptManager {
   private readonly promptsDir: string;
 
   constructor() {
-    this.promptsDir = path.join(__dirname, '../prompts');
+    this.promptsDir = path.join(moduleDir, '../prompts');
     this.loadBasePrompt();
   }
 

@@ -47,7 +47,8 @@
       "Skill(superpowers:using-git-worktrees)",
       "Bash(find:*)",
       "Bash(psql:*)",
-      "Bash(pnpm add:web @dnd-kit/sortable)"
+      "Bash(pnpm add:web @dnd-kit/sortable)",
+      "Bash(pnpm type-check:*)"
     ],
     "deny": [],
     "ask": []

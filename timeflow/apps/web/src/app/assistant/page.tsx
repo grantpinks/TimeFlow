@@ -15,7 +15,7 @@ import * as api from '../../lib/api';
 import type { ChatMessage, SchedulePreview, ApplyScheduleBlock } from '@timeflow/shared';
 
 export default function AssistantPage() {
-  const { user, isAuthenticated } = useUser();
+  const { user, isAuthenticated, loading: userLoading } = useUser();
   const { tasks, refresh: refreshTasks } = useTasks();
   const { habits } = useHabits();
   const reduceMotion = useReducedMotion();
@@ -129,14 +129,11 @@ export default function AssistantPage() {
 
   // Redirect if not authenticated
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!isAuthenticated && typeof window !== 'undefined') {
-        window.location.href = '/';
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [isAuthenticated]);
+    if (userLoading) return;
+    if (!isAuthenticated && typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  }, [isAuthenticated, userLoading]);
 
   const loadConversations = async () => {
     try {
@@ -304,7 +301,7 @@ export default function AssistantPage() {
     scheduleAutoSaveFlush(800);
   };
 
-  if (!isAuthenticated || !user) {
+  if (userLoading || !isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center app-shell">
         <div className="text-center">

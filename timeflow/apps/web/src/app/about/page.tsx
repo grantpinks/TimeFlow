@@ -55,11 +55,11 @@ export default function AboutPage() {
                 About TimeFlow
               </span>
               <h1 className="text-5xl font-bold text-gray-900 mt-4 mb-6">
-                We're Building the AI Assistant<br />You Actually Want to Use
+                We&apos;re Building the AI Assistant<br />You Actually Want to Use
               </h1>
               <p className="text-xl text-gray-600 leading-relaxed">
                 TimeFlow started from a simple frustration: existing productivity tools either overwhelm you
-                with features or don't do enough. We built an AI scheduling assistant that understands your
+                with features or don&apos;t do enough. We built an AI scheduling assistant that understands your
                 priorities, habits, and life.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
@@ -220,7 +220,7 @@ export default function AboutPage() {
               Join Us on the Journey
             </h2>
             <p className="text-lg text-gray-600 mb-8">
-              We're in beta and actively building with feedback from early users.
+              We&apos;re in beta and actively building with feedback from early users.
             </p>
             <Link
               href="/pricing"

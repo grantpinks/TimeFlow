@@ -309,5 +309,6 @@ export async function updatePreferences(
     dailyMeetingSchedule: updated.dailyMeetingSchedule || null,
     notifyStreakAtRisk: updated.notifyStreakAtRisk,
     notifyMissedHighPriority: updated.notifyMissedHighPriority,
+    actionStateLabelSyncEnabled: updated.actionStateLabelSyncEnabled,
   };
 }

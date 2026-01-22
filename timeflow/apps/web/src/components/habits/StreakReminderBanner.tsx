@@ -7,11 +7,18 @@
 
 'use client';
 
-import { useState } from 'react';
-import type { PerHabitInsights } from '@timeflow/shared';
+import { useEffect, useRef, useState } from 'react';
+import type { StreakAtRiskNotification } from '@timeflow/shared';
+
+const RATE_LIMIT_MS = 4 * 60 * 60 * 1000;
+const STORAGE_KEYS = {
+  snoozedUntil: 'streakReminderSnoozedUntil',
+  dismissed: 'streakReminderDismissed',
+  lastShownAt: 'streakReminderLastShownAt',
+};
 
 interface StreakReminderBannerProps {
-  atRiskHabits: PerHabitInsights[];
+  atRiskHabits: StreakAtRiskNotification[];
   onScheduleRescue?: (habitId: string) => void;
   onCompleteNow?: (habitId: string) => void;
 }
@@ -21,11 +28,81 @@ export function StreakReminderBanner({
   onScheduleRescue,
   onCompleteNow,
 }: StreakReminderBannerProps) {
+  const lastShownAtRef = useRef<Date | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [snoozedUntil, setSnoozedUntil] = useState<Date | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [hasShown, setHasShown] = useState(false);
+
+  useEffect(() => {
+    const dismissedValue = localStorage.getItem(STORAGE_KEYS.dismissed);
+    if (dismissedValue === 'true') {
+      setDismissed(true);
+    }
+
+    const snoozedValue = localStorage.getItem(STORAGE_KEYS.snoozedUntil);
+    if (snoozedValue) {
+      const parsed = new Date(snoozedValue);
+      if (!Number.isNaN(parsed.getTime())) {
+        setSnoozedUntil(parsed);
+      }
+    }
+
+    const lastShownValue = localStorage.getItem(STORAGE_KEYS.lastShownAt);
+    if (lastShownValue) {
+      const parsed = new Date(lastShownValue);
+      if (!Number.isNaN(parsed.getTime())) {
+        lastShownAtRef.current = parsed;
+      }
+    }
+
+    setIsHydrated(true);
+  }, []);
+
+  const isSnoozed = snoozedUntil && snoozedUntil > new Date();
+  const isRateLimited =
+    !hasShown &&
+    lastShownAtRef.current &&
+    Date.now() - lastShownAtRef.current.getTime() < RATE_LIMIT_MS;
+
+  const handleSnooze = (until: Date) => {
+    setSnoozedUntil(until);
+    localStorage.setItem(STORAGE_KEYS.snoozedUntil, until.toISOString());
+  };
+
+  const handleDismiss = () => {
+    setDismissed(true);
+    localStorage.setItem(STORAGE_KEYS.dismissed, 'true');
+  };
+
+  // Show the first at-risk habit
+  const habit = atRiskHabits[0];
+  const habitStreak = habit.currentStreak;
+
+  useEffect(() => {
+    if (
+      !isHydrated ||
+      hasShown ||
+      dismissed ||
+      isSnoozed ||
+      isRateLimited ||
+      atRiskHabits.length === 0
+    ) {
+      return;
+    }
+
+    const now = new Date();
+    localStorage.setItem(STORAGE_KEYS.lastShownAt, now.toISOString());
+    lastShownAtRef.current = now;
+    setHasShown(true);
+  }, [isHydrated, hasShown, dismissed, isSnoozed, isRateLimited, atRiskHabits.length]);
 
   // Don't show if dismissed or snoozed
-  if (dismissed || (snoozedUntil && snoozedUntil > new Date())) {
+  if (!isHydrated) {
+    return null;
+  }
+
+  if (dismissed || isSnoozed || isRateLimited) {
     return null;
   }
 
@@ -33,24 +110,6 @@ export function StreakReminderBanner({
   if (atRiskHabits.length === 0) {
     return null;
   }
-
-  const handleSnooze = (hours: number) => {
-    const snoozeUntil = new Date();
-    snoozeUntil.setHours(snoozeUntil.getHours() + hours);
-    setSnoozedUntil(snoozeUntil);
-
-    // Store in localStorage for persistence
-    localStorage.setItem('streakReminderSnoozedUntil', snoozeUntil.toISOString());
-  };
-
-  const handleDismiss = () => {
-    setDismissed(true);
-    // Store in localStorage for session persistence
-    localStorage.setItem('streakReminderDismissed', 'true');
-  };
-
-  // Show the first at-risk habit
-  const habit = atRiskHabits[0];
 
   return (
     <div className="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-lg p-4 shadow-md">
@@ -65,12 +124,12 @@ export function StreakReminderBanner({
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-bold text-red-900">Streak at Risk!</h3>
             <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded">
-              {habit.streak.current} days
+              {habitStreak} days
             </span>
           </div>
 
           <p className="text-sm text-red-800 mb-3">
-            Your {habit.streak.current}-day streak for <span className="font-semibold">{habit.habitTitle}</span> will break if you don't complete it today. Don't lose your progress!
+            Your {habitStreak}-day streak for <span className="font-semibold">{habit.habitTitle}</span> will break if you don&apos;t complete it today. Don&apos;t lose your progress!
           </p>
 
           {/* Actions */}
@@ -92,17 +151,36 @@ export function StreakReminderBanner({
             {/* Snooze/Dismiss */}
             <div className="ml-auto flex items-center gap-2">
               <button
-                onClick={() => handleSnooze(1)}
+                onClick={() => {
+                  const snoozeUntil = new Date();
+                  snoozeUntil.setHours(snoozeUntil.getHours() + 1);
+                  handleSnooze(snoozeUntil);
+                }}
                 className="text-xs text-red-700 hover:text-red-900 underline"
               >
                 Snooze 1h
               </button>
               <span className="text-red-300">|</span>
               <button
-                onClick={() => handleSnooze(3)}
+                onClick={() => {
+                  const snoozeUntil = new Date();
+                  snoozeUntil.setHours(snoozeUntil.getHours() + 3);
+                  handleSnooze(snoozeUntil);
+                }}
                 className="text-xs text-red-700 hover:text-red-900 underline"
               >
                 Snooze 3h
+              </button>
+              <span className="text-red-300">|</span>
+              <button
+                onClick={() => {
+                  const snoozeUntil = new Date();
+                  snoozeUntil.setDate(snoozeUntil.getDate() + 1);
+                  handleSnooze(snoozeUntil);
+                }}
+                className="text-xs text-red-700 hover:text-red-900 underline"
+              >
+                Snooze tomorrow
               </button>
               <span className="text-red-300">|</span>
               <button

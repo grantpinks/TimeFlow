@@ -8,19 +8,21 @@
 
 import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
-import { getHabitInsights, acceptHabitSuggestion } from '@/lib/api';
+import { getHabitInsights, acceptHabitSuggestion, getHabitNotifications } from '@/lib/api';
+import { buildRescueBlockForAtRisk, parseTimeSlotStartHour } from '@/lib/habitRescue';
 import { CoachCard } from './CoachCard';
 import { Recommendations } from './Recommendations';
 import { StreakReminderBanner } from './StreakReminderBanner';
 import { MetricsTooltip } from './MetricsTooltip';
 import { track, hashHabitId } from '@/lib/analytics';
-import type { HabitInsightsSummary, PerHabitInsights, HabitRecommendation } from '@timeflow/shared';
+import type { HabitInsightsSummary, PerHabitInsights, HabitRecommendation, StreakAtRiskNotification } from '@timeflow/shared';
 
 export function HabitsInsights() {
   const [insights, setInsights] = useState<HabitInsightsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<14 | 28>(14);
+  const [streakNotifications, setStreakNotifications] = useState<StreakAtRiskNotification[]>([]);
 
   useEffect(() => {
     loadInsights();
@@ -30,8 +32,15 @@ export function HabitsInsights() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getHabitInsights(selectedPeriod);
+      const [data, notifications] = await Promise.all([
+        getHabitInsights(selectedPeriod),
+        getHabitNotifications().catch((err) => {
+          console.warn('Failed to load habit notifications:', err);
+          return { streakAtRisk: [], missedHighPriority: [] };
+        }),
+      ]);
       setInsights(data);
+      setStreakNotifications(notifications.streakAtRisk ?? []);
 
       // Track insights viewed (privacy-safe - only period length)
       track('habits.insight.viewed', { days_filter: selectedPeriod });
@@ -90,15 +99,12 @@ export function HabitsInsights() {
       let daysUntil = targetDay - currentDay;
       if (daysUntil <= 0) daysUntil += 7; // Next occurrence
 
-      // Parse time slot (e.g., "9am-10am" -> 9)
-      const timeMatch = habitInsight.bestWindow.timeSlot.match(/(\d+)(am|pm)/);
-      let hour = timeMatch ? parseInt(timeMatch[1]) : 9;
-      if (timeMatch && timeMatch[2] === 'pm' && hour !== 12) hour += 12;
-      if (timeMatch && timeMatch[2] === 'am' && hour === 12) hour = 0;
+      const parsedHour =
+        parseTimeSlotStartHour(habitInsight.bestWindow.timeSlot) ?? 9;
 
       start = new Date(now);
       start.setDate(start.getDate() + daysUntil);
-      start.setHours(hour, 0, 0, 0);
+      start.setHours(parsedHour, 0, 0, 0);
     } else {
       // No best window - schedule for tomorrow at 9am
       start = new Date();
@@ -126,7 +132,7 @@ export function HabitsInsights() {
     alert(`✅ Rescue block scheduled for ${start.toLocaleDateString()} at ${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
   };
 
-  const handleAdjustWindow = async (recommendation: HabitRecommendation) => {
+  const handleAdjustWindow = async (_recommendation: HabitRecommendation) => {
     // TODO: Implement window adjustment
     // This would need a backend endpoint to update habit.preferredTimeOfDay
     alert('Adjust window feature coming soon! This will let you change the preferred time for your habit.');
@@ -140,43 +146,7 @@ export function HabitsInsights() {
         throw new Error('Habit not found');
       }
 
-      // Calculate rescue block time - schedule for today if possible, otherwise tomorrow
-      const now = new Date();
-      const currentHour = now.getHours();
-
-      let start: Date;
-      const duration = habitInsight.minutesScheduled / Math.max(habitInsight.scheduled, 1);
-
-      if (habitInsight.bestWindow) {
-        // Try to use best window today if it's still in the future
-        const timeMatch = habitInsight.bestWindow.timeSlot.match(/(\d+)(am|pm)/);
-        let hour = timeMatch ? parseInt(timeMatch[1]) : 18; // Default to 6pm
-        if (timeMatch && timeMatch[2] === 'pm' && hour !== 12) hour += 12;
-        if (timeMatch && timeMatch[2] === 'am' && hour === 12) hour = 0;
-
-        if (hour > currentHour) {
-          // Schedule today
-          start = new Date(now);
-          start.setHours(hour, 0, 0, 0);
-        } else {
-          // Schedule tomorrow
-          start = new Date(now);
-          start.setDate(start.getDate() + 1);
-          start.setHours(hour, 0, 0, 0);
-        }
-      } else {
-        // No best window - schedule later today (6pm) or tomorrow
-        const rescueHour = Math.max(currentHour + 2, 18); // At least 2 hours from now, or 6pm
-        start = new Date(now);
-        if (rescueHour >= 24) {
-          start.setDate(start.getDate() + 1);
-          start.setHours(18, 0, 0, 0);
-        } else {
-          start.setHours(rescueHour, 0, 0, 0);
-        }
-      }
-
-      const end = new Date(start.getTime() + duration * 60000);
+      const { start, end } = buildRescueBlockForAtRisk(habitInsight);
 
       // Schedule the rescue block
       await acceptHabitSuggestion({
@@ -241,8 +211,7 @@ export function HabitsInsights() {
     );
   }
 
-  // Get habits with streaks at risk
-  const atRiskHabits = insights.habits.filter(h => h.streak.atRisk && h.streak.current > 0);
+  const atRiskHabits = streakNotifications;
 
   return (
     <div className="space-y-6">
@@ -278,7 +247,7 @@ export function HabitsInsights() {
         <StreakReminderBanner
           atRiskHabits={atRiskHabits}
           onScheduleRescue={handleRescueBlockFromBanner}
-          onCompleteNow={(habitId) => {
+          onCompleteNow={(_habitId) => {
             // Navigate to calendar or today page to complete the habit
             window.location.href = '/calendar';
           }}

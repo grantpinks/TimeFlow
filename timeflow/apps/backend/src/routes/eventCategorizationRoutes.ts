@@ -29,6 +29,11 @@ export async function registerEventCategorizationRoutes(server: FastifyInstance)
     { preHandler: requireAuth },
     eventCategorizationController.updateEventCategorization
   );
+  server.delete(
+    '/events/:eventId/categorization',
+    { preHandler: requireAuth },
+    eventCategorizationController.deleteEventCategorization
+  );
 
   // Get categorization stats
   server.get(

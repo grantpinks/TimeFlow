@@ -1147,11 +1147,12 @@ export interface EventCategorization {
  */
 export async function getEventCategorizations(
   eventIds: string[],
-  provider: string = 'google'
+  provider: string = 'google',
+  eventSummaries?: Record<string, string>
 ): Promise<Record<string, EventCategorization>> {
   return request<Record<string, EventCategorization>>('/events/categorizations', {
     method: 'POST',
-    body: JSON.stringify({ eventIds, provider }),
+    body: JSON.stringify({ eventIds, provider, eventSummaries }),
   });
 }
 
@@ -1193,7 +1194,8 @@ export async function updateEventCategorization(
   eventId: string,
   categoryId: string,
   provider: string = 'google',
-  training?: { useForTraining: boolean; example?: CategoryTrainingExampleSnapshot }
+  training?: { useForTraining: boolean; example?: CategoryTrainingExampleSnapshot },
+  eventSummary?: string
 ): Promise<void> {
   return request<void>(`/events/${eventId}/categorization?provider=${provider}`, {
     method: 'PUT',
@@ -1201,7 +1203,20 @@ export async function updateEventCategorization(
       categoryId,
       train: training?.useForTraining,
       example: training?.example,
+      eventSummary,
     }),
+  });
+}
+
+/**
+ * Delete event categorization (reset to uncategorized)
+ */
+export async function deleteEventCategorization(
+  eventId: string,
+  provider: string = 'google'
+): Promise<void> {
+  return request<void>(`/events/${eventId}/categorization?provider=${provider}`, {
+    method: 'DELETE',
   });
 }
 
