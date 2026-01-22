@@ -1168,7 +1168,7 @@ export async function processMessage(
       message,
       effectiveMode,
       isPlanAdjustment,
-      wantsReschedule,
+      wantsReschedule, // includeScheduledTaskIds
       wantsDailyPlan,
       wantsReschedule,
       previousPlanningState,

@@ -138,4 +138,123 @@ I've scheduled your tasks for you.
     expect(result.suggestions).toBeDefined();
     expect(result.suggestions?.blocks).toHaveLength(1);
   });
+
+  it('returns reschedule preview when user asks to reschedule existing tasks', async () => {
+    const { prisma } = await import('../../config/prisma.js');
+    const calendarService = await import('../googleCalendarService.js');
+
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-1',
+      timeZone: 'UTC',
+      wakeTime: '08:00',
+      sleepTime: '22:00',
+      defaultTaskDurationMinutes: 30,
+      dailySchedule: null,
+      dailyScheduleConstraints: null,
+      defaultCalendarId: 'primary',
+      meetingStartTime: null,
+      meetingEndTime: null,
+    } as any);
+    vi.mocked(prisma.task.count).mockResolvedValue(0); // No unscheduled tasks
+
+    // Mock scheduled tasks for rescheduling
+    const scheduledTasks = [{
+      id: 'existing-task-1',
+      title: 'Meeting at 2pm',
+      description: null,
+      priority: 1,
+      durationMinutes: 60,
+      dueDate: null,
+      status: 'scheduled',
+      userId: 'user-1',
+      categoryId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      scheduledTask: {
+        id: 'scheduled-1',
+        taskId: 'existing-task-1',
+        calendarId: 'primary',
+        eventId: 'event-1',
+        startDateTime: new Date('2025-12-23T14:00:00Z'),
+        endDateTime: new Date('2025-12-23T15:00:00Z'),
+        overflowedDeadline: false,
+      },
+    }];
+
+    // Mock unscheduled tasks (empty)
+    vi.mocked(prisma.task.findMany).mockResolvedValueOnce([]);
+    // Mock scheduled tasks for rescheduling
+    vi.mocked(prisma.task.findMany).mockResolvedValueOnce([{
+      id: 'existing-task-1',
+      title: 'Meeting at 2pm',
+      description: null,
+      priority: 1,
+      durationMinutes: 60,
+      dueDate: null,
+      status: 'scheduled',
+      userId: 'user-1',
+      categoryId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      scheduledTask: {
+        id: 'scheduled-1',
+        taskId: 'existing-task-1',
+        calendarId: 'primary',
+        eventId: 'event-1',
+        startDateTime: new Date('2025-12-23T14:00:00Z'),
+        endDateTime: new Date('2025-12-23T15:00:00Z'),
+        overflowedDeadline: false,
+      },
+    }]);
+    vi.mocked(prisma.habit.findMany).mockResolvedValue([]);
+    vi.mocked(calendarService.getEvents).mockResolvedValue([
+      {
+        id: 'event-1',
+        summary: 'TF| Meeting at 2pm',
+        start: '2025-12-23T14:00:00Z',
+        end: '2025-12-23T15:00:00Z',
+      },
+    ]);
+
+    // Mock the internal prisma call for scheduled tasks
+    vi.mocked(prisma.task).findMany.mockResolvedValueOnce(scheduledTasks);
+
+    // Mock LLM response for reschedule request
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: `
+I can help you reschedule your tasks. Here's a preview of moving your afternoon task to tomorrow morning.
+
+[STRUCTURED_OUTPUT]
+\`\`\`json
+{
+  "blocks": [
+    {
+      "taskId": "existing-task-1",
+      "start": "2025-12-24T09:00:00Z",
+      "end": "2025-12-24T10:30:00Z"
+    }
+  ],
+  "summary": "Rescheduled 1 task to tomorrow morning",
+  "conflicts": [],
+  "confidence": "high"
+}
+\`\`\`
+              `,
+            },
+          },
+        ],
+      }),
+    });
+
+    const result = await processMessage('user-1', 'Move my 2pm task to tomorrow morning.');
+
+    expect(result.suggestions?.blocks).toHaveLength(1);
+    expect(result.suggestions?.blocks[0].taskId).toBe('existing-task-1');
+    expect(result.message.metadata?.action?.type).not.toBe('apply_schedule');
+  });
 });
