@@ -568,7 +568,14 @@ export async function applyScheduleBlocks(
     },
   });
 
-  return { tasksScheduled, habitsScheduled };
+  // Generate undo token for successful application
+  const undoToken = crypto
+    .createHash('sha256')
+    .update(`${userId}:${requestHash}:${Date.now()}`)
+    .digest('hex')
+    .substring(0, 16); // Short token for UX
+
+  return { tasksScheduled, habitsScheduled, undoToken };
 }
 
 /**

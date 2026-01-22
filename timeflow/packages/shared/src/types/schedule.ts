@@ -47,6 +47,7 @@ export interface ApplyScheduleRequest {
 export interface ApplyScheduleResponse {
   tasksScheduled: number;
   habitsScheduled: number;
+  undoToken?: string; // Token to undo this schedule application
 }
 
 /**
