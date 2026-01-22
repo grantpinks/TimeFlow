@@ -1012,7 +1012,13 @@ export async function processMessage(
   message: string,
   conversationHistory?: ChatMessage[],
   conversationId?: string,
-  options?: { debugEnabled?: boolean }
+  options?: { debugEnabled?: boolean },
+  planningRitualData?: {
+    selectedTaskIds: string[];
+    constraints: string[];
+    focusAreas: string[];
+    energyLevel: 'low' | 'medium' | 'high';
+  }
 ): Promise<AssistantChatResponse> {
   const debugEnabled = options?.debugEnabled ?? env.AI_DEBUG_ERRORS === 'true';
   try {
@@ -1174,7 +1180,8 @@ export async function processMessage(
       previousPlanningState,
       previousMeetingState,
       meetingLinksOverride,
-      meetingContextOverride
+      meetingContextOverride,
+      planningRitualData
     );
 
     const focusHabitSet = new Set(focusedHabitIds);
@@ -1455,7 +1462,13 @@ async function buildContextPrompt(
   previousPlanningState: PlanningState | null = null,
   previousMeetingState: MeetingWorkflowState | null = null,
   meetingLinksOverride?: MeetingLinkSummary[],
-  meetingContextOverride?: ReturnType<typeof getMeetingContext>
+  meetingContextOverride?: ReturnType<typeof getMeetingContext>,
+  planningRitualData?: {
+    selectedTaskIds: string[];
+    constraints: string[];
+    focusAreas: string[];
+    energyLevel: 'low' | 'medium' | 'high';
+  }
 ): Promise<{
   contextPrompt: string;
   calendarEvents: any[];
@@ -1679,6 +1692,39 @@ async function buildContextPrompt(
       prompt +=
         '**Rescheduling Guidance**: Only move tasks listed under "Already Scheduled Tasks" when the user explicitly asks to reschedule them.\n\n';
     }
+  }
+
+  // Add planning ritual context if provided
+  if (planningRitualData) {
+    prompt += `**Planning Ritual Context**:\n`;
+    prompt += `User completed a planning ritual with the following preferences:\n`;
+
+    if (planningRitualData.selectedTaskIds.length > 0) {
+      prompt += `**Priority Tasks** (schedule these first): `;
+      const priorityTasks = unscheduledTasks.filter(task =>
+        planningRitualData.selectedTaskIds.includes(task.id)
+      );
+      prompt += priorityTasks.map(task => `${task.title} (ID: ${task.id})`).join(', ') + '\n';
+    }
+
+    if (planningRitualData.constraints.length > 0) {
+      prompt += `**Scheduling Constraints**: ${planningRitualData.constraints.join(', ')}\n`;
+    }
+
+    if (planningRitualData.focusAreas.length > 0) {
+      prompt += `**Focus Areas**: ${planningRitualData.focusAreas.join(', ')}\n`;
+    }
+
+    prompt += `**Energy Level**: ${planningRitualData.energyLevel} energy - `;
+    if (planningRitualData.energyLevel === 'high') {
+      prompt += 'Schedule complex/intense tasks, longer blocks\n';
+    } else if (planningRitualData.energyLevel === 'medium') {
+      prompt += 'Balance focused work with meetings/communication\n';
+    } else {
+      prompt += 'Prefer routine tasks, shorter blocks, light work\n';
+    }
+
+    prompt += '\n**Planning Ritual Guidance**: Honor these preferences when generating schedules. The user has explicitly indicated these are their priorities and constraints for today.\n\n';
   }
 
   // Add active habits

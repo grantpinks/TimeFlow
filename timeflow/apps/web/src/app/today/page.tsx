@@ -18,6 +18,7 @@ import { HourlyTimeline } from '@/components/HourlyTimeline';
 import { EmailViewer } from '@/components/EmailViewer';
 import { EmailComposer } from '@/components/EmailComposer';
 import { Panel, SectionHeader } from '@/components/ui';
+import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today/PlanningRitualPanel';
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
@@ -51,6 +52,7 @@ export default function TodayPage() {
   const [emailCategories, setEmailCategories] = useState<EmailCategoryConfig[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<EmailCategory | 'all'>('all');
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
+  const [showPlanningRitual, setShowPlanningRitual] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   const sensors = useSensors(
@@ -356,6 +358,34 @@ export default function TodayPage() {
     }
   };
 
+  const handlePlanningRitualComplete = async (data: PlanningRitualData) => {
+    setShowPlanningRitual(false);
+
+    // Send planning data to AI assistant to generate schedule
+    try {
+      const message = `Plan my day with these priorities: ${data.selectedTaskIds.map(id =>
+        tasks.find(t => t.id === id)?.title
+      ).filter(Boolean).join(', ')}.
+
+Constraints: ${data.constraints.join(', ')}
+
+Focus areas: ${data.focusAreas.join(', ')}
+
+Energy level: ${data.energyLevel}
+
+Please generate a schedule preview for today.`;
+
+      // Navigate to assistant or send message
+      window.location.href = `/assistant?message=${encodeURIComponent(message)}`;
+    } catch (err) {
+      console.error('Failed to process planning ritual:', err);
+    }
+  };
+
+  const handlePlanningRitualCancel = () => {
+    setShowPlanningRitual(false);
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     const task = event.active.data.current?.task ?? unscheduledTasks.find((t) => t.id === String(event.active.id));
     if (task) {
@@ -470,6 +500,14 @@ export default function TodayPage() {
 
   return (
     <Layout>
+      {showPlanningRitual && (
+        <PlanningRitualPanel
+          tasks={tasks}
+          events={events}
+          onComplete={handlePlanningRitualComplete}
+          onCancel={handlePlanningRitualCancel}
+        />
+      )}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="max-w-[1600px] mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
         {/* Page Header */}
@@ -738,6 +776,15 @@ export default function TodayPage() {
                   title="Quick Actions"
                 />
                 <div className="space-y-2.5">
+                  <button
+                    onClick={() => setShowPlanningRitual(true)}
+                    className="group flex items-center justify-center gap-2 w-full bg-gradient-to-r from-emerald-600 to-emerald-500 text-white px-4 py-3.5 rounded-xl hover:from-emerald-700 hover:to-emerald-600 font-semibold text-sm transition-all shadow-sm hover:shadow-md"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Plan My Day
+                  </button>
                   <a
                     href="/assistant"
                     className="group flex items-center justify-center gap-2 w-full bg-gradient-to-r from-accent-600 to-accent-500 text-white px-4 py-3.5 rounded-xl hover:from-accent-700 hover:to-accent-600 font-semibold text-sm transition-all shadow-sm hover:shadow-md"
