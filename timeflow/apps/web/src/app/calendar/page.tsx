@@ -13,13 +13,12 @@ import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
-import { SchedulePreviewOverlay } from '@/components/calendar/SchedulePreviewOverlay';
 import { Button, Input, Select, Textarea, Label } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import { filterExternalEvents } from './calendarEventFilters';
-import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary } from '@timeflow/shared';
+import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary, ScheduledBlock } from '@timeflow/shared';
 import { track, hashHabitId } from '@/lib/analytics';
 
 export default function CalendarPage() {
@@ -58,6 +57,10 @@ export default function CalendarPage() {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [showEvents, setShowEvents] = useState(true);
   const categorizationUpdateTokenRef = useRef(0);
+  // Schedule preview overlay state
+  const [_schedulePreviewBlocks, _setSchedulePreviewBlocks] = useState<ScheduledBlock[]>([]);
+  const [showSchedulePreview, setShowSchedulePreview] = useState(false);
+  const [applyingSchedule, setApplyingSchedule] = useState(false);
 
   const buildEventSummaryMap = (events: CalendarEvent[]) =>
     Object.fromEntries(
