@@ -8,6 +8,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Layout } from '../../components/Layout';
 import SchedulePreviewCard from '../../components/SchedulePreviewCard';
 import ThinkingState from '../../components/ThinkingState';
+import { SchedulePreviewOverlay } from '../../components/calendar/SchedulePreviewOverlay';
 import { useTasks } from '../../hooks/useTasks';
 import { useHabits } from '../../hooks/useHabits';
 import { useUser } from '../../hooks/useUser';
@@ -27,6 +28,7 @@ export default function AssistantPage() {
   const [previewApplied, setPreviewApplied] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
+  const [showScheduleOverlay, setShowScheduleOverlay] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<api.Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -400,7 +402,8 @@ export default function AssistantPage() {
       await refreshTasks();
 
       setSchedulePreview(null);
-      setPreviewApplied(false);
+      setPreviewApplied(true);
+      setShowScheduleOverlay(false);
 
       let successText = 'Schedule applied!';
       if (tasksScheduled > 0 && habitsScheduled > 0) {
@@ -431,6 +434,7 @@ export default function AssistantPage() {
           ? error.message
           : 'Failed to apply schedule. Please try again.';
       setApplyError(detailedMessage);
+      setShowScheduleOverlay(false);
 
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}_error`,
@@ -896,7 +900,7 @@ export default function AssistantPage() {
                     tasks={tasks}
                     habits={habits}
                     timeZone={user.timeZone}
-                    onApply={handleApplySchedule}
+                    onApply={() => setShowScheduleOverlay(true)}
                     onCancel={() => {
                       setSchedulePreview(null);
                       setPreviewApplied(false);
@@ -984,6 +988,14 @@ export default function AssistantPage() {
             </div>
           </div>
         </div>
+
+        <SchedulePreviewOverlay
+          blocks={schedulePreview?.blocks || []}
+          onApply={handleApplySchedule}
+          onCancel={() => setShowScheduleOverlay(false)}
+          applying={applying}
+          applied={previewApplied}
+        />
       </div>
     </Layout>
   );

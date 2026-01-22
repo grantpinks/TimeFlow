@@ -13,6 +13,7 @@ import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
 import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
+import { SchedulePreviewOverlay } from '@/components/calendar/SchedulePreviewOverlay';
 import { Button, Input, Select, Textarea, Label } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
@@ -58,7 +59,7 @@ export default function CalendarPage() {
   const [showEvents, setShowEvents] = useState(true);
   const categorizationUpdateTokenRef = useRef(0);
   // Schedule preview overlay state
-  const [_schedulePreviewBlocks, _setSchedulePreviewBlocks] = useState<ScheduledBlock[]>([]);
+  const [schedulePreviewBlocks, setSchedulePreviewBlocks] = useState<ScheduledBlock[]>([]);
   const [showSchedulePreview, setShowSchedulePreview] = useState(false);
   const [applyingSchedule, setApplyingSchedule] = useState(false);
 
@@ -509,6 +510,42 @@ export default function CalendarPage() {
       });
       throw error;
     }
+  };
+
+  const handleShowSchedulePreview = (blocks: ScheduledBlock[]) => {
+    setSchedulePreviewBlocks(blocks);
+    setShowSchedulePreview(true);
+  };
+
+  const handleApplySchedulePreview = async () => {
+    if (schedulePreviewBlocks.length === 0) return;
+
+    setApplyingSchedule(true);
+    try {
+      const result = await api.applySchedule(schedulePreviewBlocks);
+      await Promise.all([
+        refreshTasks(),
+        fetchExternalEvents(),
+      ]);
+      setMessage({
+        type: 'success',
+        text: `Schedule applied! ${result.tasksScheduled} tasks and ${result.habitsScheduled} habits scheduled.`,
+      });
+      setShowSchedulePreview(false);
+      setSchedulePreviewBlocks([]);
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to apply schedule',
+      });
+    } finally {
+      setApplyingSchedule(false);
+    }
+  };
+
+  const handleCancelSchedulePreview = () => {
+    setShowSchedulePreview(false);
+    setSchedulePreviewBlocks([]);
   };
 
   const handleResizeTask = async (taskId: string, start: Date, end: Date) => {
@@ -1356,6 +1393,13 @@ export default function CalendarPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <SchedulePreviewOverlay
+        blocks={schedulePreviewBlocks}
+        onApply={handleApplySchedulePreview}
+        onCancel={handleCancelSchedulePreview}
+        applying={applyingSchedule}
+      />
 
       <FloatingAssistantButton />
     </Layout>
