@@ -24,11 +24,11 @@ export interface SchedulePreview {
   confidence: 'high' | 'medium' | 'low';
 }
 
-// Actions the AI can suggest
+// Actions the AI can suggest (confirm-only, no auto-apply)
 export type AssistantAction =
-  | { type: 'apply_schedule'; payload: { blocks: ScheduledBlock[] } }
-  | { type: 'show_calendar'; payload: { date: string } }
-  | { type: 'create_task'; payload: CreateTaskRequest };
+  | { type: 'preview_schedule'; payload: { blocks: ScheduledBlock[] } }
+  | { type: 'create_task_draft'; payload: CreateTaskRequest }
+  | { type: 'draft_reply'; payload: { subject: string; body: string } };
 
 // Request body for POST /api/assistant/chat
 export interface AssistantChatRequest {
