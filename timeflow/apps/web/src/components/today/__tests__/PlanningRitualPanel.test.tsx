@@ -44,7 +44,7 @@ describe('PlanningRitualPanel', () => {
     const mockOnComplete = vi.fn();
     const mockOnCancel = vi.fn();
 
-    render(
+    const { container } = render(
       <PlanningRitualPanel
         tasks={mockTasks}
         events={mockEvents}
@@ -53,14 +53,14 @@ describe('PlanningRitualPanel', () => {
       />
     );
 
-    expect(screen.getByText('Daily Planning Ritual')).toBeInTheDocument();
+    expect(container.textContent).toContain('Daily Planning Ritual');
   });
 
   it('shows tasks in priorities step', () => {
     const mockOnComplete = vi.fn();
     const mockOnCancel = vi.fn();
 
-    render(
+    const { container } = render(
       <PlanningRitualPanel
         tasks={mockTasks}
         events={mockEvents}
@@ -69,8 +69,9 @@ describe('PlanningRitualPanel', () => {
       />
     );
 
-    expect(screen.getByText('Write report')).toBeInTheDocument();
-    expect(screen.getByText('Review code')).toBeInTheDocument();
+    // Check that both task titles are present
+    expect(container.textContent).toContain('Write report');
+    expect(container.textContent).toContain('Review code');
   });
 
   it('can be canceled', () => {

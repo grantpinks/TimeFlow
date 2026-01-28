@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd ../.. && pnpm install && cd apps/web && pnpm build",
-  "installCommand": "cd ../.. && pnpm install --filter=@timeflow/web...",
-  "framework": "nextjs",
-  "outputDirectory": ".next"
-}

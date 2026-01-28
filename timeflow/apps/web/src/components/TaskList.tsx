@@ -23,6 +23,16 @@ interface TaskListProps {
   selectionMode?: boolean;
   selectedTasks?: Set<string>;
   onToggleSelect?: (taskId: string) => void;
+  groupedSections?: Array<{
+    id: string;
+    title: string;
+    tasks: Task[];
+    description?: string;
+  }>;
+  emptyState?: {
+    title: string;
+    description?: string;
+  };
 }
 
 export function TaskList({
@@ -37,6 +47,8 @@ export function TaskList({
   selectionMode = false,
   selectedTasks = new Set(),
   onToggleSelect,
+  groupedSections,
+  emptyState,
 }: TaskListProps) {
   const { categories, createCategory } = useCategories();
   const prefersReducedMotion = useReducedMotion();
@@ -71,6 +83,11 @@ export function TaskList({
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
   const [customCategoryTarget, setCustomCategoryTarget] = useState<'create' | 'edit' | null>(null);
+  const totalTasks = groupedSections?.length
+    ? groupedSections.reduce((sum, section) => sum + section.tasks.length, 0)
+    : tasks.length;
+  const emptyTitle = emptyState?.title ?? 'No tasks yet.';
+  const emptyDescription = emptyState?.description ?? 'Add one above to get started.';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,9 +206,12 @@ export function TaskList({
           <Button
             onClick={() => setShowForm(true)}
             variant="ghost"
-            className="w-full border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-primary-400 hover:text-primary-600"
+            className="w-full border border-slate-200 rounded-lg bg-slate-50/80 text-slate-600 hover:border-primary-200 hover:text-primary-700 hover:bg-primary-50/60"
           >
-            + Add Task
+            <span className="inline-flex items-center gap-2">
+              <span className="text-base">+</span>
+              Add task
+            </span>
           </Button>
           <Button
             onClick={() => setShowTemplateModal(true)}
@@ -345,20 +365,23 @@ export function TaskList({
         <div ref={setNodeRef} className="text-center text-slate-500 py-8">
           Loading tasks...
         </div>
-      ) : tasks.length === 0 ? (
+      ) : totalTasks === 0 ? (
         <div
           ref={setNodeRef}
-          className={`text-center text-slate-500 py-8 rounded-lg border-2 border-dashed transition-colors ${
-            isOver ? 'border-primary-400 bg-primary-50' : 'border-slate-200'
+          className={`text-center py-10 rounded-lg border transition-colors ${
+            isOver ? 'border-primary-300 bg-primary-50/70 text-primary-700' : 'border-slate-200 bg-slate-50/60 text-slate-600'
           }`}
         >
-          No tasks yet. Add one above!
+          <p className="text-sm font-medium">{emptyTitle}</p>
+          {emptyDescription && (
+            <p className="text-xs text-slate-500 mt-1">{emptyDescription}</p>
+          )}
         </div>
       ) : (
         <motion.div
           ref={setNodeRef}
-          className={`space-y-3 p-4 rounded-lg transition-colors ${
-            isOver ? 'bg-primary-50 border-2 border-primary-400' : ''
+          className={`p-6 rounded-lg transition-colors ${
+            isOver ? 'bg-primary-50/60 ring-1 ring-primary-200' : ''
           }`}
           variants={{
             hidden: { opacity: 0 },
@@ -372,19 +395,49 @@ export function TaskList({
           initial="hidden"
           animate="show"
         >
-          {tasks.map((task) => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onEdit={openEditModal}
-              onDelete={onDeleteTask}
-              onComplete={onCompleteTask}
-              draggable={!selectionMode}
-              selectable={selectionMode}
-              selected={selectedTasks.has(task.id)}
-              onToggleSelect={onToggleSelect}
-            />
-          ))}
+          {groupedSections && groupedSections.length > 0 ? (
+            <div className="space-y-8">
+              {groupedSections.map((section) => (
+                <div key={section.id} className="space-y-3">
+                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-400">
+                    <span>{section.title}</span>
+                    {section.description && <span className="text-[11px] normal-case tracking-normal">{section.description}</span>}
+                  </div>
+                  <div className="space-y-3">
+                    {section.tasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onEdit={openEditModal}
+                        onDelete={onDeleteTask}
+                        onComplete={onCompleteTask}
+                        draggable={!selectionMode}
+                        selectable={selectionMode}
+                        selected={selectedTasks.has(task.id)}
+                        onToggleSelect={onToggleSelect}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {tasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onEdit={openEditModal}
+                  onDelete={onDeleteTask}
+                  onComplete={onCompleteTask}
+                  draggable={!selectionMode}
+                  selectable={selectionMode}
+                  selected={selectedTasks.has(task.id)}
+                  onToggleSelect={onToggleSelect}
+                />
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 

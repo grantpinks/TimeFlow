@@ -232,6 +232,91 @@ export default function TasksPage() {
     activeTab === 'scheduled' ? scheduledTasks :
     completedTasks;
 
+  const insights = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(startOfToday);
+    endOfToday.setHours(23, 59, 59, 999);
+    const endOfWeek = new Date(startOfToday);
+    endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay()));
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const overdueCount = activeTabTasks.filter((task) => {
+      if (!task.dueDate) return false;
+      return new Date(task.dueDate) < startOfToday;
+    }).length;
+
+    const weekLoadMinutes = activeTabTasks.reduce((sum, task) => {
+      if (!task.dueDate) return sum;
+      return new Date(task.dueDate) <= endOfWeek ? sum + task.durationMinutes : sum;
+    }, 0);
+
+    const avgMinutes = activeTabTasks.length
+      ? Math.round(
+          activeTabTasks.reduce((sum, task) => sum + task.durationMinutes, 0) /
+            activeTabTasks.length
+        )
+      : 0;
+
+    const formatDuration = (minutes: number) => {
+      if (minutes < 60) return `${minutes}m`;
+      const hours = Math.floor(minutes / 60);
+      const remainder = minutes % 60;
+      return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
+    };
+
+    return {
+      overdueCount,
+      weekLoad: formatDuration(weekLoadMinutes),
+      avgMinutes,
+      hasData: activeTabTasks.length > 0,
+    };
+  }, [activeTabTasks]);
+
+  const groupedSections = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(startOfToday);
+    endOfToday.setHours(23, 59, 59, 999);
+    const endOfWeek = new Date(startOfToday);
+    endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay()));
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const buckets = {
+      today: [] as Task[],
+      thisWeek: [] as Task[],
+      later: [] as Task[],
+      noDueDate: [] as Task[],
+    };
+
+    activeTabTasks.forEach((task) => {
+      if (!task.dueDate) {
+        buckets.noDueDate.push(task);
+        return;
+      }
+
+      const dueDate = new Date(task.dueDate);
+      if (dueDate >= startOfToday && dueDate <= endOfToday) {
+        buckets.today.push(task);
+        return;
+      }
+
+      if (dueDate <= endOfWeek) {
+        buckets.thisWeek.push(task);
+        return;
+      }
+
+      buckets.later.push(task);
+    });
+
+    return [
+      { id: 'today', title: 'Today', tasks: buckets.today },
+      { id: 'this-week', title: 'This Week', tasks: buckets.thisWeek },
+      { id: 'later', title: 'Later', tasks: buckets.later },
+      { id: 'no-due-date', title: 'No Due Date', tasks: buckets.noDueDate },
+    ].filter((section) => section.tasks.length > 0);
+  }, [activeTabTasks]);
+
   const handleSmartSchedule = async () => {
     const taskIds = unscheduledTasks.map((t) => t.id);
     if (taskIds.length === 0) {
@@ -529,6 +614,23 @@ export default function TasksPage() {
           }
         />
 
+        {insights.hasData && (
+          <div className="rounded-xl border border-slate-200/70 bg-white/80 px-4 py-2 text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Insights</span>
+            <span className="text-slate-600">
+              <span className="text-slate-900 font-semibold">{insights.overdueCount}</span> overdue
+            </span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-600">
+              <span className="text-slate-900 font-semibold">{insights.weekLoad}</span> week load
+            </span>
+            <span className="text-slate-300">•</span>
+            <span className="text-slate-600">
+              <span className="text-slate-900 font-semibold">{insights.avgMinutes}m</span> avg
+            </span>
+          </div>
+        )}
+
         {/* Status messages */}
         {scheduleError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -667,6 +769,21 @@ export default function TasksPage() {
                 onDeleteTask={handleDeleteTask}
                 loading={loading}
                 droppableId={activeTab}
+                groupedSections={groupedSections}
+                emptyState={{
+                  title:
+                    activeTab === 'unscheduled'
+                      ? 'No unscheduled tasks'
+                      : activeTab === 'scheduled'
+                      ? 'Nothing scheduled yet'
+                      : 'No completed tasks yet',
+                  description:
+                    activeTab === 'unscheduled'
+                      ? 'Capture tasks as they come to keep momentum.'
+                      : activeTab === 'scheduled'
+                      ? 'Run Smart Schedule to place tasks on your calendar.'
+                      : 'Finish a task to see it live here.',
+                }}
                 selectionMode={selectionMode}
                 selectedTasks={selectedTasks}
                 onToggleSelect={toggleTaskSelection}

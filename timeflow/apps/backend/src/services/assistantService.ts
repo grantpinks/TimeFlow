@@ -378,6 +378,25 @@ function detectPlanningIntent(userMessage: string): boolean {
   return planningKeywords.some((kw) => lower.includes(kw));
 }
 
+function detectTaskCreationIntent(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  const taskCreationKeywords = [
+    'remind me to',
+    'add a task',
+    'create a task',
+    'i need to',
+    'don\'t forget to',
+    'schedule a',
+    'add to my todo',
+    'add to my tasks',
+    'i have to',
+    'i should',
+    'make sure to',
+  ];
+
+  return taskCreationKeywords.some((kw) => lower.includes(kw));
+}
+
 type PlanningTask = {
   priority?: number | null;
   dueDate?: string | Date | null;
@@ -458,9 +477,12 @@ function shouldAskPlanningQuestion(state: PlanningState): boolean {
 function resolvePlanningMode(
   baseMode: 'conversation' | 'scheduling' | 'availability',
   message: string
-): 'conversation' | 'scheduling' | 'availability' | 'planning' {
+): 'conversation' | 'scheduling' | 'availability' | 'planning' | 'task-creation' {
   if (baseMode === 'conversation' && detectPlanningIntent(message)) {
     return 'planning';
+  }
+  if (baseMode === 'conversation' && detectTaskCreationIntent(message)) {
+    return 'task-creation';
   }
   return baseMode;
 }
@@ -1098,6 +1120,13 @@ export async function processMessage(
     let effectiveMode = resolvePlanningMode(mode, message);
     const previousPlanningState = getLatestPlanningState(resolvedHistory);
     const previousMeetingState = getLatestMeetingState(resolvedHistory);
+    
+    // Detect task creation intent
+    if (effectiveMode === 'conversation' && detectTaskCreationIntent(message)) {
+      effectiveMode = 'task-creation';
+    }
+    
+    // Detect meeting intent
     if (effectiveMode === 'conversation' && detectMeetingIntent(message)) {
       effectiveMode = 'meetings';
     }
@@ -1273,7 +1302,29 @@ export async function processMessage(
     }
 
     // Parse the response to extract structured data
-    let { naturalLanguage, schedulePreview } = parseResponse(llmResponse);
+    let { naturalLanguage, schedulePreview, taskDraft } = parseResponse(llmResponse);
+
+    // Handle task creation mode
+    if (effectiveMode === 'task-creation' && taskDraft) {
+      const cleanedResponse = sanitizeAssistantContent(naturalLanguage, effectiveMode, false);
+      const mascotState = detectMascotState(cleanedResponse);
+
+      return {
+        message: {
+          id: generateMessageId(),
+          role: 'assistant',
+          content: cleanedResponse,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            mascotState,
+            action: {
+              type: 'create_task_draft' as const,
+              payload: taskDraft,
+            },
+          },
+        },
+      };
+    }
 
     if (effectiveMode === 'scheduling' && !schedulePreview && debugEnabled) {
       console.warn('[AssistantService][Debug] Missing structured output in scheduling response.');
@@ -1454,7 +1505,7 @@ export async function runThreadAssistTask(
 async function buildContextPrompt(
   userId: string,
   userMessage: string,
-  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings',
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings' | 'task-creation',
   isPlanAdjustment: boolean = false,
   includeScheduledTaskIds: boolean = false,
   dailyPlanRequest: boolean = false,
@@ -2061,6 +2112,7 @@ async function callLocalLLM(
 function parseResponse(llmResponse: string): {
   naturalLanguage: string;
   schedulePreview?: SchedulePreview;
+  taskDraft?: CreateTaskRequest & { suggestedSlot?: { start: string; end: string } };
 } {
   const marker = '[STRUCTURED_OUTPUT]';
   const markerIndex = llmResponse.indexOf(marker);
@@ -2141,9 +2193,26 @@ function parseResponse(llmResponse: string): {
       confidence: structuredData.confidence || 'medium',
     };
 
+    // Parse task draft if present
+    let taskDraft;
+    if (structuredData.taskDraft && typeof structuredData.taskDraft === 'object') {
+      taskDraft = {
+        title: structuredData.taskDraft.title || '',
+        description: structuredData.taskDraft.description || null,
+        durationMinutes: structuredData.taskDraft.durationMinutes || 30,
+        priority: structuredData.taskDraft.priority || 2,
+        categoryId: structuredData.taskDraft.categoryId || null,
+        dueDate: structuredData.taskDraft.dueDate || null,
+        ...(structuredData.suggestedSlot && {
+          suggestedSlot: structuredData.suggestedSlot
+        }),
+      };
+    }
+
     return {
       naturalLanguage,
       schedulePreview,
+      taskDraft,
     };
   } catch (error) {
     console.error('Failed to parse structured output:', error);

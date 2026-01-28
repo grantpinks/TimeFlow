@@ -258,3 +258,68 @@ I can help you reschedule your tasks. Here's a preview of moving your afternoon 
     expect(result.message.metadata?.action?.type).not.toBe('apply_schedule');
   });
 });
+
+describe('processMessage (task creation)', () => {
+  it('creates a task draft and suggests a schedule slot', async () => {
+    const { prisma } = await import('../../config/prisma.js');
+    const calendarService = await import('../googleCalendarService.js');
+
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-1',
+      timeZone: 'UTC',
+      wakeTime: '08:00',
+      sleepTime: '22:00',
+      defaultTaskDurationMinutes: 30,
+      dailySchedule: null,
+      dailyScheduleConstraints: null,
+      defaultCalendarId: 'primary',
+      meetingStartTime: null,
+      meetingEndTime: null,
+    } as any);
+
+    vi.mocked(prisma.task.count).mockResolvedValue(0);
+    vi.mocked(prisma.task.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.habit.findMany).mockResolvedValue([]);
+    vi.mocked(calendarService.getEvents).mockResolvedValue([]);
+
+    // Mock LLM response suggesting a task with a schedule slot
+    // Set up mock before any other operations
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: `I'll create a task for submitting taxes and find a good time slot for you.
+
+[STRUCTURED_OUTPUT]
+\`\`\`json
+{
+  "taskDraft": {
+    "title": "Submit taxes",
+    "description": "Complete and submit tax documents",
+    "durationMinutes": 120,
+    "priority": 1
+  },
+  "suggestedSlot": {
+    "start": "2025-12-24T10:00:00Z",
+    "end": "2025-12-24T12:00:00Z"
+  }
+}
+\`\`\``,
+            },
+          },
+        ],
+      }),
+    });
+
+    const result = await processMessage('user-1', 'Remind me to submit taxes tomorrow morning');
+
+    // Should include task creation language in the response
+    expect(result.message.content.toLowerCase()).toContain('task');
+
+    // Should have a task draft action
+    expect(result.message.metadata?.action?.type).toBe('create_task_draft');
+  });
+});

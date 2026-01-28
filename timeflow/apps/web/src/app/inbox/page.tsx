@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
+import { useInsights } from '@/hooks/useInsights';
+import { InsightList } from '@/components/insights/InsightBanner';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
 import type { EmailActionState, EmailAccount, EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
@@ -23,6 +25,7 @@ import { cacheEmails, clearEmailCache, getCachedEmails } from '@/lib/emailCache'
 
 export default function InboxPage() {
   const { isAuthenticated, user } = useUser();
+  const { insights, loading: insightsLoading, handleDismiss: handleDismissInsight } = useInsights('inbox');
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshingInbox, setRefreshingInbox] = useState(false);
@@ -1004,6 +1007,13 @@ export default function InboxPage() {
             </div>
           </div>
         </div>
+
+        {/* AI Insights */}
+        {!insightsLoading && insights.length > 0 && (
+          <div className="px-6 py-4 bg-white border-b border-[#e0e0e0]">
+            <InsightList insights={insights} onDismiss={handleDismissInsight} />
+          </div>
+        )}
 
         {/* Split Pane Container */}
         <div className="flex-1 flex overflow-hidden">

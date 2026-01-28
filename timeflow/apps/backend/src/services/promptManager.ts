@@ -17,6 +17,7 @@ export type AssistantMode =
   | 'availability'
   | 'planning'
   | 'meetings'
+  | 'task-creation'
   | 'email-draft'
   | 'email-summary'
   | 'email-tasks';
