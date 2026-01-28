@@ -22,8 +22,6 @@ import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
-import { useInsights } from '@/hooks/useInsights';
-import { InsightList } from '@/components/insights/InsightBanner';
 import * as api from '@/lib/api';
 import { buildRescueBlockForAtRisk } from '@/lib/habitRescue';
 import type { EmailCategoryConfig } from '@/lib/api';
@@ -33,7 +31,6 @@ import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEm
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
   const { tasks, loading: tasksLoading, refresh: refreshTasks, completeTask } = useTasks();
-  const { insights, loading: insightsLoading, handleDismiss: handleDismissInsight } = useInsights('today');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [showBanner, setShowBanner] = useState(true);

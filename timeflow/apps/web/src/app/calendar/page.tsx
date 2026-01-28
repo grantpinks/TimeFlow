@@ -17,8 +17,6 @@ import { SchedulePreviewOverlay } from '@/components/calendar/SchedulePreviewOve
 import { Button, Input, Select, Textarea, Label } from '@/components/ui';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
-import { useInsights } from '@/hooks/useInsights';
-import { InsightList } from '@/components/insights/InsightBanner';
 import * as api from '@/lib/api';
 import { filterExternalEvents } from './calendarEventFilters';
 import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary, ScheduledBlock } from '@timeflow/shared';
@@ -40,7 +38,6 @@ export default function CalendarPage() {
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [activeDragHabit, setActiveDragHabit] = useState<{ title: string; durationMinutes: number } | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const { insights, loading: insightsLoading, handleDismiss: handleDismissInsight } = useInsights('calendar', calendarDate);
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const [previewSlot, setPreviewSlot] = useState<{ start: Date; end: Date } | null>(null);
