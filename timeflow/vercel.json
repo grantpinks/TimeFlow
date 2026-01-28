@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd apps/web && pnpm build",
   "devCommand": "cd apps/web && pnpm dev",
-  "installCommand": "npm install -g pnpm@8.15.0 && pnpm install --no-frozen-lockfile",
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": null,
   "outputDirectory": "apps/web/.next"
 }
