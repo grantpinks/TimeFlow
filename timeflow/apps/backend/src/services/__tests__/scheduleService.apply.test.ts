@@ -31,18 +31,19 @@ describe('applyScheduleBlocks', () => {
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-1',
-      timeZone: 'UTC',
+      timezone: 'America/New_York', // Use proper IANA timezone
       wakeTime: '08:00',
       sleepTime: '22:00',
       defaultTaskDurationMinutes: 30,
       dailySchedule: null,
       dailyScheduleConstraints: null,
       defaultCalendarId: 'primary',
+      googleAccessToken: 'token',
     } as any);
 
     vi.mocked(prisma.task.findMany).mockResolvedValue([{
       id: 'task-1'
-    }]);
+    } as any]);
     vi.mocked(prisma.task.findFirst).mockResolvedValue({
       id: 'task-1',
       title: 'Test task',
@@ -66,8 +67,8 @@ describe('applyScheduleBlocks', () => {
 
     const result = await applyScheduleBlocks('user-1', [{
       taskId: 'task-1',
-      start: '2025-12-23T10:00:00Z',
-      end: '2025-12-23T11:00:00Z',
+      start: '2025-12-24T14:00:00Z', // 9:00 AM EST (within wake/sleep hours)
+      end: '2025-12-24T15:00:00Z',   // 10:00 AM EST
     }]);
 
     expect(result.tasksScheduled).toBe(1);
@@ -78,31 +79,26 @@ describe('applyScheduleBlocks', () => {
 
   it('rejects invalid blocks and does not return undo token on validation failure', async () => {
     const { prisma } = await import('../../config/prisma.js');
-    const scheduleValidator = await import('../scheduleValidator.js');
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-1',
-      timeZone: 'UTC',
+      timezone: 'America/New_York',
       wakeTime: '08:00',
       sleepTime: '22:00',
       defaultTaskDurationMinutes: 30,
       dailySchedule: null,
       dailyScheduleConstraints: null,
       defaultCalendarId: 'primary',
+      googleAccessToken: 'token',
     } as any);
 
-    // Mock validation to fail
-    vi.mocked(scheduleValidator.validateSchedulePreview).mockReturnValue({
-      valid: false,
-      errors: ['Invalid time slot'],
-      warnings: [],
-    });
+    vi.mocked(prisma.task.findMany).mockResolvedValue([]);
 
     await expect(
       applyScheduleBlocks('user-1', [{
-        taskId: 'task-1',
-        start: '2025-12-23T25:00:00Z', // Invalid time
-        end: '2025-12-23T26:00:00Z',
+        taskId: 'fake-task-id', // Non-existent task ID
+        start: '2025-12-24T14:00:00Z',
+        end: '2025-12-24T15:00:00Z',
       }])
     ).rejects.toThrow('Schedule validation failed');
   });

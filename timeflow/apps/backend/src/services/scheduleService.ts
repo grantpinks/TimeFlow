@@ -25,6 +25,7 @@ import {
 } from '../utils/scheduleValidator.js';
 import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
 import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
+import { validateSchedule } from './scheduleValidationService.js';
 
 /**
  * Run smart scheduling for the given tasks.
@@ -210,6 +211,36 @@ export async function applyScheduleBlocks(
 
   if (!user) {
     throw new Error('User not found');
+  }
+
+  // CRITICAL: Validate schedule to prevent hallucinations
+  const validation = await validateSchedule(userId, blocks, {
+    strictHabitValidation: false, // Allow partial habit schedules for flexibility
+  });
+
+  if (!validation.valid) {
+    // Log validation errors for monitoring
+    console.error('[ScheduleService] Validation failed', {
+      userId,
+      errors: validation.errors,
+      blockCount: blocks.length,
+    });
+
+    // Return user-friendly error message
+    const errorMessages = validation.errors
+      .map(e => `${e.message} (block ${e.blockIndex >= 0 ? e.blockIndex + 1 : 'N/A'})`)
+      .join('; ');
+    
+    throw new Error(`Schedule validation failed: ${errorMessages}`);
+  }
+
+  // Log warnings for monitoring (but allow schedule to proceed)
+  if (validation.warnings.length > 0) {
+    console.warn('[ScheduleService] Schedule has warnings', {
+      userId,
+      warnings: validation.warnings,
+      blockCount: blocks.length,
+    });
   }
 
   const calendarId = user.defaultCalendarId || 'primary';

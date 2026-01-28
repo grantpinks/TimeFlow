@@ -11,7 +11,7 @@ interface SchedulePreviewOverlayProps {
   applied?: boolean;
 }
 
-export default function SchedulePreviewOverlay({
+export function SchedulePreviewOverlay({
   blocks,
   onApply,
   onCancel,
