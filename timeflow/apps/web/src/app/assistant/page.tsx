@@ -28,7 +28,6 @@ export default function AssistantPage() {
   const [previewApplied, setPreviewApplied] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
-  const [showScheduleOverlay, setShowScheduleOverlay] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversations, setConversations] = useState<api.Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
