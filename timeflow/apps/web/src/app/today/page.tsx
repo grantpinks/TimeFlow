@@ -529,10 +529,6 @@ Please generate a schedule preview for today.`;
           </p>
         </div>
 
-        {/* AI Insights */}
-        {!insightsLoading && insights.length > 0 && (
-          <InsightList insights={insights} onDismiss={handleDismissInsight} />
-        )}
 
         {/* Daily Planning Banner */}
         {showBanner && (

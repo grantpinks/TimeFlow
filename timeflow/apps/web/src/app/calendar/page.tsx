@@ -19,7 +19,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import { filterExternalEvents } from './calendarEventFilters';
-import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary, ScheduledBlock } from '@timeflow/shared';
+import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary, ScheduledBlock, ApplyScheduleBlock } from '@timeflow/shared';
 import { track, hashHabitId } from '@/lib/analytics';
 
 export default function CalendarPage() {
@@ -60,7 +60,6 @@ export default function CalendarPage() {
   const categorizationUpdateTokenRef = useRef(0);
   // Schedule preview overlay state
   const [schedulePreviewBlocks, setSchedulePreviewBlocks] = useState<ScheduledBlock[]>([]);
-  const [showSchedulePreview, setShowSchedulePreview] = useState(false);
   const [applyingSchedule, setApplyingSchedule] = useState(false);
 
   const buildEventSummaryMap = (events: CalendarEvent[]) =>
@@ -512,17 +511,27 @@ export default function CalendarPage() {
     }
   };
 
-  const handleShowSchedulePreview = (blocks: ScheduledBlock[]) => {
-    setSchedulePreviewBlocks(blocks);
-    setShowSchedulePreview(true);
-  };
-
   const handleApplySchedulePreview = async () => {
     if (schedulePreviewBlocks.length === 0) return;
 
     setApplyingSchedule(true);
     try {
-      const result = await api.applySchedule(schedulePreviewBlocks);
+      // Convert ScheduledBlock[] to ApplyScheduleBlock[]
+      const applyBlocks: ApplyScheduleBlock[] = [];
+      schedulePreviewBlocks.forEach((block) => {
+        if ('taskId' in block && block.taskId) {
+          applyBlocks.push({ taskId: block.taskId, start: block.start, end: block.end });
+        } else if ('habitId' in block && block.habitId) {
+          applyBlocks.push({
+            habitId: block.habitId,
+            title: (block as any).title,
+            start: block.start,
+            end: block.end,
+          });
+        }
+      });
+
+      const result = await api.applySchedule(applyBlocks);
       await Promise.all([
         refreshTasks(),
         fetchExternalEvents(),
@@ -531,7 +540,6 @@ export default function CalendarPage() {
         type: 'success',
         text: `Schedule applied! ${result.tasksScheduled} tasks and ${result.habitsScheduled} habits scheduled.`,
       });
-      setShowSchedulePreview(false);
       setSchedulePreviewBlocks([]);
     } catch (error) {
       setMessage({
@@ -544,7 +552,6 @@ export default function CalendarPage() {
   };
 
   const handleCancelSchedulePreview = () => {
-    setShowSchedulePreview(false);
     setSchedulePreviewBlocks([]);
   };
 
@@ -1107,12 +1114,6 @@ export default function CalendarPage() {
           </div>
         )}
 
-        {/* AI Insights */}
-        {!insightsLoading && insights.length > 0 && (
-          <div className="mx-6 mb-4">
-            <InsightList insights={insights} onDismiss={handleDismissInsight} />
-          </div>
-        )}
 
         {/* Dashboard Layout: Left Rail + Main Panel */}
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>

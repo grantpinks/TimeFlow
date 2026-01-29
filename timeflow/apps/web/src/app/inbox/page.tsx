@@ -1005,12 +1005,6 @@ export default function InboxPage() {
           </div>
         </div>
 
-        {/* AI Insights */}
-        {!insightsLoading && insights.length > 0 && (
-          <div className="px-6 py-4 bg-white border-b border-[#e0e0e0]">
-            <InsightList insights={insights} onDismiss={handleDismissInsight} />
-          </div>
-        )}
 
         {/* Split Pane Container */}
         <div className="flex-1 flex overflow-hidden">

@@ -402,7 +402,6 @@ export default function AssistantPage() {
 
       setSchedulePreview(null);
       setPreviewApplied(true);
-      setShowScheduleOverlay(false);
 
       let successText = 'Schedule applied!';
       if (tasksScheduled > 0 && habitsScheduled > 0) {
@@ -433,7 +432,6 @@ export default function AssistantPage() {
           ? error.message
           : 'Failed to apply schedule. Please try again.';
       setApplyError(detailedMessage);
-      setShowScheduleOverlay(false);
 
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}_error`,
@@ -899,7 +897,7 @@ export default function AssistantPage() {
                     tasks={tasks}
                     habits={habits}
                     timeZone={user.timeZone}
-                    onApply={() => setShowScheduleOverlay(true)}
+                    onApply={() => {}}
                     onCancel={() => {
                       setSchedulePreview(null);
                       setPreviewApplied(false);
@@ -991,7 +989,7 @@ export default function AssistantPage() {
         <SchedulePreviewOverlay
           blocks={schedulePreview?.blocks || []}
           onApply={handleApplySchedule}
-          onCancel={() => setShowScheduleOverlay(false)}
+          onCancel={() => setSchedulePreview(null)}
           applying={applying}
           applied={previewApplied}
         />
