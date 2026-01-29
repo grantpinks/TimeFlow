@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Disable static generation for this page due to dynamic content
+export const dynamic = 'force-dynamic';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -10,7 +13,7 @@ import type { EmailActionState, EmailAccount, EmailMessage, FullEmailMessage, In
 import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
 import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle, MessageSquare, Bookmark } from 'lucide-react';
 import Image from 'next/image';
-import DOMPurify from 'dompurify';
+import DOMPurify from 'isomorphic-dompurify';
 import toast, { Toaster } from 'react-hot-toast';
 import { filterInboxEmails } from '@/lib/inboxFilters';
 import { CategoryPills } from '@/components/inbox/CategoryPills';
