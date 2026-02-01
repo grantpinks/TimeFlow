@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import DOMPurify from 'isomorphic-dompurify';
 import Link from 'next/link';
 import type { FullEmailMessage, WritingVoiceProfile } from '@timeflow/shared';
 import * as api from '@/lib/api';
@@ -65,13 +64,22 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sanitize HTML preview for safe rendering
+  const [DOMPurify, setDOMPurify] = useState<any>(null);
+
+  useEffect(() => {
+    // Dynamically import DOMPurify only on client side
+    import('isomorphic-dompurify').then((module) => {
+      setDOMPurify(() => module.default);
+    });
+  }, []);
+
   const sanitizedHtml = useMemo(() => {
-    if (!htmlPreview) return '';
+    if (!htmlPreview || !DOMPurify) return '';
     return DOMPurify.sanitize(htmlPreview, {
       ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'div', 'span', 'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
       ALLOWED_ATTR: ['href', 'style', 'class'],
     });
-  }, [htmlPreview]);
+  }, [htmlPreview, DOMPurify]);
 
   // Load voice profile on mount
   useEffect(() => {

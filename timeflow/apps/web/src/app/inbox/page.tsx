@@ -13,7 +13,6 @@ import type { EmailActionState, EmailAccount, EmailMessage, FullEmailMessage, In
 import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
 import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle, MessageSquare, Bookmark } from 'lucide-react';
 import Image from 'next/image';
-import DOMPurify from 'isomorphic-dompurify';
 import toast, { Toaster } from 'react-hot-toast';
 import { filterInboxEmails } from '@/lib/inboxFilters';
 import { CategoryPills } from '@/components/inbox/CategoryPills';
@@ -1216,8 +1215,18 @@ export default function InboxPage() {
 function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const [DOMPurify, setDOMPurify] = useState<any>(null);
+
+  useEffect(() => {
+    // Dynamically import DOMPurify only on client side
+    import('isomorphic-dompurify').then((module) => {
+      setDOMPurify(() => module.default);
+    });
+  }, []);
+
   const sanitizedHtml = useMemo(() => {
-    if (!html) return null;
+    if (!html || !DOMPurify) return null;
+
     // Gmail-like permissive sanitization - allow almost everything except scripts
     return DOMPurify.sanitize(html, {
       // Allow all safe tags (Gmail allows nearly everything)
