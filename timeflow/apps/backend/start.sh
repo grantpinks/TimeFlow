@@ -14,7 +14,7 @@ echo "  SESSION_SECRET: ${SESSION_SECRET:+***SET***}"
 echo "  ENCRYPTION_KEY: ${ENCRYPTION_KEY:+***SET***}"
 echo ""
 echo "📁 Checking files:"
-ls -lh dist/index.cjs || echo "❌ dist/index.cjs not found!"
+ls -lh dist/index.js || echo "❌ dist/index.js not found!"
 echo ""
 echo "🔧 Node version:"
 node --version
@@ -23,4 +23,4 @@ echo "▶️  Starting node dist/index.js..."
 echo "================================================"
 echo ""
 
-exec node dist/index.cjs
+exec node dist/index.js
