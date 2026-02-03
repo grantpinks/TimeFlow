@@ -1,12 +1,5 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-// Resolve module directory in ESM without shadowing __dirname.
-const moduleDir =
-  typeof __dirname !== 'undefined'
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * AI Assistant mode types
@@ -41,7 +34,9 @@ export class PromptManager {
   private readonly promptsDir: string;
 
   constructor() {
-    this.promptsDir = path.join(moduleDir, '../prompts');
+    // Anchor to CWD (the backend root) so the path is stable whether running
+    // from source (tsx) or from the esbuild bundle (dist/index.cjs).
+    this.promptsDir = path.join(process.cwd(), 'src', 'prompts');
     this.loadBasePrompt();
   }
 
