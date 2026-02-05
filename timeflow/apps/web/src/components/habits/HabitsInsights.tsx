@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { Panel } from '@/components/ui';
-import { getHabitInsights, acceptHabitSuggestion, getHabitNotifications } from '@/lib/api';
+import { getHabitInsights, acceptHabitSuggestion, getHabitNotifications, updateHabit } from '@/lib/api';
 import { buildRescueBlockForAtRisk, parseTimeSlotStartHour } from '@/lib/habitRescue';
 import { CoachCard } from './CoachCard';
 import { Recommendations } from './Recommendations';
@@ -64,8 +64,11 @@ export function HabitsInsights() {
         await handleScheduleRescueBlock(recommendation);
       } else if (recommendation.action.type === 'adjust_window') {
         await handleAdjustWindow(recommendation);
+      } else if (recommendation.action.type === 'move_to_best_window') {
+        await handleMoveToBestWindow(recommendation);
+      } else if (recommendation.action.type === 'reduce_duration' || recommendation.action.type === 'adjust_duration') {
+        await handleAdjustDuration(recommendation);
       } else {
-        // Other actions not yet implemented
         alert(`Action "${recommendation.action.label}" coming soon!`);
       }
     } catch (error) {
@@ -132,10 +135,90 @@ export function HabitsInsights() {
     alert(`✅ Rescue block scheduled for ${start.toLocaleDateString()} at ${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
   };
 
-  const handleAdjustWindow = async (_recommendation: HabitRecommendation) => {
-    // TODO: Implement window adjustment
-    // This would need a backend endpoint to update habit.preferredTimeOfDay
-    alert('Adjust window feature coming soon! This will let you change the preferred time for your habit.');
+  const handleAdjustWindow = async (recommendation: HabitRecommendation) => {
+    // Payload from backend: { habitId, suggestion: 'morning' | 'afternoon' | 'evening' }
+    const preferredTimeOfDay = recommendation.action.payload?.suggestion ?? 'morning';
+
+    await updateHabit(recommendation.habitId, { preferredTimeOfDay });
+
+    track('habits.coach.action_taken', { action_type: 'adjust_window' });
+
+    await loadInsights();
+
+    alert(`Preferred time updated to ${preferredTimeOfDay} for "${recommendation.habitTitle}".`);
+  };
+
+  const handleMoveToBestWindow = async (recommendation: HabitRecommendation) => {
+    // Payload from backend: { habitId, bestWindow: { dayOfWeek, timeSlot, ... } }
+    const bestWindow = recommendation.action.payload?.bestWindow;
+    const habitInsight = insights?.habits.find(h => h.habitId === recommendation.habitId);
+
+    if (!habitInsight) {
+      throw new Error('Habit not found in insights');
+    }
+
+    // Calculate duration from the habit's average scheduled duration
+    const duration = habitInsight.scheduled > 0
+      ? habitInsight.minutesScheduled / habitInsight.scheduled
+      : 30; // fallback
+
+    let start: Date;
+
+    if (bestWindow) {
+      const dayMap: Record<string, number> = {
+        'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+        'Thursday': 4, 'Friday': 5, 'Saturday': 6
+      };
+      const targetDay = dayMap[bestWindow.dayOfWeek];
+      const now = new Date();
+      const currentDay = now.getDay();
+
+      // Find the next occurrence of the target day
+      let daysUntil = targetDay - currentDay;
+      if (daysUntil <= 0) daysUntil += 7;
+
+      const parsedHour = parseTimeSlotStartHour(bestWindow.timeSlot) ?? 9;
+
+      start = new Date(now);
+      start.setDate(start.getDate() + daysUntil);
+      start.setHours(parsedHour, 0, 0, 0);
+    } else {
+      // Fallback: tomorrow at 9am
+      start = new Date();
+      start.setDate(start.getDate() + 1);
+      start.setHours(9, 0, 0, 0);
+    }
+
+    const end = new Date(start.getTime() + duration * 60000);
+
+    await acceptHabitSuggestion({
+      habitId: recommendation.habitId,
+      start: start.toISOString(),
+      end: end.toISOString(),
+    });
+
+    track('habits.coach.action_taken', { action_type: 'move_to_best_window' });
+
+    await loadInsights();
+
+    alert(`Scheduled "${recommendation.habitTitle}" for ${start.toLocaleDateString()} at ${start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`);
+  };
+
+  const handleAdjustDuration = async (recommendation: HabitRecommendation) => {
+    // Payload from backend: { habitId, currentDuration, suggestedDuration }
+    const suggestedDuration = recommendation.action.payload?.suggestedDuration;
+
+    if (suggestedDuration == null || suggestedDuration <= 0) {
+      throw new Error('Invalid suggested duration');
+    }
+
+    await updateHabit(recommendation.habitId, { durationMinutes: suggestedDuration });
+
+    track('habits.coach.action_taken', { action_type: recommendation.action.type });
+
+    await loadInsights();
+
+    alert(`Duration for "${recommendation.habitTitle}" updated to ${suggestedDuration} minutes.`);
   };
 
   const handleRescueBlockFromBanner = async (habitId: string) => {
