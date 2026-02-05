@@ -1538,3 +1538,62 @@ export async function deleteEmailOverride(overrideId: string): Promise<void> {
     method: 'DELETE',
   });
 }
+
+// ===== Billing =====
+
+export interface BillingSubscriptionStatus {
+  planTier: 'FREE' | 'PRO' | 'FLOW_STATE';
+  subscriptionStatus: string | null;
+  hasActiveSubscription: boolean;
+  billingCycleStart: string | null;
+  billingCycleEnd: string | null;
+  trialEndsAt: string | null;
+  credits: {
+    used: number;
+    limit: number;
+    remaining: number;
+    percentUsed: number;
+    resetDate: string | null;
+    planTier: string;
+  };
+}
+
+/**
+ * Create a Stripe Checkout Session for the given plan key.
+ * planKey must be one of: PRO_MONTHLY, PRO_YEARLY, FLOW_STATE_MONTHLY, FLOW_STATE_YEARLY.
+ * The backend resolves this to the actual Stripe Price ID (secrets stay server-side).
+ * Returns a URL to redirect the user to.
+ */
+export async function createCheckoutSession(planKey: string): Promise<{ url: string }> {
+  return request<{ url: string }>('/billing/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ planKey }),
+  });
+}
+
+/**
+ * Get current subscription status and credit usage.
+ */
+export async function getBillingStatus(): Promise<BillingSubscriptionStatus> {
+  return request<BillingSubscriptionStatus>('/billing/subscription');
+}
+
+/**
+ * Cancel the current subscription (at period end by default).
+ */
+export async function cancelBillingSubscription(immediately = false): Promise<{ success: boolean; canceledImmediately: boolean }> {
+  return request<{ success: boolean; canceledImmediately: boolean }>('/billing/cancel', {
+    method: 'POST',
+    body: JSON.stringify({ immediately }),
+  });
+}
+
+/**
+ * Open a Stripe Billing Portal session (manage payment method, invoices, etc.).
+ * Returns a URL to redirect the user to.
+ */
+export async function openBillingPortal(): Promise<{ url: string }> {
+  return request<{ url: string }>('/billing/manage', {
+    method: 'POST',
+  });
+}

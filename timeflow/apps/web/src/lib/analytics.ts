@@ -69,7 +69,7 @@ export type AnalyticsEvent =
   | { name: 'habit.instance.skip'; properties: { habit_id_hash: string; reason_code: string } }
   | { name: 'habits.recommendation.viewed'; properties: { recommendation_type: string; habit_id_hash: string } }
   | { name: 'habits.recommendation.action_taken'; properties: { recommendation_type: string; action_type: string; habit_id_hash: string } }
-  | { name: 'habits.coach.action_taken'; properties: { action_type: 'rescue_block' | 'adjust_window' | 'snooze_skip' } }
+  | { name: 'habits.coach.action_taken'; properties: { action_type: 'rescue_block' | 'adjust_window' | 'move_to_best_window' | 'reduce_duration' | 'adjust_duration' | 'snooze_skip' } }
   | { name: 'habits.coach.dismissed'; properties: { suggestion_type: string; habit_id_hash: string } }
   | { name: 'habits.coach.undo'; properties: { action_type: string } }
   | { name: 'habits.streak.milestone_reached'; properties: { streak_length: 7 | 14 | 30 | 100 } }
@@ -79,7 +79,11 @@ export type AnalyticsEvent =
   | { name: 'category_edited'; properties: { category_id: string } }
   // Settings events
   | { name: 'settings_updated'; properties: { setting_key: string } }
-  | { name: 'calendar_connected'; properties: { provider: 'google' } };
+  | { name: 'calendar_connected'; properties: { provider: 'google' } }
+  // Billing events
+  | { name: 'billing.checkout_started'; properties: { plan: string; billing: 'monthly' | 'yearly' } }
+  | { name: 'billing.subscription_canceled'; properties: { plan: string } }
+  | { name: 'billing.portal_opened'; properties: {} };
 
 // Track event
 export function track<T extends AnalyticsEvent>(event: T['name'], properties?: T['properties']) {

@@ -7,6 +7,7 @@ import { useUser } from '@/hooks/useUser';
 import { SchedulingLinksPanel } from '@/components/SchedulingLinksPanel';
 import { MeetingManagerPanel } from '@/components/MeetingManagerPanel';
 import * as api from '@/lib/api';
+import type { BillingSubscriptionStatus } from '@/lib/api';
 import { canShowAiDebugToggle, getAiDebugEnabled, setAiDebugEnabled as persistAiDebugEnabled } from '@/lib/aiDebug';
 import type { Calendar, DailyScheduleConfig, DailyMeetingConfig } from '@timeflow/shared';
 
@@ -41,6 +42,11 @@ export default function SettingsPage() {
   // Habit notification preferences (opt-in)
   const [notifyStreakAtRisk, setNotifyStreakAtRisk] = useState(false);
   const [notifyMissedHighPriority, setNotifyMissedHighPriority] = useState(false);
+
+  // Billing
+  const [billing, setBilling] = useState<BillingSubscriptionStatus | null>(null);
+  const [billingLoading, setBillingLoading] = useState(true);
+  const [billingAction, setBillingAction] = useState<string | null>(null); // 'cancel' | 'manage' | null
 
   // Initialize form from user data
   useEffect(() => {
@@ -105,6 +111,52 @@ export default function SettingsPage() {
 
     fetchCalendars();
   }, []);
+
+  // Fetch billing status
+  useEffect(() => {
+    async function fetchBilling() {
+      try {
+        const status = await api.getBillingStatus();
+        setBilling(status);
+      } catch (err) {
+        // If the endpoint doesn't exist yet or user is not authed, fail silently
+        console.warn('Billing status unavailable:', err);
+      } finally {
+        setBillingLoading(false);
+      }
+    }
+
+    fetchBilling();
+  }, []);
+
+  // Billing action handlers
+  const handleCancelSubscription = async () => {
+    if (!window.confirm('Cancel your subscription? You will keep access until the end of your billing period.')) return;
+    setBillingAction('cancel');
+    try {
+      await api.cancelBillingSubscription(false);
+      setMessage({ type: 'success', text: 'Subscription will be canceled at the end of your billing period.' });
+      // Refresh billing status
+      const updated = await api.getBillingStatus();
+      setBilling(updated);
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to cancel subscription.' });
+    } finally {
+      setBillingAction(null);
+    }
+  };
+
+  const handleOpenBillingPortal = async () => {
+    setBillingAction('manage');
+    try {
+      const { url } = await api.openBillingPortal();
+      if (url) window.location.href = url;
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to open billing portal.' });
+    } finally {
+      setBillingAction(null);
+    }
+  };
 
 
   const handleSave = async (e: React.FormEvent) => {
@@ -288,6 +340,107 @@ export default function SettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </a>
+          </div>
+
+          {/* Billing & Plan */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-slate-800">Billing & Plan</h2>
+              <Link
+                href="/pricing"
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+              >
+                View all plans
+              </Link>
+            </div>
+
+            {billingLoading ? (
+              <p className="text-sm text-slate-500">Loading billing info...</p>
+            ) : billing ? (
+              <div className="space-y-4">
+                {/* Current plan + credits */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold px-2.5 py-0.5 rounded-full ${
+                        billing.planTier === 'FLOW_STATE'
+                          ? 'bg-purple-100 text-purple-800'
+                          : billing.planTier === 'PRO'
+                            ? 'bg-teal-100 text-teal-800'
+                            : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        {billing.planTier === 'FLOW_STATE' ? 'Flow State' : billing.planTier === 'PRO' ? 'Pro' : 'Starter'}
+                      </span>
+                      {billing.subscriptionStatus === 'past_due' && (
+                        <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Payment due</span>
+                      )}
+                    </div>
+                    {billing.billingCycleEnd && billing.hasActiveSubscription && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Renews {new Date(billing.billingCycleEnd).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">Flow Credits</p>
+                    <p className="text-sm font-semibold text-slate-800">
+                      {billing.credits.remaining.toLocaleString()} <span className="text-slate-400 font-normal">/ {billing.credits.limit.toLocaleString()}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Credits progress bar */}
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      billing.credits.percentUsed > 80 ? 'bg-red-500' : billing.credits.percentUsed > 50 ? 'bg-amber-500' : 'bg-teal-500'
+                    }`}
+                    style={{ width: `${Math.min(billing.credits.percentUsed, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500">
+                  {billing.credits.percentUsed}% used this month
+                  {billing.credits.resetDate && (
+                    <span className="ml-2">— resets {new Date(billing.credits.resetDate).toLocaleDateString()}</span>
+                  )}
+                </p>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {billing.hasActiveSubscription ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleOpenBillingPortal}
+                        disabled={billingAction === 'manage'}
+                        className="px-4 py-1.5 text-sm border border-primary-300 text-primary-700 rounded-lg hover:bg-primary-50 disabled:opacity-50 transition-colors"
+                      >
+                        {billingAction === 'manage' ? 'Opening...' : 'Manage payment'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCancelSubscription}
+                        disabled={billingAction === 'cancel'}
+                        className="px-4 py-1.5 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
+                      >
+                        {billingAction === 'cancel' ? 'Canceling...' : 'Cancel subscription'}
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      href="/pricing"
+                      className="px-4 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                      Upgrade plan
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">
+                Billing information is not available. <Link href="/pricing" className="text-primary-600 hover:underline">View pricing</Link>
+              </p>
+            )}
           </div>
 
           {/* Working Hours */}
