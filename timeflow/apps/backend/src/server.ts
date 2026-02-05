@@ -20,6 +20,7 @@ import { registerEventCategorizationRoutes } from './routes/eventCategorizationR
 import { registerScheduleRoutes } from './routes/scheduleRoutes.js';
 import { registerAssistantRoutes } from './routes/assistantRoutes.js';
 import { registerHabitRoutes } from './routes/habitRoutes.js';
+import { registerDiagnosticsRoutes } from './routes/diagnosticsRoutes.js';
 import { registerEmailRoutes } from './routes/emailRoutes.js';
 import { registerEmailOverrideRoutes } from './routes/emailOverrideRoutes.js';
 import { registerConversationRoutes } from './routes/conversationRoutes.js';
@@ -92,6 +93,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerAvailabilityRoutes(api);
       await registerBookingRoutes(api);
       await registerMeetingRoutes(api);
+      await registerDiagnosticsRoutes(api);
     },
     { prefix: '/api' }
   );

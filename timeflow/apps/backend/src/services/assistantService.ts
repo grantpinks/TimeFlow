@@ -1615,8 +1615,13 @@ async function buildContextPrompt(
       now.toISOString(),
       sevenDaysLater.toISOString()
     );
+    logDebug(`[AssistantService] Fetched ${calendarEvents.length} calendar events for context`);
   } catch (error) {
-    console.error('Failed to fetch calendar events:', error);
+    console.error('[AssistantService] CRITICAL: Failed to fetch calendar events:', error);
+    console.error('[AssistantService] User will not see their calendar in AI context');
+    console.error('[AssistantService] User ID:', userId);
+    console.error('[AssistantService] Has Google token:', !!user.googleAccessToken);
+    console.error('[AssistantService] Token expiry:', user.googleAccessTokenExpiry);
     // Continue without calendar events
   }
 
