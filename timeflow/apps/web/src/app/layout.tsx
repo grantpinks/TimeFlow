@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'TimeFlow - AI Scheduling Assistant',
     description: 'Effortlessly manage tasks, emails, and habits with AI that learns your priorities.',
-    url: 'https://timeflow.app',
+    url: 'https://www.time-flow.app',
     siteName: 'TimeFlow',
     locale: 'en_US',
     type: 'website',

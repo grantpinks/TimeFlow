@@ -27,12 +27,12 @@ export function StructuredData() {
       "Natural language processing",
       "Automatic conflict resolution"
     ],
-    "screenshot": "https://timeflow.app/screenshots/main.png",
+    "screenshot": "https://www.time-flow.app/screenshots/main.png",
     "softwareVersion": "1.0",
     "author": {
       "@type": "Organization",
       "name": "TimeFlow",
-      "url": "https://timeflow.app"
+      "url": "https://www.time-flow.app"
     }
   };
 

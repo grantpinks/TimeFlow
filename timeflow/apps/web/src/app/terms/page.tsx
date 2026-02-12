@@ -185,7 +185,7 @@ export default function TermsPage() {
               Questions about these Terms? Contact us at:
             </p>
             <p className="text-gray-700 leading-relaxed mt-4">
-              Email: <a href="mailto:legal@timeflow.app" className="text-teal-600 hover:underline">legal@timeflow.app</a><br />
+              Email: <a href="mailto:legal@time-flow.app" className="text-teal-600 hover:underline">legal@time-flow.app</a><br />
               Address: [To be added - company registered address]
             </p>
           </section>

@@ -92,7 +92,7 @@ export default function HelpPage() {
         },
         {
           q: 'I\'m getting an authentication error',
-          a: 'Your session may have expired. Try signing out and signing back in. If the problem persists, contact support@timeflow.app.',
+          a: 'Your session may have expired. Try signing out and signing back in. If the problem persists, contact support@time-flow.app.',
         },
         {
           q: 'The app is running slow',

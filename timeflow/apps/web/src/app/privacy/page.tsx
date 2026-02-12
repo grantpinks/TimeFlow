@@ -136,7 +136,7 @@ export default function PrivacyPage() {
               <li><strong>Export:</strong> Download your tasks and calendar data</li>
             </ul>
             <p className="text-gray-700 leading-relaxed mt-4">
-              Contact <a href="mailto:privacy@timeflow.app" className="text-teal-600 hover:underline">privacy@timeflow.app</a> to exercise these rights.
+              Contact <a href="mailto:privacy@time-flow.app" className="text-teal-600 hover:underline">privacy@time-flow.app</a> to exercise these rights.
             </p>
           </section>
 
@@ -185,7 +185,7 @@ export default function PrivacyPage() {
               Questions about this Privacy Policy? Contact us at:
             </p>
             <p className="text-gray-700 leading-relaxed mt-4">
-              Email: <a href="mailto:privacy@timeflow.app" className="text-teal-600 hover:underline">privacy@timeflow.app</a><br />
+              Email: <a href="mailto:privacy@time-flow.app" className="text-teal-600 hover:underline">privacy@time-flow.app</a><br />
               Address: [To be added - company registered address]
             </p>
           </section>

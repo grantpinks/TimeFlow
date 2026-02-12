@@ -58,7 +58,7 @@ export default function ContactPage() {
                 Visit Help Center
               </Link>
               <a
-                href="mailto:support@timeflow.app"
+                href="mailto:support@time-flow.app"
                 onClick={() => track('homepage_cta_clicked', { cta_text: 'Email Support', location: 'contact-support' })}
                 className="block px-6 py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition-colors text-center"
               >
@@ -75,11 +75,11 @@ export default function ContactPage() {
             </p>
             <div className="space-y-4">
               <a
-                href="mailto:hello@timeflow.app"
-                onClick={() => track('homepage_cta_clicked', { cta_text: 'hello@timeflow.app', location: 'contact-general' })}
+                href="mailto:hello@time-flow.app"
+                onClick={() => track('homepage_cta_clicked', { cta_text: 'hello@time-flow.app', location: 'contact-general' })}
                 className="block px-6 py-3 bg-white border border-gray-200 rounded-lg text-gray-900 font-medium hover:border-teal-600 transition-colors text-center"
               >
-                hello@timeflow.app
+                hello@time-flow.app
               </a>
             </div>
           </div>

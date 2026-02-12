@@ -32,7 +32,7 @@ export function HomepageFooter() {
             <h3 className="font-semibold mb-4">Support</h3>
             <ul className="space-y-2 text-gray-400">
               <li><Link href="/help" className="hover:text-white">Help Center</Link></li>
-              <li><a href="mailto:support@timeflow.app" className="hover:text-white">Email Support</a></li>
+              <li><a href="mailto:support@time-flow.app" className="hover:text-white">Email Support</a></li>
             </ul>
           </div>
 

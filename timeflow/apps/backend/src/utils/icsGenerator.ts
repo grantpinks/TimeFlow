@@ -27,7 +27,7 @@ export function generateICS(event: ICSEventData): string {
   const dtEnd = formatDate(event.endDateTime);
 
   // Generate unique ID
-  const uid = `${Date.now()}-${Math.random().toString(36).substring(7)}@timeflow.app`;
+  const uid = `${Date.now()}-${Math.random().toString(36).substring(7)}@time-flow.app`;
 
   const lines = [
     'BEGIN:VCALENDAR',
