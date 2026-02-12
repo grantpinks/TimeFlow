@@ -9,8 +9,6 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { getStripeClient, getOrCreateStripeCustomer, cancelSubscription, STRIPE_PRICE_IDS } from '../services/stripeService.js';
 import { getCreditUsageStats } from '../services/usageTrackingService.js';
 
-const stripe = getStripeClient();
-
 /**
  * POST /api/billing/checkout
  *
@@ -57,7 +55,7 @@ export async function createCheckoutSession(
     // Determine success/cancel URLs based on origin
     const origin = request.headers.origin || process.env.APP_BASE_URL || 'http://localhost:3000';
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripeClient().checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
@@ -178,7 +176,7 @@ export async function createBillingPortalSession(
 
     const origin = request.headers.origin || process.env.APP_BASE_URL || 'http://localhost:3000';
 
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripeClient().billingPortal.sessions.create({
       customer: user.stripeCustomerId,
       return_url: `${origin}/settings`,
     });

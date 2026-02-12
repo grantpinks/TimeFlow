@@ -15,18 +15,26 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Initialize Stripe with API key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia', // Use latest Stripe API version
-  typescript: true,
-});
+// Initialize Stripe lazily so a missing key doesn't crash the server at startup
+let _stripe: Stripe | null = null;
+export function getStripeClient(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error('STRIPE_SECRET_KEY env var is not set');
+    _stripe = new Stripe(key, {
+      apiVersion: '2024-12-18.acacia',
+      typescript: true,
+    });
+  }
+  return _stripe;
+}
 
-// Stripe Price IDs (these will be set up in Stripe Dashboard)
+// Stripe Price IDs (set via env vars on Render)
 export const STRIPE_PRICE_IDS = {
-  PRO_MONTHLY: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
-  PRO_YEARLY: process.env.STRIPE_PRO_YEARLY_PRICE_ID || '',
-  FLOW_STATE_MONTHLY: process.env.STRIPE_FLOW_STATE_MONTHLY_PRICE_ID || '',
-  FLOW_STATE_YEARLY: process.env.STRIPE_FLOW_STATE_YEARLY_PRICE_ID || '',
+  PRO_MONTHLY: process.env.STRIPE_PRICE_PRO_MONTHLY || '',
+  PRO_YEARLY: process.env.STRIPE_PRICE_PRO_YEARLY || '',
+  FLOW_STATE_MONTHLY: process.env.STRIPE_PRICE_FLOW_STATE_MONTHLY || '',
+  FLOW_STATE_YEARLY: process.env.STRIPE_PRICE_FLOW_STATE_YEARLY || '',
 } as const;
 
 // Plan tiers and their Flow Credits limits
@@ -57,7 +65,7 @@ export async function getOrCreateStripeCustomer(
   }
 
   // Create new Stripe customer
-  const customer = await stripe.customers.create({
+  const customer = await getStripeClient().customers.create({
     email,
     name,
     metadata: {
@@ -96,7 +104,7 @@ export async function createSubscription(
     await getOrCreateStripeCustomer(userId, user.email, user.name || undefined);
 
   // Create subscription
-  const subscription = await stripe.subscriptions.create({
+  const subscription = await getStripeClient().subscriptions.create({
     customer: customerId,
     items: [{ price: priceId }],
     trial_period_days: trialDays,
@@ -164,7 +172,7 @@ export async function cancelSubscription(
     throw new Error('User has no active subscription');
   }
 
-  const subscription = await stripe.subscriptions.update(
+  const subscription = await getStripeClient().subscriptions.update(
     user.stripeSubscriptionId,
     {
       cancel_at_period_end: !immediately,
@@ -173,7 +181,7 @@ export async function cancelSubscription(
   );
 
   if (immediately) {
-    await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+    await getStripeClient().subscriptions.cancel(user.stripeSubscriptionId);
   }
 
   // Update subscription record
@@ -217,12 +225,12 @@ export async function changeSubscriptionPlan(
   }
 
   // Get current subscription
-  const currentSubscription = await stripe.subscriptions.retrieve(
+  const currentSubscription = await getStripeClient().subscriptions.retrieve(
     user.stripeSubscriptionId
   );
 
   // Update subscription with new price
-  const updatedSubscription = await stripe.subscriptions.update(
+  const updatedSubscription = await getStripeClient().subscriptions.update(
     user.stripeSubscriptionId,
     {
       items: [
@@ -310,13 +318,6 @@ export async function syncSubscriptionFromWebhook(
       creditsResetAt: new Date(subscription.current_period_end * 1000),
     },
   });
-}
-
-/**
- * Get Stripe instance for custom operations
- */
-export function getStripeClient(): Stripe {
-  return stripe;
 }
 
 export default {

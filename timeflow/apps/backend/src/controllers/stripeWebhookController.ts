@@ -15,8 +15,6 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import Stripe from 'stripe';
 import { getStripeClient, syncSubscriptionFromWebhook } from '../services/stripeService';
 
-const stripe = getStripeClient();
-
 /**
  * Handle Stripe webhook events
  *
@@ -37,7 +35,7 @@ export async function handleStripeWebhook(
 
   try {
     // Verify webhook signature
-    event = stripe.webhooks.constructEvent(
+    event = getStripeClient().webhooks.constructEvent(
       request.rawBody || request.body, // Use raw body for signature verification
       signature,
       process.env.STRIPE_WEBHOOK_SECRET || ''
@@ -134,7 +132,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
   }
 
   // Retrieve subscription to get userId
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
   const userId = subscription.metadata.userId;
 
   if (!userId) {
@@ -168,7 +166,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     return;
   }
 
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await getStripeClient().subscriptions.retrieve(subscriptionId);
   const userId = subscription.metadata.userId;
 
   if (!userId) {
