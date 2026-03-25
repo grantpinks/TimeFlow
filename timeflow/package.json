@@ -4,14 +4,17 @@
   "private": true,
   "description": "TimeFlow – a cross-device productivity app that smart-schedules tasks into your calendar.",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/web",
+    "packages/shared",
+    "packages/scheduling"
   ],
   "engines": {
     "node": "20.x"
   },
   "scripts": {
     "build": "pnpm -r build",
+    "build:packages": "cd packages/shared && npm run build && cd ../scheduling && npm run build",
+    "build:web": "npm run build:packages && cd apps/web && npm run build",
     "dev": "pnpm dev:backend",
     "dev:backend": "pnpm -C apps/backend dev",
     "dev:full": "bash scripts/dev-with-ngrok.sh",
