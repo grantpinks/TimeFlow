@@ -67,6 +67,9 @@ export default function HabitsPage() {
   const [newDaysOfWeek, setNewDaysOfWeek] = useState<string[]>([]);
   const [newTimeOfDay, setNewTimeOfDay] = useState<TimeOfDay | ''>('');
   const [newDuration, setNewDuration] = useState(30);
+  const [newIdentity, setNewIdentity] = useState('');
+  const [newLongTermGoal, setNewLongTermGoal] = useState('');
+  const [newWhyStatement, setNewWhyStatement] = useState('');
 
   // Form state for edit
   const [editTitle, setEditTitle] = useState('');
@@ -76,6 +79,9 @@ export default function HabitsPage() {
   const [editTimeOfDay, setEditTimeOfDay] = useState<TimeOfDay | ''>('');
   const [editDuration, setEditDuration] = useState(30);
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editIdentity, setEditIdentity] = useState('');
+  const [editLongTermGoal, setEditLongTermGoal] = useState('');
+  const [editWhyStatement, setEditWhyStatement] = useState('');
 
   const [addError, setAddError] = useState('');
   const [editError, setEditError] = useState('');
@@ -94,6 +100,9 @@ export default function HabitsPage() {
         daysOfWeek: newFrequency === 'weekly' ? newDaysOfWeek : undefined,
         preferredTimeOfDay: newTimeOfDay || undefined,
         durationMinutes: newDuration,
+        identity: newIdentity.trim() || undefined,
+        longTermGoal: newLongTermGoal.trim() || undefined,
+        whyStatement: newWhyStatement.trim() || undefined,
       });
 
       // Reset form
@@ -103,6 +112,9 @@ export default function HabitsPage() {
       setNewDaysOfWeek([]);
       setNewTimeOfDay('');
       setNewDuration(30);
+      setNewIdentity('');
+      setNewLongTermGoal('');
+      setNewWhyStatement('');
       setShowAdd(false);
       setAddError('');
     } catch (err) {
@@ -119,6 +131,9 @@ export default function HabitsPage() {
     setEditTimeOfDay((habit.preferredTimeOfDay as TimeOfDay) || '');
     setEditDuration(habit.durationMinutes);
     setEditIsActive(habit.isActive);
+    setEditIdentity(habit.identity || '');
+    setEditLongTermGoal(habit.longTermGoal || '');
+    setEditWhyStatement(habit.whyStatement || '');
     setEditError('');
   };
 
@@ -137,6 +152,9 @@ export default function HabitsPage() {
         preferredTimeOfDay: editTimeOfDay || undefined,
         durationMinutes: editDuration,
         isActive: editIsActive,
+        identity: editIdentity.trim() || undefined,
+        longTermGoal: editLongTermGoal.trim() || undefined,
+        whyStatement: editWhyStatement.trim() || undefined,
       });
 
       setEditing(null);
@@ -372,6 +390,68 @@ export default function HabitsPage() {
                 />
               </div>
 
+              {/* Identity-Based Tracking Section */}
+              <div className="border-t border-slate-200 pt-4 mt-2">
+                <div className="flex items-start gap-2 mb-3">
+                  <svg className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <div>
+                    <h3 className="font-semibold text-slate-800 text-sm">Identity-Based Habit Tracking</h3>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Link this habit to who you&apos;re becoming. Research shows connecting daily actions to your identity makes habits stick.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Identity <span className="text-xs text-slate-500">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newIdentity}
+                      onChange={(e) => setNewIdentity(e.target.value)}
+                      placeholder="e.g., Writer, Athlete, Leader"
+                      maxLength={50}
+                      className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Who are you becoming through this habit?</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Long-Term Goal <span className="text-xs text-slate-500">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newLongTermGoal}
+                      onChange={(e) => setNewLongTermGoal(e.target.value)}
+                      placeholder="e.g., Run a marathon by 2027"
+                      maxLength={200}
+                      className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">What&apos;s the bigger picture outcome?</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Why This Matters <span className="text-xs text-slate-500">(optional)</span>
+                    </label>
+                    <textarea
+                      value={newWhyStatement}
+                      onChange={(e) => setNewWhyStatement(e.target.value)}
+                      placeholder="e.g., To have energy to play with my kids and set a healthy example..."
+                      maxLength={500}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-slate-300 rounded resize-none text-sm"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Your personal motivation - this helps on tough days</p>
+                  </div>
+                </div>
+              </div>
+
               {addError && <p className="text-sm text-red-600">{addError}</p>}
 
               <div className="flex gap-2">
@@ -542,6 +622,65 @@ export default function HabitsPage() {
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                           </select>
+                        </div>
+                      </div>
+
+                      {/* Identity-Based Tracking Section */}
+                      <div className="border-t border-slate-200 pt-4 mt-2">
+                        <div className="flex items-start gap-2 mb-3">
+                          <svg className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          <div>
+                            <h3 className="font-semibold text-slate-800 text-sm">Identity-Based Habit Tracking</h3>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                              Link this habit to who you&apos;re becoming for stronger motivation.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Identity <span className="text-xs text-slate-500">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={editIdentity}
+                              onChange={(e) => setEditIdentity(e.target.value)}
+                              placeholder="e.g., Writer, Athlete, Leader"
+                              maxLength={50}
+                              className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Long-Term Goal <span className="text-xs text-slate-500">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={editLongTermGoal}
+                              onChange={(e) => setEditLongTermGoal(e.target.value)}
+                              placeholder="e.g., Run a marathon by 2027"
+                              maxLength={200}
+                              className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                              Why This Matters <span className="text-xs text-slate-500">(optional)</span>
+                            </label>
+                            <textarea
+                              value={editWhyStatement}
+                              onChange={(e) => setEditWhyStatement(e.target.value)}
+                              placeholder="Your personal motivation..."
+                              maxLength={500}
+                              rows={3}
+                              className="w-full px-3 py-2 border border-slate-300 rounded resize-none text-sm"
+                            />
+                          </div>
                         </div>
                       </div>
 

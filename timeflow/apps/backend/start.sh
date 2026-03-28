@@ -19,6 +19,10 @@ echo ""
 echo "🔧 Node version:"
 node --version
 echo ""
+echo "📦 Running database migrations..."
+npx prisma migrate deploy
+echo "✅ Migrations complete!"
+echo ""
 echo "▶️  Starting node dist/index.js..."
 echo "================================================"
 echo ""

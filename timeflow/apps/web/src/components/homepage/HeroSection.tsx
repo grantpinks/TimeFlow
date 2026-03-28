@@ -54,17 +54,17 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden hero-gradient pt-36 pb-16">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden hero-gradient pt-24 sm:pt-32 md:pt-36 pb-12 sm:pb-16 px-4 sm:px-6">
       {/* Animated gradient background - defined in globals.css */}
 
       {/* Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-6 text-center">
+      <div className="relative z-10 max-w-6xl mx-auto text-center">
         {/* Mascot with floating animation - BIGGER & CENTERED */}
         <motion.div
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="flex justify-center mb-12"
+          className="flex justify-center mb-8 sm:mb-12"
         >
           <div className="relative">
             {/* Flow Mascot */}
@@ -86,14 +86,15 @@ export function HeroSection() {
                   animate={{ opacity: 1, rotate: 0 }}
                   transition={{ duration: 0.35, ease: "easeOut" }}
                 >
-                  <Image
-                    src={flowEmotions[emotionIndex].src}
-                    alt={`Flow, your AI scheduling assistant — ${flowEmotions[emotionIndex].label}`}
-                    width={260}
-                    height={260}
-                    className="rounded-full shadow-2xl ring-4 ring-white/20"
-                    priority
-                  />
+                  <div className="relative w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64">
+                    <Image
+                      src={flowEmotions[emotionIndex].src}
+                      alt={`Flow, your AI scheduling assistant — ${flowEmotions[emotionIndex].label}`}
+                      fill
+                      className="rounded-full shadow-2xl ring-4 ring-white/20 object-contain"
+                      priority
+                    />
+                  </div>
                 </motion.div>
               </motion.div>
             </motion.div>
@@ -119,7 +120,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight"
+          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 sm:mb-6 leading-tight px-4"
         >
           Stop Fighting Your Calendar.
           <br />
@@ -131,11 +132,11 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-xl md:text-2xl text-white/90 mb-10 max-w-3xl mx-auto font-medium"
+          className="text-base sm:text-xl md:text-2xl text-white/90 mb-8 sm:mb-10 max-w-3xl mx-auto font-medium px-4"
         >
-          AI-powered scheduling that actually understands you&apos;re busy.
-          <br className="hidden md:block" />
-          No more juggling calendars, tasks, and emails manually.
+          The only AI scheduler that reads your inbox, understands context,
+          <br className="hidden sm:block" />
+          and schedules everything automatically. Email → Calendar → Done.
         </motion.p>
 
         {/* CTAs */}
@@ -143,12 +144,12 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-10"
+          className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center mb-8 sm:mb-10 px-4"
         >
           <motion.a
             href={getGoogleAuthUrl()}
             onClick={() => track('homepage_cta_clicked', { cta_text: 'Get Started Free', location: 'hero' })}
-            className="group relative px-10 py-5 bg-white text-teal-600 rounded-xl font-bold text-lg hover:shadow-2xl transition-all duration-300"
+            className="group relative px-8 sm:px-10 py-4 sm:py-5 min-h-[56px] bg-white text-teal-600 rounded-xl font-bold text-base sm:text-lg hover:shadow-2xl transition-all duration-300 inline-flex items-center justify-center"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -166,7 +167,7 @@ export function HeroSection() {
           </motion.a>
           <motion.button
             onClick={handleScrollToDemo}
-            className="px-10 py-5 bg-white/10 backdrop-blur-sm text-white border-2 border-white/40 rounded-xl font-semibold text-lg hover:bg-white/20 transition-all duration-300"
+            className="px-8 sm:px-10 py-4 sm:py-5 min-h-[56px] bg-white/10 backdrop-blur-sm text-white border-2 border-white/40 rounded-xl font-semibold text-base sm:text-lg hover:bg-white/20 active:bg-white/30 transition-all duration-300 inline-flex items-center justify-center"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -179,22 +180,22 @@ export function HeroSection() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.9 }}
-          className="flex flex-col sm:flex-row gap-6 justify-center items-center text-white/90 text-sm"
+          className="flex flex-col sm:flex-row gap-3 sm:gap-6 justify-center items-center text-white/90 text-xs sm:text-sm px-4"
         >
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2.5 min-h-[44px] rounded-full">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <span className="font-medium">Free 14-day trial</span>
           </div>
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2.5 min-h-[44px] rounded-full">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <span className="font-medium">No credit card needed</span>
           </div>
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2.5 min-h-[44px] rounded-full">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
             </svg>
             <span className="font-medium">Join 10,000+ users</span>
@@ -206,7 +207,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 1.1 }}
-          className="mt-8 text-white/70 text-sm"
+          className="mt-6 sm:mt-8 text-white/70 text-xs sm:text-sm px-4"
         >
           ⭐⭐⭐⭐⭐ <span className="font-semibold text-white/90">4.8/5</span> from 500+ productivity enthusiasts
         </motion.div>
@@ -217,7 +218,7 @@ export function HeroSection() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 1.3 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 hidden sm:block"
       >
         <motion.div
           animate={{ y: [0, 10, 0] }}

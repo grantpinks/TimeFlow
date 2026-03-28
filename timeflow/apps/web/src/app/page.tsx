@@ -23,59 +23,61 @@ export default function HomePage() {
 
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center">
             <Image
               src="/branding/main_logo.png"
               alt="TimeFlow"
-              width={150}
-              height={40}
+              width={120}
+              height={32}
               priority
+              className="h-8 sm:h-10 w-auto"
             />
           </Link>
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
             <a
               href="#features"
               onClick={() => track('homepage_navigation_clicked', { destination: 'features' })}
-              className="text-gray-600 hover:text-teal-600 font-medium transition-colors"
+              className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Features
             </a>
             <a
               href="#how-it-works"
               onClick={() => track('homepage_navigation_clicked', { destination: 'how-it-works' })}
-              className="text-gray-600 hover:text-teal-600 font-medium transition-colors"
+              className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               How It Works
             </a>
             <a
               href="#pricing"
               onClick={() => track('homepage_navigation_clicked', { destination: 'pricing' })}
-              className="text-gray-600 hover:text-teal-600 font-medium transition-colors"
+              className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Pricing
             </a>
             <Link
               href="/today"
               onClick={() => track('homepage_navigation_clicked', { destination: 'sign-in' })}
-              className="text-gray-600 hover:text-teal-600 font-medium transition-colors"
+              className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Sign In
             </Link>
             <a
               href={getGoogleAuthUrl()}
               onClick={() => track('homepage_cta_clicked', { cta_text: 'Get Started Free', location: 'header' })}
-              className="bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 font-medium transition-colors"
+              className="bg-teal-600 text-white px-5 lg:px-6 py-2.5 lg:py-3 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium text-sm lg:text-base transition-all inline-flex items-center justify-center"
             >
               Get Started Free
             </a>
           </nav>
           {/* Mobile menu button */}
-          <button className="md:hidden p-2 text-gray-600 hover:text-gray-900">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          <a
+            href={getGoogleAuthUrl()}
+            className="md:hidden bg-teal-600 text-white px-4 py-2.5 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium text-sm transition-all inline-flex items-center justify-center"
+          >
+            Get Started
+          </a>
         </div>
       </header>
 
@@ -96,13 +98,13 @@ export default function HomePage() {
         {/* AI Assistant Deep-Dive */}
         <FeatureDeepDive
           id="ai-assistant-section"
-          title="Conversational AI Scheduling"
-          subtitle="No more manual time-blocking. Just chat with Flow and let AI handle the rest."
+          title="Your AI Assistant That Actually Reads Emails"
+          subtitle="Unlike simple habit trackers, TimeFlow connects to your inbox and turns emails into scheduled actions automatically."
           benefits={[
-            'Natural language understanding',
-            'Context-aware suggestions',
-            'Learns your preferences over time',
-            'Automatic conflict resolution',
+            'Auto-extracts tasks and meetings from Gmail',
+            'Suggests optimal scheduling based on your energy patterns',
+            'Handles meeting coordination with natural language',
+            'Learns your preferences and adapts over time',
           ]}
           ctaText="Try It Now"
           ctaLink={getGoogleAuthUrl()}

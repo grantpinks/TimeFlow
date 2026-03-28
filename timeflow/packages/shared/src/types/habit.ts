@@ -16,6 +16,12 @@ export interface Habit {
   durationMinutes: number;
   priorityRank?: number | null;
   isActive: boolean;
+  
+  // Identity-based habit tracking
+  identity?: string | null; // "Writer", "Athlete", "Leader" - who you're becoming
+  longTermGoal?: string | null; // "Publish a book by 2027" - the bigger picture
+  whyStatement?: string | null; // Personal motivation - why this matters
+  
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +33,11 @@ export interface CreateHabitRequest {
   daysOfWeek?: string[];
   preferredTimeOfDay?: TimeOfDay;
   durationMinutes?: number;
+  
+  // Identity-based fields
+  identity?: string;
+  longTermGoal?: string;
+  whyStatement?: string;
 }
 
 export interface UpdateHabitRequest {
@@ -37,6 +48,11 @@ export interface UpdateHabitRequest {
   preferredTimeOfDay?: TimeOfDay;
   durationMinutes?: number;
   isActive?: boolean;
+  
+  // Identity-based fields
+  identity?: string;
+  longTermGoal?: string;
+  whyStatement?: string;
 }
 
 export interface ScheduledHabitInstance {

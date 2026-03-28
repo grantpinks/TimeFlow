@@ -27,6 +27,11 @@ const createHabitSchema = z.object({
   daysOfWeek: z.array(z.string()).optional(),
   preferredTimeOfDay: z.enum(['morning', 'afternoon', 'evening']).optional(),
   durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
+  
+  // Identity-based habit tracking
+  identity: z.string().trim().max(50).optional(),
+  longTermGoal: z.string().trim().max(200).optional(),
+  whyStatement: z.string().trim().max(500).optional(),
 });
 
 const updateHabitSchema = z.object({
@@ -37,6 +42,11 @@ const updateHabitSchema = z.object({
   preferredTimeOfDay: z.enum(['morning', 'afternoon', 'evening']).optional(),
   durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
   isActive: z.boolean().optional(),
+  
+  // Identity-based habit tracking
+  identity: z.string().trim().max(50).optional(),
+  longTermGoal: z.string().trim().max(200).optional(),
+  whyStatement: z.string().trim().max(500).optional(),
 });
 
 const habitSuggestionQuerySchema = z.object({

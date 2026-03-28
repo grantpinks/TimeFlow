@@ -150,6 +150,45 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
           <p className="text-sm text-slate-600 mb-3">{habit.description}</p>
         )}
 
+        {/* Identity-Based Tracking Display */}
+        {(habit.identity || habit.longTermGoal || habit.whyStatement) && (
+          <div className="mb-4 p-3 bg-gradient-to-br from-primary-50/50 to-blue-50/50 border border-primary-100 rounded-lg space-y-2">
+            {habit.identity && (
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-medium text-slate-600">Identity</p>
+                  <p className="text-sm font-semibold text-primary-800">{habit.identity}</p>
+                </div>
+              </div>
+            )}
+            {habit.longTermGoal && (
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-medium text-slate-600">Long-Term Goal</p>
+                  <p className="text-sm text-slate-700">{habit.longTermGoal}</p>
+                </div>
+              </div>
+            )}
+            {habit.whyStatement && (
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                <div>
+                  <p className="text-xs font-medium text-slate-600">Why This Matters</p>
+                  <p className="text-sm text-slate-700 italic">{habit.whyStatement}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Habit details */}
         <div className="flex items-center gap-3 mb-4 text-sm text-slate-500">
           <span className="inline-flex items-center gap-1">
