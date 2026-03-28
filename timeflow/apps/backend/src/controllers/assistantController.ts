@@ -1,6 +1,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import * as assistantService from '../services/assistantService.js';
 import * as conversationService from '../services/conversationService.js';
+import * as usageTrackingService from '../services/usageTrackingService.js';
 import type { AssistantChatRequest, ChatMessage } from '@timeflow/shared';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
@@ -51,6 +52,30 @@ export async function chat(
   );
 
   try {
+    // Determine credit cost based on message complexity
+    // Simple queries: "what's on my calendar today?" -> SIMPLE_AI_COMMAND (1 credit)
+    // Complex queries: "schedule all my tasks" -> COMPLEX_AI_COMMAND (5 credits)
+    const isComplexQuery =
+      message.toLowerCase().includes('schedule') ||
+      message.toLowerCase().includes('plan') ||
+      message.toLowerCase().includes('optimize') ||
+      message.toLowerCase().includes('reschedule') ||
+      message.toLowerCase().includes('suggest');
+
+    const action = isComplexQuery ? 'COMPLEX_AI_COMMAND' : 'SIMPLE_AI_COMMAND';
+
+    // Check if user has enough credits
+    const creditCheck = await usageTrackingService.hasCreditsAvailable(user.id, action);
+
+    if (!creditCheck.allowed) {
+      return reply.status(402).send({
+        error: creditCheck.reason || 'Insufficient Flow Credits',
+        code: 'INSUFFICIENT_CREDITS',
+        creditsRemaining: creditCheck.creditsRemaining || 0,
+      });
+    }
+
+    // Process the message
     const response = await assistantService.processMessage(
       user.id,
       message,
@@ -59,7 +84,25 @@ export async function chat(
       { debugEnabled }
     );
 
-    return reply.status(200).send(response);
+    // Track usage (deduct credits)
+    const trackingResult = await usageTrackingService.trackUsage(user.id, action, {
+      messageLength: message.length,
+      conversationId,
+      hasSchedulePreview: !!response.schedulePreview,
+    });
+
+    if (!trackingResult.success) {
+      request.log.warn({ userId: user.id }, 'Failed to track usage but message was processed');
+    }
+
+    // Include credit info in response
+    return reply.status(200).send({
+      ...response,
+      credits: {
+        used: usageTrackingService.CREDIT_COSTS[action],
+        remaining: trackingResult.creditsRemaining,
+      },
+    });
   } catch (error) {
     request.log.error(error, 'Assistant chat failed');
     return reply.status(500).send({

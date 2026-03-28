@@ -9,6 +9,7 @@ import { getFullEmail } from '../services/gmailService.js';
 import { createGmailDraft } from '../services/gmailService.js';
 import { sendEmail } from '../services/gmailService.js';
 import { runAssistantTask } from '../services/assistantService.js';
+import * as usageTrackingService from '../services/usageTrackingService.js';
 import crypto from 'crypto';
 import type {
   EmailDraftRequest,
@@ -125,17 +126,19 @@ export async function generateEmailDraft(
       return reply.status(404).send({ error: 'Original email not found' });
     }
 
-    // Get or create voice profile
-    const profile = await getOrCreateVoiceProfile(userId);
+    // Check Flow Credits before generating draft
+    const creditCheck = await usageTrackingService.hasCreditsAvailable(userId, 'EMAIL_DRAFT');
 
-    const maxDraftsRaw = Number(process.env.AI_DRAFT_QUOTA_MAX || '50');
-    const maxDrafts = Number.isNaN(maxDraftsRaw) ? 50 : maxDraftsRaw;
-    if (maxDrafts > 0 && profile.aiDraftsGenerated >= maxDrafts) {
-      return reply.status(429).send({
-        error: 'AI draft quota exceeded. Please try again later.',
-        code: 'AI_DRAFT_QUOTA_EXCEEDED',
+    if (!creditCheck.allowed) {
+      return reply.status(402).send({
+        error: creditCheck.reason || 'Insufficient Flow Credits for email draft generation',
+        code: 'INSUFFICIENT_CREDITS',
+        creditsRemaining: creditCheck.creditsRemaining || 0,
       });
     }
+
+    // Get or create voice profile
+    const profile = await getOrCreateVoiceProfile(userId);
 
     // Apply voice overrides if provided
     const effectivePreferences = {
@@ -168,7 +171,18 @@ export async function generateEmailDraft(
       throw new Error('Generated draft was too short. Please try again.');
     }
 
-    // Increment usage counter
+    // Track Flow Credits usage
+    const trackingResult = await usageTrackingService.trackUsage(userId, 'EMAIL_DRAFT', {
+      emailId,
+      draftLength: draftText.length,
+      originalSubject: originalEmail.subject,
+    });
+
+    if (!trackingResult.success) {
+      request.log.warn({ userId }, 'Failed to track email draft usage');
+    }
+
+    // Increment voice profile counter (for analytics)
     await prisma.writingVoiceProfile.update({
       where: { userId },
       data: {
@@ -192,6 +206,8 @@ export async function generateEmailDraft(
       metadata: {
         generatedAt: new Date().toISOString(),
         modelUsed: process.env.LLM_MODEL || 'gpt-4o',
+        creditsUsed: usageTrackingService.CREDIT_COSTS.EMAIL_DRAFT,
+        creditsRemaining: trackingResult.creditsRemaining,
       },
     };
 
