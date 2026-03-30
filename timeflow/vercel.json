@@ -1,12 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "corepack enable && pnpm install --filter=@timeflow/web... --prod=false --frozen-lockfile",
+  "installCommand": "npm install -g pnpm@10.23.0 && pnpm install --filter=@timeflow/web... --prod=false --frozen-lockfile",
   "buildCommand": "cd apps/web && pnpm run build",
   "framework": "nextjs",
-  "outputDirectory": "apps/web/.next",
-  "build": {
-    "env": {
-      "ENABLE_EXPERIMENTAL_COREPACK": "1"
-    }
-  }
+  "outputDirectory": "apps/web/.next"
 }
