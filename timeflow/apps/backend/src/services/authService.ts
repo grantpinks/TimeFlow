@@ -11,14 +11,16 @@ import { encrypt } from '../utils/crypto.js';
 
 /**
  * Generate the Google OAuth2 authorization URL.
+ * @param state - Optional state parameter to preserve context (e.g., return URL)
  */
-export function getGoogleAuthUrl(): string {
+export function getGoogleAuthUrl(state?: string): string {
   const oauth2Client = getOAuth2Client();
 
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: GOOGLE_SCOPES,
     prompt: 'consent', // Force consent to always get refresh token
+    ...(state ? { state } : {}),
   });
 }
 

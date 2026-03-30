@@ -15,17 +15,20 @@ import { formatZodError } from '../utils/errorFormatter.js';
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
   error: z.string().optional(),
+  state: z.string().optional(), // OAuth2 state parameter (returnTo URL)
 });
 
 /**
  * GET /api/auth/google/start
  * Redirects user to Google OAuth2 consent screen.
+ * Accepts optional ?returnTo= query parameter to redirect after auth completes.
  */
 export async function startGoogleAuth(
-  _request: FastifyRequest,
+  request: FastifyRequest<{ Querystring: { returnTo?: string } }>,
   reply: FastifyReply
 ) {
-  const authUrl = authService.getGoogleAuthUrl();
+  const { returnTo } = request.query;
+  const authUrl = authService.getGoogleAuthUrl(returnTo);
   return reply.redirect(authUrl);
 }
 
@@ -34,7 +37,7 @@ export async function startGoogleAuth(
  * Handles OAuth callback, exchanges code for tokens, creates/updates user.
  */
 export async function handleGoogleCallback(
-  request: FastifyRequest<{ Querystring: { code?: string; error?: string } }>,
+  request: FastifyRequest<{ Querystring: { code?: string; error?: string; state?: string } }>,
   reply: FastifyReply
 ) {
   const parsedQuery = callbackQuerySchema.safeParse(request.query);
@@ -42,7 +45,7 @@ export async function handleGoogleCallback(
     return reply.status(400).send({ error: formatZodError(parsedQuery.error) });
   }
 
-  const { code, error } = parsedQuery.data;
+  const { code, error, state } = parsedQuery.data;
 
   if (error) {
     request.log.error({ error }, 'Google OAuth error');
@@ -70,10 +73,11 @@ export async function handleGoogleCallback(
 
     // Redirect to frontend with tokens (MVP: query params; future: HttpOnly cookies)
     const baseUrl = env.APP_BASE_URL || '';
+    const stateParam = state ? `&state=${encodeURIComponent(state)}` : '';
     return reply.redirect(
       `${baseUrl}/auth/callback?token=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(
         refreshToken
-      )}`
+      )}${stateParam}`
     );
   } catch (err) {
     request.log.error(err, 'Failed to handle Google callback');

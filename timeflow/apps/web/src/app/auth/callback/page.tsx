@@ -12,6 +12,7 @@ function AuthCallbackContent() {
     const token = searchParams.get('token') || searchParams.get('accessToken');
     const refreshToken = searchParams.get('refreshToken');
     const error = searchParams.get('error');
+    const state = searchParams.get('state'); // OAuth state parameter (returnTo URL)
 
     if (error) {
       router.push(`/auth/error?error=${error}`);
@@ -23,7 +24,11 @@ function AuthCallbackContent() {
       if (refreshToken) {
         setRefreshToken(refreshToken);
       }
-      router.push('/tasks');
+
+      // If state parameter exists, redirect there (e.g., back to pricing with checkout param)
+      // Otherwise, go to default /tasks page
+      const redirectTo = state || '/tasks';
+      router.push(redirectTo);
     } else {
       router.push('/auth/error?error=no_token');
     }
