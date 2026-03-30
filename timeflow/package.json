@@ -10,8 +10,7 @@
     "packages/scheduling"
   ],
   "engines": {
-    "node": "20.x",
-    "pnpm": "10.23.0"
+    "node": "20.x"
   },
   "scripts": {
     "build": "pnpm -r build",
