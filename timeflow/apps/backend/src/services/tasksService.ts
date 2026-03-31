@@ -13,6 +13,7 @@ export interface CreateTaskInput {
   durationMinutes?: number;
   priority?: number;
   categoryId?: string;
+  identityId?: string;
   dueDate?: Date;
   sourceEmailId?: string;
   sourceThreadId?: string;
@@ -26,6 +27,7 @@ export interface UpdateTaskInput {
   durationMinutes?: number;
   priority?: number;
   categoryId?: string;
+  identityId?: string | null;
   dueDate?: Date;
   status?: string;
   sourceEmailId?: string;
@@ -48,6 +50,7 @@ export async function getTasks(userId: string, status?: string) {
     include: {
       scheduledTask: true,
       category: true,
+      identity: true,
     },
     orderBy: [{ dueDate: 'asc' }, { priority: 'asc' }, { createdAt: 'desc' }],
   });
@@ -62,6 +65,7 @@ export async function getTaskById(taskId: string, userId: string) {
     include: {
       scheduledTask: true,
       category: true,
+      identity: true,
     },
   });
 }
@@ -78,6 +82,7 @@ export async function createTask(input: CreateTaskInput) {
       durationMinutes: input.durationMinutes ?? 30,
       priority: input.priority ?? 2,
       categoryId: input.categoryId,
+      identityId: input.identityId,
       dueDate: input.dueDate,
       status: 'unscheduled',
       sourceEmailId: input.sourceEmailId,
@@ -87,6 +92,7 @@ export async function createTask(input: CreateTaskInput) {
     },
     include: {
       category: true,
+      identity: true,
     },
   });
 }
@@ -195,6 +201,7 @@ export async function updateTask(
     include: {
       scheduledTask: true,
       category: true,
+      identity: true,
     },
   });
 }

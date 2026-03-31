@@ -167,20 +167,21 @@ export function Layout({ children }: LayoutProps) {
       <div className="min-h-screen flex flex-col app-shell">
         <header className="app-header">
           <div className="app-container flex items-center justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="rounded-md bg-primary-50 border border-primary-100 p-1.5 group-hover:border-primary-200 transition-colors">
-                <Image src="/branding/main_logo.png" alt="TimeFlow logo" width={36} height={36} priority />
+            <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+              <div className="rounded-lg bg-primary-50 border border-primary-100 p-1.5 group-hover:border-primary-200 transition-colors">
+                <Image src="/branding/main_logo.png" alt="TimeFlow logo" width={32} height={32} priority className="w-8 h-8 sm:w-9 sm:h-9" />
               </div>
-              <span className="text-2xl font-bold text-primary-700 tracking-tight group-hover:text-primary-600 transition-colors">
+              <span className="text-xl sm:text-2xl font-bold text-primary-700 tracking-tight group-hover:text-primary-600 transition-colors">
                 TimeFlow
               </span>
             </Link>
-            <nav className="flex items-center gap-6">
+            <nav className="flex items-center gap-3 sm:gap-6">
               <a
                 href={getGoogleAuthUrl()}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-medium"
+                className="bg-primary-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 min-h-[44px] rounded-lg hover:bg-primary-700 active:bg-primary-800 font-medium text-sm sm:text-base transition-all inline-flex items-center justify-center"
               >
-                Sign in with Google
+                <span className="hidden sm:inline">Sign in with Google</span>
+                <span className="sm:hidden">Sign in</span>
               </a>
             </nav>
           </div>
@@ -235,7 +236,7 @@ export function Layout({ children }: LayoutProps) {
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-3 space-y-1">
+        <nav className="flex-1 px-3 py-3 space-y-1.5">
           {orderedNavItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -254,11 +255,11 @@ export function Layout({ children }: LayoutProps) {
                       href={item.href}
                       title={!isSidebarExpanded ? item.label : undefined}
                       aria-label={!isSidebarExpanded ? item.label : undefined}
-                      className={`flex flex-1 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-grab active:cursor-grabbing ${
+                      className={`flex flex-1 items-center gap-3 rounded-lg px-3 py-3 min-h-[44px] text-sm font-medium transition-all cursor-grab active:cursor-grabbing active:scale-95 ${
                         isActive
-                          ? 'bg-primary-50 text-primary-700'
+                          ? 'bg-primary-50 text-primary-700 shadow-sm'
                           : 'text-slate-600 hover:text-primary-600 hover:bg-slate-100'
-                      } ${isDropTarget ? 'ring-1 ring-primary-200' : ''}`}
+                      } ${isDropTarget ? 'ring-2 ring-primary-300 bg-primary-50' : ''}`}
                       onClick={() => setIsMobileSidebarOpen(false)}
                       draggable
                       onDragStart={(event) => handleDragStart(item.id, event)}
@@ -266,17 +267,17 @@ export function Layout({ children }: LayoutProps) {
                       onDrop={() => handleDrop(item.id)}
                       onDragEnd={handleDragEnd}
                     >
-                      <Icon className="h-5 w-5" />
-                      {isSidebarExpanded ? <span>{item.label}</span> : null}
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      {isSidebarExpanded ? <span className="text-base">{item.label}</span> : null}
                     </Link>
                     {isSidebarExpanded ? (
                       <button
                         type="button"
                         onClick={() => toggleNavExpanded(item.id)}
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-400 hover:text-primary-600 transition-colors"
+                        className="inline-flex items-center justify-center rounded-lg min-h-[44px] min-w-[44px] text-slate-400 hover:text-primary-600 hover:bg-slate-100 active:bg-slate-200 transition-colors"
                         aria-label={isExpanded ? `Collapse ${item.label} subpages` : `Expand ${item.label} subpages`}
                       >
-                        <ChevronIcon className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                        <ChevronIcon className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                       </button>
                     ) : null}
                   </div>
@@ -289,9 +290,9 @@ export function Layout({ children }: LayoutProps) {
                           <Link
                             key={child.href}
                             href={child.href}
-                            className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                            className={`flex items-center rounded-lg px-3 py-2.5 min-h-[44px] text-sm font-medium transition-all active:scale-95 ${
                               isChildActive
-                                ? 'bg-primary-50 text-primary-700'
+                                ? 'bg-primary-50 text-primary-700 shadow-sm'
                                 : 'text-slate-500 hover:text-primary-600 hover:bg-slate-100'
                             }`}
                             onClick={() => setIsMobileSidebarOpen(false)}
@@ -312,11 +313,11 @@ export function Layout({ children }: LayoutProps) {
                 href={item.href}
                 title={!isSidebarExpanded ? item.label : undefined}
                 aria-label={!isSidebarExpanded ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-grab active:cursor-grabbing ${
+                className={`flex items-center gap-3 rounded-lg px-3 py-3 min-h-[44px] text-sm font-medium transition-all cursor-grab active:cursor-grabbing active:scale-95 ${
                   isActive
-                    ? 'bg-primary-50 text-primary-700'
+                    ? 'bg-primary-50 text-primary-700 shadow-sm'
                     : 'text-slate-600 hover:text-primary-600 hover:bg-slate-100'
-                } ${isDropTarget ? 'ring-1 ring-primary-200' : ''}`}
+                } ${isDropTarget ? 'ring-2 ring-primary-300 bg-primary-50' : ''}`}
                 onClick={() => setIsMobileSidebarOpen(false)}
                 draggable
                 onDragStart={(event) => handleDragStart(item.id, event)}
@@ -324,8 +325,8 @@ export function Layout({ children }: LayoutProps) {
                 onDrop={() => handleDrop(item.id)}
                 onDragEnd={handleDragEnd}
               >
-                <Icon className="h-5 w-5" />
-                {isSidebarExpanded ? <span>{item.label}</span> : null}
+                <Icon className="h-5 w-5 flex-shrink-0" />
+                {isSidebarExpanded ? <span className="text-base">{item.label}</span> : null}
               </Link>
             );
           })}
@@ -335,7 +336,7 @@ export function Layout({ children }: LayoutProps) {
           <div
             className={`transition-all duration-200 ease-out ${
               isSidebarExpanded
-                ? 'flex items-center justify-between gap-2'
+                ? 'grid grid-cols-2 gap-2'
                 : 'grid grid-cols-2 gap-2 justify-items-center'
             }`}
           >
@@ -343,43 +344,43 @@ export function Layout({ children }: LayoutProps) {
               href="/settings"
               title="Settings"
               aria-label="Settings"
-              className={`inline-flex items-center justify-center rounded-md border border-slate-200 p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors ${
+              className={`inline-flex items-center justify-center rounded-lg border border-slate-200 min-h-[44px] min-w-[44px] text-slate-600 hover:text-primary-600 hover:border-primary-200 active:bg-slate-50 transition-colors ${
                 pathname.startsWith('/settings') ? 'bg-primary-50 text-primary-700 border-primary-200' : 'bg-white'
               }`}
               onClick={() => setIsMobileSidebarOpen(false)}
             >
-              <GearIcon className="h-4 w-4" />
+              <GearIcon className="h-5 w-5" />
             </Link>
             <button
               type="button"
               onClick={openPalette}
-              className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white min-h-[44px] min-w-[44px] text-slate-600 hover:text-primary-600 hover:border-primary-200 active:bg-slate-50 transition-colors"
               aria-label="Open command palette"
             >
-              <CommandIcon className="h-4 w-4" />
+              <CommandIcon className="h-5 w-5" />
             </button>
             <ThemeToggle />
             <button
               onClick={logout}
-              className={`inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors ${
+              className={`inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white min-h-[44px] min-w-[44px] text-slate-600 hover:text-red-600 hover:border-red-200 active:bg-red-50 transition-colors ${
                 isSidebarExpanded ? 'hidden' : ''
               }`}
               aria-label="Sign out"
               title="Sign out"
             >
-              <LogoutIcon className="h-4 w-4" />
+              <LogoutIcon className="h-5 w-5" />
             </button>
           </div>
 
-          <div className={`rounded-lg border border-slate-200 bg-white px-3 py-2 ${isSidebarExpanded ? '' : 'hidden'}`}>
-            <p className="text-xs text-slate-500">Signed in as</p>
+          <div className={`rounded-lg border border-slate-200 bg-white px-4 py-3 ${isSidebarExpanded ? '' : 'hidden'}`}>
+            <p className="text-xs text-slate-500 mb-1">Signed in as</p>
             <p className="text-sm font-medium text-slate-900 truncate">{user?.email}</p>
           </div>
 
           {isSidebarExpanded ? (
             <button
               onClick={logout}
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
+              className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 min-h-[44px] text-sm font-medium text-slate-600 hover:text-red-600 hover:border-red-200 active:bg-red-50 transition-colors"
             >
               Sign out
             </button>
@@ -412,29 +413,29 @@ export function Layout({ children }: LayoutProps) {
           </nav>
         </div>
         <header className="app-header md:hidden">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
+              className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white min-h-[44px] min-w-[44px] text-slate-600 hover:text-primary-600 hover:border-primary-200 active:bg-slate-50 transition-colors"
               aria-label="Open navigation menu"
               aria-expanded={isMobileSidebarOpen}
             >
-              <MenuIcon className="h-5 w-5" />
+              <MenuIcon className="h-6 w-6" />
             </button>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={openPalette}
-                className="inline-flex items-center justify-center rounded-md border border-slate-200 bg-white p-2 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition-colors"
+                className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white min-h-[44px] min-w-[44px] text-slate-600 hover:text-primary-600 hover:border-primary-200 active:bg-slate-50 transition-colors"
                 aria-label="Open command palette"
               >
-                <CommandIcon className="h-4 w-4" />
+                <CommandIcon className="h-5 w-5" />
               </button>
               <ThemeToggle />
             </div>
           </div>
-          <nav className="mt-3 -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+          <nav className="mt-3 -mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1 scrollbar-thin">
             {orderedNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -447,13 +448,14 @@ export function Layout({ children }: LayoutProps) {
                   href={item.href}
                   title={item.label}
                   aria-label={item.label}
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
+                  className={`flex items-center gap-2.5 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap active:scale-95 ${
                     isActive
-                      ? 'bg-primary-50 text-primary-700'
+                      ? 'bg-primary-50 text-primary-700 shadow-sm'
                       : 'text-slate-600 hover:text-primary-600 hover:bg-slate-100'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-base">{item.label}</span>
                 </Link>
               );
             })}

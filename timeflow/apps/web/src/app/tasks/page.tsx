@@ -478,7 +478,7 @@ export default function TasksPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Header with Smart Schedule primary action */}
         <SectionHeader
           title="Tasks"
@@ -493,8 +493,9 @@ export default function TasksPage() {
               <div className="relative">
                 <button
                   onClick={() => setShowOverflowMenu(!showOverflowMenu)}
-                  className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                  className="p-2.5 min-h-[44px] min-w-[44px] text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 rounded-lg transition-colors inline-flex items-center justify-center"
                   title="More actions"
+                  aria-label="More actions"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path

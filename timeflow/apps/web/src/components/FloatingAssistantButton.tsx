@@ -14,10 +14,10 @@ export function FloatingAssistantButton() {
   return (
     <Link
       href="/assistant"
-      className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-3 rounded-full bg-primary-600 px-4 py-3 text-white shadow-lg transition hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2"
+      className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-40 inline-flex items-center gap-2 sm:gap-3 rounded-full bg-primary-600 px-4 sm:px-5 py-3 sm:py-3.5 min-h-[56px] text-white shadow-lg transition hover:bg-primary-700 active:bg-primary-800 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2"
       aria-label="Open AI assistant"
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15">
+      <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/15 flex-shrink-0">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -33,7 +33,7 @@ export function FloatingAssistantButton() {
           />
         </svg>
       </span>
-      <div className="text-left">
+      <div className="text-left hidden sm:block">
         <p className="text-xs uppercase tracking-wide text-white/80">Need a hand?</p>
         <p className="text-sm font-semibold leading-tight">Ask the Assistant</p>
       </div>

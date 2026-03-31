@@ -48,7 +48,14 @@
       "Bash(find:*)",
       "Bash(psql:*)",
       "Bash(pnpm add:web @dnd-kit/sortable)",
-      "Bash(pnpm type-check:*)"
+      "Bash(pnpm type-check:*)",
+      "Bash(npm run build:*)",
+      "Bash(tee:*)",
+      "Bash(B=\"https://timeflow-wosj.onrender.com\")",
+      "Bash(__NEW_LINE__ echo \"\")",
+      "Bash($B/api/tasks)",
+      "Bash(\"/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/src\" )",
+      "Bash(\"/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/backend/src\")"
     ],
     "deny": [],
     "ask": []

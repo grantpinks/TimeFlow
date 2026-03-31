@@ -1,4 +1,4 @@
-# TimeFlow Sprint Roadmap (Sprints 1-23)
+# TimeFlow Sprint Roadmap (Sprints 1-24)
 
 **Project**: TimeFlow
 **Duration**: 32 weeks (2 weeks per sprint)
@@ -1000,8 +1000,189 @@
 
 ---
 
-### Sprint 18: Subscriptions, Payments & Scale
+### Sprint 18: Feature Integration & Design Cohesion
 **Duration**: Week 35-36  
+**Status**: 🟡 In Progress
+**Focus**: Transform TimeFlow from "a collection of features" into a unified, identity-driven productivity ecosystem. Seamlessly integrate email → tasks → habits → identity across all surfaces with consistent design language.
+
+**Strategic Context:**  
+After competitive analysis of Priority.app (competitor with similar functions), identified key opportunities to differentiate TimeFlow through deeper feature integration and identity-based motivation system. Target user base: 50-60% email-heavy professionals, 40-50% self-directed/mixed workflow users.
+
+#### Goals
+- [x] ✅ Identity-based habit tracking foundation (schema, backend, frontend UI)
+- [x] ✅ Identity system extends to tasks (connect any task to identity goals, badge on TaskCard, selector in forms)
+- [x] ✅ Identity Management page in Settings (full CRUD, 10 starter templates, emoji picker, curated color palette)
+- [x] ✅ Auto-migration of existing habit identity strings → Identity model on first visit
+- [x] ✅ Today page shows identity progress pills in header (clickable filters, live refresh)
+- [x] ✅ Habits page shows identity progress pills with filter-by-identity support
+- [ ] Email page redesigned to match app design system (fix colors, compact action buttons to icons)
+- [ ] All core pages (Today, Tasks, Habits, Inbox, Calendar) share consistent design patterns
+- [ ] Cross-feature completion flows (complete task → update identity progress with celebration modal)
+- [ ] What's Now widget integrated into Today page (real-time schedule status)
+- [ ] End-of-day identity report card
+
+#### Phase 1A: Identity Connection System (Core Integration Layer)
+**Goal:** Link tasks, habits, and emails to identity goals throughout the app. Build the foundation for identity-driven productivity.
+
+**Tasks:**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 18.1 | ✅ Add identity-based fields to Habit model (identity, longTermGoal, whyStatement) with migration | Codex | 3-4h | P0 | ✅ |
+| 18.2 | ✅ Update habit creation/edit forms with identity tracking UI (beautiful gradient section, helpful prompts) | Codex | 4-6h | P0 | ✅ |
+| 18.3 | ✅ Add identity display to HabitCard component with visual badges and gradient backgrounds | Codex | 2-3h | P0 | ✅ |
+| 18.4 | Create Identity model in database (id, userId, name, description, color, icon, isActive, createdAt, updatedAt) | Codex | 3-4h | P0 | ✅ |
+| 18.5 | Build Identity CRUD service and API endpoints (create, list, update, delete, reorder) | Codex | 4-6h | P0 | ✅ |
+| 18.6 | Add identityId field to Task model (optional FK to Identity) with migration | Codex | 2-3h | P0 | ✅ |
+| 18.7 | Update Task creation/edit forms to include identity selector dropdown | Codex | 3-4h | P0 | ✅ |
+| 18.8 | Add identity badge/pill to TaskCard component (shows identity name + color) | Codex | 2-3h | P0 | ✅ |
+| 18.9 | Add identity filter to Today page + Habits page (filter by identity pill) | Codex | 3-4h | P1 | ✅ |
+| 18.10 | Build Identity Management UI in Settings (create, edit, delete, reorder, set colors) | Codex | 6-8h | P0 | ✅ |
+| 18.11 | Create starter identity templates (10 templates: Professional, Personal Growth, Health, Creative, Financial, Relationships, Learning, Mindfulness, Home, Adventure) with suggested icons/colors | Codex | 2-3h | P1 | ✅ |
+| 18.12 | Email → Task flow: suggest identity based on sender/content when creating task from email | Claude | 4-6h | P1 | ⬜ |
+| 18.13 | Add identity-based email tagging: show "Supports your Writer identity" badge on relevant emails | Codex | 3-4h | P2 | ⬜ |
+
+**Identity Progress Tracking:**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 18.14 | Create IdentityProgress service: calculate daily/weekly completion stats per identity | Codex | 4-6h | P0 | ✅ |
+| 18.15 | Add GET /api/identities/progress endpoint (today's progress, week's progress, streaks) | Codex | 3-4h | P0 | ✅ |
+| 18.16 | Build IdentityProgressWidget component (compact horizontal progress pills with completion count + minutes) | Codex | 4-6h | P0 | ✅ |
+| 18.17 | Integrate identity progress into Today page header (below date, clickable filter pills) | Codex | 2-3h | P0 | ✅ |
+| 18.18 | Add identity filter quick-access buttons to Today page (click identity pill to filter view) | Codex | 3-4h | P1 | ✅ |
+| 18.19 | Build end-of-day identity report card (modal/panel showing all identity progress) | Codex | 4-6h | P1 | ⬜ |
+| 18.C1 | Define identity achievement/milestone system (level up after X completions, unlock badges) | Claude | 3-4h | P2 | ⬜ |
+
+#### Phase 1B: Unified Today Page (Command Center)
+**Goal:** Make Today page the hub where everything connects - email, tasks, habits, and identity progress in one view.
+
+**Tasks:**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 18.20 | ✅ Create What's Now Widget component (current/upcoming events, task suggestions, free time indicator) | Codex | 6-8h | P0 | ✅ |
+| 18.21 | Integrate What's Now Widget into Today page (position below identity progress, above planning banner) | Codex | 2-3h | P0 | ⬜ |
+| 18.22 | Add "Actionable Emails" widget to Today page (emails needing tasks/responses, quick actions) | Codex | 6-8h | P0 | ⬜ |
+| 18.23 | Make email widget adaptive: auto-hide if user has <5 actionable emails (learns usage patterns) | Codex | 3-4h | P1 | ⬜ |
+| 18.24 | Add "Habits Due Soon" reminder widget (shows next habit in <60min with countdown) | Codex | 4-6h | P1 | ⬜ |
+| 18.25 | Create unified timeline view showing tasks, habits, meetings, AND email response time blocks | Codex | 8-12h | P0 | ⬜ |
+| 18.26 | Add identity color coding to timeline (Writer tasks = blue stripe, Athlete = green, etc.) | Codex | 3-4h | P1 | ⬜ |
+| 18.27 | Build "Focus Mode" toggle that hides non-priority items and filters by selected identity | Codex | 4-6h | P1 | ⬜ |
+| 18.28 | Add smart context panel that shows relevant info based on What's Now (during meeting: attendees + notes; during habit: progress + why statement) | Codex | 6-8h | P1 | ⬜ |
+| 18.C2 | Design responsive layout for mobile: collapsible sections, priority-based widget order | Claude | 3-4h | P1 | ⬜ |
+
+#### Phase 1C: Cross-Feature Completion Flow
+**Goal:** Completing anything updates everything else - create powerful feedback loops.
+
+**Tasks:**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 18.29 | Wire task completion to identity progress updates (increment identity score, check milestones) | Codex | 3-4h | P0 | ⬜ |
+| 18.30 | Wire habit completion to identity progress updates (same logic as tasks) | Codex | 2-3h | P0 | ⬜ |
+| 18.31 | Add completion celebration modal showing identity impact ("This advances your Writer identity to 75%!") | Codex | 4-6h | P1 | ⬜ |
+| 18.32 | After completing habit, suggest related tasks ("You finished your run! Schedule meal prep?") | Claude | 4-6h | P1 | ⬜ |
+| 18.33 | After completing meeting, offer AI action item extraction → create tasks with identity tags | Codex | 6-8h | P1 | ⬜ |
+| 18.34 | Build end-of-day summary view (all completions: tasks + habits, identity progress, tomorrow preview) | Codex | 6-8h | P1 | ⬜ |
+| 18.35 | Add identity milestone achievements (unlock badges at 25/50/100 completions per identity) | Codex | 4-6h | P2 | ⬜ |
+| 18.36 | Create identity streak tracking (X consecutive days advancing this identity) | Codex | 4-6h | P2 | ⬜ |
+
+#### Phase 1D: Design Consistency Pass
+**Goal:** Make all pages look and feel unified with consistent design patterns.
+
+**Tasks:**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 18.37 | Audit all core pages (Today, Tasks, Habits, Inbox, Calendar, Settings) for design inconsistencies | Claude | 3-4h | P0 | ⬜ |
+| 18.38 | Redesign Inbox/Email page: fix colors to match brand, use consistent panel/card components | Codex | 6-8h | P0 | ⬜ |
+| 18.39 | Compact email action buttons to icon-only format: Reply, Create Task, Archive, Mark Read (tooltips on hover) | Codex | 4-6h | P0 | ⬜ |
+| 18.40 | Standardize page headers across all pages (consistent title size, spacing, action button placement) | Codex | 3-4h | P0 | ⬜ |
+| 18.41 | Ensure all panel/card components use same shadow, border, radius, padding system | Codex | 3-4h | P0 | ⬜ |
+| 18.42 | Audit and fix color usage across pages (primary teal, category colors, status colors) | Codex | 3-4h | P0 | ⬜ |
+| 18.43 | Standardize empty states across all pages (same illustration style, helpful copy, clear CTAs) | Codex | 4-6h | P1 | ⬜ |
+| 18.44 | Mobile responsive audit for all modified pages (test iOS ratios, ensure touch targets) | Codex | 4-6h | P1 | ⬜ |
+| 18.45 | Create design system documentation showing standard patterns (headers, cards, buttons, forms) | Gemini | 3-4h | P1 | ⬜ |
+| 18.C3 | Final cohesion review: ensure no page feels like "different app", all features connect naturally | Claude | 3-4h | P0 | ⬜ |
+
+#### Phase 1E: Homepage Messaging Update
+**Goal:** Emphasize TimeFlow's AI + email automation differentiation vs competitors.
+
+**Tasks:**
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 18.46 | ✅ Update hero section headline to emphasize AI email automation | Codex | 1-2h | P0 | ✅ |
+| 18.47 | ✅ Add "What Makes TimeFlow Different" section to features grid | Codex | 2-3h | P0 | ✅ |
+| 18.48 | ✅ Rewrite feature descriptions to highlight: AI reads emails, email→calendar automation, identity-based habits | Codex | 2-3h | P0 | ✅ |
+| 18.49 | ✅ Update AI Assistant section title to "Your AI Assistant That Actually Reads Emails" | Codex | 1h | P1 | ✅ |
+| 18.50 | Add competitive differentiation section highlighting unique TimeFlow capabilities | Codex | 3-4h | P1 | ⬜ |
+| 18.51 | Update testimonials to include identity-based success stories | Codex | 2-3h | P2 | ⬜ |
+
+#### Competitive Differentiation (Priority.app Analysis)
+**Context:** Analyzed competitor Priority.app (similar functions: habits, tasks, AI scheduling). Identified these differentiation opportunities:
+
+**TimeFlow's Unique Value Props (vs Priority):**
+1. **Email Integration** - TimeFlow reads Gmail, extracts tasks automatically, schedules responses
+2. **Multi-Calendar Support** - Google + Apple Calendar (Priority: Apple only)
+3. **AI Email Drafting** - Already implemented with voice customization
+4. **Meeting Scheduling Links** - External booking with constraints
+5. **Smart Email Categorization** - Auto-triage with Gmail label sync
+
+**Inspired Features to Implement:**
+- ✅ Identity-based habit tracking (linking daily actions to long-term identity)
+- Real-time "What's Now" status widget
+- Weekly identity progress reports
+- Habit completion → identity level-up system
+- Social accountability features (future: share identity progress)
+
+#### Acceptance Criteria
+- [ ] Users can create and manage identities in settings (3-5 max recommended)
+- [ ] Tasks and habits can be linked to identities with visual badges throughout UI
+- [ ] Today page shows identity progress dashboard with completion stats
+- [ ] Completing any task or habit updates identity progress in real-time
+- [ ] What's Now widget is live on Today page with 30-second auto-refresh
+- [ ] Email page matches design system (consistent colors, compact icon-only actions: Reply, Create Task, Archive, Mark Read)
+- [ ] All core pages share consistent: headers, cards, buttons, spacing, typography
+- [ ] Mobile responsive on all modified pages (tested on iOS device)
+- [ ] No feature feels disconnected - all pages reference and build on each other
+- [ ] Homepage messaging emphasizes AI + email differentiation vs competitors
+
+#### Advanced Integration Opportunities (Post-Sprint 18)
+**Logged for future sprints - high-value but not blocking current cohesion work:**
+
+**The Proactive Time Protection System:**
+- Habits auto-block calendar time (prevent meetings during "Writer" morning blocks)
+- AI prevents overbooking and defends identity time
+- Smart habit rescue when streaks at risk
+
+**The Predictive Intelligence System:**
+- Pattern detection: "You always exercise after 10am meetings - auto-schedule that?"
+- Energy-based scheduling: track when you complete habits fastest
+- Email patterns: "Emails from this person usually become tasks"
+
+**The Achievement & Momentum System:**
+- Cross-feature streaks: "10 days completing Writer tasks + habit!"
+- Identity level-up badges and milestones
+- Weekly wins recap email
+
+**The AI-Powered Prioritization Engine:**
+- Morning AI brief with automatic daily plan
+- Dynamic re-prioritization when schedule changes
+- Energy-aware suggestions throughout day
+
+**Social Accountability (inspired by Priority's "Circles"):**
+- Share identity progress with accountability partners (opt-in)
+- Weekly identity scorecard exports
+- Team/group identity goals
+
+**Plan doc**: See **[`docs/plans/2026-03-27-sprint-18-feature-integration.md`](./docs/plans/2026-03-27-sprint-18-feature-integration.md)** (to be created).
+
+---
+
+### Sprint 19: Subscriptions, Payments & Scale
+**Duration**: Week 37-38  
 **Focus**: Introduce subscription-based pricing and payments, wire value-adding features into tiers, and prepare the platform for public scale.
 
 #### Goals
@@ -1061,8 +1242,8 @@
 
 ---
 
-### Sprint 19: Public Beta Launch (Web + Mobile) — SaaS Readiness
-**Duration**: Week 37-38  
+### Sprint 20: Public Beta Launch (Web + Mobile) — SaaS Readiness
+**Duration**: Week 39-40  
 **Focus**: Ship a **public beta** that runs like a typical SaaS: production hosting (Vercel + Render + Supabase), Google-only auth, beta gating, AI cost controls, onboarding, docs, and mobile distribution readiness.
 
 #### Goals
@@ -1122,7 +1303,7 @@
 - Marketing site is launch-ready: required public pages exist, are branded, have working CTAs, and there are **no dead links** from the homepage/footer.
 - Categories and Meetings pages feel cohesive with the design system (not “elementary”), with clear empty states and basic analytics instrumentation.
 
-**Plan doc**: See **[`docs/plans/2026-01-01-sprint-18-public-beta-launch.md`](./docs/plans/2026-01-01-sprint-18-public-beta-launch.md)** for the full checklist and gates.
+**Plan doc**: See **[`docs/plans/2026-01-01-sprint-20-public-beta-launch.md`](./docs/plans/2026-01-01-sprint-20-public-beta-launch.md)** for the full checklist and gates.
 
 ---
 
@@ -1130,8 +1311,8 @@
 
 ---
 
-### Sprint 20: Pre-Launch Hardening & Scalability
-**Duration**: Week 39-40
+### Sprint 21: Pre-Launch Hardening & Scalability
+**Duration**: Week 41-42
 **Focus**: Address critical security vulnerabilities, scalability bottlenecks, production deployment, and implement the **audit-ready security/compliance foundations** needed to earn user trust (SOC 2 / ISO 27001 readiness, PCI scope minimization).
 
 #### Goals
@@ -1146,18 +1327,18 @@
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
-| 20.0 | **Resolve Render deployment blocking issue** | Claude/Codex | 8-12h | **P0** | 🔴 BLOCKED |
-| 20.1 | Production deployment testing & verification | Codex | 2-4h | P0 | Pending |
-| 20.2 | Frontend deployment to Vercel | Codex | 2-3h | P0 | Pending |
+| 21.0 | **Resolve Render deployment blocking issue** | Claude/Codex | 8-12h | **P0** | 🔴 BLOCKED |
+| 21.1 | Production deployment testing & verification | Codex | 2-4h | P0 | Pending |
+| 21.2 | Frontend deployment to Vercel | Codex | 2-3h | P0 | Pending |
 
-**Deployment Blocker Details**: See **[Sprint 20 Production Deployment Task](./docs/SPRINT_20_PRODUCTION_DEPLOYMENT.md)** for complete troubleshooting history, hypotheses, and recommended next steps.
+**Deployment Blocker Details**: See **[Sprint 21 Production Deployment Task](./docs/SPRINT_21_PRODUCTION_DEPLOYMENT.md)** for complete troubleshooting history, hypotheses, and recommended next steps.
 
 #### Additional Tasks
 This sprint focuses on hardening the existing application. For a detailed breakdown of security, scalability tasks, priorities, and implementation plans, see the full sprint plan:
-- **[View Full Plan: Sprint 20 Pre-Launch Plan](./docs/SPRINT_20_PRELAUNCH_PLAN.md)**
+- **[View Full Plan: Sprint 21 Pre-Launch Plan](./docs/SPRINT_21_PRELAUNCH_PLAN.md)**
 
-**Compliance/Audit Readiness Plan (Sprint 20)**:
-- **[`docs/plans/2026-01-02-sprint-20-compliance-audit-readiness.md`](./docs/plans/2026-01-02-sprint-20-compliance-audit-readiness.md)** (SOC 2 / ISO 27001 readiness + PCI scope minimization)
+**Compliance/Audit Readiness Plan (Sprint 21)**:
+- **[`docs/plans/2026-01-02-sprint-21-compliance-audit-readiness.md`](./docs/plans/2026-01-02-sprint-21-compliance-audit-readiness.md)** (SOC 2 / ISO 27001 readiness + PCI scope minimization)
 
 #### Decision Gate
 - [ ] **Is the backend successfully deployed and accessible in production?**
@@ -1168,12 +1349,12 @@ This sprint focuses on hardening the existing application. For a detailed breakd
 
 ---
 
-## Phase 3 Preview (Post-Sprint 20)
+## Phase 3 Preview (Post-Sprint 21)
 
 These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSIS_FYXER_AI.md` while keeping Sprints 14–16 focused on shipping reliable foundations (calendar overhaul, meeting scheduling, inbox trust, Gmail label sync).
 
-### Sprint 21: Email Workflow & Automation
-**Duration**: Week 41-42  
+### Sprint 22: Email Workflow & Automation
+**Duration**: Week 43-44  
 **Focus**: Go deeper into “in workflow” email management while preserving user trust via control + transparency.
 
 #### Goals
@@ -1185,16 +1366,16 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 21.1 | Expand rules engine: multi-condition rules (domain/sender/subject keywords), precedence/priority, and a “test rule” simulator UI. | Codex | 8-12h | P0 |
-| 21.2 | Add action-oriented states/labels in TimeFlow (queues + filters) and optionally map them to Gmail labels (namespaced). | Codex | 6-8h | P1 |
-| 21.3 | Add “why + history + undo” UX: show explanation, show last changes, allow undo for the last action. | Codex | 6-8h | P1 |
-| 21.4 | Investigate Gmail-native UX surface: Chrome extension or Gmail add-on; write a decision memo with a minimal POC plan. | Claude | 4-6h | P2 |
-| 21.5 | (Future) AI-drafted replies exploration: safety constraints, evaluation, and opt-in UX; document an incremental rollout plan. | Claude | 4-6h | P2 |
+| 23.1 | Expand rules engine: multi-condition rules (domain/sender/subject keywords), precedence/priority, and a “test rule” simulator UI. | Codex | 8-12h | P0 |
+| 23.2 | Add action-oriented states/labels in TimeFlow (queues + filters) and optionally map them to Gmail labels (namespaced). | Codex | 6-8h | P1 |
+| 23.3 | Add “why + history + undo” UX: show explanation, show last changes, allow undo for the last action. | Codex | 6-8h | P1 |
+| 23.4 | Investigate Gmail-native UX surface: Chrome extension or Gmail add-on; write a decision memo with a minimal POC plan. | Claude | 4-6h | P2 |
+| 23.5 | (Future) AI-drafted replies exploration: safety constraints, evaluation, and opt-in UX; document an incremental rollout plan. | Claude | 4-6h | P2 |
 
 ---
 
-### Sprint 22: Integrations Expansion — Calendar-First → Tasks/Projects → Comms
-**Duration**: Week 43-44  
+### Sprint 23: Integrations Expansion — Calendar-First → Tasks/Projects → Comms
+**Duration**: Week 47-48  
 **Focus**: Expand TimeFlow’s reach by supporting the **top non-Google calendar ecosystems** and the **top task sources**, then add lightweight comms capture loops that feed the Inbox/Tasks.
 
 #### Goals
@@ -1209,36 +1390,36 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 22.1 | Land the unified `Account` model (migrate Google tokens into `Account`, update auth + services to read from accounts). | Codex | 10-16h | **P0** |
-| 22.2 | Build “Integrations Hub” in Settings: list connected accounts, status (connected/errored), last sync, disconnect, and per-integration configuration panels. | Codex | 8-12h | **P0** |
-| 22.3 | Add integration sync telemetry: lastSuccessAt/lastErrorAt/lastErrorCode + admin/debug view (internal) for support. | Codex | 4-8h | P1 |
+| 23.1 | Land the unified `Account` model (migrate Google tokens into `Account`, update auth + services to read from accounts). | Codex | 10-16h | **P0** |
+| 23.2 | Build “Integrations Hub” in Settings: list connected accounts, status (connected/errored), last sync, disconnect, and per-integration configuration panels. | Codex | 8-12h | **P0** |
+| 23.3 | Add integration sync telemetry: lastSuccessAt/lastErrorAt/lastErrorCode + admin/debug view (internal) for support. | Codex | 4-8h | P1 |
 
 **Calendar: CalDAV (read-only)**
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 22.4 | CalDAV integration MVP: connect, list calendars, select included calendars, fetch events (read-only). | Codex | 10-16h | **P0** |
-| 22.5 | Normalize + merge multi-source calendar events into one availability feed for scheduling (Google + Microsoft + CalDAV). | Codex | 6-10h | **P0** |
+| 23.4 | CalDAV integration MVP: connect, list calendars, select included calendars, fetch events (read-only). | Codex | 10-16h | **P0** |
+| 23.5 | Normalize + merge multi-source calendar events into one availability feed for scheduling (Google + Microsoft + CalDAV). | Codex | 6-10h | **P0** |
 
 **Calendar: iOS EventKit (read-only)**
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 22.6 | iOS EventKit MVP: permission, select included calendars, show events in mobile availability (read-only). | Codex | 10-16h | **P0** |
-| 22.7 | Decide + implement EventKit→backend story: either ship “busy interval snapshots” to backend or explicitly scope as mobile-only with clear UX copy. | Architect/Codex | 6-12h | **P0** |
+| 23.6 | iOS EventKit MVP: permission, select included calendars, show events in mobile availability (read-only). | Codex | 10-16h | **P0** |
+| 23.7 | Decide + implement EventKit→backend story: either ship “busy interval snapshots” to backend or explicitly scope as mobile-only with clear UX copy. | Architect/Codex | 6-12h | **P0** |
 
 **Tasks/Projects: Todoist (one-way import MVP)**
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 22.8 | Add external task metadata (provider + externalId + sourceProject) to support safe re-sync. | Codex | 4-8h | **P0** |
-| 22.9 | Todoist integration MVP: connect, select projects, import open tasks (one-way), map fields, prevent duplicates. | Codex | 10-16h | **P0** |
+| 23.8 | Add external task metadata (provider + externalId + sourceProject) to support safe re-sync. | Codex | 4-8h | **P0** |
+| 23.9 | Todoist integration MVP: connect, select projects, import open tasks (one-way), map fields, prevent duplicates. | Codex | 10-16h | **P0** |
 
 **Comms: Slack (message → task capture MVP)**
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 22.10 | Slack integration MVP: message action → create task, plus minimal install/connect UI. | Codex | 10-16h | P1 |
+| 23.10 | Slack integration MVP: message action → create task, plus minimal install/connect UI. | Codex | 10-16h | P1 |
 
 #### Decision Gate / Acceptance Criteria (per-integration DoD)
 - [ ] **Foundation complete**: Integrations Hub works; accounts + telemetry model is live; Google integration still works post-migration.
@@ -1249,12 +1430,12 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 - [ ] Provider scopes/permissions are documented and least-privilege for MVP.
 - [ ] Basic monitoring exists: last sync timestamps + error capture for each integration.
 
-**Plan doc**: See **[`docs/plans/2026-01-05-sprint-22-integrations-expansion.md`](./docs/plans/2026-01-05-sprint-22-integrations-expansion.md)**.
+**Plan doc**: See **[`docs/plans/2026-01-05-sprint-23-integrations-expansion.md`](./docs/plans/2026-01-05-sprint-23-integrations-expansion.md)**.
 
 ---
 
-### Sprint 23: Group Scheduling & Multi-Attendee Availability
-**Duration**: Week 45-46  
+### Sprint 24: Group Scheduling & Multi-Attendee Availability
+**Duration**: Week 49-50  
 **Focus**: Multi-attendee scheduling that respects constraints, time zones, and conflict safety.
 
 #### Goals
@@ -1266,10 +1447,10 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 
 | ID | Task | Agent | Hours | Priority |
 |----|------|-------|-------|----------|
-| 23.1 | Add multi-attendee availability computation (intersection of free/busy windows; timezone-safe). | Codex | 8-12h | P0 |
-| 23.2 | Add booking flows for multiple attendees (invites, confirmations, reschedules, cancellations). | Codex | 8-12h | P0 |
-| 23.C1 | Define UX and rules for attendee constraints (whose work hours apply; buffers; caps; organizer vs participant). | Claude | 4-6h | P1 |
-| 23.G1 | Document group scheduling behavior, privacy boundaries, and failure modes. | Gemini | 4-6h | P1 |
+| 24.1 | Add multi-attendee availability computation (intersection of free/busy windows; timezone-safe). | Codex | 8-12h | P0 |
+| 24.2 | Add booking flows for multiple attendees (invites, confirmations, reschedules, cancellations). | Codex | 8-12h | P0 |
+| 24.C1 | Define UX and rules for attendee constraints (whose work hours apply; buffers; caps; organizer vs participant). | Claude | 4-6h | P1 |
+| 24.G1 | Document group scheduling behavior, privacy boundaries, and failure modes. | Gemini | 4-6h | P1 |
 
 ### Task 16.10 Implementation Notes (2026-01-12)
 
@@ -1320,4 +1501,182 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 - Add third action state: `needs_action` → `TimeFlow/NeedsAction` (optional)
 - Add UI toggle in settings page
 - Add analytics tracking for label sync actions
+
+---
+
+**Duration**: Week 47-48  
+**Status**: 🟡 In Progress
+**Focus**: Transform TimeFlow from "a collection of features" into a unified, identity-driven productivity ecosystem. Seamlessly integrate email → tasks → habits → identity across all surfaces with consistent design language.
+
+**Strategic Context:**  
+After competitive analysis of Priority.app (competitor with similar functions), identified key opportunities to differentiate TimeFlow through deeper feature integration and identity-based motivation system. Target user base: 50-60% email-heavy professionals, 40-50% self-directed/mixed workflow users.
+
+#### Goals
+- [x] ✅ Identity-based habit tracking foundation (schema, backend, frontend UI)
+- [ ] Identity system extends to tasks (connect any task to identity goals)
+- [ ] Today page becomes unified command center showing identity progress
+- [ ] Email page redesigned to match app design system (fix colors, compact cluttered action buttons)
+- [ ] All core pages (Today, Tasks, Habits, Inbox, Calendar) share consistent design patterns
+- [ ] Cross-feature completion flows (complete task → update identity progress)
+- [ ] What's Now widget integrated into Today page (real-time schedule status)
+
+#### Phase 1A: Identity Connection System (Core Integration Layer)
+**Goal:** Link tasks, habits, and emails to identity goals throughout the app. Build the foundation for identity-driven productivity.
+
+**Tasks:**
+
+|| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+|| 24.1 | ✅ Add identity-based fields to Habit model (identity, longTermGoal, whyStatement) with migration | Codex | 3-4h | P0 | ✅ |
+|| 24.2 | ✅ Update habit creation/edit forms with identity tracking UI (beautiful gradient section, helpful prompts) | Codex | 4-6h | P0 | ✅ |
+|| 24.3 | ✅ Add identity display to HabitCard component with visual badges and gradient backgrounds | Codex | 2-3h | P0 | ✅ |
+|| 24.4 | Create Identity model in database (id, userId, name, description, color, icon, isActive, createdAt, updatedAt) | Codex | 3-4h | P0 | ⬜ |
+|| 24.5 | Build Identity CRUD service and API endpoints (create, list, update, delete, reorder) | Codex | 4-6h | P0 | ⬜ |
+|| 24.6 | Add identityId field to Task model (optional FK to Identity) with migration | Codex | 2-3h | P0 | ⬜ |
+|| 24.7 | Update Task creation/edit forms to include identity selector dropdown | Codex | 3-4h | P0 | ⬜ |
+|| 24.8 | Add identity badge/pill to TaskCard component (shows identity name + color) | Codex | 2-3h | P0 | ⬜ |
+|| 24.9 | Add identity filter to Tasks page and Today page task lists | Codex | 3-4h | P1 | ⬜ |
+|| 24.10 | Build Identity Management UI in Settings (create, edit, delete, reorder, set colors) | Codex | 6-8h | P0 | ⬜ |
+|| 24.11 | Create starter identity templates (Professional, Personal, Health, Creative) with suggested icons/colors | Codex | 2-3h | P1 | ⬜ |
+|| 24.12 | Email → Task flow: suggest identity based on sender/content when creating task from email | Claude | 4-6h | P1 | ⬜ |
+|| 24.13 | Add identity-based email tagging: show "Supports your Writer identity" badge on relevant emails | Codex | 3-4h | P2 | ⬜ |
+
+**Identity Progress Tracking:**
+
+|| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+|| 24.14 | Create IdentityProgress service: calculate daily/weekly completion stats per identity | Codex | 4-6h | P0 | ⬜ |
+|| 24.15 | Add GET /api/identities/progress endpoint (today's progress, week's progress, streaks) | Codex | 3-4h | P0 | ⬜ |
+|| 24.16 | Build IdentityProgressWidget component (compact horizontal progress rings) | Codex | 4-6h | P0 | ⬜ |
+|| 24.17 | Integrate identity progress into Today page header (below date, above What's Now widget) | Codex | 2-3h | P0 | ⬜ |
+|| 24.18 | Add identity filter quick-access buttons to Today page (click identity ring to filter view) | Codex | 3-4h | P1 | ⬜ |
+|| 24.19 | Build end-of-day identity report card (modal/panel showing all identity progress) | Codex | 4-6h | P1 | ⬜ |
+|| 24.C1 | Define identity achievement/milestone system (level up after X completions, unlock badges) | Claude | 3-4h | P2 | ⬜ |
+
+#### Phase 1B: Unified Today Page (Command Center)
+**Goal:** Make Today page the hub where everything connects - email, tasks, habits, and identity progress in one view.
+
+**Tasks:**
+
+|| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+|| 24.20 | ✅ Create What's Now Widget component (current/upcoming events, task suggestions, free time indicator) | Codex | 6-8h | P0 | ✅ |
+|| 24.21 | Integrate What's Now Widget into Today page (position below identity progress, above planning banner) | Codex | 2-3h | P0 | ⬜ |
+|| 24.22 | Add "Actionable Emails" widget to Today page (emails needing tasks/responses, quick actions) | Codex | 6-8h | P0 | ⬜ |
+|| 24.23 | Make email widget adaptive: auto-hide if user has <5 actionable emails (learns usage patterns) | Codex | 3-4h | P1 | ⬜ |
+|| 24.24 | Add "Habits Due Soon" reminder widget (shows next habit in <60min with countdown) | Codex | 4-6h | P1 | ⬜ |
+|| 24.25 | Create unified timeline view showing tasks, habits, meetings, AND email response time blocks | Codex | 8-12h | P0 | ⬜ |
+|| 24.26 | Add identity color coding to timeline (Writer tasks = blue stripe, Athlete = green, etc.) | Codex | 3-4h | P1 | ⬜ |
+|| 24.27 | Build "Focus Mode" toggle that hides non-priority items and filters by selected identity | Codex | 4-6h | P1 | ⬜ |
+|| 24.28 | Add smart context panel that shows relevant info based on What's Now (during meeting: attendees + notes; during habit: progress + why statement) | Codex | 6-8h | P1 | ⬜ |
+|| 24.C2 | Design responsive layout for mobile: collapsible sections, priority-based widget order | Claude | 3-4h | P1 | ⬜ |
+
+#### Phase 1C: Cross-Feature Completion Flow
+**Goal:** Completing anything updates everything else - create powerful feedback loops.
+
+**Tasks:**
+
+|| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+|| 24.29 | Wire task completion to identity progress updates (increment identity score, check milestones) | Codex | 3-4h | P0 | ⬜ |
+|| 24.30 | Wire habit completion to identity progress updates (same logic as tasks) | Codex | 2-3h | P0 | ⬜ |
+|| 24.31 | Add completion celebration modal showing identity impact ("This advances your Writer identity to 75%!") | Codex | 4-6h | P1 | ⬜ |
+|| 24.32 | After completing habit, suggest related tasks ("You finished your run! Schedule meal prep?") | Claude | 4-6h | P1 | ⬜ |
+|| 24.33 | After completing meeting, offer AI action item extraction → create tasks with identity tags | Codex | 6-8h | P1 | ⬜ |
+|| 24.34 | Build end-of-day summary view (all completions: tasks + habits, identity progress, tomorrow preview) | Codex | 6-8h | P1 | ⬜ |
+|| 24.35 | Add identity milestone achievements (unlock badges at 25/50/100 completions per identity) | Codex | 4-6h | P2 | ⬜ |
+|| 24.36 | Create identity streak tracking (X consecutive days advancing this identity) | Codex | 4-6h | P2 | ⬜ |
+
+#### Phase 1D: Design Consistency Pass
+**Goal:** Make all pages look and feel unified with consistent design patterns.
+
+**Tasks:**
+
+|| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+|| 24.37 | Audit all core pages (Today, Tasks, Habits, Inbox, Calendar, Settings) for design inconsistencies | Claude | 3-4h | P0 | ⬜ |
+|| 24.38 | Redesign Inbox/Email page: fix colors to match brand, use consistent panel/card components | Codex | 6-8h | P0 | ⬜ |
+|| 24.39 | Compact cluttered action buttons on email cards (use dropdown menu: primary action + "More ⋯") | Codex | 4-6h | P0 | ⬜ |
+|| 24.40 | Standardize page headers across all pages (consistent title size, spacing, action button placement) | Codex | 3-4h | P0 | ⬜ |
+|| 24.41 | Ensure all panel/card components use same shadow, border, radius, padding system | Codex | 3-4h | P0 | ⬜ |
+|| 24.42 | Audit and fix color usage across pages (primary teal, category colors, status colors) | Codex | 3-4h | P0 | ⬜ |
+|| 24.43 | Standardize empty states across all pages (same illustration style, helpful copy, clear CTAs) | Codex | 4-6h | P1 | ⬜ |
+|| 24.44 | Mobile responsive audit for all modified pages (test iOS ratios, ensure touch targets) | Codex | 4-6h | P1 | ⬜ |
+|| 24.45 | Create design system documentation showing standard patterns (headers, cards, buttons, forms) | Gemini | 3-4h | P1 | ⬜ |
+|| 24.C3 | Final cohesion review: ensure no page feels like "different app", all features connect naturally | Claude | 3-4h | P0 | ⬜ |
+
+#### Phase 1E: Homepage Messaging Update
+**Goal:** Emphasize TimeFlow's AI + email automation differentiation vs competitors.
+
+**Tasks:**
+
+|| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+|| 24.46 | ✅ Update hero section headline to emphasize AI email automation | Codex | 1-2h | P0 | ✅ |
+|| 24.47 | ✅ Add "What Makes TimeFlow Different" section to features grid | Codex | 2-3h | P0 | ✅ |
+|| 24.48 | ✅ Rewrite feature descriptions to highlight: AI reads emails, email→calendar automation, identity-based habits | Codex | 2-3h | P0 | ✅ |
+|| 24.49 | ✅ Update AI Assistant section title to "Your AI Assistant That Actually Reads Emails" | Codex | 1h | P1 | ✅ |
+|| 24.50 | Add competitive differentiation section highlighting unique TimeFlow capabilities | Codex | 3-4h | P1 | ⬜ |
+|| 24.51 | Update testimonials to include identity-based success stories | Codex | 2-3h | P2 | ⬜ |
+
+#### Competitive Differentiation (Priority.app Analysis)
+**Context:** Analyzed competitor Priority.app (similar functions: habits, tasks, AI scheduling). Identified these differentiation opportunities:
+
+**TimeFlow's Unique Value Props (vs Priority):**
+1. **Email Integration** - TimeFlow reads Gmail, extracts tasks automatically, schedules responses
+2. **Multi-Calendar Support** - Google + Apple Calendar (Priority: Apple only)
+3. **AI Email Drafting** - Already implemented with voice customization
+4. **Meeting Scheduling Links** - External booking with constraints
+5. **Smart Email Categorization** - Auto-triage with Gmail label sync
+
+**Inspired Features to Implement:**
+- ✅ Identity-based habit tracking (linking daily actions to long-term identity)
+- Real-time "What's Now" status widget
+- Weekly identity progress reports
+- Habit completion → identity level-up system
+- Social accountability features (future: share identity progress)
+
+#### Acceptance Criteria
+- [ ] Users can create and manage identities in settings (3-5 max recommended)
+- [ ] Tasks and habits can be linked to identities with visual badges throughout UI
+- [ ] Today page shows identity progress dashboard with completion stats
+- [ ] Completing any task or habit updates identity progress in real-time
+- [ ] What's Now widget is live on Today page with 30-second auto-refresh
+- [ ] Email page matches design system (consistent colors, compact actions, not overwhelming)
+- [ ] All core pages share consistent: headers, cards, buttons, spacing, typography
+- [ ] Mobile responsive on all modified pages (tested on iOS device)
+- [ ] No feature feels disconnected - all pages reference and build on each other
+- [ ] Homepage messaging emphasizes AI + email differentiation vs competitors
+
+#### Advanced Integration Opportunities (Post-Sprint 24)
+**Logged for future sprints - high-value but not blocking current cohesion work:**
+
+**The Proactive Time Protection System:**
+- Habits auto-block calendar time (prevent meetings during "Writer" morning blocks)
+- AI prevents overbooking and defends identity time
+- Smart habit rescue when streaks at risk
+
+**The Predictive Intelligence System:**
+- Pattern detection: "You always exercise after 10am meetings - auto-schedule that?"
+- Energy-based scheduling: track when you complete habits fastest
+- Email patterns: "Emails from this person usually become tasks"
+
+**The Achievement & Momentum System:**
+- Cross-feature streaks: "10 days completing Writer tasks + habit!"
+- Identity level-up badges and milestones
+- Weekly wins recap email
+
+**The AI-Powered Prioritization Engine:**
+- Morning AI brief with automatic daily plan
+- Dynamic re-prioritization when schedule changes
+- Energy-aware suggestions throughout day
+
+**Social Accountability (inspired by Priority's "Circles"):**
+- Share identity progress with accountability partners (opt-in)
+- Weekly identity scorecard exports
+- Team/group identity goals
+
+**Plan doc**: See **[`docs/plans/2026-03-27-sprint-18-feature-integration.md`](./docs/plans/2026-03-27-sprint-18-feature-integration.md)** (to be created).
+
+---
 

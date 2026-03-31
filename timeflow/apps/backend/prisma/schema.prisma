@@ -70,6 +70,7 @@ model User {
   eventCategorizations     EventCategorization[]
   gmailLabelSyncState      GmailLabelSyncState?
   habits                   Habit[]
+  identities               Identity[]
   scheduledHabits          ScheduledHabit[]
   schedulingJobs           SchedulingJob[]
   habitCompletions         HabitCompletion[]
@@ -99,9 +100,13 @@ model Task {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   categoryId          String?
+  identityId          String? // Optional link to Identity
   scheduledTask       ScheduledTask?
   category            Category?      @relation(fields: [categoryId], references: [id])
+  identity            Identity?      @relation(fields: [identityId], references: [id], onDelete: SetNull)
   user                User           @relation(fields: [userId], references: [id])
+
+  @@index([identityId])
 }
 
 model ScheduledTask {
@@ -172,6 +177,27 @@ model EventCategorization {
   @@index([userId, categoryId])
 }
 
+model Identity {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String   // "Writer", "Athlete", "Leader"
+  description String?  // Optional longer description
+  color       String   // Hex color from curated palette
+  icon        String   // Single emoji character
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks  Task[]
+  habits Habit[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@index([userId, sortOrder])
+}
+
 model Habit {
   id                 String            @id @default(cuid())
   userId             String
@@ -183,8 +209,9 @@ model Habit {
   durationMinutes    Int               @default(30)
   priorityRank       Int? // Priority ranking (1 = highest priority, null = not set)
   isActive           Boolean           @default(true)
+  identityId         String? // Optional FK to Identity model
   
-  // Identity-based habit tracking (inspired by Priority app)
+  // Legacy identity string fields (kept for backward compat, identityId is preferred)
   identity           String? // "Writer", "Athlete", "Leader" - who you're becoming
   longTermGoal       String? // "Publish a book by 2027" - the bigger picture
   whyStatement       String? // Personal motivation - why this matters
@@ -192,11 +219,13 @@ model Habit {
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   user               User              @relation(fields: [userId], references: [id])
+  identityModel      Identity?         @relation(fields: [identityId], references: [id], onDelete: SetNull)
   scheduledHabits    ScheduledHabit[]
   completions        HabitCompletion[]
 
   @@index([userId])
   @@index([userId, priorityRank])
+  @@index([identityId])
 }
 
 model ScheduledHabit {

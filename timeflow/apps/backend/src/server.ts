@@ -31,6 +31,7 @@ import { registerMeetingRoutes } from './routes/meetingRoutes.js';
 import { startWatchRenewalJob } from './services/gmailWatchScheduler.js';
 import { registerGmailSyncRoutes } from './routes/gmailSyncRoutes.js';
 import { registerBillingRoutes, registerStripeWebhookRoute } from './routes/billingRoutes.js';
+import { registerIdentityRoutes } from './routes/identityRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -95,6 +96,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerBookingRoutes(api);
       await registerMeetingRoutes(api);
       await registerBillingRoutes(api);
+      await registerIdentityRoutes(api);
       await registerDiagnosticsRoutes(api);
     },
     { prefix: '/api' }

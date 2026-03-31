@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useDraggable } from '@dnd-kit/core';
 import type { Task } from '@timeflow/shared';
+import { IdentityBadge } from '@/components/identity/IdentityBadge';
 
 export interface TaskCardProps {
   task: Task;
@@ -44,7 +45,7 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
     const isCompleted = task.status === 'completed';
 
     const baseCardStyles = `
-      bg-white border rounded-lg p-4 transition-all duration-200
+      bg-white border rounded-lg p-3 sm:p-4 transition-all duration-200
       ${isOverdue ? 'border-red-200 bg-red-50' : 'border-slate-200'}
       ${isCompleted ? 'opacity-60' : ''}
     `;
@@ -99,16 +100,17 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
                 onToggleSelect(task.id);
               }}
               className={`
-                mt-1 w-5 h-5 rounded border-2 flex items-center justify-center
+                mt-1 w-7 h-7 sm:w-6 sm:h-6 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg border-2 flex items-center justify-center
                 transition-all duration-200 flex-shrink-0
                 ${selected
                   ? 'bg-primary-600 border-primary-600'
-                  : 'border-slate-300 hover:border-primary-500 hover:bg-primary-50'
+                  : 'border-slate-300 hover:border-primary-500 hover:bg-primary-50 active:bg-primary-100'
                 }
               `}
+              aria-label={`Select ${task.title}`}
             >
               {selected && (
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 sm:w-3 sm:h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               )}
@@ -120,16 +122,17 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
             <button
               onClick={() => onComplete(task.id)}
               className={`
-                mt-1 w-5 h-5 rounded border-2 flex items-center justify-center
+                mt-1 w-7 h-7 sm:w-6 sm:h-6 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg border-2 flex items-center justify-center
                 transition-all duration-200 flex-shrink-0
                 ${isCompleted
                   ? 'bg-green-500 border-green-500'
-                  : 'border-slate-300 hover:border-primary-500 hover:bg-primary-50'
+                  : 'border-slate-300 hover:border-primary-500 hover:bg-primary-50 active:bg-primary-100'
                 }
               `}
+              aria-label={`Mark ${task.title} as complete`}
             >
               {isCompleted && (
-                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 sm:w-3 sm:h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               )}
@@ -140,31 +143,36 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
           <div className="flex-1 min-w-0">
             {/* Title and Priority */}
             <div className="flex items-start gap-2 mb-2">
-              <h3 className={`font-medium text-slate-900 flex-1 ${isCompleted ? 'line-through' : ''}`}>
+              <h3 className={`font-medium text-sm sm:text-base text-slate-900 flex-1 leading-snug ${isCompleted ? 'line-through' : ''}`}>
                 {task.title}
               </h3>
-              <span className={`px-2 py-0.5 text-xs font-semibold rounded border ${priority.color} whitespace-nowrap`}>
+              <span className={`px-2 py-1 text-xs font-semibold rounded border ${priority.color} whitespace-nowrap flex-shrink-0`}>
                 {priority.label}
               </span>
             </div>
 
-            {/* Category Badge */}
-            {task.category && (
-              <div className="mb-2">
-                <span
-                  className="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
-                  style={{
-                    backgroundColor: task.category.color ? `${task.category.color}20` : '#f1f5f9',
-                    color: task.category.color || '#64748b',
-                  }}
-                >
-                  {task.category.name}
-                </span>
+            {/* Category + Identity Badges */}
+            {(task.category || task.identity) && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                {task.category && (
+                  <span
+                    className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium"
+                    style={{
+                      backgroundColor: task.category.color ? `${task.category.color}20` : '#f1f5f9',
+                      color: task.category.color || '#64748b',
+                    }}
+                  >
+                    {task.category.name}
+                  </span>
+                )}
+                {task.identity && (
+                  <IdentityBadge identity={task.identity} size="sm" />
+                )}
               </div>
             )}
 
             {/* Metadata Row */}
-            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 mb-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600 mb-2">
               {/* Duration */}
               <div className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,14 +225,15 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
 
           {/* Actions */}
           {showActions && (onEdit || onDelete) && (
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
               {onEdit && (
                 <button
                   onClick={() => onEdit(task)}
-                  className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                  className="p-2.5 sm:p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-slate-400 hover:text-primary-600 hover:bg-primary-50 active:bg-primary-100 rounded-lg transition-colors inline-flex items-center justify-center"
                   title="Edit task"
+                  aria-label={`Edit ${task.title}`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
@@ -232,10 +241,11 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
               {onDelete && (
                 <button
                   onClick={() => onDelete(task.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                  className="p-2.5 sm:p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-slate-400 hover:text-red-600 hover:bg-red-50 active:bg-red-100 rounded-lg transition-colors inline-flex items-center justify-center"
                   title="Delete task"
+                  aria-label={`Delete ${task.title}`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>

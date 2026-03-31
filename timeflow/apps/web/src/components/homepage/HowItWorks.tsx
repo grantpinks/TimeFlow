@@ -40,19 +40,19 @@ const itemVariants = {
 
 export function HowItWorks() {
   return (
-    <section className="py-24 bg-white">
-      <div className="max-w-5xl mx-auto px-6">
+    <section className="py-16 sm:py-24 bg-white px-4 sm:px-6">
+      <div className="max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
             How TimeFlow Works
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-lg sm:text-xl text-gray-600">
             Three simple steps to transform your productivity
           </p>
         </motion.div>
@@ -62,7 +62,7 @@ export function HowItWorks() {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           variants={containerVariants}
-          className="space-y-12"
+          className="space-y-10 sm:space-y-12"
         >
           {steps.map((step, index) => (
             <motion.div
@@ -70,16 +70,16 @@ export function HowItWorks() {
               variants={itemVariants}
               className="relative"
             >
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="flex-shrink-0 w-24 h-24 bg-gradient-to-br from-teal-500 to-teal-600 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-lg">
+              <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8">
+                <div className="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white font-bold text-2xl sm:text-3xl shadow-lg">
                   {step.number}
                 </div>
-                <div className="flex-1">
-                  <div className="text-4xl mb-3">{step.icon}</div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                <div className="flex-1 text-center md:text-left">
+                  <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">{step.icon}</div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
                     {step.title}
                   </h3>
-                  <p className="text-lg text-gray-600">
+                  <p className="text-base sm:text-lg text-gray-600">
                     {step.description}
                   </p>
                 </div>
@@ -93,10 +93,10 @@ export function HowItWorks() {
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
-                  className="flex justify-center my-8"
+                  className="flex justify-center my-6 sm:my-8"
                 >
                   <svg
-                    className="w-8 h-8 text-teal-400"
+                    className="w-7 h-7 sm:w-8 sm:h-8 text-teal-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

@@ -853,6 +853,29 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Identities */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800 mb-1">
+                  My Identities
+                </h2>
+                <p className="text-slate-600 text-sm">
+                  Link your tasks and habits to who you're becoming — up to 5 identities.
+                </p>
+              </div>
+              <Link
+                href="/settings/identities"
+                className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-100"
+              >
+                Manage Identities
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+
           {/* Categories */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between gap-4">

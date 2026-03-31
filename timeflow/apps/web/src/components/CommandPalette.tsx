@@ -122,7 +122,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
       {children}
 
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 px-4">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-16 sm:pt-24 px-4">
           {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -130,11 +130,11 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
           />
 
           {/* Command palette */}
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Search input */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3 px-4 py-4 border-b border-slate-200 dark:border-slate-700">
               <svg
-                className="w-5 h-5 text-slate-400"
+                className="w-5 h-5 text-slate-400 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -151,16 +151,16 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                 placeholder="Type a command or search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-slate-100 placeholder-slate-400 text-base min-h-[44px] py-2"
                 autoFocus
               />
-              <kbd className="px-2 py-1 text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400 rounded">
+              <kbd className="px-2.5 py-1.5 text-xs font-semibold text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-400 rounded hidden sm:inline-block">
                 ESC
               </kbd>
             </div>
 
             {/* Commands list */}
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
               {filteredCommands.length === 0 ? (
                 <div className="px-4 py-8 text-center text-slate-500">
                   No commands found
@@ -171,13 +171,13 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                     <button
                       key={command.id}
                       onClick={() => handleCommandClick(command)}
-                      className="w-full px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-between group"
+                      className="w-full px-4 py-4 min-h-[56px] text-left hover:bg-slate-100 dark:hover:bg-slate-700 active:bg-slate-200 dark:active:bg-slate-600 transition-colors flex items-center justify-between group"
                     >
-                      <span className="text-slate-900 dark:text-slate-100">
+                      <span className="text-base sm:text-lg text-slate-900 dark:text-slate-100">
                         {command.label}
                       </span>
                       <svg
-                        className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -196,17 +196,17 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs text-slate-500">
-              <span>Navigate with arrow keys</span>
+            <div className="px-4 py-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+              <span className="hidden sm:inline">Navigate with arrow keys</span>
               <div className="flex items-center gap-2">
                 <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
                   ↑↓
                 </kbd>
-                <span>to navigate</span>
+                <span className="hidden sm:inline">to navigate</span>
                 <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
                   ↵
                 </kbd>
-                <span>to select</span>
+                <span className="hidden sm:inline">to select</span>
               </div>
             </div>
           </div>

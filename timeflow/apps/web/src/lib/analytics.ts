@@ -83,7 +83,9 @@ export type AnalyticsEvent =
   // Billing events
   | { name: 'billing.checkout_started'; properties: { plan: string; billing: 'monthly' | 'yearly' } }
   | { name: 'billing.subscription_canceled'; properties: { plan: string } }
-  | { name: 'billing.portal_opened'; properties: {} };
+  | { name: 'billing.portal_opened'; properties: {} }
+  | { name: 'billing.checkout_resumed_after_auth'; properties: { planKey: string } }
+  | { name: 'billing.redirecting_to_auth'; properties: { planKey: string } };
 
 // Track event
 export function track<T extends AnalyticsEvent>(event: T['name'], properties?: T['properties']) {

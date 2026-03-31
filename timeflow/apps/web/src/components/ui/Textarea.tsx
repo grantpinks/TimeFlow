@@ -35,7 +35,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     const textareaRef = (ref as React.RefObject<HTMLTextAreaElement>) || internalRef;
 
     const baseStyles =
-      'w-full px-4 py-3 border rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed resize-y';
+      'w-full px-4 py-3 min-h-[44px] text-base border rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed resize-y';
 
     const stateStyles = error
       ? 'border-red-300 focus:border-red-500 focus:ring-red-500'

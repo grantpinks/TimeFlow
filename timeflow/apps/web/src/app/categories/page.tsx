@@ -94,15 +94,15 @@ export default function CategoriesPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Categories</h1>
-            <p className="text-slate-600 mt-1">Organize your tasks with color-coded categories</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Categories</h1>
+            <p className="text-slate-600 mt-1 text-sm sm:text-base">Organize your tasks with color-coded categories</p>
           </div>
           <button
             onClick={() => setShowAdd(true)}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            className="px-4 sm:px-5 py-2.5 sm:py-3 min-h-[48px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors font-medium text-sm sm:text-base"
           >
             Add Category
           </button>
@@ -121,7 +121,7 @@ export default function CategoriesPage() {
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="px-3 py-2 border border-slate-300 rounded flex-1"
+                      className="px-4 py-3 min-h-[44px] border border-slate-300 rounded-lg flex-1 text-base"
                       placeholder="Category name"
                     />
                   </div>
@@ -132,7 +132,7 @@ export default function CategoriesPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={handleSaveEdit}
-                      className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+                      className="px-4 py-3 min-h-[48px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 active:bg-primary-800 transition-colors font-medium text-sm sm:text-base"
                     >
                       Save
                     </button>
@@ -141,7 +141,7 @@ export default function CategoriesPage() {
                         setEditing(null);
                         setEditError('');
                       }}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition-colors"
+                      className="px-4 py-3 min-h-[48px] bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 active:bg-slate-400 transition-colors font-medium text-sm sm:text-base"
                     >
                       Cancel
                     </button>
@@ -159,23 +159,23 @@ export default function CategoriesPage() {
                       <span className="text-xs text-slate-500">(default)</span>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => handleEdit(category)}
-                      className="px-3 py-1 text-sm text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                      className="px-3 sm:px-4 py-2.5 min-h-[44px] text-xs sm:text-sm text-primary-600 hover:bg-primary-50 active:bg-primary-100 rounded-lg transition-colors font-medium"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => setTrainingCategoryId(category.id)}
-                      className="px-3 py-1 text-sm text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                      className="px-3 sm:px-4 py-2.5 min-h-[44px] text-xs sm:text-sm text-slate-600 hover:bg-slate-100 active:bg-slate-200 rounded-lg transition-colors font-medium"
                     >
                       Train
                     </button>
                     {!category.isDefault && (
                       <button
                         onClick={() => handleDelete(category.id)}
-                        className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                        className="px-3 sm:px-4 py-2.5 min-h-[44px] text-xs sm:text-sm text-red-600 hover:bg-red-50 active:bg-red-100 rounded-lg transition-colors font-medium"
                       >
                         Delete
                       </button>
@@ -188,15 +188,15 @@ export default function CategoriesPage() {
         </div>
 
         {showAdd && (
-          <div className="mt-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-            <h3 className="font-medium mb-3">Add New Category</h3>
+          <div className="mt-4 bg-slate-50 p-4 sm:p-5 rounded-lg border border-slate-200">
+            <h3 className="font-medium mb-3 text-base sm:text-lg">Add New Category</h3>
             <div className="space-y-3">
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Category name"
-                className="w-full px-3 py-2 border border-slate-300 rounded"
+                className="w-full px-4 py-3 min-h-[44px] border border-slate-300 rounded-lg text-base"
               />
               <ColorPicker value={newColor} onChange={setNewColor} />
               {addError && (
@@ -206,7 +206,7 @@ export default function CategoriesPage() {
                 <button
                   onClick={handleAdd}
                   disabled={!newName.trim()}
-                  className="px-4 py-2 bg-primary-600 text-white rounded disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-primary-700 transition-colors"
+                  className="px-4 py-3 min-h-[48px] bg-primary-600 text-white rounded-lg disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-primary-700 active:bg-primary-800 transition-colors font-medium text-sm sm:text-base"
                 >
                   Add
                 </button>
@@ -217,7 +217,7 @@ export default function CategoriesPage() {
                     setNewColor('#3B82F6');
                     setAddError('');
                   }}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition-colors"
+                  className="px-4 py-3 min-h-[48px] bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 active:bg-slate-400 transition-colors font-medium text-sm sm:text-base"
                 >
                   Cancel
                 </button>

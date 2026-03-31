@@ -29,6 +29,8 @@ export interface Task {
   status: TaskStatus;
   categoryId?: string | null;
   category?: Category | null;
+  identityId?: string | null;
+  identity?: { id: string; name: string; color: string; icon: string } | null;
   dueDate?: string | null;
   sourceEmailId?: string | null;
   sourceThreadId?: string | null;
@@ -62,6 +64,7 @@ export interface CreateTaskRequest {
   durationMinutes?: number;
   priority?: TaskPriority;
   categoryId?: string;
+  identityId?: string;
   dueDate?: string;
   sourceEmailId?: string;
   sourceThreadId?: string;
@@ -78,6 +81,7 @@ export interface UpdateTaskRequest {
   durationMinutes?: number;
   priority?: TaskPriority;
   categoryId?: string;
+  identityId?: string | null;
   dueDate?: string;
   status?: TaskStatus;
   sourceEmailId?: string;

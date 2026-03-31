@@ -19,7 +19,11 @@
       "Bash(pnpm prisma studio:*)",
       "Bash(pnpm prisma generate:*)",
       "Bash(pnpm dev:web:*)",
-      "Bash(Start-Sleep -Seconds 5)"
+      "Bash(Start-Sleep -Seconds 5)",
+      "Bash(cd /Users/grantpinkerton/Desktop/Time\\ Flow/TimeFlow/timeflow && pnpm ls:*)",
+      "Bash(cd /Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow && pnpm -C packages/scheduling test:*)",
+      "Bash(cd:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

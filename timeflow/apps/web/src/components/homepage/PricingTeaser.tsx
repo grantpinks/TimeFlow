@@ -126,10 +126,10 @@ export function PricingTeaser() {
 
               <a
                 href={plan.ctaLink}
-                className={`block w-full text-center px-6 py-3 rounded-lg font-semibold transition-colors ${
+                className={`block w-full text-center px-6 py-3.5 min-h-[48px] rounded-lg font-semibold text-base transition-all active:scale-[0.98] inline-flex items-center justify-center ${
                   plan.popular
-                    ? 'bg-teal-600 text-white hover:bg-teal-700'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    ? 'bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 shadow-sm hover:shadow-md'
+                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200 active:bg-gray-300'
                 }`}
               >
                 {plan.cta}

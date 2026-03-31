@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
 import { Panel, SectionHeader } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
@@ -16,7 +16,6 @@ import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
 import { FlowMascot } from '@/components/FlowMascot';
 import { FlowSchedulingBanner } from '@/components/habits/FlowSchedulingBanner';
 import { track } from '@/lib/analytics';
-import { reorderHabits as reorderHabitsApi } from '@/lib/api';
 import {
   DndContext,
   closestCenter,
@@ -32,7 +31,9 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import type { Habit, HabitFrequency, TimeOfDay } from '@timeflow/shared';
+import type { Habit, HabitFrequency, TimeOfDay, Identity } from '@timeflow/shared';
+import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
+import * as api from '@/lib/api';
 
 export default function HabitsPage() {
   const { habits, loading, createHabit, updateHabit, deleteHabit } = useHabits();
@@ -85,6 +86,23 @@ export default function HabitsPage() {
 
   const [addError, setAddError] = useState('');
   const [editError, setEditError] = useState('');
+
+  // Identity filter state
+  const [identities, setIdentities] = useState<Identity[]>([]);
+  const [identityFilter, setIdentityFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getIdentities().then(setIdentities).catch(() => {});
+  }, []);
+
+  const filteredHabits = useMemo(() => {
+    if (!identityFilter) return localHabits;
+    const identity = identities.find((i) => i.id === identityFilter);
+    if (!identity) return localHabits;
+    return localHabits.filter(
+      (h) => h.identityId === identityFilter || h.identity === identity.name
+    );
+  }, [localHabits, identityFilter, identities]);
 
   const handleAdd = async () => {
     if (!newTitle.trim()) {
@@ -210,7 +228,7 @@ export default function HabitsPage() {
     try {
       // Send new order to backend
       const habitIds = reordered.map((h) => h.id);
-      await reorderHabitsApi(habitIds);
+      await api.reorderHabits(habitIds);
 
       track('habits.reordered', {
         from: oldIndex,
@@ -252,6 +270,25 @@ export default function HabitsPage() {
             </button>
           }
         />
+
+        {/* Identity Progress & Filter */}
+        {identities.length > 0 && (
+          <div className="space-y-2">
+            <IdentityProgressWidget
+              onFilterChange={setIdentityFilter}
+              activeFilter={identityFilter}
+            />
+            {identityFilter && (
+              <p className="text-xs text-slate-500">
+                Showing habits linked to{' '}
+                <span className="font-medium">
+                  {identities.find((i) => i.id === identityFilter)?.icon}{' '}
+                  {identities.find((i) => i.id === identityFilter)?.name}
+                </span>
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Flow Coach Welcome (only show if user has habits) */}
         {habits.length > 0 && (
@@ -513,11 +550,11 @@ export default function HabitsPage() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={localHabits.map((h) => h.id)}
+                items={filteredHabits.map((h) => h.id)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="grid gap-4 overflow-visible">
-                {localHabits.map((habit) =>
+                {filteredHabits.map((habit) =>
                   editing === habit.id ? (
                     <Panel key={habit.id} className="bg-slate-50">
                       <div className="space-y-3">

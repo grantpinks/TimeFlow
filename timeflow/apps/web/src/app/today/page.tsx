@@ -20,6 +20,7 @@ import { EmailComposer } from '@/components/EmailComposer';
 import { Panel, SectionHeader } from '@/components/ui';
 import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today/PlanningRitualPanel';
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
+import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -53,6 +54,7 @@ export default function TodayPage() {
   const [selectedCategory, setSelectedCategory] = useState<EmailCategory | 'all'>('all');
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [showPlanningRitual, setShowPlanningRitual] = useState(false);
+  const [identityFilter, setIdentityFilter] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   const sensors = useSensors(
@@ -527,6 +529,12 @@ Please generate a schedule preview for today.`;
           <p className="text-sm text-slate-600">
             {unscheduledTasks.length} tasks to schedule • {scheduledTasks.length} on timeline
           </p>
+          {/* Identity Progress Pills */}
+          <IdentityProgressWidget
+            onFilterChange={setIdentityFilter}
+            activeFilter={identityFilter}
+            className="mt-3"
+          />
         </div>
 
 

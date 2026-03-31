@@ -1,0 +1,41 @@
+# Copy these environment variables to Render
+# Replace the placeholder values with your actual Stripe values
+
+# ============================================================================
+# STEP 1: Add this IMMEDIATELY to fix backend crash
+# ============================================================================
+STRIPE_SECRET_KEY=sk_test_PASTE_YOUR_KEY_HERE
+
+# ============================================================================
+# STEP 2: Add these after creating Stripe products (Step 2 below)
+# ============================================================================
+STRIPE_PRICE_PRO_MONTHLY=price_PASTE_PRICE_ID_HERE
+STRIPE_PRICE_PRO_YEARLY=price_PASTE_PRICE_ID_HERE
+STRIPE_PRICE_FLOW_STATE_MONTHLY=price_PASTE_PRICE_ID_HERE
+STRIPE_PRICE_FLOW_STATE_YEARLY=price_PASTE_PRICE_ID_HERE
+
+# ============================================================================
+# STEP 3: Add this after creating webhook (Step 3 below)
+# ============================================================================
+STRIPE_WEBHOOK_SECRET=whsec_PASTE_WEBHOOK_SECRET_HERE
+
+# ============================================================================
+# HOW TO ADD TO RENDER:
+# ============================================================================
+# 1. Go to: https://dashboard.render.com
+# 2. Click your backend service: timeflow-wosj
+# 3. Click "Environment" tab in left sidebar
+# 4. Click "Add Environment Variable" button
+# 5. Paste the Key (e.g., STRIPE_SECRET_KEY)
+# 6. Paste the Value (e.g., sk_test_...)
+# 7. Click "Save Changes"
+# 8. Render will automatically redeploy (takes 2-3 minutes)
+
+# ============================================================================
+# VERIFICATION:
+# ============================================================================
+# After each deploy, check:
+# 1. Render logs should show: "✅ Server ready at http://..."
+# 2. NOT: "Error: Neither apiKey nor config.authenticator provided"
+# 3. Visit: https://timeflow-wosj.onrender.com/health
+# 4. Should return: {"status":"ok"}

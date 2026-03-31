@@ -8,6 +8,11 @@ import type {
   Task,
   CreateTaskRequest,
   UpdateTaskRequest,
+  Identity,
+  CreateIdentityRequest,
+  UpdateIdentityRequest,
+  ReorderIdentitiesRequest,
+  IdentityProgressResponse,
   UserProfile,
   UserPreferencesUpdate,
   EmailAccount,
@@ -1596,4 +1601,53 @@ export async function openBillingPortal(): Promise<{ url: string }> {
   return request<{ url: string }>('/billing/manage', {
     method: 'POST',
   });
+}
+
+// ===== Identities =====
+
+export async function getIdentities(): Promise<Identity[]> {
+  return request<Identity[]>('/identities');
+}
+
+export async function createIdentity(data: CreateIdentityRequest): Promise<Identity> {
+  return request<Identity>('/identities', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateIdentity(id: string, data: UpdateIdentityRequest): Promise<Identity> {
+  return request<Identity>(`/identities/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteIdentity(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/identities/${id}`, { method: 'DELETE' });
+}
+
+export async function reorderIdentities(data: ReorderIdentitiesRequest): Promise<Identity[]> {
+  return request<Identity[]>('/identities/reorder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getIdentityMigrationStatus(): Promise<{ needsMigration: boolean }> {
+  return request<{ needsMigration: boolean }>('/identities/migration/status');
+}
+
+export async function runIdentityMigration(): Promise<{ success: boolean; identities: Identity[] }> {
+  return request<{ success: boolean; identities: Identity[] }>('/identities/migration/run', {
+    method: 'POST',
+  });
+}
+
+export async function getIdentityProgress(date?: string): Promise<IdentityProgressResponse> {
+  const qs = date ? `?date=${date}` : '';
+  return request<IdentityProgressResponse>(`/identities/progress${qs}`);
 }

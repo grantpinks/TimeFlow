@@ -31,9 +31,9 @@ export function FeatureDeepDive({
   const bgClass = gradient ? 'feature-gradient' : 'bg-white';
 
   return (
-    <section id={id} className={`py-24 ${bgClass}`}>
-      <div className="max-w-7xl mx-auto px-6">
-        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${reverse ? 'lg:flex-row-reverse' : ''}`}>
+    <section id={id} className={`py-16 sm:py-24 ${bgClass} px-4 sm:px-6`}>
+      <div className="max-w-7xl mx-auto">
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center ${reverse ? 'lg:flex-row-reverse' : ''}`}>
           {/* Text content */}
           <motion.div
             initial={{ opacity: 0, x: reverse ? 20 : -20 }}
@@ -42,13 +42,13 @@ export function FeatureDeepDive({
             transition={{ duration: 0.5 }}
             className={reverse ? 'lg:order-2' : ''}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
               {title}
             </h2>
-            <p className="text-xl text-gray-600 mb-8">
+            <p className="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8">
               {subtitle}
             </p>
-            <ul className="space-y-4 mb-8">
+            <ul className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
               {benefits.map((benefit, index) => (
                 <motion.li
                   key={index}
@@ -59,7 +59,7 @@ export function FeatureDeepDive({
                   className="flex items-start gap-3"
                 >
                   <svg
-                    className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1"
+                    className="w-6 h-6 sm:w-7 sm:h-7 text-teal-600 flex-shrink-0 mt-1"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -69,14 +69,14 @@ export function FeatureDeepDive({
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span className="text-lg text-gray-700">{benefit}</span>
+                  <span className="text-base sm:text-lg text-gray-700">{benefit}</span>
                 </motion.li>
               ))}
             </ul>
             <a
               href={ctaLink}
               onClick={onCtaClick}
-              className="inline-block px-8 py-4 bg-teal-600 text-white rounded-lg font-semibold text-lg hover:bg-teal-700 transition-colors hover:shadow-lg"
+              className="inline-flex items-center justify-center px-6 sm:px-8 py-3.5 sm:py-4 min-h-[52px] bg-teal-600 text-white rounded-lg font-semibold text-base sm:text-lg hover:bg-teal-700 active:bg-teal-800 transition-all hover:shadow-lg active:scale-[0.98]"
             >
               {ctaText}
             </a>

@@ -18,7 +18,8 @@ export interface Habit {
   isActive: boolean;
   
   // Identity-based habit tracking
-  identity?: string | null; // "Writer", "Athlete", "Leader" - who you're becoming
+  identityId?: string | null; // FK to Identity model
+  identity?: string | null; // "Writer", "Athlete", "Leader" - who you're becoming (legacy string field)
   longTermGoal?: string | null; // "Publish a book by 2027" - the bigger picture
   whyStatement?: string | null; // Personal motivation - why this matters
   

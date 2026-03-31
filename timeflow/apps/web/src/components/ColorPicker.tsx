@@ -47,16 +47,16 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 sm:grid-cols-6 gap-2 sm:gap-2.5">
         {PRESET_COLORS.map((color) => (
           <button
             key={color}
             type="button"
             onClick={() => onChange(color)}
-            className={`w-10 h-10 rounded-lg border-2 transition-all ${
+            className={`w-12 h-12 sm:w-11 sm:h-11 min-h-[48px] min-w-[48px] sm:min-h-[44px] sm:min-w-[44px] rounded-lg border-2 transition-all active:scale-95 ${
               value === color
-                ? 'border-slate-900 scale-110'
-                : 'border-slate-200 hover:border-slate-400'
+                ? 'border-slate-900 ring-2 ring-slate-300'
+                : 'border-slate-200 hover:border-slate-400 active:border-slate-500'
             }`}
             style={{ backgroundColor: color }}
             title={color}
@@ -68,7 +68,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
       <button
         type="button"
         onClick={() => setShowCustom(!showCustom)}
-        className="text-sm text-primary-600 hover:text-primary-700"
+        className="text-sm text-primary-600 hover:text-primary-700 active:text-primary-800 min-h-[44px] inline-flex items-center"
       >
         {showCustom ? 'Hide' : 'Show'} custom color
       </button>
@@ -79,14 +79,14 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
             type="color"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="w-16 h-10 rounded border border-slate-300"
+            className="w-16 h-12 min-h-[48px] rounded-lg border border-slate-300"
           />
           <input
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="#000000"
-            className="flex-1 px-3 py-2 border border-slate-300 rounded"
+            className="flex-1 px-4 py-3 min-h-[44px] text-base border border-slate-300 rounded-lg"
           />
         </div>
       )}

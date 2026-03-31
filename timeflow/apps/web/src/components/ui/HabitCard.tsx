@@ -22,7 +22,7 @@ export function HabitCard({ habit, onEdit, onDelete }: HabitCardProps) {
 
   return (
     <motion.div
-      className={`bg-white rounded-lg border p-4 transition-all duration-200 ${
+      className={`bg-white rounded-lg border p-4 sm:p-5 transition-all duration-200 ${
         habit.isActive
           ? 'border-slate-200 hover:shadow-md hover:border-slate-300'
           : 'border-slate-100 opacity-60'
@@ -35,35 +35,35 @@ export function HabitCard({ habit, onEdit, onDelete }: HabitCardProps) {
     >
       <div>
         <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-slate-800">{habit.title}</h3>
+          <h3 className="font-semibold text-base sm:text-lg text-slate-800">{habit.title}</h3>
           {!habit.isActive && (
-            <span className="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded">
+            <span className="text-xs bg-slate-200 text-slate-600 px-2.5 py-1 rounded-md">
               Inactive
             </span>
           )}
         </div>
         {habit.description && (
-          <p className="text-sm text-slate-600 mb-3">{habit.description}</p>
+          <p className="text-sm sm:text-base text-slate-600 mb-3">{habit.description}</p>
         )}
-        <div className="flex flex-wrap gap-2 mb-3 text-xs text-slate-500">
-          <span className="bg-slate-100 px-2 py-1 rounded">{formatFrequency(habit)}</span>
+        <div className="flex flex-wrap gap-2 mb-4 text-xs sm:text-sm text-slate-500">
+          <span className="bg-slate-100 px-2.5 py-1.5 rounded-md">{formatFrequency(habit)}</span>
           {habit.preferredTimeOfDay && (
-            <span className="bg-slate-100 px-2 py-1 rounded capitalize">
+            <span className="bg-slate-100 px-2.5 py-1.5 rounded-md capitalize">
               {habit.preferredTimeOfDay}
             </span>
           )}
-          <span className="bg-slate-100 px-2 py-1 rounded">{habit.durationMinutes} min</span>
+          <span className="bg-slate-100 px-2.5 py-1.5 rounded-md">{habit.durationMinutes} min</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <button
             onClick={() => onEdit(habit)}
-            className="flex-1 px-3 py-1.5 text-sm text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
+            className="flex-1 px-4 py-3 min-h-[48px] text-sm sm:text-base font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 active:bg-primary-200 rounded-lg transition-colors"
           >
             Edit
           </button>
           <button
             onClick={() => onDelete(habit.id)}
-            className="flex-1 px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+            className="flex-1 px-4 py-3 min-h-[48px] text-sm sm:text-base font-medium text-red-600 bg-red-50 hover:bg-red-100 active:bg-red-200 rounded-lg transition-colors"
           >
             Delete
           </button>

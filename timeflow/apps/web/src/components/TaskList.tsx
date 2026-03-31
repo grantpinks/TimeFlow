@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useDroppable } from '@dnd-kit/core';
-import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@timeflow/shared';
+import type { Task, CreateTaskRequest, UpdateTaskRequest, Identity } from '@timeflow/shared';
 import { useCategories } from '@/hooks/useCategories';
 import { TaskCard } from '@/components/ui/TaskCard';
 import { Button, Input, Select, Textarea, Label, TemplateModal } from '@/components/ui';
 import { saveTaskTemplate } from '@/utils/taskTemplates';
 import type { TaskTemplate } from '@/utils/taskTemplates';
 import { CategoryTrainingModal } from '@/components/CategoryTrainingModal';
+import { IdentitySelector } from '@/components/identity/IdentitySelector';
+import * as api from '@/lib/api';
 
 interface TaskListProps {
   tasks: Task[];
@@ -63,14 +65,22 @@ export function TaskList({
       setShowForm(true);
     }
   }, [autoOpenForm]);
+
+  // Load identities for the selector
+  useEffect(() => {
+    api.getIdentities().then(setIdentities).catch(() => {});
+  }, []);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [duration, setDuration] = useState(30);
   const [priority, setPriority] = useState<1 | 2 | 3>(2);
   const [dueDate, setDueDate] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [identityId, setIdentityId] = useState<string | null>(null);
+  const [identities, setIdentities] = useState<Identity[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingIdentityId, setEditingIdentityId] = useState<string | null>(null);
   const [editingState, setEditingState] = useState<{
     title: string;
     description: string;
@@ -102,6 +112,7 @@ export function TaskList({
         priority,
         dueDate: dueDate || undefined,
         categoryId: categoryId || undefined,
+        identityId: identityId || undefined,
       });
       // Reset form
       setTitle('');
@@ -110,6 +121,7 @@ export function TaskList({
       setPriority(2);
       setDueDate('');
       setCategoryId('');
+      setIdentityId(null);
       setShowForm(false);
     } catch (err) {
       console.error('Failed to create task:', err);
@@ -120,6 +132,7 @@ export function TaskList({
 
   const openEditModal = (task: Task) => {
     setEditingTask(task);
+    setEditingIdentityId(task.identityId ?? null);
     setEditingState({
       title: task.title,
       description: task.description ?? '',
@@ -149,6 +162,7 @@ export function TaskList({
         priority: editingState.priority,
         dueDate: editingState.dueDate || undefined,
         categoryId: editingState.categoryId || undefined,
+        identityId: editingIdentityId,
       });
       closeEditModal();
     } catch (err) {
@@ -279,6 +293,18 @@ export function TaskList({
                 Manage categories
               </a>
             </div>
+
+            {identities.length > 0 && (
+              <div>
+                <IdentitySelector
+                  identities={identities}
+                  value={identityId}
+                  onChange={setIdentityId}
+                  label="Identity (optional)"
+                  showLinkPrompt={!identityId}
+                />
+              </div>
+            )}
 
             <div>
               <Label>Duration</Label>
@@ -524,6 +550,18 @@ export function TaskList({
                       Manage categories
                     </a>
                   </div>
+
+                  {identities.length > 0 && (
+                    <div>
+                      <IdentitySelector
+                        identities={identities}
+                        value={editingIdentityId}
+                        onChange={setEditingIdentityId}
+                        label="Identity (optional)"
+                        showLinkPrompt={!editingIdentityId}
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <Label>Duration</Label>

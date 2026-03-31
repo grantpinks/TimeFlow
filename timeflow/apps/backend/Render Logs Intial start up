@@ -1,0 +1,68 @@
+2026-02-03T22:17:03.80175211Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1453:15)
+2026-02-03T22:17:03.80175462Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1064:19)
+2026-02-03T22:17:03.801757Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1069:22)
+2026-02-03T22:17:03.801760161Z     at Module._load (node:internal/modules/cjs/loader:1239:25)
+2026-02-03T22:17:03.801762901Z     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+2026-02-03T22:17:03.801765511Z     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-02-03T22:17:03.801768131Z     at node:internal/main/run_main_module:33:47 {
+2026-02-03T22:17:03.801770901Z   code: 'MODULE_NOT_FOUND',
+2026-02-03T22:17:03.801773941Z   requireStack: []
+2026-02-03T22:17:03.801776742Z }
+2026-02-03T22:17:03.801779022Z 
+2026-02-03T22:17:03.801781512Z Node.js v25.6.0
+2026-02-03T22:17:14.190310311Z ==> Running 'cd apps/backend && node dist/index.js'
+2026-02-03T22:17:14.391803567Z node:internal/modules/cjs/loader:1456
+2026-02-03T22:17:14.391825098Z   throw err;
+2026-02-03T22:17:14.391828309Z   ^
+2026-02-03T22:17:14.391830769Z 
+2026-02-03T22:17:14.391835419Z Error: Cannot find module '/opt/render/project/src/timeflow/apps/backend/dist/index.js'
+2026-02-03T22:17:14.391839869Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1453:15)
+2026-02-03T22:17:14.39184265Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1064:19)
+2026-02-03T22:17:14.39184567Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1069:22)
+2026-02-03T22:17:14.39184968Z     at Module._load (node:internal/modules/cjs/loader:1239:25)
+2026-02-03T22:17:14.39185235Z     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+2026-02-03T22:17:14.39185526Z     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-02-03T22:17:14.391858031Z     at node:internal/main/run_main_module:33:47 {
+2026-02-03T22:17:14.391862091Z   code: 'MODULE_NOT_FOUND',
+2026-02-03T22:17:14.391866501Z   requireStack: []
+2026-02-03T22:17:14.391869201Z }
+2026-02-03T22:17:14.391871631Z 
+2026-02-03T22:17:14.391874201Z Node.js v25.6.0
+2026-02-03T22:17:44.453745553Z ==> Running 'cd apps/backend && node dist/index.js'
+2026-02-03T22:17:44.65442354Z node:internal/modules/cjs/loader:1456
+2026-02-03T22:17:44.654450831Z   throw err;
+2026-02-03T22:17:44.654454262Z   ^
+2026-02-03T22:17:44.654456662Z 
+2026-02-03T22:17:44.654461312Z Error: Cannot find module '/opt/render/project/src/timeflow/apps/backend/dist/index.js'
+2026-02-03T22:17:44.654464582Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1453:15)
+2026-02-03T22:17:44.654467292Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1064:19)
+2026-02-03T22:17:44.654470092Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1069:22)
+2026-02-03T22:17:44.654474323Z     at Module._load (node:internal/modules/cjs/loader:1239:25)
+2026-02-03T22:17:44.654477043Z     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+2026-02-03T22:17:44.654479953Z     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-02-03T22:17:44.654482813Z     at node:internal/main/run_main_module:33:47 {
+2026-02-03T22:17:44.654485964Z   code: 'MODULE_NOT_FOUND',
+2026-02-03T22:17:44.654489464Z   requireStack: []
+2026-02-03T22:17:44.654492184Z }
+2026-02-03T22:17:44.654494464Z 
+2026-02-03T22:17:44.654497194Z Node.js v25.6.0
+2026-02-03T22:18:12.561880424Z ==> Exited with status 1
+2026-02-03T22:18:12.572489362Z ==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+2026-02-03T22:18:22.531953591Z ==> Running 'cd apps/backend && node dist/index.js'
+2026-02-03T22:18:22.732530971Z node:internal/modules/cjs/loader:1456
+2026-02-03T22:18:22.732552553Z   throw err;
+2026-02-03T22:18:22.732555483Z   ^
+2026-02-03T22:18:22.732557933Z 
+2026-02-03T22:18:22.732561593Z Error: Cannot find module '/opt/render/project/src/timeflow/apps/backend/dist/index.js'
+2026-02-03T22:18:22.732565193Z     at Module._resolveFilename (node:internal/modules/cjs/loader:1453:15)
+2026-02-03T22:18:22.732567833Z     at defaultResolveImpl (node:internal/modules/cjs/loader:1064:19)
+2026-02-03T22:18:22.732570624Z     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1069:22)
+2026-02-03T22:18:22.732574154Z     at Module._load (node:internal/modules/cjs/loader:1239:25)
+2026-02-03T22:18:22.732577154Z     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+2026-02-03T22:18:22.732580264Z     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+2026-02-03T22:18:22.732583394Z     at node:internal/main/run_main_module:33:47 {
+2026-02-03T22:18:22.732587015Z   code: 'MODULE_NOT_FOUND',
+2026-02-03T22:18:22.732590385Z   requireStack: []
+2026-02-03T22:18:22.732592895Z }
+2026-02-03T22:18:22.732594975Z 
+2026-02-03T22:18:22.732597065Z Node.js v25.6.0

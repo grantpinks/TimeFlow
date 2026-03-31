@@ -151,21 +151,21 @@ export function ProblemStatement() {
   }, [schedule]);
 
   return (
-    <section className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-6">
+    <section className="py-16 sm:py-24 bg-white px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto">
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.5 }}
           variants={fadeInVariants}
-          className="text-center mb-16"
+          className="text-center mb-12 sm:mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
             Your Calendar Shouldn&apos;t Control You
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            <span className="text-3xl font-bold text-teal-600">{count}%</span> of
+          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
+            <span className="text-2xl sm:text-3xl font-bold text-teal-600">{count}%</span> of
             workers feel overwhelmed by task management and scheduling conflicts
           </p>
         </motion.div>
@@ -179,29 +179,31 @@ export function ProblemStatement() {
           className="max-w-4xl mx-auto"
         >
           {/* Toggle Button */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <button
               onClick={handleToggle}
-              className={`group relative px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 ${
+              className={`group relative px-6 sm:px-8 py-3.5 sm:py-4 min-h-[56px] rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 active:scale-[0.98] inline-flex items-center justify-center ${
                 isOrganized
-                  ? 'bg-teal-600 text-white shadow-lg hover:bg-teal-700'
-                  : 'bg-red-500 text-white shadow-lg hover:bg-red-600 pulse-animation'
+                  ? 'bg-teal-600 text-white shadow-lg hover:bg-teal-700 active:bg-teal-800'
+                  : 'bg-red-500 text-white shadow-lg hover:bg-red-600 active:bg-red-700 pulse-animation'
               }`}
             >
-              <span className="flex items-center gap-3">
+              <span className="flex items-center gap-2 sm:gap-3">
                 {isOrganized ? (
                   <>
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    Organized with TimeFlow
+                    <span className="hidden sm:inline">Organized with TimeFlow</span>
+                    <span className="sm:hidden">Organized</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    Click to Organize Your Calendar
+                    <span className="hidden sm:inline">Click to Organize Your Calendar</span>
+                    <span className="sm:hidden">Tap to Fix This</span>
                   </>
                 )}
               </span>
@@ -213,49 +215,49 @@ export function ProblemStatement() {
                 />
               )}
             </button>
-            <p className="text-sm text-gray-500 mt-3">
+            <p className="text-xs sm:text-sm text-gray-500 mt-3 px-4">
               {isOrganized ? 'AI-optimized schedule with no conflicts' : 'Chaotic calendar with overlapping events'}
             </p>
           </div>
 
           {/* Calendar View */}
-          <div className="relative rounded-2xl border border-gray-200 overflow-hidden shadow-2xl bg-white">
+          <div className="relative rounded-xl sm:rounded-2xl border border-gray-200 overflow-hidden shadow-2xl bg-white">
             {/* Calendar Header */}
-            <div className="px-6 py-4 flex items-center justify-between bg-[#1a73e8] text-white">
-              <div className="flex items-center gap-3">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-[#1a73e8] text-white">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className="font-bold text-lg">
-                  {isOrganized ? 'Your Optimized Schedule' : 'Chaotic Schedule'}
+                <span className="font-bold text-sm sm:text-base md:text-lg truncate">
+                  {isOrganized ? 'Optimized' : 'Chaotic'}
                 </span>
               </div>
-              <span className="text-sm font-semibold">Monday, Dec 11</span>
+              <span className="text-xs sm:text-sm font-semibold whitespace-nowrap ml-2">Mon, Dec 11</span>
             </div>
 
             <div className="flex">
               {/* Time labels */}
-              <div className="w-24 bg-white border-r border-gray-200">
+              <div className="w-14 sm:w-20 md:w-24 bg-white border-r border-gray-200 flex-shrink-0">
                 {HOURS.map((time, i) => (
-                  <div key={i} className="h-16 px-2 text-[11px] text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-1">
+                  <div key={i} className="h-14 sm:h-16 px-1 sm:px-2 text-[9px] sm:text-[11px] text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-1">
                     {time}
                   </div>
                 ))}
               </div>
 
               {/* Events Container */}
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden min-w-0">
                 {/* Day labels */}
                 <div className="grid" style={{ gridTemplateColumns: `repeat(${positionedSchedule.length}, minmax(0, 1fr))` }}>
                   {positionedSchedule.map((day) => (
-                    <div key={day.label} className="px-2 py-2 text-xs font-semibold text-gray-600 border-b border-gray-200 text-center">
-                      <span className="text-gray-800">{day.label}</span> <span className="text-gray-500">{day.date}</span>
+                    <div key={day.label} className="px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-600 border-b border-gray-200 text-center">
+                      <span className="text-gray-800">{day.label}</span> <span className="text-gray-500 hidden sm:inline">{day.date}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Grid */}
-                <div className="relative h-[560px] bg-white border-t border-gray-200 overflow-hidden">
+                <div className="relative h-[400px] sm:h-[500px] md:h-[560px] bg-white border-t border-gray-200 overflow-hidden">
                   {/* Hour grid lines across all days */}
                   {HOURS.map((_, idx) => (
                     <div
@@ -270,7 +272,7 @@ export function ProblemStatement() {
                   className="absolute left-0 right-0 h-px bg-red-500"
                   style={{ top: `${((toMinutes('13:30') - dayStartMinutes) / totalMinutes) * 100}%` }}
                 >
-                  <div className="absolute -left-2 -translate-y-1/2 w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="absolute -left-1.5 sm:-left-2 -translate-y-1/2 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500"></div>
                 </div>
 
                   {/* Day columns with events */}
@@ -281,7 +283,7 @@ export function ProblemStatement() {
                     {positionedSchedule.map((day) => (
                       <div
                         key={day.label}
-                        className="relative border-l border-gray-100 first:border-l-0 px-1"
+                        className="relative border-l border-gray-100 first:border-l-0 px-0.5 sm:px-1"
                       >
                         <AnimatePresence mode="sync">
                           {day.events.map((event, index) => {
@@ -303,9 +305,9 @@ export function ProblemStatement() {
                                   backgroundColor: event.color,
                                 }}
                               >
-                                <div className="px-3 py-2 text-xs text-white">
-                                  <div className="font-semibold text-sm truncate">{event.title}</div>
-                                  <div className="text-white/80 text-[11px]">
+                                <div className="px-1.5 sm:px-2 md:px-3 py-1.5 sm:py-2 text-[9px] sm:text-xs text-white">
+                                  <div className="font-semibold text-[10px] sm:text-sm truncate">{event.title}</div>
+                                  <div className="text-white/80 text-[8px] sm:text-[11px]">
                                     {event.start} – {event.end}
                                   </div>
                                 </div>
@@ -321,9 +323,9 @@ export function ProblemStatement() {
             </div>
 
             {/* Status Bar */}
-            <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between text-sm bg-gray-50">
+            <div className="px-3 sm:px-6 py-2.5 sm:py-3 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs sm:text-sm bg-gray-50">
               <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${isOrganized ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></span>
+                <span className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${isOrganized ? 'bg-green-500' : 'bg-red-500'} animate-pulse`}></span>
                 <span className={`${isOrganized ? 'text-green-800' : 'text-red-800'} font-medium`}>
                   {isOrganized ? 'All conflicts resolved' : 'Conflicts detected'}
                 </span>
@@ -335,45 +337,45 @@ export function ProblemStatement() {
           </div>
 
           {/* Stats Below */}
-          <div className="grid grid-cols-3 gap-4 mt-8">
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-8">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-center p-4 bg-gray-50 rounded-lg"
+              className="text-center p-3 sm:p-4 bg-gray-50 rounded-lg"
             >
-              <div className={`text-3xl font-bold mb-1 transition-colors duration-500 ${
+              <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
                 {isOrganized ? '0' : '3'}
               </div>
-              <div className="text-sm text-gray-600">Conflicts</div>
+              <div className="text-xs sm:text-sm text-gray-600">Conflicts</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-center p-4 bg-gray-50 rounded-lg"
+              className="text-center p-3 sm:p-4 bg-gray-50 rounded-lg"
             >
-              <div className={`text-3xl font-bold mb-1 transition-colors duration-500 ${
+              <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
                 {isOrganized ? '8h' : '2h'}
               </div>
-              <div className="text-sm text-gray-600">Focus Time</div>
+              <div className="text-xs sm:text-sm text-gray-600">Focus Time</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="text-center p-4 bg-gray-50 rounded-lg"
+              className="text-center p-3 sm:p-4 bg-gray-50 rounded-lg"
             >
-              <div className={`text-3xl font-bold mb-1 transition-colors duration-500 ${
+              <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
                 {isOrganized ? '100%' : '45%'}
               </div>
-              <div className="text-sm text-gray-600">Efficiency</div>
+              <div className="text-xs sm:text-sm text-gray-600">Efficiency</div>
             </motion.div>
           </div>
         </motion.div>
