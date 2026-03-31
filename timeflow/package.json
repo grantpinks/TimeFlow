@@ -5,6 +5,7 @@
   "description": "TimeFlow – a cross-device productivity app that smart-schedules tasks into your calendar.",
   "packageManager": "pnpm@10.23.0",
   "workspaces": [
+    "apps/backend",
     "apps/web",
     "packages/shared",
     "packages/scheduling"
