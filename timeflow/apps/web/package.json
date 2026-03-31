@@ -15,7 +15,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hello-pangea/dnd": "^18.0.1",
-    "@timeflow/shared": "*",
+    "@timeflow/shared": "workspace:*",
     "cmdk": "^1.1.1",
     "date-fns": "^3.0.6",
     "dompurify": "^3.3.1",
