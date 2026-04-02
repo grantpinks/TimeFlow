@@ -1,212 +1,139 @@
-# Vercel Deployment Fix: pnpm ERR_INVALID_THIS Issue
+# Deployment Configuration: Vercel + Render (pnpm monorepo)
 
-**Date:** March 25, 2026  
-**Status:** ✅ RESOLVED
-
----
-
-## Problem Summary
-
-Vercel deployment was failing consistently with `ERR_INVALID_THIS` errors during `pnpm install`:
-
-```
-ERR_PNPM_META_FETCH_FAIL  GET https://registry.npmjs.org/@babel%2Fcore: 
-Value of "this" must be of type URLSearchParams
-```
-
-This affected all package installations and blocked deployment entirely.
+**Last Verified:** April 1, 2026 — commit `f7d2370`  
+**Status:** ✅ BOTH PLATFORMS WORKING
 
 ---
 
-## Root Cause
+## The Core Problem
 
-**pnpm has a fundamental incompatibility with Vercel's build infrastructure** at the Node.js polyfill level. The error occurs in pnpm's internal HTTP request handling when it tries to fetch package metadata from the npm registry.
+This is a **pnpm monorepo** that deploys to two platforms with different package managers:
 
-**Attempted Solutions That Failed:**
-1. ❌ Adding `.npmrc` with hoisting configurations
-2. ❌ Pinning specific pnpm versions (8.15.0, 9.15.4)
-3. ❌ Using corepack to manage pnpm versions
-4. ❌ Modifying install flags (`--no-frozen-lockfile`, etc.)
+| Platform | Package Manager | Workspace syntax |
+|---|---|---|
+| Render (backend) | pnpm | `workspace:*` ✅ |
+| Vercel (frontend) | npm | `workspace:*` ❌ crashes |
 
-**Why They Failed:** The issue is at the runtime level, not configuration. Vercel's Node.js environment has quirks that break pnpm's registry client.
+`workspace:*` is pnpm-specific. When npm encounters it, it throws:
+```
+npm error code EUNSUPPORTEDPROTOCOL
+npm error Unsupported URL Type "workspace:": workspace:*
+```
+
+If you change `workspace:*` to plain `*` for npm compatibility, pnpm then tries to fetch the package from the npm registry and fails with:
+```
+ERR_PNPM_FETCH_404  GET https://registry.npmjs.org/@timeflow%2Fshared: Not Found - 404
+```
+
+You cannot satisfy both with a single version specifier in `package.json`.
 
 ---
 
-## Solution: Switch to npm for Vercel (Keep pnpm Locally)
+## The Solution (DO NOT CHANGE THIS)
 
-### Strategy
-Use **npm** exclusively for Vercel deployment while keeping **pnpm** for local development. Both package managers support npm workspaces syntax.
+**Keep `workspace:*` in `apps/web/package.json`.** Let Vercel patch it on-the-fly.
 
-### Implementation
-
-#### 1. Root `package.json` Changes
-
-**Before:**
-```json
-{
-  "workspaces": ["apps/*", "packages/*"]
-}
-```
-
-**After:**
-```json
-{
-  "workspaces": [
-    "apps/web",
-    "packages/shared",
-    "packages/scheduling"
-  ],
-  "scripts": {
-    "build:packages": "cd packages/shared && npm run build && cd ../scheduling && npm run build",
-    "build:web": "npm run build:packages && cd apps/web && npm run build"
-  }
-}
-```
-
-**Why:** Explicit workspace paths work better with npm, and sequential build scripts ensure proper dependency order.
-
-#### 2. `apps/web/package.json` Changes
-
-**Before:**
-```json
-{
-  "dependencies": {
-    "@timeflow/shared": "workspace:*"
-  }
-}
-```
-
-**After:**
-```json
-{
-  "dependencies": {
-    "@timeflow/shared": "*"
-  }
-}
-```
-
-**Why:** The `workspace:*` protocol is pnpm-specific. npm uses `*` for workspace dependencies.
-
-#### 3. `vercel.json` Configuration
-
-**Before:**
-```json
-{
-  "installCommand": "pnpm install",
-  "buildCommand": "cd apps/web && pnpm build"
-}
-```
-
-**After:**
+### `vercel.json`
 ```json
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "sed -i 's/workspace:\\*/*/g' apps/web/package.json && npm install --legacy-peer-deps",
   "buildCommand": "npm run build:web",
   "framework": "nextjs",
   "outputDirectory": "apps/web/.next"
 }
 ```
 
-**Why:** 
-- `--legacy-peer-deps` handles peer dependency conflicts gracefully
-- `build:web` script ensures packages build before the web app
-- No pnpm usage at all
+The `sed` command runs inside Vercel's **ephemeral build environment** — it rewrites `workspace:*` → `*` on disk only for that build. The committed code is never touched.
 
-#### 4. Simplified `.npmrc`
+### `apps/web/package.json` (keep as-is)
+```json
+"@timeflow/shared": "workspace:*"
+```
 
-**Before:**
+### Root `package.json` workspaces (keep `apps/backend` EXCLUDED)
+```json
+"workspaces": [
+  "apps/web",
+  "packages/shared",
+  "packages/scheduling"
+]
+```
+`apps/backend` is excluded because its `package.json` also contains `workspace:*` references (`@timeflow/scheduling`, `@timeflow/shared`). If it were included, npm would read it and crash. Render uses `pnpm-workspace.yaml` to find the backend — not this field — so excluding it here has zero impact on Render or local dev.
+
+### `.npmrc`
 ```
 strict-peer-dependencies=false
 auto-install-peers=true
-resolution-mode=highest
-node-linker=hoisted
-public-hoist-pattern[]=*
 shamefully-hoist=true
+prefer-workspace-packages=true
 ```
-
-**After:**
-```
-strict-peer-dependencies=false
-auto-install-peers=true
-shamefully-hoist=true
-```
-
-**Why:** Removed pnpm-specific settings that npm doesn't understand.
 
 ---
 
-## How It Works
+## How Each Platform Works
 
-### Vercel Deployment Flow
+### Vercel (Frontend)
+1. Clones repo (has `workspace:*` in apps/web/package.json)
+2. `installCommand` runs `sed` → patches `workspace:*` to `*` in the ephemeral env
+3. `npm install --legacy-peer-deps` from root → npm workspaces resolves `@timeflow/shared` locally
+4. `npm run build:web` → builds `packages/shared` → `packages/scheduling` → `apps/web`
+5. Serves from `apps/web/.next`
 
-1. **Clone Repository** - Vercel pulls latest code from GitHub
-2. **Install Dependencies** - `npm install --legacy-peer-deps`
-   - Installs all workspace packages (web, shared, scheduling)
-   - npm automatically handles workspace linking
-   - Generates `package-lock.json` in Vercel's environment
-3. **Build Packages** - `npm run build:packages`
-   - Compiles `packages/shared` TypeScript → `dist/`
-   - Compiles `packages/scheduling` TypeScript → `dist/`
-4. **Build Web App** - `cd apps/web && npm run build`
-   - Next.js imports from compiled packages
-   - Creates production bundle in `apps/web/.next`
-5. **Deploy** - Vercel serves from `.next` directory
+### Render (Backend)
+1. Clones repo (has `workspace:*` in all packages — untouched)
+2. `pnpm install` → pnpm natively resolves all `workspace:*` from local packages
+3. `cd apps/backend && pnpm prisma generate && pnpm build`
+4. `start.sh` runs `npx prisma migrate deploy` then starts the server
 
-### Local Development (Unchanged)
-
-Developers continue using pnpm locally:
+### Local Development (unchanged)
 ```bash
-pnpm install          # Use pnpm locally
-pnpm dev:backend      # Backend server
-pnpm dev:web          # Frontend server
+pnpm install     # pnpm handles workspace:* natively
+pnpm dev:web     # frontend
+pnpm dev:backend # backend
 ```
 
-**Why This Works:** pnpm and npm both understand npm workspace syntax in `package.json`. The only difference is the `workspace:*` protocol, which we changed to `*`.
+---
+
+## What Was Tried and Failed
+
+| Attempt | Why It Failed |
+|---|---|
+| Change `workspace:*` → `*` in apps/web/package.json | pnpm tries to fetch `@timeflow/shared` from npm registry → 404 |
+| Add `prefer-workspace-packages=true` to .npmrc (with `*`) | pnpm-lock.yaml mismatch caused pnpm to re-resolve from registry anyway |
+| `npm install -g pnpm && pnpm install` in Vercel installCommand | pnpm has `ERR_INVALID_THIS` incompatibility with Vercel's Node.js build environment |
+| Using corepack to pin pnpm version on Vercel | Same ERR_INVALID_THIS issue, different pnpm versions |
+| Removing installCommand (letting Vercel auto-detect pnpm) | Vercel auto-detects pnpm but still hits the same ERR_INVALID_THIS error |
+| Manually running `npm install` in each subdir | `npm install` in apps/web sees `workspace:*` and crashes |
 
 ---
 
-## Results
+## Key Files
 
-✅ **Deployment Status:** Successful  
-✅ **Build Time:** Normal (2-3 minutes)  
-✅ **No Registry Errors:** npm has no URLSearchParams issues  
-✅ **Workspace Linking:** Works perfectly with npm workspaces  
-✅ **Local Dev:** Unchanged, still using pnpm  
-
----
-
-## Key Takeaways
-
-1. **pnpm is not universally compatible** with all deployment platforms due to internal implementation differences
-2. **npm workspaces are more portable** and work reliably across platforms
-3. **You can use different package managers** for local vs. deployment without breaking functionality
-4. **Explicit workspace paths** are more reliable than glob patterns for deployment
+| File | Purpose |
+|---|---|
+| `vercel.json` | Vercel build config — contains the `sed` patch + `npm run build:web` |
+| `package.json` (root) | npm workspaces (excludes apps/backend) |
+| `pnpm-workspace.yaml` | pnpm workspaces (includes everything, used by Render + local) |
+| `.npmrc` | Shared package manager config |
+| `apps/backend/start.sh` | Runs `npx prisma migrate deploy` before starting server on Render |
 
 ---
 
-## Files Changed
+## If Something Breaks
 
-- ✏️ `package.json` - Explicit workspaces + build scripts
-- ✏️ `apps/web/package.json` - Changed `workspace:*` to `*`
-- ✏️ `vercel.json` - Switched to npm commands
-- ✏️ `.npmrc` - Simplified for npm compatibility
+**Vercel fails with `workspace:*`:**
+- Check `vercel.json` → `installCommand` must start with the `sed` command
+- Check `apps/web/package.json` → `@timeflow/shared` must be `workspace:*`
 
-**Commits:**
-- `99cdc3b` - Switch Vercel deployment from pnpm to npm
-- `b72308c` - Fix Vercel deployment with stable pnpm version (failed)
-- `bb2375a` - Fix Vercel pnpm deployment issues (failed)
+**Render fails with 404 on `@timeflow/shared`:**
+- Check `apps/web/package.json` → must be `workspace:*` (NOT `*`)
+- Check `pnpm-workspace.yaml` → must include `packages/*`
 
----
+**Render fails with `workspace:*` in backend:**
+- This would only happen if `apps/backend` was added back to root `package.json` workspaces AND npm was being used
+- `apps/backend` must stay OUT of root `package.json` workspaces
 
-## Future Considerations
-
-- **Backend (Render):** Still uses pnpm successfully, no changes needed
-- **Package-lock.json:** Not committed to repo, generated by Vercel during build
-- **Mobile App:** If deploying, follow same npm approach
-- **CI/CD:** Any automated builds should use npm for reliability
-
----
-
-**Last Updated:** March 25, 2026  
-**Verified By:** Successful production deployment to time-flow.app
+**New package added to apps/web that is a local workspace:**
+- Add it as `workspace:*` in `apps/web/package.json`
+- The `sed` command in vercel.json patches ALL `workspace:*` occurrences — no extra config needed
