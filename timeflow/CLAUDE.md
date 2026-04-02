@@ -16,6 +16,34 @@
 2. **Architecture Decisions** - `ARCHITECTURE_DECISIONS.md` - Technical choices
 3. **Tasks Checklist** - `TASKS.md` - Implementation status
 4. **Sprint Reviews** - `sprint_review/` - Lessons learned
+5. **Deployment Config** - `VERCEL_PNPM_FIX.md` - **READ BEFORE touching package.json, vercel.json, or .npmrc**
+
+---
+
+## ⚠️ Deployment Rules (DO NOT BREAK)
+
+This monorepo deploys to **two platforms with different package managers**. The config below is the result of significant debugging — do not change it without reading `VERCEL_PNPM_FIX.md` first.
+
+| Platform | Package Manager | Deploys | Auto-triggered by |
+|---|---|---|---|
+| **Vercel** | npm | `apps/web` (frontend) | push to `main` |
+| **Render** | pnpm | `apps/backend` (API) | push to `main` |
+
+### Rules that must never change
+
+1. **`apps/web/package.json`** — `@timeflow/shared` MUST be `"workspace:*"` (pnpm syntax). Never change to `"*"`.
+2. **`vercel.json`** — `installCommand` MUST start with `sed -i 's/workspace:\\*/*/g' apps/web/package.json` to patch workspace:* before npm runs.
+3. **Root `package.json` workspaces** — MUST exclude `apps/backend`. It contains `workspace:*` refs that crash npm.
+4. **`.npmrc`** — MUST include `prefer-workspace-packages=true`.
+5. **`pnpm-workspace.yaml`** — covers all packages for local dev and Render. Do not remove entries.
+
+### If you add a new local workspace package as a dependency of `apps/web`
+
+Add it as `"workspace:*"` in `apps/web/package.json`. The `sed` command in `vercel.json` patches ALL `workspace:*` occurrences automatically — no extra config needed.
+
+### Render backend migrations
+
+`apps/backend/start.sh` runs `npx prisma migrate deploy` automatically on every deploy. Schema changes push to production DB without manual intervention.
 
 ---
 
