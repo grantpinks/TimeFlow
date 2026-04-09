@@ -6,7 +6,7 @@ services:
     region: ohio
     plan: starter
     buildCommand: cd /opt/render/project/src/timeflow && pnpm install --workspace-root && cd apps/backend && pnpm prisma generate && pnpm build
-    startCommand: cd apps/backend && node dist/index.js
+    startCommand: cd apps/backend && bash start.sh
     envVars:
       - key: NODE_ENV
         value: production
