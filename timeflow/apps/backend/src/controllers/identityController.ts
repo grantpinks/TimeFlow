@@ -39,7 +39,7 @@ const reorderSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export async function listIdentities(request: FastifyRequest, reply: FastifyReply) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
   const identities = await identityService.getIdentities(userId);
   return reply.send(identities);
 }
@@ -48,14 +48,14 @@ export async function getIdentity(
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
   const identity = await identityService.getIdentityById(request.params.id, userId);
   if (!identity) return reply.status(404).send({ error: 'Identity not found' });
   return reply.send(identity);
 }
 
 export async function createIdentity(request: FastifyRequest, reply: FastifyReply) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
 
   const parsed = createIdentitySchema.safeParse(request.body);
   if (!parsed.success) {
@@ -83,7 +83,7 @@ export async function updateIdentity(
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
 
   const parsed = updateIdentitySchema.safeParse(request.body);
   if (!parsed.success) {
@@ -110,14 +110,14 @@ export async function deleteIdentity(
   request: FastifyRequest<{ Params: { id: string } }>,
   reply: FastifyReply
 ) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
   const result = await identityService.deleteIdentity(request.params.id, userId);
   if (!result) return reply.status(404).send({ error: 'Identity not found' });
   return reply.send({ success: true });
 }
 
 export async function reorderIdentities(request: FastifyRequest, reply: FastifyReply) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
 
   const parsed = reorderSchema.safeParse(request.body);
   if (!parsed.success) {
@@ -136,13 +136,13 @@ export async function reorderIdentities(request: FastifyRequest, reply: FastifyR
 }
 
 export async function getMigrationStatus(request: FastifyRequest, reply: FastifyReply) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
   const needsMigration = await identityService.checkMigrationNeeded(userId);
   return reply.send({ needsMigration });
 }
 
 export async function runMigration(request: FastifyRequest, reply: FastifyReply) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
   await identityService.migrateHabitIdentities(userId);
   const identities = await identityService.getIdentities(userId);
   return reply.send({ success: true, identities });
@@ -152,7 +152,7 @@ export async function getProgress(
   request: FastifyRequest<{ Querystring: { date?: string } }>,
   reply: FastifyReply
 ) {
-  const userId = (request.user as any).userId;
+  const userId = (request.user as any).id;
   // Default to today in ISO format
   const date = request.query.date ?? new Date().toISOString().split('T')[0];
 

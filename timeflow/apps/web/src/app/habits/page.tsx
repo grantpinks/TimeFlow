@@ -31,6 +31,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import Link from 'next/link';
 import type { Habit, HabitFrequency, TimeOfDay, Identity } from '@timeflow/shared';
 import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
 import * as api from '@/lib/api';
@@ -262,12 +263,20 @@ export default function HabitsPage() {
           subtitle="Track your progress and build better routines with Flow, your AI habits coach"
           count={habits.length}
           actions={
-            <button
-              onClick={() => setShowAdd(true)}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
-            >
-              Add Habit
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/settings/identities"
+                className="px-3 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+              >
+                <span>🎯</span> Manage Identities
+              </Link>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+              >
+                Add Habit
+              </button>
+            </div>
           }
         />
 
