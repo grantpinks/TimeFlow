@@ -1552,7 +1552,6 @@ function ReadingPane({
   actionState,
   onCreateTask,
   onDraftLabelSync,
-  onDraftExplanation,
   aiDraftLoading,
   onArchive,
   onToggleRead,
@@ -1568,10 +1567,22 @@ function ReadingPane({
 }: ReadingPaneProps) {
   const [selectedCategory, setSelectedCategory] = useState(categoryId || '');
   const [correctionScope, setCorrectionScope] = useState<'sender' | 'domain' | 'thread'>('sender');
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSelectedCategory(categoryId || '');
   }, [categoryId]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    }
+    if (moreOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [moreOpen]);
 
   const latestMessage = threadMessages[threadMessages.length - 1] || threadMessages[0];
   const threadId = email.threadId || email.id;
@@ -1581,177 +1592,172 @@ function ReadingPane({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Action Bar - Fixed */}
-      <div className="flex-none bg-white border-b border-[#e0e0e0] px-6 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-2xl font-bold text-[#1a1a1a] pr-4 flex-1" style={{ fontFamily: "'Crimson Pro', serif" }}>
+      <div className="flex-none bg-white border-b border-slate-200 px-6 py-3">
+        {/* Subject + Gmail link */}
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <h2 className="text-xl font-semibold text-slate-900 flex-1 leading-snug">
             {email.subject}
           </h2>
           <a
             href={`https://mail.google.com/mail/u/0/#inbox/${email.threadId || email.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-none px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
+            title="Open in Gmail"
+            className="flex-none p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <ExternalLink size={14} />
-            Gmail
+            <ExternalLink size={16} />
           </a>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Compact action row */}
+        <div className="flex items-center gap-1.5">
+          {/* PRIMARY: Create Task */}
           <button
             onClick={() => onCreateTask(email)}
             disabled={aiDraftLoading}
-            className="px-4 py-2 text-sm font-medium bg-white border-2 border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10 transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-white border-2 border-[#0BAF9A] text-[#0BAF9A] hover:bg-[#0BAF9A]/10 transition-colors rounded-lg disabled:opacity-60"
           >
             <Clock size={14} />
             Create Task
           </button>
-          <button
-            onClick={() => onCreateTask(email, { schedule: true })}
-            disabled={aiDraftLoading}
-            className="px-4 py-2 text-sm font-medium bg-[#0BAF9A] text-white hover:bg-[#078c77] transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
-          >
-            <Calendar size={14} />
-            Schedule
-          </button>
-          <button
-            onClick={() => onDraftLabelSync(email)}
-            disabled={aiDraftLoading}
-            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
-          >
-            <Tag size={14} />
-            Label Sync
-          </button>
-          <button
-            onClick={() => onDraftExplanation(email)}
-            disabled={aiDraftLoading}
-            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2 disabled:opacity-60"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
-          >
-            <HelpCircle size={14} />
-            Why this label?
-          </button>
-          <button
-            onClick={() => onArchive(email.id)}
-            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
-          >
-            <Archive size={14} />
-            Archive
-          </button>
-          <button
-            onClick={() => onToggleRead(email.id, email.isRead ?? false)}
-            className="px-4 py-2 text-sm font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors rounded-lg flex items-center gap-2"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
-          >
-            {email.isRead ? <Mail size={14} /> : <MailOpen size={14} />}
-            {email.isRead ? 'Mark Unread' : 'Mark Read'}
-          </button>
+
+          {/* PRIMARY: Draft Reply with AI */}
           <button
             onClick={() => onOpenDraft(latestMessage)}
-            className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all rounded-lg flex items-center gap-2 shadow-sm"
-            style={{ fontFamily: "'Manrope', sans-serif" }}
+            disabled={aiDraftLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all rounded-lg shadow-sm disabled:opacity-60"
           >
             <Sparkles size={14} />
-            Draft Reply with AI
+            {aiDraftLoading ? 'Generating…' : 'Draft with AI'}
           </button>
+
+          {/* Divider */}
+          <div className="h-6 w-px bg-slate-200 mx-0.5" />
+
+          {/* ICON: Archive */}
+          <button
+            onClick={() => onArchive(email.id)}
+            title="Archive"
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+          >
+            <Archive size={16} />
+          </button>
+
+          {/* ICON: Mark Read / Unread */}
+          <button
+            onClick={() => onToggleRead(email.id, email.isRead ?? false)}
+            title={email.isRead ? 'Mark unread' : 'Mark read'}
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+          >
+            {email.isRead ? <Mail size={16} /> : <MailOpen size={16} />}
+          </button>
+
+          {/* ICON: Needs Reply toggle */}
           <button
             onClick={() => onUpdateActionState(threadId, isNeedsReply ? null : 'needs_reply')}
-            className={`px-4 py-2 text-sm font-medium border rounded-lg flex items-center gap-2 transition-colors ${
+            title={isNeedsReply ? 'Remove Needs Reply' : 'Mark Needs Reply'}
+            className={`p-2 rounded-lg transition-colors ${
               isNeedsReply
-                ? 'border-[#F97316] text-[#F97316] bg-[#F97316]/10'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                ? 'text-orange-500 bg-orange-50 hover:bg-orange-100'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
             }`}
-            style={{ fontFamily: "'Manrope', sans-serif" }}
           >
-            <MessageSquare size={14} />
-            Needs Reply
+            <MessageSquare size={16} />
           </button>
+
+          {/* ICON: Read Later toggle */}
           <button
             onClick={() => onUpdateActionState(threadId, isReadLater ? null : 'read_later')}
-            className={`px-4 py-2 text-sm font-medium border rounded-lg flex items-center gap-2 transition-colors ${
+            title={isReadLater ? 'Remove Read Later' : 'Mark Read Later'}
+            className={`p-2 rounded-lg transition-colors ${
               isReadLater
-                ? 'border-[#2563EB] text-[#2563EB] bg-[#2563EB]/10'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                ? 'text-blue-500 bg-blue-50 hover:bg-blue-100'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
             }`}
-            style={{ fontFamily: "'Manrope', sans-serif" }}
           >
-            <Bookmark size={14} />
-            Read Later
+            <Bookmark size={16} />
           </button>
 
-          <div className="flex-1" />
+          {/* ⋯ More dropdown */}
+          <div className="relative" ref={moreRef}>
+            <button
+              onClick={() => setMoreOpen((v) => !v)}
+              title="More actions"
+              className="p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+            >
+              <ChevronDown size={16} />
+            </button>
 
-          {(categoryLabel || needsResponse || actionState) && (
-            <div className="flex items-center gap-2">
-              {categoryLabel && (
-                <span
-                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
-                  style={{
-                    backgroundColor: `${categoryColor}15`,
-                    color: categoryColor,
-                    borderColor: `${categoryColor}40`,
-                    fontFamily: "'Manrope', sans-serif"
-                  }}
-                >
-                  {categoryLabel}
-                </span>
-              )}
-              {needsResponse && (
-                <span
-                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
-                  style={{
-                    backgroundColor: '#F9731620',
-                    color: '#F97316',
-                    borderColor: '#F9731640',
-                    fontFamily: "'Manrope', sans-serif"
-                  }}
-                >
-                  Needs Response
-                </span>
-              )}
-              {actionState === 'needs_reply' && (
-                <span
-                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
-                  style={{
-                    backgroundColor: '#F9731620',
-                    color: '#F97316',
-                    borderColor: '#F9731640',
-                    fontFamily: "'Manrope', sans-serif",
-                  }}
-                >
-                  Needs Reply
-                </span>
-              )}
-              {actionState === 'read_later' && (
-                <span
-                  className="px-3 py-1.5 text-sm font-medium rounded-full border"
-                  style={{
-                    backgroundColor: '#2563EB1A',
-                    color: '#2563EB',
-                    borderColor: '#2563EB40',
-                    fontFamily: "'Manrope', sans-serif",
-                  }}
-                >
-                  Read Later
-                </span>
-              )}
-              {categoryLabel && (
+            {moreOpen && (
+              <div className="absolute left-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1">
                 <button
-                  onClick={onStartCorrect}
-                  className="text-xs text-[#0BAF9A] hover:underline"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                  onClick={() => { onCreateTask(email, { schedule: true }); setMoreOpen(false); }}
+                  disabled={aiDraftLoading}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                 >
-                  Correct
+                  <Calendar size={14} />
+                  Schedule
                 </button>
-              )}
-            </div>
-          )}
+                <button
+                  onClick={() => { onDraftLabelSync(email); setMoreOpen(false); }}
+                  disabled={aiDraftLoading}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <Tag size={14} />
+                  Label Sync
+                </button>
+                <button
+                  onClick={() => { onToggleExplanation(); setMoreOpen(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  <HelpCircle size={14} />
+                  Why this label?
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Category / action state badges */}
+        {(categoryLabel || needsResponse || actionState) && (
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {categoryLabel && (
+              <span
+                className="px-2.5 py-1 text-xs font-medium rounded-full border"
+                style={{
+                  backgroundColor: `${categoryColor}15`,
+                  color: categoryColor,
+                  borderColor: `${categoryColor}40`,
+                }}
+              >
+                {categoryLabel}
+              </span>
+            )}
+            {needsResponse && (
+              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-600 border border-orange-200">
+                Needs Response
+              </span>
+            )}
+            {actionState === 'needs_reply' && (
+              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-orange-50 text-orange-600 border border-orange-200">
+                Needs Reply
+              </span>
+            )}
+            {actionState === 'read_later' && (
+              <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                Read Later
+              </span>
+            )}
+            {categoryLabel && !isCorrecting && (
+              <button
+                onClick={onStartCorrect}
+                className="text-xs text-[#0BAF9A] hover:underline"
+              >
+                Correct
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Email Content - Scrollable */}
