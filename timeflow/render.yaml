@@ -7,7 +7,9 @@ services:
     plan: starter
     # Install pnpm from npm so the build does not depend on Corepack's cached ~/.local path (fixes
     # "Failed to switch pnpm to v10.x" on Render when packageManager points at a missing toolchain).
-    buildCommand: npm install -g pnpm@9.15.9 && pnpm install --workspace-root && cd apps/backend && pnpm exec prisma generate && pnpm build
+    # Set Render "Root Directory" to `timeflow` so cwd is the monorepo root. Prisma CLI is a backend
+    # dependency (not dev-only) so it installs when NODE_ENV=production; `pnpm run` avoids `npx prisma@7`.
+    buildCommand: npm install -g pnpm@9.15.9 && pnpm install --workspace-root && cd apps/backend && pnpm run prisma:generate && pnpm build
     startCommand: cd apps/backend && bash start.sh
     envVars:
       - key: NODE_ENV
