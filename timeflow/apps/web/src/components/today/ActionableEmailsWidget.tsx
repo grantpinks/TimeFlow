@@ -31,7 +31,11 @@ function getSenderName(from: string): string {
   return from.split('@')[0] ?? from;
 }
 
-export function ActionableEmailsWidget() {
+type ActionableEmailsWidgetProps = {
+  className?: string;
+};
+
+export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProps) {
   const { user } = useUser();
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,7 +167,11 @@ export function ActionableEmailsWidget() {
 
   return (
     <>
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div
+        className={['rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden', className]
+          .filter(Boolean)
+          .join(' ')}
+      >
         {/* Header */}
         <button
           type="button"

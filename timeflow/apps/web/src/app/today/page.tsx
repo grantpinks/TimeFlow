@@ -22,6 +22,7 @@ import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
 import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
+import { ActionableEmailsWidget } from '@/components/today/ActionableEmailsWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -568,6 +569,8 @@ Please generate a schedule preview for today.`;
             tasks={tasks}
             className="mt-4"
           />
+          {/* Actionable Emails — emails needing attention */}
+          <ActionableEmailsWidget className="mt-3" />
         </div>
 
 
