@@ -263,7 +263,8 @@ export default function InboxPage() {
           messages: result.messages,
           nextPageToken: result.nextPageToken,
         });
-        setInboxCacheStale(Boolean(result.isStale));
+        // Only show stale banner if NOT a forced refresh (user explicitly requested fresh data)
+        setInboxCacheStale(Boolean(result.isStale) && !forceRefresh);
         if (result.isStale && !forceRefresh) {
           // Quick refresh when cache is stale
           if (staleRefreshTimer.current) {
@@ -1323,7 +1324,7 @@ function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
     return (
       <iframe
         ref={iframeRef}
-        sandbox="allow-same-origin allow-popups"
+        sandbox="allow-same-origin allow-popups allow-scripts allow-forms"
         referrerPolicy="no-referrer-when-downgrade"
         style={{
           width: '100%',
