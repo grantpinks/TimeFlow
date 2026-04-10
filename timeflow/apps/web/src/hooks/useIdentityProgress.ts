@@ -1,4 +1,3 @@
-// apps/web/src/hooks/useIdentityProgress.ts
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -12,7 +11,7 @@ export function useIdentityProgress(date?: string) {
 
   const targetDate = date ?? new Date().toISOString().split('T')[0];
 
-  const fetch = useCallback(async () => {
+  const fetchProgress = useCallback(async () => {
     try {
       setLoading(true);
       const data = await api.getIdentityProgress(targetDate);
@@ -26,8 +25,8 @@ export function useIdentityProgress(date?: string) {
   }, [targetDate]);
 
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    fetchProgress();
+  }, [fetchProgress]);
 
-  return { progress, loading, error, refresh: fetch };
+  return { progress, loading, error, refresh: fetchProgress };
 }
