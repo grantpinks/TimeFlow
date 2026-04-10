@@ -1096,13 +1096,13 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
 | 18.37 | Audit all core pages (Today, Tasks, Habits, Inbox, Calendar, Settings) for design inconsistencies | Claude | 3-4h | P0 | ⬜ |
-| 18.38 | Redesign Inbox/Email page: fix colors to match brand, use consistent panel/card components | Codex | 6-8h | P0 | ⬜ |
-| 18.39 | Compact email action buttons to icon-only format: Reply, Create Task, Archive, Mark Read (tooltips on hover) | Codex | 4-6h | P0 | ⬜ |
-| 18.40 | Standardize page headers across all pages (consistent title size, spacing, action button placement) | Codex | 3-4h | P0 | ⬜ |
-| 18.41 | Ensure all panel/card components use same shadow, border, radius, padding system | Codex | 3-4h | P0 | ⬜ |
-| 18.42 | Audit and fix color usage across pages (primary teal, category colors, status colors) | Codex | 3-4h | P0 | ⬜ |
+| 18.38 | Redesign Inbox/Email page: fix colors to match brand, use consistent panel/card components | Codex | 6-8h | P0 | ✅ |
+| 18.39 | Compact email action buttons to icon-only format: Reply, Create Task, Archive, Mark Read (tooltips on hover) | Codex | 4-6h | P0 | ✅ |
+| 18.40 | Standardize page headers across all pages (consistent title size, spacing, action button placement) | Codex | 3-4h | P0 | ✅ |
+| 18.41 | Ensure all panel/card components use same shadow, border, radius, padding system | Codex | 3-4h | P0 | ✅ |
+| 18.42 | Audit and fix color usage across pages (primary teal, category colors, status colors) | Codex | 3-4h | P0 | ✅ |
 | 18.43 | Standardize empty states across all pages (same illustration style, helpful copy, clear CTAs) | Codex | 4-6h | P1 | ⬜ |
-| 18.44 | Mobile responsive audit for all modified pages (test iOS ratios, ensure touch targets) | Codex | 4-6h | P1 | ⬜ |
+| 18.44 | Mobile responsive audit for all modified pages (test iOS ratios, ensure touch targets) | Codex | 4-6h | P1 | ✅ |
 | 18.45 | Create design system documentation showing standard patterns (headers, cards, buttons, forms) | Gemini | 3-4h | P1 | ⬜ |
 | 18.C3 | Final cohesion review: ensure no page feels like "different app", all features connect naturally | Claude | 3-4h | P0 | ⬜ |
 
