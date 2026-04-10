@@ -29,7 +29,7 @@ export function IdentityProgressWidget({
   const fetchProgress = useCallback(async () => {
     try {
       const result = await api.getIdentityProgress();
-      setProgress(result.identities.filter((i) => i.completedCount > 0 || i.inProgressCount > 0));
+      setProgress(result.identities);
     } catch {
       // Silent — widget is non-critical
     } finally {
@@ -61,10 +61,18 @@ export function IdentityProgressWidget({
       <AnimatePresence>
         {progress.map((item) => {
           const isActive = activeFilter === item.identityId;
+          const hasProgress = item.completedCount > 0 || item.inProgressCount > 0;
+
           const bg = isActive
             ? hexWithOpacity(item.color, 0.18)
-            : hexWithOpacity(item.color, 0.08);
-          const border = isActive ? item.color : hexWithOpacity(item.color, 0.3);
+            : hasProgress
+            ? hexWithOpacity(item.color, 0.08)
+            : 'transparent';
+          const border = isActive
+            ? item.color
+            : hasProgress
+            ? hexWithOpacity(item.color, 0.3)
+            : hexWithOpacity(item.color, 0.2);
 
           return (
             <motion.button
@@ -76,31 +84,42 @@ export function IdentityProgressWidget({
                 onFilterChange?.(isActive ? null : item.identityId)
               }
               className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-150 hover:scale-105 active:scale-95"
-              style={{ backgroundColor: bg, borderColor: border }}
-              title={`${item.name}: ${item.completedCount} completed, ${item.totalMinutes} min`}
+              style={{
+                backgroundColor: bg,
+                borderColor: border,
+                borderStyle: hasProgress ? 'solid' : 'dashed',
+                opacity: hasProgress ? 1 : 0.65,
+              }}
+              title={
+                hasProgress
+                  ? `${item.name}: ${item.completedCount} completed, ${item.totalMinutes} min`
+                  : `${item.name}: nothing completed yet today`
+              }
             >
               <span className="text-sm">{item.icon}</span>
 
               {/* Name (hidden on xs) */}
               <span
                 className="hidden sm:block text-xs font-semibold"
-                style={{ color: item.color }}
+                style={{ color: hasProgress ? item.color : '#94a3b8' }}
               >
                 {item.name}
               </span>
 
-              {/* Stats */}
-              <span className="text-xs font-medium text-slate-600">
-                {item.completedCount > 0 && (
-                  <span>{item.completedCount} done</span>
-                )}
-                {item.completedCount > 0 && item.totalMinutes > 0 && (
-                  <span className="text-slate-400 mx-0.5">·</span>
-                )}
-                {item.totalMinutes > 0 && (
-                  <span>{item.totalMinutes}m</span>
-                )}
-              </span>
+              {/* Stats — only shown when there's progress */}
+              {hasProgress && (
+                <span className="text-xs font-medium text-slate-600">
+                  {item.completedCount > 0 && (
+                    <span>{item.completedCount} done</span>
+                  )}
+                  {item.completedCount > 0 && item.totalMinutes > 0 && (
+                    <span className="text-slate-400 mx-0.5">·</span>
+                  )}
+                  {item.totalMinutes > 0 && (
+                    <span>{item.totalMinutes}m</span>
+                  )}
+                </span>
+              )}
 
               {/* Completion check */}
               {item.completedCount > 0 && item.inProgressCount === 0 && (
