@@ -1062,7 +1062,7 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
 | 18.20 | ✅ Create What's Now Widget component (current/upcoming events, task suggestions, free time indicator) | Codex | 6-8h | P0 | ✅ |
-| 18.21 | Integrate What's Now Widget into Today page (position below identity progress, above planning banner) | Codex | 2-3h | P0 | ⬜ |
+| 18.21 | Integrate What's Now Widget into Today page (position below identity progress, above planning banner) | Codex | 2-3h | P0 | ✅ |
 | 18.22 | Add "Actionable Emails" widget to Today page (emails needing tasks/responses, quick actions) | Codex | 6-8h | P0 | ⬜ |
 | 18.23 | Make email widget adaptive: auto-hide if user has <5 actionable emails (learns usage patterns) | Codex | 3-4h | P1 | ⬜ |
 | 18.24 | Add "Habits Due Soon" reminder widget (shows next habit in <60min with countdown) | Codex | 4-6h | P1 | ⬜ |
@@ -1079,9 +1079,9 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
-| 18.29 | Wire task completion to identity progress updates (increment identity score, check milestones) | Codex | 3-4h | P0 | ⬜ |
-| 18.30 | Wire habit completion to identity progress updates (same logic as tasks) | Codex | 2-3h | P0 | ⬜ |
-| 18.31 | Add completion celebration modal showing identity impact ("This advances your Writer identity to 75%!") | Codex | 4-6h | P1 | ⬜ |
+| 18.29 | Wire task completion to identity progress updates (increment identity score, check milestones) | Codex | 3-4h | P0 | ✅ |
+| 18.30 | Wire habit completion to identity progress updates (same logic as tasks) | Codex | 2-3h | P0 | ✅ |
+| 18.31 | Add completion celebration modal showing identity impact ("This advances your Writer identity to 75%!") | Codex | 4-6h | P1 | ✅ |
 | 18.32 | After completing habit, suggest related tasks ("You finished your run! Schedule meal prep?") | Claude | 4-6h | P1 | ⬜ |
 | 18.33 | After completing meeting, offer AI action item extraction → create tasks with identity tags | Codex | 6-8h | P1 | ⬜ |
 | 18.34 | Build end-of-day summary view (all completions: tasks + habits, identity progress, tomorrow preview) | Codex | 6-8h | P1 | ⬜ |
