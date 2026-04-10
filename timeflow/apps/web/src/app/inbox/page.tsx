@@ -1678,7 +1678,7 @@ function ReadingPane({
             <Bookmark size={16} />
           </button>
 
-          {/* ⋯ More dropdown */}
+          {/* More dropdown */}
           <div className="relative" ref={moreRef}>
             <button
               onClick={() => setMoreOpen((v) => !v)}
