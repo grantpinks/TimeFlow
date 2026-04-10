@@ -48,8 +48,8 @@ body {
 
 .app-container {
   margin: 0 auto;
-  max-width: 1200px;
   width: 100%;
+  /* max-width removed to allow full viewport width */
 }
 
 .text-muted {
