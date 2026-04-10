@@ -1838,18 +1838,18 @@ function ReadingPane({
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-6 py-6">
           {/* Email Metadata */}
-          <div className="mb-6 pb-6 border-b border-[#e0e0e0]">
+          <div className="mb-6 pb-6 border-b border-slate-200">
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
-                <div className="text-lg font-bold text-[#1a1a1a] mb-1" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                <div className="text-lg font-bold text-slate-900 mb-1">
                   {latestMessage.from}
                 </div>
-                <div className="text-sm text-[#666]" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                <div className="text-sm text-slate-500">
                   To: {latestMessage.to}
                   {latestMessage.cc && ` • Cc: ${latestMessage.cc}`}
                 </div>
               </div>
-              <div className="text-sm text-[#999]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <div className="text-sm text-slate-400">
                 {new Date(latestMessage.receivedAt).toLocaleString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -1868,7 +1868,7 @@ function ReadingPane({
           >
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-xs font-semibold text-[#1a1a1a] tracking-wide uppercase mb-1" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                <h4 className="text-xs font-semibold text-slate-900 tracking-wide uppercase mb-1">
                   Why &quot;{categoryLabel}&quot;?
                 </h4>
                 {showExplanation && explanation && (
@@ -1877,21 +1877,21 @@ function ReadingPane({
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                   >
-                    <p className="text-sm text-[#666] mt-2" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                    <p className="text-sm text-slate-500 mt-2">
                       {explanation.reason}
                     </p>
                     {explanation.source === 'override' && explanation.details.overrideType && (
-                      <div className="text-xs text-[#0BAF9A] mt-2 font-medium" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="text-xs text-[#0BAF9A] mt-2 font-medium">
                         ✓ Rule: {explanation.details.overrideType} ({explanation.details.matchedValue})
                       </div>
                     )}
                     {explanation.source === 'keywords' && explanation.details.matchedKeywords && (
-                      <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="text-xs text-[#0BAF9A] mt-2">
                         Keywords: {explanation.details.matchedKeywords.join(', ')}
                       </div>
                     )}
                     {explanation.source === 'gmailLabel' && explanation.details.gmailLabel && (
-                      <div className="text-xs text-[#0BAF9A] mt-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                      <div className="text-xs text-[#0BAF9A] mt-2">
                         Gmail label: {explanation.details.gmailLabel}
                       </div>
                     )}
@@ -1909,18 +1909,18 @@ function ReadingPane({
                 <EmailBody html={message.body} plainText={message.snippet} />
 
                 {message.attachments && message.attachments.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-[#e0e0e0]">
-                    <div className="text-sm font-semibold text-[#1a1a1a] mb-3" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                  <div className="mt-6 pt-6 border-t border-slate-200">
+                    <div className="text-sm font-semibold text-slate-900 mb-3">
                       Attachments
                     </div>
                     <div className="space-y-2">
                       {message.attachments.map((att, i) => (
-                        <div key={i} className="flex items-center gap-3 px-3 py-2 bg-white border border-[#e0e0e0] rounded-lg">
+                        <div key={i} className="flex items-center gap-3 px-3 py-2 bg-white border border-slate-200 rounded-lg">
                           <Paperclip size={16} className="text-[#0BAF9A]" />
-                          <span className="text-sm flex-1" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                          <span className="text-sm flex-1">
                             {att.filename}
                           </span>
-                          <span className="text-xs text-[#999]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                          <span className="text-xs text-slate-400">
                             {Math.round(att.size / 1024)}KB
                           </span>
                         </div>
