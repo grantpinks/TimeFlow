@@ -20,8 +20,8 @@ echo "🔧 Node version:"
 node --version
 echo ""
 echo "📦 Running database migrations..."
-# Use the bundled Prisma 5.x CLI — `npx prisma` can resolve to a global Prisma 7+ and break the schema.
-./node_modules/.bin/prisma migrate deploy
+# Invoke the Prisma 5.x CLI via Node (no reliance on pnpm/npx in PATH at container start).
+node ./node_modules/prisma/build/index.js migrate deploy
 echo "✅ Migrations complete!"
 echo ""
 echo "▶️  Starting node dist/index.js..."
