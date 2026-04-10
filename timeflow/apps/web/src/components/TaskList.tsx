@@ -7,7 +7,7 @@ import type { Task, CreateTaskRequest, UpdateTaskRequest, Identity, IdentityDayP
 import { useCategories } from '@/hooks/useCategories';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { TaskCard } from '@/components/ui/TaskCard';
-import { Button, Input, Select, Textarea, Label, TemplateModal } from '@/components/ui';
+import { Button, Input, Select, Textarea, Label, TemplateModal, DueDatePicker } from '@/components/ui';
 import { saveTaskTemplate } from '@/utils/taskTemplates';
 import type { TaskTemplate } from '@/utils/taskTemplates';
 import { CategoryTrainingModal } from '@/components/CategoryTrainingModal';
@@ -143,7 +143,7 @@ export function TaskList({
       description: task.description ?? '',
       durationMinutes: task.durationMinutes,
       priority: task.priority as 1 | 2 | 3,
-      dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
+      dueDate: task.dueDate ? (task.dueDate.includes('T') ? task.dueDate.slice(0, 16) : task.dueDate.slice(0, 10)) : '',
       categoryId: task.categoryId ?? '',
     });
   };
@@ -355,12 +355,11 @@ export function TaskList({
               </Select>
             </div>
 
-            <div>
+            <div className="col-span-2">
               <Label>Due Date</Label>
-              <Input
-                type="date"
+              <DueDatePicker
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={setDueDate}
               />
             </div>
           </div>
@@ -629,13 +628,12 @@ export function TaskList({
                     </Select>
                   </div>
 
-                  <div>
+                  <div className="col-span-2">
                     <Label>Due Date</Label>
-                    <Input
-                      type="date"
+                    <DueDatePicker
                       value={editingState.dueDate}
-                      onChange={(e) =>
-                        setEditingState((prev) => prev && { ...prev, dueDate: e.target.value })
+                      onChange={(value) =>
+                        setEditingState((prev) => prev && { ...prev, dueDate: value })
                       }
                     />
                   </div>

@@ -5,6 +5,7 @@ export * from './Input';
 export * from './Select';
 export * from './Textarea';
 export * from './Label';
+export * from './DueDatePicker';
 export * from './TaskCard';
 export * from './HabitCard';
 export * from './SearchBar';
