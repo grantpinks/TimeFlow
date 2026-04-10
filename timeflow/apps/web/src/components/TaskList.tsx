@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useDroppable } from '@dnd-kit/core';
-import type { Task, CreateTaskRequest, UpdateTaskRequest, Identity } from '@timeflow/shared';
+import type { Task, CreateTaskRequest, UpdateTaskRequest, Identity, IdentityDayProgress } from '@timeflow/shared';
 import { useCategories } from '@/hooks/useCategories';
+import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { TaskCard } from '@/components/ui/TaskCard';
 import { Button, Input, Select, Textarea, Label, TemplateModal } from '@/components/ui';
 import { saveTaskTemplate } from '@/utils/taskTemplates';
 import type { TaskTemplate } from '@/utils/taskTemplates';
 import { CategoryTrainingModal } from '@/components/CategoryTrainingModal';
 import { IdentitySelector } from '@/components/identity/IdentitySelector';
+import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
 import * as api from '@/lib/api';
 
 interface TaskListProps {
@@ -53,6 +55,8 @@ export function TaskList({
   emptyState,
 }: TaskListProps) {
   const { categories, createCategory } = useCategories();
+  const { refresh: refreshProgress } = useIdentityProgress();
+  const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const { setNodeRef, isOver } = useDroppable({
     id: droppableId || 'default',
@@ -200,6 +204,22 @@ export function TaskList({
     });
 
     alert('Template saved successfully!');
+  };
+
+  const handleCompleteTask = async (taskId: string) => {
+    const allTasks = groupedSections
+      ? groupedSections.flatMap((s) => s.tasks)
+      : tasks;
+    const task = allTasks.find((t) => t.id === taskId);
+    const linkedIdentityId = task?.identityId ?? null;
+
+    await onCompleteTask(taskId);
+
+    if (linkedIdentityId) {
+      const freshProgress = await refreshProgress();
+      const updated = freshProgress?.identities.find((i) => i.identityId === linkedIdentityId);
+      if (updated) setCelebration(updated);
+    }
   };
 
   const handleCustomCategoryComplete = (newCategoryId: string) => {
@@ -436,7 +456,7 @@ export function TaskList({
                         task={task}
                         onEdit={openEditModal}
                         onDelete={onDeleteTask}
-                        onComplete={onCompleteTask}
+                        onComplete={handleCompleteTask}
                         draggable={!selectionMode}
                         selectable={selectionMode}
                         selected={selectedTasks.has(task.id)}
@@ -455,7 +475,7 @@ export function TaskList({
                   task={task}
                   onEdit={openEditModal}
                   onDelete={onDeleteTask}
-                  onComplete={onCompleteTask}
+                  onComplete={handleCompleteTask}
                   draggable={!selectionMode}
                   selectable={selectionMode}
                   selected={selectedTasks.has(task.id)}
@@ -650,6 +670,11 @@ export function TaskList({
         }}
         onComplete={handleCustomCategoryComplete}
         createCategory={createCategory}
+      />
+
+      <IdentityCelebrationModal
+        identity={celebration}
+        onDismiss={() => setCelebration(null)}
       />
     </div>
   );
