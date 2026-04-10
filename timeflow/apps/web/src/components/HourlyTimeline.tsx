@@ -13,6 +13,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CheckSquare, Flame, Calendar, Mail, X } from 'lucide-react';
 import type { Task, CalendarEvent } from '@timeflow/shared';
+import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 
 const BRAND_TEAL = '#0BAF9A';
 const SLATE_UNLINKED = '#94a3b8';
@@ -42,6 +43,10 @@ interface TimelineItem {
   /** Suggested email-review block */
   isSuggested?: boolean;
   emailCount?: number;
+  /** Task created from email — for quick link */
+  sourceEmailUrl?: string | null;
+  sourceThreadId?: string | null;
+  sourceEmailId?: string | null;
 }
 
 interface TimeSlot {
@@ -176,6 +181,9 @@ export function HourlyTimeline({
             identityColor: id?.color,
             identityIcon: id?.icon,
             identityName: id?.name,
+            sourceEmailUrl: task.sourceEmailUrl,
+            sourceThreadId: task.sourceThreadId,
+            sourceEmailId: task.sourceEmailId,
           });
         }
       });
@@ -477,6 +485,18 @@ const TimelineCard = memo(function TimelineCard({
             {item.identityName}
           </span>
         )}
+        {item.type === 'task' &&
+          (item.sourceEmailId || item.sourceEmailUrl || item.sourceThreadId) && (
+            <div className="mt-1.5">
+              <TaskEmailSourceLink
+                emailSource={{
+                  sourceEmailUrl: item.sourceEmailUrl,
+                  sourceThreadId: item.sourceThreadId,
+                  sourceEmailId: item.sourceEmailId,
+                }}
+              />
+            </div>
+          )}
         {item.description && item.type !== 'email' && (
           <p className="text-xs text-slate-600 mt-1 line-clamp-2">{item.description}</p>
         )}

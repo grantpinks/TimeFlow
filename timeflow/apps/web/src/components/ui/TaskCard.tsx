@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useDraggable } from '@dnd-kit/core';
 import type { Task } from '@timeflow/shared';
 import { IdentityBadge } from '@/components/identity/IdentityBadge';
+import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 
 export interface TaskCardProps {
   task: Task;
@@ -168,6 +169,12 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
                 {task.identity && (
                   <IdentityBadge identity={task.identity} size="sm" />
                 )}
+              </div>
+            )}
+
+            {(task.sourceEmailId || task.sourceEmailUrl || task.sourceThreadId) && (
+              <div className="mb-2">
+                <TaskEmailSourceLink task={task} />
               </div>
             )}
 

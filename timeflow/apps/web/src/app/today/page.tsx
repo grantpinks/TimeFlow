@@ -32,6 +32,7 @@ import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache'
 import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification, IdentityDayProgress } from '@timeflow/shared';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
+import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -1344,6 +1345,11 @@ const DraggableTaskCard = memo(function DraggableTaskCard({ task, accentClass, o
               </span>
             )}
           </div>
+          {(task.sourceEmailId || task.sourceEmailUrl || task.sourceThreadId) && (
+            <div className="mt-2">
+              <TaskEmailSourceLink task={task} stopPropagation />
+            </div>
+          )}
         </div>
         <motion.button
           type="button"

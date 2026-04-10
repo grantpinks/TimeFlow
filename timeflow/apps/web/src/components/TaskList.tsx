@@ -13,6 +13,7 @@ import type { TaskTemplate } from '@/utils/taskTemplates';
 import { CategoryTrainingModal } from '@/components/CategoryTrainingModal';
 import { IdentitySelector } from '@/components/identity/IdentitySelector';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
+import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 import * as api from '@/lib/api';
 
 interface TaskListProps {
@@ -517,6 +518,15 @@ export function TaskList({
                   </svg>
                 </button>
               </div>
+
+              {(editingTask.sourceEmailId ||
+                editingTask.sourceEmailUrl ||
+                editingTask.sourceThreadId) && (
+                <div className="px-5 py-2.5 bg-blue-50/90 border-b border-blue-100 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-slate-600">Source email</span>
+                  <TaskEmailSourceLink task={editingTask} />
+                </div>
+              )}
 
               <form onSubmit={handleUpdateSubmit} className="px-5 py-4 space-y-4">
                 <div className="space-y-2">
