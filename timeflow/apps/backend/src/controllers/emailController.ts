@@ -243,6 +243,30 @@ export async function archiveEmail(
   }
 }
 
+export async function trashEmail(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  try {
+    const emailId = request.params.id;
+    await gmailService.trashEmail(user.id, emailId);
+    return reply.send({ success: true });
+  } catch (error) {
+    if (error instanceof GmailRateLimitError) {
+      return reply
+        .status(429)
+        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
+    }
+    request.log.error(error, 'Failed to trash email');
+    return reply.status(500).send({ error: 'Failed to trash email' });
+  }
+}
+
 /**
  * Get email category configurations
  */

@@ -18,7 +18,7 @@ import type {
   InboxView,
 } from '@timeflow/shared';
 import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
-import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle, MessageSquare, Bookmark } from 'lucide-react';
+import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Trash, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle, MessageSquare, Bookmark } from 'lucide-react';
 import Image from 'next/image';
 import toast, { Toaster } from 'react-hot-toast';
 import { filterInboxEmails } from '@/lib/inboxFilters';
@@ -543,6 +543,7 @@ export default function InboxPage() {
 
     try {
       await api.archiveEmail(emailId);
+      toast.success('Email archived');
 
       // If we archived the selected email, select the next one
       if (selectedThreadId === emailToArchive.threadId || selectedThreadId === emailToArchive.id) {
@@ -563,6 +564,42 @@ export default function InboxPage() {
         toast.error(`${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
       } else {
         toast.error('Failed to archive email. Please try again.');
+      }
+    }
+  }
+
+  async function handleTrash(emailId: string) {
+    const emailToTrash = emails.find(e => e.id === emailId);
+    if (!emailToTrash) {
+      console.error('Email not found for trash:', emailId);
+      return;
+    }
+
+    setEmails(prev => prev.filter(e => e.id !== emailId));
+
+    try {
+      await api.trashEmail(emailId);
+      toast.success('Email moved to trash');
+
+      // If we trashed the selected email, select the next one
+      if (selectedThreadId === emailToTrash.threadId || selectedThreadId === emailToTrash.id) {
+        const displayEmails = getDisplayEmails().filter(e => e.id !== emailId);
+        if (displayEmails.length > 0) {
+          fetchThread(displayEmails[0].threadId || displayEmails[0].id);
+        } else {
+          setSelectedThreadId(null);
+          setThreadMessages([]);
+        }
+      }
+    } catch (error: any) {
+      setEmails(prev => [...prev, emailToTrash].sort((a, b) =>
+        new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
+      ));
+
+      if (error.response?.status === 429) {
+        toast.error(`${error.response.data.error}. Please try again in ${error.response.data.retryAfterSeconds} seconds.`);
+      } else {
+        toast.error('Failed to delete email. Please try again.');
       }
     }
   }
@@ -1075,6 +1112,7 @@ export default function InboxPage() {
                       onClick={() => fetchThread(email.threadId || email.id)}
                       onToggleRead={handleToggleRead}
                       onArchive={handleArchive}
+                      onTrash={handleTrash}
                       onUpdateActionState={handleUpdateActionState}
                       categoryColor={getCategoryColor(email.category || '')}
                       categoryLabel={getCategoryLabel(email.category)}
@@ -1407,6 +1445,7 @@ interface EmailListItemProps {
   onClick: () => void;
   onToggleRead: (emailId: string, currentIsRead: boolean) => void;
   onArchive: (emailId: string) => void;
+  onTrash: (emailId: string) => void;
   onUpdateActionState: (threadId: string, actionState: EmailActionState | null) => void;
   categoryColor: string;
   categoryLabel: string;
@@ -1420,6 +1459,7 @@ function EmailListItem({
   onClick,
   onToggleRead,
   onArchive,
+  onTrash,
   onUpdateActionState,
   categoryColor,
   categoryLabel,
@@ -1503,6 +1543,16 @@ function EmailListItem({
             title="Archive"
           >
             <Archive size={14} className="text-[#666]" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTrash(email.id);
+            }}
+            className="p-1 hover:bg-white rounded"
+            title="Delete"
+          >
+            <Trash size={14} className="text-[#666]" />
           </button>
         </div>
       </div>

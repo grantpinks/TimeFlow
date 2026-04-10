@@ -762,6 +762,25 @@ export async function archiveEmail(emailId: string): Promise<void> {
 }
 
 /**
+ * Delete an email (move to trash).
+ */
+export async function trashEmail(emailId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/email/${emailId}/trash`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getAuthToken()}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error: any = new Error('Failed to trash email');
+    error.response = { status: response.status, data: await response.json().catch(() => ({})) };
+    throw error;
+  }
+}
+
+/**
  * Update action-state queue for a thread.
  */
 export async function updateEmailActionState(

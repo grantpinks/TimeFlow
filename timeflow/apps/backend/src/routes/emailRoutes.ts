@@ -13,6 +13,7 @@ import {
   searchEmails,
   markEmailAsRead,
   archiveEmail,
+  trashEmail,
   getEmailCategories,
   updateEmailCategory,
   explainEmailCategory,
@@ -64,6 +65,9 @@ export async function registerEmailRoutes(server: FastifyInstance) {
 
   // Archive email
   server.post('/email/:id/archive', { preHandler: requireAuth }, archiveEmail);
+
+  // Trash email
+  server.post('/email/:id/trash', { preHandler: requireAuth }, trashEmail);
 
   // Update action-state queues
   server.post(

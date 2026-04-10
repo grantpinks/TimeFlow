@@ -499,6 +499,19 @@ export async function archiveEmail(userId: string, emailId: string): Promise<voi
 }
 
 /**
+ * Delete an email (move to trash)
+ */
+export async function trashEmail(userId: string, emailId: string): Promise<void> {
+  assertWithinGmailRateLimit(userId);
+  const gmail = await getGmailClient(userId);
+
+  await gmail.users.messages.trash({
+    userId: 'me',
+    id: emailId,
+  });
+}
+
+/**
  * Create a Gmail draft
  * Sprint 16 Phase B+: AI Email Draft Workflow
  */

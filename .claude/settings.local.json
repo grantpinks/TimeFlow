@@ -55,7 +55,8 @@
       "Bash(__NEW_LINE__ echo \"\")",
       "Bash($B/api/tasks)",
       "Bash(\"/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/src\" )",
-      "Bash(\"/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/backend/src\")"
+      "Bash(\"/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/backend/src\")",
+      "Skill(systematic-debugging)"
     ],
     "deny": [],
     "ask": []
