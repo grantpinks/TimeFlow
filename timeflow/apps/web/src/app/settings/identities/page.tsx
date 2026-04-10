@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Identity } from '@timeflow/shared';
 import * as api from '@/lib/api';
+import { Layout } from '@/components/Layout';
 import {
   IDENTITY_COLORS,
   IDENTITY_TEMPLATES,
@@ -137,7 +138,7 @@ function IdentityFormModal({
         className="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
           <h2 className="text-lg font-bold text-slate-900">
             {identity ? 'Edit Identity' : 'Create Identity'}
           </h2>
@@ -496,11 +497,12 @@ export default function IdentitiesSettingsPage() {
   const atLimit = identities.length >= IDENTITY_LIMIT;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+    <Layout>
+    <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Identities</h1>
+          <h1 className="text-3xl font-bold text-slate-900">My Identities</h1>
           <p className="text-slate-500 mt-1 text-sm">
             Link your tasks and habits to who you're becoming.
           </p>
@@ -605,5 +607,6 @@ export default function IdentitiesSettingsPage() {
         )}
       </AnimatePresence>
     </div>
+    </Layout>
   );
 }

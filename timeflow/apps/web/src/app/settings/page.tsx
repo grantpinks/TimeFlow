@@ -269,7 +269,7 @@ export default function SettingsPage() {
   return (
     <Layout>
       <div className="max-w-2xl">
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">Settings</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Settings</h1>
         <p className="text-slate-600 mb-8">
           Configure your scheduling preferences
         </p>
@@ -288,20 +288,37 @@ export default function SettingsPage() {
 
         <form onSubmit={handleSave} className="space-y-8">
           {/* Google / Gmail connection */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-lg font-semibold text-slate-800">Google Connection</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Google Connection</h2>
                 <p className="text-slate-600 text-sm">
                   Gmail inbox requires a connected Google account with read-only access.
+                </p>
+              </div>
+              <span className="text-sm font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
+                Connected
+              </span>
+            </div>
+            <p className="text-sm text-slate-600 mb-3">
+              If emails stop loading, reconnect your Google account to refresh permissions.
             </p>
+            <a
+              href={api.getGoogleAuthUrl()}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+            >
+              Reconnect Google
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
           </div>
 
           {showAiDebugToggle && (
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-800">AI Debugging (Admin)</h2>
+                  <h2 className="text-lg font-semibold text-slate-900">AI Debugging (Admin)</h2>
                   <p className="text-slate-600 text-sm">
                     Show AI error details for troubleshooting. Hidden unless enabled by env.
                   </p>
@@ -324,28 +341,11 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-              <span className="text-sm font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
-                Connected
-              </span>
-            </div>
-            <p className="text-sm text-slate-600 mb-3">
-              If emails stop loading, reconnect your Google account to refresh permissions.
-            </p>
-            <a
-              href={api.getGoogleAuthUrl()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
-            >
-              Reconnect Google
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
 
           {/* Billing & Plan */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-800">Billing & Plan</h2>
+              <h2 className="text-lg font-semibold text-slate-900">Billing & Plan</h2>
               <Link
                 href="/pricing"
                 className="text-sm text-primary-600 hover:text-primary-700 font-medium"
@@ -444,8 +444,8 @@ export default function SettingsPage() {
           </div>
 
           {/* Working Hours */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
               Working Hours
             </h2>
             <p className="text-slate-600 mb-4">
@@ -525,8 +525,8 @@ export default function SettingsPage() {
           </div>
 
           {/* Meeting Availability Section */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Meeting Availability</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Meeting Availability</h2>
             <p className="text-sm text-slate-600 mb-4">
               Configure when you&apos;re available for meetings. This is separate from your general working hours.
             </p>
@@ -689,8 +689,8 @@ export default function SettingsPage() {
           </div>
 
           {/* Time Zone */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
               Time Zone
             </h2>
 
@@ -708,8 +708,8 @@ export default function SettingsPage() {
           </div>
 
           {/* Default Task Duration */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
               Default Task Duration
             </h2>
             <p className="text-slate-600 mb-4">
@@ -731,8 +731,8 @@ export default function SettingsPage() {
           </div>
 
           {/* Default Calendar */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
               Default Calendar
             </h2>
             <p className="text-slate-600 mb-4">
@@ -762,8 +762,8 @@ export default function SettingsPage() {
           </div>
 
           {/* Event Prefix */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
               Calendar Event Prefix
             </h2>
             <p className="text-slate-600 mb-4">
@@ -806,8 +806,8 @@ export default function SettingsPage() {
           <MeetingManagerPanel />
 
           {/* Habit Notifications */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-2">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">
               Habit Notifications
             </h2>
             <p className="text-sm text-slate-600 mb-6">
@@ -854,10 +854,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Identities */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-slate-800 mb-1">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1">
                   My Identities
                 </h2>
                 <p className="text-slate-600 text-sm">
@@ -866,7 +866,7 @@ export default function SettingsPage() {
               </div>
               <Link
                 href="/settings/identities"
-                className="inline-flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-medium text-teal-700 hover:bg-teal-100"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Manage Identities
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -877,10 +877,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Categories */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-slate-800 mb-1">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1">
                   Categories
                 </h2>
                 <p className="text-slate-600 text-sm">
@@ -889,7 +889,7 @@ export default function SettingsPage() {
               </div>
               <Link
                 href="/settings/email-categories"
-                className="inline-flex items-center gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-medium text-primary-700 hover:bg-primary-100"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Manage Categories
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -900,10 +900,10 @@ export default function SettingsPage() {
           </div>
 
           {/* Writing & Voice */}
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-slate-800 mb-1">
+                <h2 className="text-lg font-semibold text-slate-900 mb-1">
                   Writing &amp; Voice
                 </h2>
                 <p className="text-slate-600 text-sm">
@@ -912,7 +912,7 @@ export default function SettingsPage() {
               </div>
               <Link
                 href="/settings/writing-voice"
-                className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 Configure Voice
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

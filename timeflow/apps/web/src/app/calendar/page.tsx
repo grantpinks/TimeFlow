@@ -953,36 +953,17 @@ export default function CalendarPage() {
     <Layout>
       <div className="flex flex-col -mx-4 -my-6" style={{ height: 'calc(100vh - 140px)' }}>
         {/* Header */}
-        <div className="px-6 py-5 flex-shrink-0 bg-gradient-to-r from-slate-50 via-primary-50/30 to-blue-50/30 border-b border-slate-200">
-          <div className="flex items-start justify-between">
+        <div className="px-6 py-5 flex-shrink-0 bg-white border-b border-slate-200">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="page-title bg-gradient-to-r from-slate-900 via-primary-700 to-blue-700 bg-clip-text text-transparent">
-                  Calendar
-                </h1>
-                <motion.div
-                  animate={reduceMotion ? { y: 0 } : { y: [0, -4, 0] }}
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : {
-                          duration: 1.5,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }
-                  }
-                >
-                  <svg className="w-8 h-8 text-primary-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" />
-                  </svg>
-                </motion.div>
-              </div>
-              <p className="page-subtitle">
-                AI-powered calendar with smart scheduling and intelligent time management
+              <h1 className="text-3xl font-bold text-slate-900">
+                Calendar
+              </h1>
+              <p className="text-sm text-slate-500 mt-1">
+                AI-powered scheduling and intelligent time management
               </p>
             </div>
-            <div className="flex flex-col gap-5">
-              <div className="flex items-center gap-5">
+            <div className="flex flex-wrap items-center gap-3">
                 <CalendarFiltersPopover
                   categories={categories}
                   selectedCategories={selectedCategories}
@@ -992,19 +973,19 @@ export default function CalendarPage() {
                 />
                 <a
                   href="/categories"
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs font-medium text-slate-700 hover:border-primary-200 hover:text-primary-700"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Train categories
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </a>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={handleCategorizeEvents}
                     disabled={categorizingEvents || displayExternalEvents.length === 0}
                     title="Use AI to categorize all calendar events. Re-runs categorization for all events."
-                    className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center gap-2"
+                    className="bg-[#0BAF9A] text-white px-5 py-2 rounded-lg hover:bg-[#099e8b] disabled:opacity-50 font-medium flex items-center gap-2"
                   >
                     {categorizingEvents ? (
                       <>
@@ -1096,12 +1077,12 @@ export default function CalendarPage() {
                     )}
                   </button>
                 </div>
-              </div>
             </div>
           </div>
         </div>
 
         {/* Messages */}
+
         {message && (
           <div
             className={`mx-6 mb-4 px-4 py-3 rounded-lg flex-shrink-0 ${
