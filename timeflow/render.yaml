@@ -5,9 +5,9 @@ services:
     runtime: node
     region: ohio
     plan: starter
-    # Install pnpm from npm so the build does not depend on Corepack’s cached ~/.local path (fixes
+    # Install pnpm from npm so the build does not depend on Corepack's cached ~/.local path (fixes
     # "Failed to switch pnpm to v10.x" on Render when packageManager points at a missing toolchain).
-    buildCommand: npm install -g pnpm@9.15.9 && cd /opt/render/project/src/timeflow && pnpm install --workspace-root && cd apps/backend && pnpm prisma generate && pnpm build
+    buildCommand: npm install -g pnpm@9.15.9 && pnpm install --workspace-root && cd apps/backend && npx prisma generate && pnpm build
     startCommand: cd apps/backend && bash start.sh
     envVars:
       - key: NODE_ENV
