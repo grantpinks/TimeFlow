@@ -1758,6 +1758,80 @@ function ReadingPane({
             )}
           </div>
         )}
+
+        {/* Correction UI */}
+        <AnimatePresence>
+          {isCorrecting && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3 p-4 bg-[#fffdf5] border-2 border-[#f59e0b] rounded-lg"
+            >
+              <h4 className="text-sm font-semibold text-[#1a1a1a] mb-3 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                Correct Category
+              </h4>
+              <div className="flex gap-2 mb-4">
+                {([
+                  { value: 'sender', label: 'This sender' },
+                  { value: 'domain', label: 'This domain' },
+                  { value: 'thread', label: 'This thread' },
+                ] as const).map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => setCorrectionScope(option.value)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 transition-all ${
+                      correctionScope === option.value
+                        ? 'border-[#0BAF9A] bg-[#0BAF9A]/10 text-[#0BAF9A]'
+                        : 'border-[#e0e0e0] text-[#666] hover:border-[#999]'
+                    }`}
+                    style={{ fontFamily: "'Manrope', sans-serif" }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {categories.filter(c => c.enabled).map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
+                      selectedCategory === category.id
+                        ? 'border-[#1a1a1a]'
+                        : 'border-[#e0e0e0] hover:border-[#999]'
+                    }`}
+                    style={{
+                      backgroundColor: selectedCategory === category.id ? category.color : 'white',
+                      color: selectedCategory === category.id ? '#1a1a1a' : category.color,
+                      fontFamily: "'Manrope', sans-serif"
+                    }}
+                  >
+                    {category.emoji && <span className="mr-2">{category.emoji}</span>}
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => onCorrect(selectedCategory, correctionScope)}
+                  disabled={!selectedCategory || selectedCategory === categoryId}
+                  className="px-6 py-2 bg-[#0BAF9A] text-white text-sm font-medium hover:bg-[#078c77] disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-lg"
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
+                >
+                  Save Correction
+                </button>
+                <button
+                  onClick={onCancelCorrect}
+                  className="px-6 py-2 border-2 border-[#0BAF9A]/30 text-[#1a1a1a] text-sm font-medium hover:bg-[#0BAF9A]/5 transition-all rounded-lg"
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Email Content - Scrollable */}
@@ -1827,80 +1901,6 @@ function ReadingPane({
               {showExplanation ? <ChevronUp size={16} className="text-[#0BAF9A]" /> : <ChevronDown size={16} className="text-[#0BAF9A]" />}
             </div>
           </button>
-
-          {/* Correction Panel */}
-          <AnimatePresence>
-            {isCorrecting && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-6 p-4 bg-[#fffdf5] border-2 border-[#f59e0b] rounded-lg"
-              >
-                <h4 className="text-sm font-semibold text-[#1a1a1a] mb-3 tracking-wide uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  Correct Category
-                </h4>
-                <div className="flex gap-2 mb-4">
-                  {([
-                    { value: 'sender', label: 'This sender' },
-                    { value: 'domain', label: 'This domain' },
-                    { value: 'thread', label: 'This thread' },
-                  ] as const).map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => setCorrectionScope(option.value)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded-full border-2 transition-all ${
-                        correctionScope === option.value
-                          ? 'border-[#0BAF9A] bg-[#0BAF9A]/10 text-[#0BAF9A]'
-                          : 'border-[#e0e0e0] text-[#666] hover:border-[#999]'
-                      }`}
-                      style={{ fontFamily: "'Manrope', sans-serif" }}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {categories.filter(c => c.enabled).map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
-                        selectedCategory === category.id
-                          ? 'border-[#1a1a1a]'
-                          : 'border-[#e0e0e0] hover:border-[#999]'
-                      }`}
-                      style={{
-                        backgroundColor: selectedCategory === category.id ? category.color : 'white',
-                        color: selectedCategory === category.id ? '#1a1a1a' : category.color,
-                        fontFamily: "'Manrope', sans-serif"
-                      }}
-                    >
-                      {category.emoji && <span className="mr-2">{category.emoji}</span>}
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => onCorrect(selectedCategory, correctionScope)}
-                    disabled={!selectedCategory || selectedCategory === categoryId}
-                    className="px-6 py-2 bg-[#0BAF9A] text-white text-sm font-medium hover:bg-[#078c77] disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-lg"
-                    style={{ fontFamily: "'Manrope', sans-serif" }}
-                  >
-                    Save Correction
-                  </button>
-                  <button
-                    onClick={onCancelCorrect}
-                    className="px-6 py-2 border-2 border-[#0BAF9A]/30 text-[#1a1a1a] text-sm font-medium hover:bg-[#0BAF9A]/5 transition-all rounded-lg"
-                    style={{ fontFamily: "'Manrope', sans-serif" }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* Email Messages */}
           <div className="space-y-6">
