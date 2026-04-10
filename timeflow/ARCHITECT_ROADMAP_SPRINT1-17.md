@@ -1039,7 +1039,7 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | 18.9 | Add identity filter to Today page + Habits page (filter by identity pill) | Codex | 3-4h | P1 | ✅ |
 | 18.10 | Build Identity Management UI in Settings (create, edit, delete, reorder, set colors) | Codex | 6-8h | P0 | ✅ |
 | 18.11 | Create starter identity templates (10 templates: Professional, Personal Growth, Health, Creative, Financial, Relationships, Learning, Mindfulness, Home, Adventure) with suggested icons/colors | Codex | 2-3h | P1 | ✅ |
-| 18.12 | Email → Task flow: suggest identity based on sender/content when creating task from email | Claude | 4-6h | P1 | ⬜ |
+| 18.12 | Email → Task flow: suggest identity based on sender/content when creating task from email | Claude | 4-6h | P1 | ✅ |
 | 18.13 | Add identity-based email tagging: show "Supports your Writer identity" badge on relevant emails | Codex | 3-4h | P2 | ⬜ |
 
 **Identity Progress Tracking:**

@@ -9,7 +9,14 @@ import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
-import type { EmailActionState, EmailAccount, EmailMessage, FullEmailMessage, InboxView } from '@timeflow/shared';
+import type {
+  EmailActionState,
+  EmailAccount,
+  EmailMessage,
+  FullEmailMessage,
+  Identity,
+  InboxView,
+} from '@timeflow/shared';
 import { DEFAULT_INBOX_VIEWS } from '@timeflow/shared';
 import { ExternalLink, Paperclip, Mail, MailOpen, Archive, Search, ChevronDown, ChevronUp, Clock, Calendar, Sparkles, RefreshCw, Tag, HelpCircle, MessageSquare, Bookmark } from 'lucide-react';
 import Image from 'next/image';
@@ -22,6 +29,7 @@ import { InboxAiDraftPanel, type InboxAiDraft } from '@/components/inbox/InboxAi
 import { loadInboxViews, saveInboxViews } from '@/lib/inboxViewsStorage';
 import { track } from '@/lib/analytics';
 import { cacheEmails, clearEmailCache, getCachedEmails } from '@/lib/emailCache';
+import { suggestIdentityFromEmail } from '@/lib/suggestIdentityFromEmail';
 
 export default function InboxPage() {
   const { isAuthenticated, user } = useUser();
@@ -75,6 +83,9 @@ export default function InboxPage() {
   const [aiDraft, setAiDraft] = useState<InboxAiDraft | null>(null);
   const [aiDraftEmail, setAiDraftEmail] = useState<EmailMessage | null>(null);
   const [aiDraftLoading, setAiDraftLoading] = useState(false);
+  const [identities, setIdentities] = useState<Identity[]>([]);
+  const [taskDraftIdentityId, setTaskDraftIdentityId] = useState<string | null>(null);
+  const [identitySuggestionHint, setIdentitySuggestionHint] = useState<string | null>(null);
   const NUDGE_AGE_DAYS = 3;
 
   useEffect(() => {
@@ -82,6 +93,7 @@ export default function InboxPage() {
       fetchInbox();
       fetchCategories();
       fetchEmailAccounts();
+      api.getIdentities().then(setIdentities).catch(() => setIdentities([]));
     }
   }, [isAuthenticated]);
 
@@ -587,6 +599,14 @@ export default function InboxPage() {
         confirmCta: response.confirmCta,
         schedule: Boolean(options.schedule),
       });
+      const suggestion = suggestIdentityFromEmail({
+        identities,
+        from: email.from,
+        subject: email.subject,
+        snippet: email.snippet,
+      });
+      setTaskDraftIdentityId(suggestion.identityId);
+      setIdentitySuggestionHint(suggestion.hint);
       setAiDraftPanelOpen(true);
     } catch (error) {
       console.error('Failed to generate task draft:', error);
@@ -653,6 +673,7 @@ export default function InboxPage() {
         description,
         priority: aiDraft.draft.priority as 1 | 2 | 3,
         dueDate: aiDraft.draft.dueDate || undefined,
+        identityId: taskDraftIdentityId ?? undefined,
         sourceEmailId: aiDraftEmail.id,
         sourceThreadId: aiDraftEmail.threadId,
         sourceEmailProvider: 'gmail',
@@ -1200,8 +1221,14 @@ export default function InboxPage() {
           setAiDraftPanelOpen(false);
           setAiDraft(null);
           setAiDraftEmail(null);
+          setTaskDraftIdentityId(null);
+          setIdentitySuggestionHint(null);
         }}
         onConfirm={handleAiDraftConfirm}
+        identities={identities}
+        taskIdentityId={taskDraftIdentityId}
+        onTaskIdentityChange={setTaskDraftIdentityId}
+        identitySuggestionHint={identitySuggestionHint}
       />
     </Layout>
   );

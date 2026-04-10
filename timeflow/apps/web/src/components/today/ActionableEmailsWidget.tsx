@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, ChevronDown, ChevronUp, Archive, Sparkles, Clock } from 'lucide-react';
 import Link from 'next/link';
 import * as api from '@/lib/api';
-import type { EmailMessage, FullEmailMessage } from '@timeflow/shared';
+import type { EmailMessage, FullEmailMessage, Identity } from '@timeflow/shared';
+import { suggestIdentityFromEmail } from '@/lib/suggestIdentityFromEmail';
 import { DraftPanel } from '@/components/inbox/DraftPanel';
 import { InboxAiDraftPanel, type InboxAiDraft } from '@/components/inbox/InboxAiDraftPanel';
 import { useUser } from '@/hooks/useUser';
@@ -50,8 +51,11 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
 
   // AI Task draft state
   const [aiDraft, setAiDraft] = useState<InboxAiDraft | null>(null);
-  const [aiDraftEmailId, setAiDraftEmailId] = useState<string | null>(null);
+  const [aiDraftSourceEmail, setAiDraftSourceEmail] = useState<EmailMessage | null>(null);
   const [aiDraftOpen, setAiDraftOpen] = useState(false);
+  const [identities, setIdentities] = useState<Identity[]>([]);
+  const [taskDraftIdentityId, setTaskDraftIdentityId] = useState<string | null>(null);
+  const [identitySuggestionHint, setIdentitySuggestionHint] = useState<string | null>(null);
 
   // Loading states per email
   const [replyLoading, setReplyLoading] = useState<Record<string, boolean>>({});
@@ -82,6 +86,10 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [fetchEmails]);
+
+  useEffect(() => {
+    api.getIdentities().then(setIdentities).catch(() => setIdentities([]));
+  }, []);
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -120,7 +128,15 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
         confirmCta: res.confirmCta,
       };
       setAiDraft(draft);
-      setAiDraftEmailId(email.id);
+      setAiDraftSourceEmail(email);
+      const suggestion = suggestIdentityFromEmail({
+        identities,
+        from: email.from,
+        subject: email.subject,
+        snippet: email.snippet,
+      });
+      setTaskDraftIdentityId(suggestion.identityId);
+      setIdentitySuggestionHint(suggestion.hint);
       setAiDraftOpen(true);
     } catch {
       toast.error('Failed to draft task');
@@ -130,19 +146,27 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
   }
 
   async function handleConfirmTaskDraft() {
-    if (!aiDraft || aiDraft.type !== 'task' || !aiDraftEmailId) return;
+    if (!aiDraft || aiDraft.type !== 'task' || !aiDraftSourceEmail) return;
     const { draft } = aiDraft;
+    const threadId = aiDraftSourceEmail.threadId || aiDraftSourceEmail.id;
+    const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${threadId}`;
     await api.createTask({
       title: draft.title,
       description: draft.description,
       priority: draft.priority as 1 | 2 | 3,
       dueDate: draft.dueDate ?? undefined,
-      sourceEmailId: aiDraftEmailId,
+      identityId: taskDraftIdentityId ?? undefined,
+      sourceEmailId: aiDraftSourceEmail.id,
+      sourceThreadId: aiDraftSourceEmail.threadId,
+      sourceEmailProvider: 'gmail',
+      sourceEmailUrl: gmailUrl,
     });
     toast.success('Task created');
     setAiDraftOpen(false);
     setAiDraft(null);
-    setAiDraftEmailId(null);
+    setAiDraftSourceEmail(null);
+    setTaskDraftIdentityId(null);
+    setIdentitySuggestionHint(null);
   }
 
   async function handleArchive(email: EmailMessage) {
@@ -329,9 +353,15 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
         onClose={() => {
           setAiDraftOpen(false);
           setAiDraft(null);
-          setAiDraftEmailId(null);
+          setAiDraftSourceEmail(null);
+          setTaskDraftIdentityId(null);
+          setIdentitySuggestionHint(null);
         }}
         onConfirm={handleConfirmTaskDraft}
+        identities={identities}
+        taskIdentityId={taskDraftIdentityId}
+        onTaskIdentityChange={setTaskDraftIdentityId}
+        identitySuggestionHint={identitySuggestionHint}
       />
     </>
   );

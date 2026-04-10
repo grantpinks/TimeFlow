@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import type { Identity } from '@timeflow/shared';
+import { IdentitySelector } from '@/components/identity/IdentitySelector';
 
 type TaskDraft = {
   title: string;
@@ -29,9 +31,23 @@ interface InboxAiDraftPanelProps {
   draft: InboxAiDraft | null;
   onClose: () => void;
   onConfirm: () => Promise<void> | void;
+  /** When draft is a task, show optional identity link (email → task flow). */
+  identities?: Identity[];
+  taskIdentityId?: string | null;
+  onTaskIdentityChange?: (id: string | null) => void;
+  identitySuggestionHint?: string | null;
 }
 
-export function InboxAiDraftPanel({ isOpen, draft, onClose, onConfirm }: InboxAiDraftPanelProps) {
+export function InboxAiDraftPanel({
+  isOpen,
+  draft,
+  onClose,
+  onConfirm,
+  identities = [],
+  taskIdentityId = null,
+  onTaskIdentityChange,
+  identitySuggestionHint = null,
+}: InboxAiDraftPanelProps) {
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -88,6 +104,21 @@ export function InboxAiDraftPanel({ isOpen, draft, onClose, onConfirm }: InboxAi
               </div>
               {draft.draft.reason && (
                 <div className="text-slate-500">{draft.draft.reason}</div>
+              )}
+              {identities.length > 0 && onTaskIdentityChange && (
+                <div className="pt-2 border-t border-slate-100 mt-3">
+                  <IdentitySelector
+                    identities={identities}
+                    value={taskIdentityId}
+                    onChange={onTaskIdentityChange}
+                    label="Link to identity"
+                    showLinkPrompt={!taskIdentityId}
+                    placeholder="No identity (optional)"
+                  />
+                  {identitySuggestionHint && (
+                    <p className="text-xs text-slate-500 mt-1.5">{identitySuggestionHint}</p>
+                  )}
+                </div>
               )}
             </>
           )}
