@@ -228,8 +228,11 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
                     key={email.id}
                     className="px-4 py-3 flex items-start gap-3 hover:bg-slate-50/60 transition-colors"
                   >
-                    {/* Left: sender + subject */}
-                    <div className="flex-1 min-w-0">
+                    {/* Left: sender + subject — clicking opens that thread in inbox */}
+                    <Link
+                      href={`/inbox?thread=${encodeURIComponent(email.threadId || email.id)}`}
+                      className="flex-1 min-w-0 cursor-pointer"
+                    >
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-slate-800 truncate">
                           {getSenderName(email.from)}
@@ -246,7 +249,7 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
                         ) : null}
                       </div>
                       <p className="text-xs text-slate-500 truncate mt-0.5">{email.subject}</p>
-                    </div>
+                    </Link>
 
                     {/* Right: action buttons */}
                     <div className="flex items-center gap-1.5 shrink-0">

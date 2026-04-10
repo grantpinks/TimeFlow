@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Disable static generation for this page due to dynamic content
 export const dynamic = 'force-dynamic';
+import { useSearchParams } from 'next/navigation';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -25,6 +26,8 @@ import { cacheEmails, clearEmailCache, getCachedEmails } from '@/lib/emailCache'
 
 export default function InboxPage() {
   const { isAuthenticated, user } = useUser();
+  const searchParams = useSearchParams();
+  const threadFromUrl = searchParams.get('thread');
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshingInbox, setRefreshingInbox] = useState(false);
@@ -169,7 +172,7 @@ export default function InboxPage() {
     };
   }, [isAuthenticated]);
 
-  // Auto-select first email when list changes
+  // Auto-select email when list changes — prefer ?thread= URL param over first email
   useEffect(() => {
     const displayEmails = getDisplayEmails();
     if (displayEmails.length === 0) {
@@ -187,6 +190,16 @@ export default function InboxPage() {
       : false;
 
     if (!hasSelected) {
+      // If a ?thread= param is present and matches an email in the list, open that one
+      if (threadFromUrl) {
+        const targetEmail = displayEmails.find(
+          (e) => e.threadId === threadFromUrl || e.id === threadFromUrl
+        );
+        if (targetEmail) {
+          fetchThread(targetEmail.threadId || targetEmail.id);
+          return;
+        }
+      }
       const firstEmail = displayEmails[0];
       fetchThread(firstEmail.threadId || firstEmail.id);
     }
@@ -200,6 +213,7 @@ export default function InboxPage() {
     needsResponseOnly,
     queueFilter,
     selectedThreadId,
+    threadFromUrl,
   ]);
 
   async function fetchInbox(options?: {
@@ -437,6 +451,7 @@ export default function InboxPage() {
 
   async function fetchThread(threadId: string) {
     setLoadingThread(true);
+    setThreadMessages([]);
     setThreadError(null);
     setSelectedThreadId(threadId);
     setShowExplanation(false);
@@ -1064,7 +1079,7 @@ export default function InboxPage() {
 
           {/* Right Pane - Reading Pane */}
           <div className={`${!selectedThreadId ? 'hidden sm:flex' : 'flex'} flex-1 flex-col bg-[#FFFEF7] overflow-hidden min-w-0`}>
-            {!selectedThreadId || threadMessages.length === 0 || !selectedEmail ? (
+            {!selectedThreadId || !selectedEmail ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                   <Image
@@ -1079,7 +1094,7 @@ export default function InboxPage() {
                   </p>
                 </div>
               </div>
-            ) : loadingThread ? (
+            ) : loadingThread || threadMessages.length === 0 ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0BAF9A]"></div>
               </div>
@@ -1246,7 +1261,7 @@ function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
       FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'applet', 'base', 'meta', 'link'], // Block dangerous tags
       FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur'], // Block event handlers
     });
-  }, [html]);
+  }, [html, DOMPurify]);
 
   // Update iframe content when HTML changes
   useEffect(() => {
