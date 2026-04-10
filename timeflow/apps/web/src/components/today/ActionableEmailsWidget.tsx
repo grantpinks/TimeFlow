@@ -158,6 +158,7 @@ export function ActionableEmailsWidget() {
 
   if (loading || emails.length === 0) return null;
 
+  const actionableCount = emails.length;
   const userEmails = user?.email ? [user.email] : undefined;
 
   return (
@@ -169,11 +170,22 @@ export function ActionableEmailsWidget() {
           onClick={toggleCollapsed}
           className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4 text-purple-500" />
-            <span className="text-sm font-semibold text-slate-800">
-              {emails.length} email{emails.length !== 1 ? 's' : ''} need attention
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <Mail size={14} className="text-blue-500" />
+            </div>
+            <span className="text-sm font-semibold text-slate-700">
+              {loading
+                ? 'Checking emails…'
+                : actionableCount === 0
+                  ? 'No emails need attention'
+                  : `${actionableCount} email${actionableCount === 1 ? '' : 's'} need${actionableCount === 1 ? 's' : ''} attention`}
             </span>
+            {actionableCount > 0 && !loading && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold">
+                {actionableCount}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Link
