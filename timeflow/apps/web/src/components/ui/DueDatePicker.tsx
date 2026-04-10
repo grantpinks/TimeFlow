@@ -15,7 +15,7 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
   const [selectedOption, setSelectedOption] = useState<QuickOption>(null);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customDate, setCustomDate] = useState('');
-  const [customTime, setCustomTime] = useState('09:00');
+  const [selectedTime, setSelectedTime] = useState('09:00');
 
   // Determine which quick option matches the current value
   useEffect(() => {
@@ -38,6 +38,12 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     const valueDateOnly = new Date(valueDate);
     valueDateOnly.setHours(0, 0, 0, 0);
 
+    // Extract time from value
+    if (value.includes('T')) {
+      const timeStr = value.slice(11, 16);
+      setSelectedTime(timeStr);
+    }
+
     if (valueDateOnly.getTime() === today.getTime()) {
       setSelectedOption('today');
       setShowCustomPicker(false);
@@ -50,19 +56,22 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     } else {
       setSelectedOption('custom');
       setShowCustomPicker(true);
-      // Parse custom date/time from value
+      // Parse custom date from value
       const dateStr = value.slice(0, 10);
       setCustomDate(dateStr);
-      if (value.includes('T')) {
-        const timeStr = value.slice(11, 16);
-        setCustomTime(timeStr);
-      }
     }
   }, [value]);
 
   const handleQuickOption = (option: QuickOption) => {
+    if (option === 'custom') {
+      setSelectedOption('custom');
+      setShowCustomPicker(true);
+      return;
+    }
+
     const today = new Date();
-    today.setHours(9, 0, 0, 0); // Default to 9 AM
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    today.setHours(hours, minutes, 0, 0);
 
     let targetDate: Date;
 
@@ -78,10 +87,6 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
         targetDate = new Date(today);
         targetDate.setDate(targetDate.getDate() + 2);
         break;
-      case 'custom':
-        setSelectedOption('custom');
-        setShowCustomPicker(true);
-        return;
       default:
         return;
     }
@@ -93,11 +98,50 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     onChange(isoString);
   };
 
+  const handleTimeChange = (newTime: string) => {
+    setSelectedTime(newTime);
+
+    if (!selectedOption || selectedOption === 'custom') {
+      // For custom, the date picker will handle the update
+      if (customDate) {
+        const dateTime = `${customDate}T${newTime}`;
+        onChange(dateTime);
+      }
+      return;
+    }
+
+    // For quick options, recalculate the date with new time
+    const today = new Date();
+    const [hours, minutes] = newTime.split(':').map(Number);
+    today.setHours(hours, minutes, 0, 0);
+
+    let targetDate: Date;
+
+    switch (selectedOption) {
+      case 'today':
+        targetDate = today;
+        break;
+      case 'tomorrow':
+        targetDate = new Date(today);
+        targetDate.setDate(targetDate.getDate() + 1);
+        break;
+      case 'in-2-days':
+        targetDate = new Date(today);
+        targetDate.setDate(targetDate.getDate() + 2);
+        break;
+      default:
+        return;
+    }
+
+    const isoString = targetDate.toISOString().slice(0, 16);
+    onChange(isoString);
+  };
+
   const handleClear = () => {
     setSelectedOption(null);
     setShowCustomPicker(false);
     setCustomDate('');
-    setCustomTime('09:00');
+    setSelectedTime('09:00');
     onChange('');
   };
 
@@ -159,6 +203,19 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
         )}
       </div>
 
+      {/* Time picker for quick options */}
+      {selectedOption && selectedOption !== 'custom' && (
+        <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
+          <Label>Time</Label>
+          <Input
+            type="time"
+            value={selectedTime}
+            onChange={(e) => handleTimeChange(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* Custom date and time picker */}
       {showCustomPicker && (
         <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
           <div>
@@ -170,7 +227,7 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
                 setCustomDate(e.target.value);
                 // Auto-update when date changes
                 if (e.target.value) {
-                  const dateTime = `${e.target.value}T${customTime}`;
+                  const dateTime = `${e.target.value}T${selectedTime}`;
                   onChange(dateTime);
                 }
               }}
@@ -180,15 +237,8 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
             <Label>Time</Label>
             <Input
               type="time"
-              value={customTime}
-              onChange={(e) => {
-                setCustomTime(e.target.value);
-                // Auto-update when time changes
-                if (customDate) {
-                  const dateTime = `${customDate}T${e.target.value}`;
-                  onChange(dateTime);
-                }
-              }}
+              value={selectedTime}
+              onChange={(e) => handleTimeChange(e.target.value)}
             />
           </div>
         </div>
