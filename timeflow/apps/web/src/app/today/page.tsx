@@ -21,6 +21,7 @@ import { Panel, SectionHeader } from '@/components/ui';
 import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today/PlanningRitualPanel';
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
+import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -560,6 +561,12 @@ Please generate a schedule preview for today.`;
             onFilterChange={setIdentityFilter}
             activeFilter={identityFilter}
             className="mt-3"
+          />
+          {/* What's Now — current and upcoming */}
+          <WhatsNowWidget
+            events={events}
+            tasks={tasks}
+            className="mt-4"
           />
         </div>
 
