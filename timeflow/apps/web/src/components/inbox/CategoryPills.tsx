@@ -75,17 +75,12 @@ export function CategoryPills({
               onClick={() =>
                 onSelectCategory(selectedCategoryId === category.id ? null : category.id)
               }
-              className={`px-4 py-1.5 text-xs font-medium rounded-full transition-all border-2 ${
+              className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-all border ${
                 selectedCategoryId === category.id
-                  ? 'border-[#1a1a1a]'
-                  : 'border-transparent hover:border-[#e0e0e0]'
+                  ? 'border-[#0BAF9A] text-[#0BAF9A] bg-[#0BAF9A]/10'
+                  : 'border-slate-200 text-slate-700 hover:bg-slate-50'
               }`}
               style={{
-                backgroundColor:
-                  selectedCategoryId === category.id
-                    ? category.color
-                    : `${category.color}20`,
-                color: selectedCategoryId === category.id ? '#1a1a1a' : category.color,
                 fontFamily: "'Manrope', sans-serif",
               }}
             >

@@ -782,7 +782,7 @@ export default function InboxPage() {
   if (!isAuthenticated) {
     return (
       <Layout>
-        <div className="min-h-screen bg-[#FFFEF7] flex items-center justify-center">
+        <div className="min-h-screen bg-white flex items-center justify-center">
           <p className="text-[#1a1a1a] text-lg font-serif">Please sign in to view your inbox.</p>
         </div>
       </Layout>
