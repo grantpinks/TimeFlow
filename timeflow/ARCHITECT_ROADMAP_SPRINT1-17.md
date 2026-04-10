@@ -1063,8 +1063,8 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 |----|------|-------|-------|----------|--------|
 | 18.20 | ✅ Create What's Now Widget component (current/upcoming events, task suggestions, free time indicator) | Codex | 6-8h | P0 | ✅ |
 | 18.21 | Integrate What's Now Widget into Today page (position below identity progress, above planning banner) | Codex | 2-3h | P0 | ✅ |
-| 18.22 | Add "Actionable Emails" widget to Today page (emails needing tasks/responses, quick actions) | Codex | 6-8h | P0 | ⬜ |
-| 18.23 | Make email widget adaptive: auto-hide if user has <5 actionable emails (learns usage patterns) | Codex | 3-4h | P1 | ⬜ |
+| 18.22 | Add "Actionable Emails" widget to Today page (emails needing tasks/responses, quick actions) | Codex | 6-8h | P0 | ✅ |
+| 18.23 | Make email widget adaptive: auto-hide if user has <5 actionable emails (learns usage patterns) | Codex | 3-4h | P1 | ✅ |
 | 18.24 | Add "Habits Due Soon" reminder widget (shows next habit in <60min with countdown) | Codex | 4-6h | P1 | ⬜ |
 | 18.25 | Create unified timeline view showing tasks, habits, meetings, AND email response time blocks | Codex | 8-12h | P0 | ⬜ |
 | 18.26 | Add identity color coding to timeline (Writer tasks = blue stripe, Athlete = green, etc.) | Codex | 3-4h | P1 | ⬜ |
