@@ -1066,8 +1066,8 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | 18.22 | Add "Actionable Emails" widget to Today page (emails needing tasks/responses, quick actions) | Codex | 6-8h | P0 | ✅ |
 | 18.23 | Make email widget adaptive: auto-hide if user has <5 actionable emails (learns usage patterns) | Codex | 3-4h | P1 | ✅ |
 | 18.24 | Add "Habits Due Soon" reminder widget (shows next habit in <60min with countdown) | Codex | 4-6h | P1 | ⬜ |
-| 18.25 | Create unified timeline view showing tasks, habits, meetings, AND email response time blocks | Codex | 8-12h | P0 | ⬜ |
-| 18.26 | Add identity color coding to timeline (Writer tasks = blue stripe, Athlete = green, etc.) | Codex | 3-4h | P1 | ⬜ |
+| 18.25 | Create unified timeline view showing tasks, habits, meetings, AND email response time blocks | Codex | 8-12h | P0 | ✅ |
+| 18.26 | Add identity color coding to timeline (Writer tasks = blue stripe, Athlete = green, etc.) | Codex | 3-4h | P1 | ✅ |
 | 18.27 | Build "Focus Mode" toggle that hides non-priority items and filters by selected identity | Codex | 4-6h | P1 | ⬜ |
 | 18.28 | Add smart context panel that shows relevant info based on What's Now (during meeting: attendees + notes; during habit: progress + why statement) | Codex | 6-8h | P1 | ⬜ |
 | 18.C2 | Design responsive layout for mobile: collapsible sections, priority-based widget order | Claude | 3-4h | P1 | ⬜ |

@@ -49,6 +49,12 @@ export default function TodayPage() {
   const [inboxError, setInboxError] = useState<string | null>(null);
   const [nextEmailPageToken, setNextEmailPageToken] = useState<string | undefined>();
   const [loadingMoreEmails, setLoadingMoreEmails] = useState(false);
+  /** Unified timeline: hide suggested email block for today (persisted). */
+  const [emailBlockDismissed, setEmailBlockDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const key = `timeflow_timeline_email_dismiss_${new Date().toISOString().slice(0, 10)}`;
+    return localStorage.getItem(key) === '1';
+  });
   const [emailSearchQuery, setEmailSearchQuery] = useState('');
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [emailViewerOpen, setEmailViewerOpen] = useState(false);
@@ -203,6 +209,22 @@ export default function TodayPage() {
     } finally {
       setLoadingMoreEmails(false);
     }
+  };
+
+  /** Same filter as ActionableEmailsWidget — drives suggested email block on the timeline. */
+  const actionableEmailCount = useMemo(
+    () =>
+      emails.filter(
+        (e) =>
+          e.actionState === 'needs_reply' || e.needsResponse === true || e.isRead === false
+      ).length,
+    [emails]
+  );
+
+  const handleDismissEmailBlock = () => {
+    const key = `timeflow_timeline_email_dismiss_${new Date().toISOString().slice(0, 10)}`;
+    localStorage.setItem(key, '1');
+    setEmailBlockDismissed(true);
   };
 
   // Refresh inbox emails (clears cache and fetches fresh data)
@@ -809,6 +831,9 @@ Please generate a schedule preview for today.`;
                     onCompleteTask={handleCompleteTask}
                     onCompleteHabit={handleCompleteHabit}
                     enableDropTargets
+                    actionableEmailCount={actionableEmailCount}
+                    emailBlockDismissed={emailBlockDismissed}
+                    onDismissEmailBlock={handleDismissEmailBlock}
                   />
                 </div>
               </Panel>
