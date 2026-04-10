@@ -8,9 +8,20 @@ export function filterInboxEmails(
     selectedCategoryId: string | null;
     needsResponseOnly?: boolean;
     actionStateFilter?: EmailActionState | null;
+    excludePromotions?: boolean;
   }
 ): EmailMessage[] {
   let filtered = emails;
+
+  // Filter out promotional emails if requested (default for main view)
+  // Exclude both Gmail promotions AND TimeFlow "promotion" category
+  if (options.excludePromotions) {
+    filtered = filtered.filter((email) =>
+      !email.isPromotional &&
+      email.category !== 'promotion' &&
+      email.category !== 'shopping'
+    );
+  }
 
   if (options.selectedCategoryId) {
     filtered = filtered.filter((email) => email.category === options.selectedCategoryId);

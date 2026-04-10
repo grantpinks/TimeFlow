@@ -3,7 +3,7 @@ import { prisma } from '../config/prisma.js';
 import * as gmailService from './gmailService.js';
 import { syncGmailLabelsOnInboxFetch } from './gmailLabelSyncService.js';
 
-const CACHE_TTL_MS = 2 * 60 * 1000;
+const CACHE_TTL_MS = 90 * 1000; // 90 seconds - balanced between freshness and rate limits
 const refreshLocks = new Map<string, Promise<void>>();
 
 export function getInboxCacheKey(maxResults?: number): string {
@@ -78,4 +78,14 @@ export async function refreshInboxCache(
   } finally {
     refreshLocks.delete(lockKey);
   }
+}
+
+/**
+ * Clear all inbox cache entries for a user
+ * Called when new emails arrive via Gmail push to force fresh data
+ */
+export async function clearInboxCacheForUser(userId: string): Promise<void> {
+  await prisma.inboxCache.deleteMany({
+    where: { userId },
+  });
 }

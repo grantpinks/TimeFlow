@@ -12,7 +12,7 @@ interface CacheEntry {
 }
 
 const CACHE_KEY = 'timeflow_email_cache';
-const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const CACHE_TTL_MS = 90 * 1000; // 90 seconds - balanced between freshness and rate limits
 
 /**
  * Get cached emails if they exist and are less than 2 minutes old.

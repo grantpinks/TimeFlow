@@ -9,6 +9,8 @@ import { prisma } from '../config/prisma.js';
 import { getOAuth2Client } from '../config/google.js';
 import { env } from '../config/env.js';
 import { syncFromHistory } from '../services/gmailWatchService.js';
+import { clearInboxCacheForUser } from '../services/inboxCacheService.js';
+import { broadcastInboxUpdate } from '../services/sseService.js';
 
 type PubSubPushBody = {
   message?: {
@@ -139,6 +141,13 @@ export async function handleGmailPush(
       await syncFromHistory(user.id, historyIdToProcess);
       historyIdToProcess = pendingHistoryByUser.get(user.id);
     }
+
+    // Clear inbox cache to force fresh data on next fetch
+    await clearInboxCacheForUser(user.id);
+
+    // Broadcast real-time update to connected SSE clients
+    broadcastInboxUpdate(user.id, { historyId: normalizedHistoryId });
+
     return reply.status(204).send();
   } catch (error) {
     request.log.error({ error }, 'Failed to sync Gmail history');

@@ -36,8 +36,12 @@ import {
 } from '../controllers/inboxAiController.js';
 import { updateEmailActionState } from '../controllers/emailActionStateController.js';
 import { extractTasksFromThread, summarizeEmailThread } from '../controllers/emailThreadAssistController.js';
+import { handleSSEConnection } from '../controllers/sseController.js';
 
 export async function registerEmailRoutes(server: FastifyInstance) {
+  // Server-Sent Events for real-time inbox updates
+  server.get('/email/inbox/stream', { preHandler: requireAuth }, handleSSEConnection);
+
   // Get inbox messages (list view)
   server.get('/email/inbox', { preHandler: requireAuth }, getInboxEmails);
 

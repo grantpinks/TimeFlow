@@ -4,7 +4,7 @@
  */
 
 const WINDOW_MS = Number(process.env.GMAIL_RATE_LIMIT_WINDOW_MS ?? 60_000); // default 1 minute
-const MAX_PER_WINDOW = Number(process.env.GMAIL_RATE_LIMIT_PER_MINUTE ?? 30);
+const MAX_PER_WINDOW = Number(process.env.GMAIL_RATE_LIMIT_PER_MINUTE ?? 60); // Increased from 30 to 60
 
 type Bucket = { windowStart: number; count: number };
 const buckets = new Map<string, Bucket>();

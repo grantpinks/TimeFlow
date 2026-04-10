@@ -206,8 +206,9 @@ export default function InboxPage() {
     pageToken?: string;
     append?: boolean;
     forceRefresh?: boolean;
+    userInitiated?: boolean;
   }) {
-    const { pageToken, append, forceRefresh } = options ?? {};
+    const { pageToken, append, forceRefresh, userInitiated } = options ?? {};
     const isFirstPage = !pageToken && !append;
     const cacheMode = isFirstPage ? (forceRefresh ? 'refresh' : 'prefer') : 'bypass';
 
@@ -226,20 +227,21 @@ export default function InboxPage() {
       setLoading(true);
     }
 
-    // Rate limit protection: prevent multiple force-refresh API calls within 2 seconds
-    // But still allow the request if there's no cached data (user needs something to see!)
-    if (forceRefresh && isFirstPage) {
+    // Rate limit protection: prevent multiple AUTOMATIC force-refresh API calls within 2 seconds
+    // NEVER debounce user-initiated refreshes (clicking the refresh button should ALWAYS work!)
+    if (forceRefresh && isFirstPage && !userInitiated) {
       const now = Date.now();
       const timeSinceLastRefresh = now - lastRefreshTime.current;
 
       if (timeSinceLastRefresh < 2000 && emails.length > 0) {
-        console.log('Refresh debounced to prevent rate limiting (user already has data)');
+        console.log('Auto-refresh debounced to prevent rate limiting');
         setLoading(false);
-        setRefreshingInbox(false);
         return;
       }
+    }
 
-      lastRefreshTime.current = now;
+    if (forceRefresh && isFirstPage) {
+      lastRefreshTime.current = Date.now();
     }
 
     try {
@@ -297,7 +299,7 @@ export default function InboxPage() {
   async function handleRefreshInbox() {
     setRefreshingInbox(true);
     try {
-      await fetchInbox({ forceRefresh: true });
+      await fetchInbox({ forceRefresh: true, userInitiated: true });
     } finally {
       setRefreshingInbox(false);
     }
@@ -739,6 +741,7 @@ export default function InboxPage() {
       selectedCategoryId,
       needsResponseOnly,
       actionStateFilter: queueFilter === 'all' ? null : queueFilter,
+      excludePromotions: true, // Always exclude promotional emails from inbox
     });
 
     if (searchMode === 'server') {
@@ -1320,7 +1323,8 @@ function EmailBody({ html, plainText }: { html?: string; plainText?: string }) {
     return (
       <iframe
         ref={iframeRef}
-        sandbox="allow-same-origin"
+        sandbox="allow-same-origin allow-popups"
+        referrerPolicy="no-referrer-when-downgrade"
         style={{
           width: '100%',
           border: 'none',

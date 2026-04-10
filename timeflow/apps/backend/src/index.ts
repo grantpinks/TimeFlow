@@ -26,6 +26,7 @@ console.log('  ENCRYPTION_KEY:', process.env.ENCRYPTION_KEY ? '✓ Set' : '✗ M
 
 import { buildServer } from './server.js';
 import { env } from './config/env.js';
+import { startPingInterval, stopPingInterval } from './services/sseService.js';
 
 console.log('✅ Imports loaded successfully');
 
@@ -36,6 +37,7 @@ async function main() {
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     server.log.info(`Received ${signal}, shutting down...`);
+    stopPingInterval();
     await server.close();
     process.exit(0);
   };
@@ -48,6 +50,10 @@ async function main() {
     const address = await server.listen({ port: env.PORT, host: '0.0.0.0' });
     server.log.info(`TimeFlow backend listening at ${address}`);
     console.log(`✅ Server ready at ${address}`);
+
+    // Start SSE keepalive ping interval
+    startPingInterval();
+    server.log.info('SSE ping interval started');
   } catch (err) {
     server.log.error(err);
     console.error('❌ Failed to start server:', err);
