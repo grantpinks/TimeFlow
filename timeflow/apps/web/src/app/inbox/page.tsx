@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Disable static generation for this page due to dynamic content
 export const dynamic = 'force-dynamic';
-import { useSearchParams } from 'next/navigation';
 import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -26,8 +25,12 @@ import { cacheEmails, clearEmailCache, getCachedEmails } from '@/lib/emailCache'
 
 export default function InboxPage() {
   const { isAuthenticated, user } = useUser();
-  const searchParams = useSearchParams();
-  const threadFromUrl = searchParams.get('thread');
+  // Read ?thread= param client-side to avoid Suspense requirement from useSearchParams
+  const [threadFromUrl, setThreadFromUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setThreadFromUrl(params.get('thread'));
+  }, []);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshingInbox, setRefreshingInbox] = useState(false);
