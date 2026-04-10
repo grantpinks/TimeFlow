@@ -335,7 +335,7 @@ export default function HabitsPage() {
         {/* Add Habit Form */}
         {showAdd && (
           <Panel className="bg-slate-50">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Add New Habit</h2>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Add New Habit</h2>
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
