@@ -57,7 +57,7 @@ export default function TodayPage() {
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [showPlanningRitual, setShowPlanningRitual] = useState(false);
   const [identityFilter, setIdentityFilter] = useState<string | null>(null);
-  const { progress, refresh: refreshProgress } = useIdentityProgress();
+  const { refresh: refreshProgress } = useIdentityProgress();
   const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
@@ -355,8 +355,8 @@ export default function TodayPage() {
       await refreshTasks();
 
       if (linkedIdentityId) {
-        await refreshProgress();
-        const updated = progress?.identities.find((i) => i.identityId === linkedIdentityId);
+        const freshProgress = await refreshProgress();
+        const updated = freshProgress?.identities.find((i) => i.identityId === linkedIdentityId);
         if (updated) setCelebration(updated);
       }
     } catch (err) {
@@ -374,10 +374,12 @@ export default function TodayPage() {
       await api.completeHabitInstance(scheduledHabitId);
       await fetchTodayEvents(); // Refresh to get updated completion status
 
-      await refreshProgress();
       if (linkedIdentityId) {
-        const updated = progress?.identities.find((i) => i.identityId === linkedIdentityId);
+        const freshProgress = await refreshProgress();
+        const updated = freshProgress?.identities.find((i) => i.identityId === linkedIdentityId);
         if (updated) setCelebration(updated);
+      } else {
+        await refreshProgress();
       }
     } catch (err) {
       console.error('Failed to complete habit:', err);

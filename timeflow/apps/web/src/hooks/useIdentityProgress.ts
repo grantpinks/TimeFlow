@@ -17,8 +17,10 @@ export function useIdentityProgress(date?: string) {
       const data = await api.getIdentityProgress(targetDate);
       setProgress(data);
       setError(null);
+      return data;
     } catch (err) {
       setError('Failed to load identity progress');
+      return null;
     } finally {
       setLoading(false);
     }
