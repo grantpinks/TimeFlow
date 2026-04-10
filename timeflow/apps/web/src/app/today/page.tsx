@@ -27,7 +27,9 @@ import * as api from '@/lib/api';
 import { buildRescueBlockForAtRisk } from '@/lib/habitRescue';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache';
-import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification } from '@timeflow/shared';
+import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification, IdentityDayProgress } from '@timeflow/shared';
+import { useIdentityProgress } from '@/hooks/useIdentityProgress';
+import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -55,6 +57,8 @@ export default function TodayPage() {
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [showPlanningRitual, setShowPlanningRitual] = useState(false);
   const [identityFilter, setIdentityFilter] = useState<string | null>(null);
+  const { progress, refresh: refreshProgress } = useIdentityProgress();
+  const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   const sensors = useSensors(
@@ -344,8 +348,17 @@ export default function TodayPage() {
 
   const handleCompleteTask = async (taskId: string) => {
     try {
+      const task = tasks.find((t) => t.id === taskId);
+      const linkedIdentityId = task?.identityId ?? null;
+
       await completeTask(taskId);
       await refreshTasks();
+
+      if (linkedIdentityId) {
+        await refreshProgress();
+        const updated = progress?.identities.find((i) => i.identityId === linkedIdentityId);
+        if (updated) setCelebration(updated);
+      }
     } catch (err) {
       console.error('Failed to complete task:', err);
     }
@@ -353,8 +366,19 @@ export default function TodayPage() {
 
   const handleCompleteHabit = async (scheduledHabitId: string) => {
     try {
+      const habitEvent = events.find(
+        (e) => e.sourceId === scheduledHabitId || e.id === scheduledHabitId
+      );
+      const linkedIdentityId = (habitEvent as (typeof habitEvent & { identityId?: string | null }))?.identityId ?? null;
+
       await api.completeHabitInstance(scheduledHabitId);
       await fetchTodayEvents(); // Refresh to get updated completion status
+
+      await refreshProgress();
+      if (linkedIdentityId) {
+        const updated = progress?.identities.find((i) => i.identityId === linkedIdentityId);
+        if (updated) setCelebration(updated);
+      }
     } catch (err) {
       console.error('Failed to complete habit:', err);
     }
@@ -1212,6 +1236,11 @@ Please generate a schedule preview for today.`;
         }}
         onSent={handleEmailSent}
         replyToEmail={replyToEmail}
+      />
+
+      <IdentityCelebrationModal
+        identity={celebration}
+        onDismiss={() => setCelebration(null)}
       />
     </Layout>
   );
