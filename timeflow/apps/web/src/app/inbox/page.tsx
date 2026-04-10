@@ -49,6 +49,8 @@ export default function InboxPage() {
   const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const searchRequestId = useRef(0);
   const staleRefreshTimer = useRef<NodeJS.Timeout | null>(null);
+  const sseConnectionRef = useRef<EventSource | null>(null);
+  const lastRefreshTime = useRef<number>(0);
 
   // Thread detail state
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -107,6 +109,66 @@ export default function InboxPage() {
     };
   }, []);
 
+  // Real-time inbox updates via Server-Sent Events
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const connectSSE = () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const eventSource = new EventSource(`${apiUrl}/api/email/inbox/stream`, {
+          withCredentials: true,
+        });
+
+        eventSource.addEventListener('connected', () => {
+          console.log('SSE: Connected to inbox stream');
+        });
+
+        eventSource.addEventListener('inbox-update', () => {
+          console.log('SSE: Inbox update received');
+          // Clear cache to mark data as stale
+          clearEmailCache();
+
+          // Only force refresh if user is currently viewing the inbox and has data
+          // Otherwise, natural refresh will happen when they next view it
+          if (document.visibilityState === 'visible' && !loading && emails.length > 0) {
+            console.log('SSE: Triggering inbox refresh');
+            fetchInbox({ forceRefresh: true }).catch((error) => {
+              console.error('Failed to refresh inbox after SSE update:', error);
+            });
+          } else {
+            console.log('SSE: Cache cleared, will refresh on next view or initial load');
+          }
+        });
+
+        eventSource.addEventListener('ping', () => {
+          // Keepalive ping, no action needed
+        });
+
+        eventSource.onerror = (error) => {
+          console.error('SSE: Connection error:', error);
+          eventSource.close();
+          // Reconnect after 5 seconds
+          setTimeout(connectSSE, 5000);
+        };
+
+        sseConnectionRef.current = eventSource;
+      } catch (error) {
+        console.error('SSE: Failed to connect:', error);
+      }
+    };
+
+    connectSSE();
+
+    return () => {
+      if (sseConnectionRef.current) {
+        console.log('SSE: Closing connection');
+        sseConnectionRef.current.close();
+        sseConnectionRef.current = null;
+      }
+    };
+  }, [isAuthenticated]);
+
   // Auto-select first email when list changes
   useEffect(() => {
     const displayEmails = getDisplayEmails();
@@ -164,6 +226,22 @@ export default function InboxPage() {
       setLoading(true);
     }
 
+    // Rate limit protection: prevent multiple force-refresh API calls within 2 seconds
+    // But still allow the request if there's no cached data (user needs something to see!)
+    if (forceRefresh && isFirstPage) {
+      const now = Date.now();
+      const timeSinceLastRefresh = now - lastRefreshTime.current;
+
+      if (timeSinceLastRefresh < 2000 && emails.length > 0) {
+        console.log('Refresh debounced to prevent rate limiting (user already has data)');
+        setLoading(false);
+        setRefreshingInbox(false);
+        return;
+      }
+
+      lastRefreshTime.current = now;
+    }
+
     try {
       if (forceRefresh && isFirstPage) {
         clearEmailCache();
@@ -185,6 +263,7 @@ export default function InboxPage() {
         });
         setInboxCacheStale(Boolean(result.isStale));
         if (result.isStale && !forceRefresh) {
+          // Quick refresh when cache is stale
           if (staleRefreshTimer.current) {
             clearTimeout(staleRefreshTimer.current);
           }
@@ -193,13 +272,16 @@ export default function InboxPage() {
             fetchInbox().catch((error) => {
               console.error('Failed to refresh inbox cache:', error);
             });
-          }, 1500);
+          }, 500); // Fast but not too aggressive to avoid rate limits
         }
       }
     } catch (error: any) {
       console.error('Failed to fetch inbox:', error);
       if (error instanceof Error && /rate limit|429/i.test(error.message)) {
-        toast.error('Gmail rate limit exceeded. Please try again in a few seconds.');
+        toast.error(
+          'Gmail rate limit reached. Your inbox will auto-refresh shortly. Please avoid manual refreshes.',
+          { duration: 5000 }
+        );
       } else {
         toast.error('Failed to load inbox. Please try again.');
       }
@@ -696,35 +778,6 @@ export default function InboxPage() {
   const selectedEmail = displayEmails.find(e =>
     e.threadId === selectedThreadId || e.id === selectedThreadId
   );
-  const activeEmailAccount =
-    emailAccounts.find((account) => account.primary) ??
-    emailAccounts[0] ??
-    (user?.email
-      ? ({
-          id: `google:${user.email}`,
-          provider: 'google',
-          email: user.email,
-          connected: false,
-          primary: true,
-        } satisfies EmailAccount)
-      : null);
-  const providerLabel = activeEmailAccount?.provider === 'google' ? 'Gmail' : activeEmailAccount?.provider ?? 'Email';
-  const providerIcon =
-    activeEmailAccount?.provider === 'google' ? (
-      <span
-        aria-hidden="true"
-        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white"
-      >
-        <svg width="12" height="12" viewBox="0 0 48 48" role="img" aria-label="Google">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.06 1.53 7.44 2.8l5.48-5.48C33.64 3.78 29.2 2 24 2 14.92 2 7.2 7.02 3.62 14.3l6.6 5.12C11.78 13.62 17.44 9.5 24 9.5z" />
-          <path fill="#4285F4" d="M46.14 24.5c0-1.64-.15-3.21-.43-4.73H24v8.95h12.4c-.54 2.9-2.18 5.36-4.64 7.01l7.08 5.5c4.14-3.82 6.3-9.45 6.3-16.73z" />
-          <path fill="#FBBC05" d="M10.22 28.42a14.43 14.43 0 0 1 0-8.84l-6.6-5.12a22.1 22.1 0 0 0 0 19.08l6.6-5.12z" />
-          <path fill="#34A853" d="M24 46c5.2 0 9.58-1.72 12.77-4.67l-7.08-5.5c-1.96 1.32-4.48 2.1-5.7 2.1-6.56 0-12.22-4.12-13.78-9.78l-6.6 5.12C7.2 40.98 14.92 46 24 46z" />
-        </svg>
-      </span>
-    ) : (
-      <Mail size={14} className="text-[#0BAF9A]" />
-    );
 
   if (!isAuthenticated) {
     return (
@@ -739,85 +792,96 @@ export default function InboxPage() {
   return (
     <Layout>
       <Toaster position="top-right" />
-      <div className="h-screen flex flex-col bg-[#FFFEF7] overflow-hidden">
+      <div className="h-screen flex flex-col bg-white overflow-hidden">
         {/* Header */}
-        <div className="flex-none border-b-2 border-[#0BAF9A] bg-gradient-to-r from-white to-[#0BAF9A]/5">
-          <div className="px-6 py-6">
-            <div className="flex items-end justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Image
-                    src="/branding/flow-default.png"
-                    alt="Flow"
-                    width={48}
-                    height={48}
-                    className="rounded-full"
-                  />
-                </motion.div>
-                <div>
-                  <h1 className="text-4xl font-bold text-[#1a1a1a] mb-1" style={{ fontFamily: "'Crimson Pro', serif" }}>
-                    Inbox
-                  </h1>
-                  <p className="text-xs text-[#666] tracking-wider uppercase" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    {displayEmails.length} threads
-                  </p>
-                </div>
+        <div className="flex-none border-b border-slate-200 bg-white">
+          <div className="px-6 pt-6 pb-0">
+            {/* Title row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div className="flex items-baseline gap-3">
+                <h1 className="text-3xl font-bold text-slate-900">Inbox</h1>
+                <span className="text-sm text-slate-500 font-medium">
+                  {displayEmails.length} threads
+                </span>
               </div>
 
-              {/* Search */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search inbox..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="w-80 px-4 py-2.5 pl-10 border-2 border-[#0BAF9A]/30 bg-white text-[#1a1a1a] placeholder-[#999] focus:outline-none focus:ring-2 focus:ring-[#0BAF9A] focus:border-[#0BAF9A] transition-all rounded-lg"
-                  style={{ fontFamily: "'Manrope', sans-serif" }}
-                />
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0BAF9A]" size={16} />
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Refresh button */}
+                <button
+                  onClick={handleRefreshInbox}
+                  disabled={refreshingInbox}
+                  title="Refresh inbox"
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw size={16} className={refreshingInbox ? 'animate-spin' : ''} />
+                </button>
 
-                {searchLoading && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#0BAF9A]"></div>
+                {/* Account pill(s) */}
+                {emailAccounts.map((account) => (
+                  <div key={account.id} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-full text-xs font-medium text-slate-600">
+                    {account.provider === 'google' ? (
+                      <svg width="12" height="12" viewBox="0 0 48 48" role="img" aria-label="Google">
+                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.06 1.53 7.44 2.8l5.48-5.48C33.64 3.78 29.2 2 24 2 14.92 2 7.2 7.02 3.62 14.3l6.6 5.12C11.78 13.62 17.44 9.5 24 9.5z" />
+                        <path fill="#4285F4" d="M46.14 24.5c0-1.64-.15-3.21-.43-4.73H24v8.95h12.4c-.54 2.9-2.18 5.36-4.64 7.01l7.08 5.5c4.14-3.82 6.3-9.45 6.3-16.73z" />
+                        <path fill="#FBBC05" d="M10.22 28.42a14.43 14.43 0 0 1 0-8.84l-6.6-5.12a22.1 22.1 0 0 0 0 19.08l6.6-5.12z" />
+                        <path fill="#34A853" d="M24 46c5.2 0 9.58-1.72 12.77-4.67l-7.08-5.5c-1.96 1.32-4.48 2.1-5.7 2.1-6.56 0-12.22-4.12-13.78-9.78l-6.6 5.12C7.2 40.98 14.92 46 24 46z" />
+                      </svg>
+                    ) : (
+                      <Mail size={12} />
+                    )}
+                    {account.email}
                   </div>
-                )}
+                ))}
 
-                {searchMode === 'server' && !searchLoading && searchQuery && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#666]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Gmail search
-                  </div>
-                )}
-
-                {searchQuery && !searchLoading && searchMode === 'client' && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setSearchMode('client');
-                      setServerSearchResults([]);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#1a1a1a]"
-                  >
-                    ✕
-                  </button>
-                )}
+                {/* Search */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search inbox..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="w-full sm:w-64 px-3 py-2 pl-9 text-sm border border-slate-200 bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0BAF9A]/30 focus:border-[#0BAF9A] transition-all rounded-lg"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  {searchLoading && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#0BAF9A]" />
+                    </div>
+                  )}
+                  {searchMode === 'server' && !searchLoading && searchQuery && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">Gmail</span>
+                  )}
+                  {searchQuery && !searchLoading && searchMode === 'client' && (
+                    <button
+                      onClick={() => { setSearchQuery(''); setSearchMode('client'); setServerSearchResults([]); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Stale cache nudge */}
+            {inboxCacheStale && (
+              <div className="mb-3 flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-2 rounded-lg">
+                <RefreshCw size={12} />
+                <span>Showing cached results.</span>
+                <button onClick={handleRefreshInbox} className="underline font-medium">Refresh now</button>
+              </div>
+            )}
+
+            {/* Filters row */}
+            <div className="flex flex-wrap items-center gap-2 pb-3">
               <button
                 type="button"
                 onClick={() => setShowViewEditor((prev) => !prev)}
-                className={`px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] rounded-full border ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
                   showViewEditor
                     ? 'border-[#0BAF9A] text-[#0BAF9A] bg-[#0BAF9A]/10'
-                    : 'border-[#0BAF9A]/40 text-[#0BAF9A] hover:bg-[#0BAF9A]/10'
+                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
                 }`}
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
               >
                 Customize
               </button>
@@ -827,16 +891,12 @@ export default function InboxPage() {
                 return (
                   <button
                     key={view.id}
-                    onClick={() => {
-                      setSelectedViewId(view.id);
-                      setSelectedCategoryId(null);
-                    }}
-                    className={`px-4 py-1.5 text-sm font-medium transition-all border-2 rounded-full ${
+                    onClick={() => { setSelectedViewId(view.id); setSelectedCategoryId(null); }}
+                    className={`px-3 py-1.5 text-sm font-medium transition-all rounded-lg border ${
                       isActive
                         ? 'bg-[#0BAF9A] text-white border-[#0BAF9A]'
-                        : 'bg-white text-[#1a1a1a] border-[#0BAF9A]/30 hover:bg-[#0BAF9A]/5'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                     }`}
-                    style={{ fontFamily: "'Manrope', sans-serif" }}
                   >
                     {view.name}
                   </button>
@@ -846,17 +906,16 @@ export default function InboxPage() {
               <button
                 type="button"
                 onClick={() => setNeedsResponseOnly((prev) => !prev)}
-                className={`px-4 py-1.5 text-sm font-medium transition-all border-2 rounded-full ${
+                className={`px-3 py-1.5 text-sm font-medium transition-all rounded-lg border ${
                   needsResponseOnly
-                    ? 'bg-[#F97316] text-white border-[#F97316]'
-                    : 'bg-white text-[#1a1a1a] border-[#F97316]/30 hover:bg-[#F97316]/10'
+                    ? 'bg-orange-500 text-white border-orange-500'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                 }`}
-                style={{ fontFamily: "'Manrope', sans-serif" }}
               >
                 Needs Response
               </button>
 
-              <div className="h-6 w-px bg-[#e0e0e0] mx-1" />
+              <div className="h-5 w-px bg-slate-200 mx-1" />
 
               <CategoryPills
                 categories={categories}
@@ -880,129 +939,50 @@ export default function InboxPage() {
               />
             )}
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span
-                className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8b8b8b]"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
-              >
-                Queues
-              </span>
+            {/* Queue filter row */}
+            <div className="flex flex-wrap items-center gap-2 pb-3 border-t border-slate-100 pt-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Queues</span>
               {(['all', 'needs_reply', 'read_later'] as const).map((queue) => {
                 const isActive = queueFilter === queue;
-                const label =
-                  queue === 'all'
-                    ? 'All'
-                    : queue === 'needs_reply'
-                      ? 'Needs Reply'
-                      : 'Read Later';
-
+                const label = queue === 'all' ? 'All' : queue === 'needs_reply' ? 'Needs Reply' : 'Read Later';
                 return (
                   <button
                     key={queue}
-                    type="button"
                     onClick={() => setQueueFilter(queue)}
-                    className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] rounded-full border transition-all ${
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
                       isActive
-                        ? 'border-[#0BAF9A] text-[#0BAF9A] bg-[#0BAF9A]/10'
-                        : 'border-[#0BAF9A]/30 text-[#0BAF9A] hover:bg-[#0BAF9A]/10'
+                        ? 'bg-[#0BAF9A] text-white border-[#0BAF9A]'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                     }`}
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
                   >
                     {label}
                   </button>
                 );
               })}
-            </div>
 
-            {(agingNudges.needsReply > 0 || agingNudges.unreadImportant > 0) && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span
-                  className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8b8b8b]"
-                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  Aging nudges
-                </span>
-                {agingNudges.needsReply > 0 && (
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full border border-[#F9731640] bg-[#F9731620] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#F97316]"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    Needs Reply &gt; {NUDGE_AGE_DAYS} days
-                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-[#F97316]">
-                      {agingNudges.needsReply}
-                    </span>
-                  </span>
-                )}
-                {agingNudges.unreadImportant > 0 && (
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full border border-[#2563EB40] bg-[#2563EB1A] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#2563EB]"
-                    style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                  >
-                    Unread important &gt; {NUDGE_AGE_DAYS} days
-                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-[#2563EB]">
-                      {agingNudges.unreadImportant}
-                    </span>
-                  </span>
-                )}
-              </div>
-            )}
-
-            <div className="mt-4 flex w-full items-center justify-between gap-4">
-              <div className="inline-flex items-center rounded-full border-2 border-[#0BAF9A]/30 bg-white/80 shadow-[0_10px_30px_rgba(11,175,154,0.08)]">
-                {activeEmailAccount ? (
-                  <>
-                    <span
-                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] bg-[#0BAF9A]/10 rounded-l-full"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      {providerIcon}
-                      {providerLabel}
-                    </span>
-                    <span
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm text-[#1a1a1a] border-l-2 border-[#0BAF9A]/20"
-                      style={{ fontFamily: "'Manrope', sans-serif" }}
-                    >
-                      {activeEmailAccount.email}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleRefreshInbox}
-                      disabled={refreshingInbox}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] border-l-2 border-[#0BAF9A]/20 rounded-r-full transition-all hover:bg-[#0BAF9A]/10 disabled:opacity-60"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                      aria-label="Refresh inbox"
-                    >
-                      <RefreshCw size={14} className={refreshingInbox ? 'animate-spin' : ''} />
-                      {refreshingInbox ? 'Refreshing' : 'Refresh'}
-                    </button>
-                    {inboxCacheStale && (
-                      <span
-                        className="inline-flex items-center px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#6B7280] bg-[#F3F4F6] border-l-2 border-[#E5E7EB]"
-                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                      >
-                        Updating…
+              {/* Aging nudge badges */}
+              {(agingNudges.needsReply > 0 || agingNudges.unreadImportant > 0) && (
+                <div className="ml-auto flex items-center gap-2">
+                  {agingNudges.needsReply > 0 && (
+                    <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-orange-50 text-orange-600 border border-orange-200 rounded-full">
+                      <Clock size={11} />
+                      Needs Reply &gt; {NUDGE_AGE_DAYS} days
+                      <span className="ml-1 bg-orange-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                        {agingNudges.needsReply}
                       </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <span
-                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#9CA3AF] bg-[#F3F4F6] rounded-l-full"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      <Mail size={14} className="text-[#9CA3AF]" />
-                      No email connected
                     </span>
-                    <a
-                      href={api.getGoogleAuthUrl()}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#0BAF9A] border-l-2 border-[#0BAF9A]/20 rounded-r-full transition-all hover:bg-[#0BAF9A]/10"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      Connect Google
-                    </a>
-                  </>
-                )}
-              </div>
+                  )}
+                  {agingNudges.unreadImportant > 0 && (
+                    <span className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-600 border border-blue-200 rounded-full">
+                      <Mail size={11} />
+                      Unread Important
+                      <span className="ml-1 bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                        {agingNudges.unreadImportant}
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1173,11 +1153,6 @@ export default function InboxPage() {
         </div>
 
       </div>
-
-      {/* Web Fonts */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap');
-      `}</style>
 
       {/* Draft Panel (Sprint 16 Phase B+) */}
       {draftEmail && (
