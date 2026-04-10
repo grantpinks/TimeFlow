@@ -22,6 +22,7 @@ import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
 import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
+import { WhatsNowContextPanel } from '@/components/today/WhatsNowContextPanel';
 import { ActionableEmailsWidget } from '@/components/today/ActionableEmailsWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
@@ -29,7 +30,7 @@ import * as api from '@/lib/api';
 import { buildRescueBlockForAtRisk } from '@/lib/habitRescue';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache';
-import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification, IdentityDayProgress } from '@timeflow/shared';
+import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification, IdentityDayProgress, Habit } from '@timeflow/shared';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
@@ -66,7 +67,9 @@ export default function TodayPage() {
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [showPlanningRitual, setShowPlanningRitual] = useState(false);
   const [identityFilter, setIdentityFilter] = useState<string | null>(null);
-  const { refresh: refreshProgress } = useIdentityProgress();
+  const [focusMode, setFocusMode] = useState(false);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress();
   const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
@@ -86,6 +89,20 @@ export default function TodayPage() {
       setShowBanner(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('timeflow_today_focus_mode') === '1') {
+      setFocusMode(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    api
+      .getHabits()
+      .then(setHabits)
+      .catch(() => setHabits([]));
+  }, [isAuthenticated]);
 
   const handleDismissBanner = () => {
     setShowBanner(false);
@@ -348,9 +365,50 @@ export default function TodayPage() {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
 
-  // Get unscheduled tasks (inbox)
-  const unscheduledTasks = tasks.filter((task) => task.status === 'unscheduled');
-  const scheduledTasks = tasks.filter((task) => task.status === 'scheduled');
+  const tasksView = useMemo(() => {
+    let list = tasks;
+    if (identityFilter) {
+      list = list.filter((task) => task.identityId === identityFilter);
+    }
+    if (focusMode) {
+      list = list.filter((task) => task.priority !== 3);
+    }
+    return list;
+  }, [tasks, identityFilter, focusMode]);
+
+  const habitsById = useMemo(() => {
+    const m = new Map<string, Habit>();
+    habits.forEach((h) => m.set(h.id, h));
+    return m;
+  }, [habits]);
+
+  const eventsForTimeline = useMemo(() => {
+    if (!identityFilter) return events;
+    return events.filter((ev) => {
+      if (ev.sourceType === 'external') return true;
+      if (ev.sourceType === 'task' && ev.sourceId) {
+        const t = tasks.find((x) => x.id === ev.sourceId);
+        return t?.identityId === identityFilter;
+      }
+      if (ev.sourceType === 'habit' && ev.habitId) {
+        const h = habitsById.get(ev.habitId);
+        return h?.identityId === identityFilter;
+      }
+      return true;
+    });
+  }, [events, identityFilter, tasks, habitsById]);
+
+  const habitSuggestionsFiltered = useMemo(() => {
+    if (!identityFilter) return habitSuggestions;
+    return habitSuggestions.filter((s) => {
+      const h = habits.find((hab) => hab.id === s.habitId);
+      return h?.identityId === identityFilter;
+    });
+  }, [habitSuggestions, identityFilter, habits]);
+
+  // Get unscheduled tasks (inbox) — respects identity + Focus mode
+  const unscheduledTasks = tasksView.filter((task) => task.status === 'unscheduled');
+  const scheduledTasks = tasksView.filter((task) => task.status === 'scheduled');
 
   // Prioritize: due today first, then high priority, then rest
   const unscheduledDueToday = unscheduledTasks.filter((task) => {
@@ -581,11 +639,44 @@ Please generate a schedule preview for today.`;
             {unscheduledTasks.length} tasks to schedule • {scheduledTasks.length} on timeline
           </p>
           {/* Identity Progress Pills */}
-          <IdentityProgressWidget
-            onFilterChange={setIdentityFilter}
-            activeFilter={identityFilter}
-            className="mt-3"
-          />
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <IdentityProgressWidget
+              onFilterChange={setIdentityFilter}
+              activeFilter={identityFilter}
+              className="flex-1 min-w-0"
+            />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={focusMode}
+              onClick={() => {
+                setFocusMode((f) => {
+                  const next = !f;
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('timeflow_today_focus_mode', next ? '1' : '0');
+                  }
+                  return next;
+                });
+              }}
+              className={`flex-shrink-0 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                focusMode
+                  ? 'border-primary-500 bg-primary-50 text-primary-800'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+              }`}
+              title="Hide low-priority tasks and narrow the timeline to the selected identity"
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${focusMode ? 'bg-primary-500' : 'bg-slate-300'}`}
+                aria-hidden
+              />
+              Focus
+            </button>
+          </div>
+          {focusMode && (
+            <p className="mt-2 text-xs text-slate-600">
+              Focus mode hides low-priority tasks. Select an identity above to filter by that goal.
+            </p>
+          )}
           {/* What's Now — current and upcoming */}
           <WhatsNowWidget
             events={events}
@@ -593,7 +684,7 @@ Please generate a schedule preview for today.`;
             className="mt-4"
           />
           {/* Actionable Emails — emails needing attention */}
-          <ActionableEmailsWidget className="mt-3" />
+          {!focusMode && <ActionableEmailsWidget className="mt-3" />}
         </div>
 
 
@@ -767,13 +858,15 @@ Please generate a schedule preview for today.`;
                   <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
                     {habitSuggestionsError}
                   </div>
-                ) : habitSuggestions.length === 0 ? (
+                ) : habitSuggestionsFiltered.length === 0 ? (
                   <div className="text-sm text-slate-500 py-4">
-                    No active habits to suggest yet.
+                    {identityFilter
+                      ? 'No suggestions for this identity right now.'
+                      : 'No active habits to suggest yet.'}
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-[360px] overflow-y-auto pr-1">
-                    {habitSuggestions.map((suggestion) => (
+                    {habitSuggestionsFiltered.map((suggestion) => (
                       <div
                         key={`${suggestion.habitId}-${suggestion.start}`}
                         className="border border-slate-200 rounded-lg p-3"
@@ -825,8 +918,8 @@ Please generate a schedule preview for today.`;
                 />
                 <div className="max-h-[650px] overflow-y-auto pr-2 -mr-2">
                   <HourlyTimeline
-                    tasks={tasks}
-                    events={events}
+                    tasks={tasksView}
+                    events={eventsForTimeline}
                     wakeTime={user.wakeTime || '08:00'}
                     sleepTime={user.sleepTime || '23:00'}
                     onCompleteTask={handleCompleteTask}
@@ -835,13 +928,20 @@ Please generate a schedule preview for today.`;
                     actionableEmailCount={actionableEmailCount}
                     emailBlockDismissed={emailBlockDismissed}
                     onDismissEmailBlock={handleDismissEmailBlock}
+                    hideSuggestedEmailBlock={focusMode}
                   />
                 </div>
               </Panel>
             </div>
 
-            {/* RIGHT COLUMN: Quick Actions & Habits (3 columns of 12) */}
+            {/* RIGHT COLUMN: Context, quick actions & stats (3 columns of 12) */}
             <div className="lg:col-span-3 space-y-5">
+              <WhatsNowContextPanel
+                events={events}
+                tasks={tasks}
+                habits={habits}
+                identityProgress={identityProgressFull}
+              />
               <Panel padding="sm">
                 <SectionHeader
                   title="Quick Actions"
@@ -908,7 +1008,7 @@ Please generate a schedule preview for today.`;
                     <div className="flex justify-between">
                       <span className="text-slate-600">Scheduled:</span>
                       <span className="font-medium text-slate-800">
-                        {tasks.filter((t) => t.status === 'scheduled').length}
+                        {tasksView.filter((t) => t.status === 'scheduled').length}
                       </span>
                     </div>
                     <div className="flex justify-between">

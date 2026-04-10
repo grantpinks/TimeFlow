@@ -114,6 +114,7 @@ export async function getEvents(
         end: sh.endDateTime.toISOString(),
         sourceType: 'habit' as const,
         sourceId: sh.id, // Use scheduledHabit ID for completion API
+        habitId: sh.habitId,
         isCompleted: sh.completion?.status === 'completed',
       };
     });

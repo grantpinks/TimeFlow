@@ -7,9 +7,10 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { CalendarEvent, Task } from '@timeflow/shared';
+import { computeWhatsNowPhase } from '@/lib/whatsNow';
 
 interface WhatsNowWidgetProps {
   events: CalendarEvent[];
@@ -27,11 +28,71 @@ interface CurrentActivity {
   color: 'primary' | 'green' | 'amber' | 'blue';
 }
 
+function phaseToActivity(
+  events: CalendarEvent[],
+  tasks: Task[],
+  now: Date
+): CurrentActivity | null {
+  const phase = computeWhatsNowPhase(events, tasks, now);
+
+  if (phase.kind === 'current') {
+    const ev = phase.event;
+    const isHabit = ev.sourceType === 'habit';
+    return {
+      type: 'event',
+      title: ev.summary || 'Untitled Event',
+      description: isHabit
+        ? ev.description || 'Habit block in progress'
+        : ev.description,
+      timeInfo: `${phase.minutesRemaining} min remaining`,
+      progress: phase.progress,
+      icon: 'calendar',
+      color: 'primary',
+    };
+  }
+
+  if (phase.kind === 'upcoming') {
+    const nextEvent = phase.event;
+    const start = new Date(nextEvent.start);
+    const timeStr = start.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return {
+      type: 'upcoming',
+      title: nextEvent.summary || 'Untitled Event',
+      description: `Starting at ${timeStr}`,
+      timeInfo: `in ${phase.minutesUntil} min`,
+      icon: 'clock',
+      color: 'blue',
+    };
+  }
+
+  if (phase.kind === 'suggested-task') {
+    const topTask = phase.task;
+    return {
+      type: 'task',
+      title: topTask.title,
+      description: 'Important task ready to schedule',
+      timeInfo: `${topTask.durationMinutes} min`,
+      icon: 'task',
+      color: 'green',
+    };
+  }
+
+  return {
+    type: 'free',
+    title: 'Free Time',
+    description: 'No scheduled events right now',
+    timeInfo: 'Time to focus or take a break',
+    icon: 'coffee',
+    color: 'amber',
+  };
+}
+
 export function WhatsNowWidget({ events, tasks, className = '' }: WhatsNowWidgetProps) {
-  const [currentActivity, setCurrentActivity] = useState<CurrentActivity | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Update current time every 30 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
@@ -39,97 +100,10 @@ export function WhatsNowWidget({ events, tasks, className = '' }: WhatsNowWidget
     return () => clearInterval(interval);
   }, []);
 
-  // Determine what's happening now
-  useEffect(() => {
-    const now = currentTime;
-    const nowTime = now.getTime();
-
-    // Check for current event
-    const currentEvent = events.find((event) => {
-      const start = new Date(event.start).getTime();
-      const end = new Date(event.end).getTime();
-      return nowTime >= start && nowTime < end;
-    });
-
-    if (currentEvent) {
-      const start = new Date(currentEvent.start).getTime();
-      const end = new Date(currentEvent.end).getTime();
-      const progress = ((nowTime - start) / (end - start)) * 100;
-      const minutesRemaining = Math.round((end - nowTime) / 1000 / 60);
-
-      setCurrentActivity({
-        type: 'event',
-        title: currentEvent.summary || 'Untitled Event',
-        description: currentEvent.description,
-        timeInfo: `${minutesRemaining} min remaining`,
-        progress,
-        icon: 'calendar',
-        color: 'primary',
-      });
-      return;
-    }
-
-    // Check for scheduled task happening now
-    // Note: Task scheduled time would need to come from ScheduledTask relation
-    // For now, we'll skip this and move to upcoming events
-
-    // Check for upcoming event in next 2 hours
-    const upcomingEvents = events
-      .filter((event) => {
-        const start = new Date(event.start).getTime();
-        return start > nowTime && start < nowTime + 2 * 60 * 60 * 1000;
-      })
-      .sort((a, b) => {
-        const aStart = new Date(a.start).getTime();
-        const bStart = new Date(b.start).getTime();
-        return aStart - bStart;
-      });
-
-    if (upcomingEvents.length > 0) {
-      const nextEvent = upcomingEvents[0];
-      const start = new Date(nextEvent.start);
-      const minutesUntil = Math.round((start.getTime() - nowTime) / 1000 / 60);
-      const timeStr = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-
-      setCurrentActivity({
-        type: 'upcoming',
-        title: nextEvent.summary || 'Untitled Event',
-        description: `Starting at ${timeStr}`,
-        timeInfo: `in ${minutesUntil} min`,
-        icon: 'clock',
-        color: 'blue',
-      });
-      return;
-    }
-
-    // Check for unscheduled high-priority tasks
-    const unscheduledTasks = tasks
-      .filter((task) => task.status === 'unscheduled' && task.priority >= 3)
-      .sort((a, b) => b.priority - a.priority);
-
-    if (unscheduledTasks.length > 0) {
-      const topTask = unscheduledTasks[0];
-      setCurrentActivity({
-        type: 'task',
-        title: topTask.title,
-        description: 'High-priority task ready to schedule',
-        timeInfo: `${topTask.durationMinutes} min`,
-        icon: 'task',
-        color: 'green',
-      });
-      return;
-    }
-
-    // Free time
-    setCurrentActivity({
-      type: 'free',
-      title: 'Free Time',
-      description: 'No scheduled events right now',
-      timeInfo: 'Time to focus or take a break',
-      icon: 'coffee',
-      color: 'amber',
-    });
-  }, [events, tasks, currentTime]);
+  const currentActivity = useMemo(
+    () => phaseToActivity(events, tasks, currentTime),
+    [events, tasks, currentTime]
+  );
 
   if (!currentActivity) return null;
 
@@ -197,14 +171,12 @@ export function WhatsNowWidget({ events, tasks, className = '' }: WhatsNowWidget
       className={`${bgColorMap[currentActivity.color]} border-2 rounded-xl p-4 sm:p-5 shadow-lg ${className}`}
     >
       <div className="flex items-start gap-3 sm:gap-4">
-        {/* Icon */}
         <div
           className={`flex-shrink-0 p-3 rounded-xl bg-gradient-to-br ${colorMap[currentActivity.color]} text-white shadow-md`}
         >
           {iconMap[currentActivity.icon]}
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-bold text-slate-900 text-base sm:text-lg truncate">
@@ -221,7 +193,6 @@ export function WhatsNowWidget({ events, tasks, className = '' }: WhatsNowWidget
             </p>
           )}
 
-          {/* Progress bar for current events */}
           {currentActivity.progress !== undefined && (
             <div className="relative w-full h-2 bg-white/50 rounded-full overflow-hidden">
               <motion.div
@@ -233,7 +204,6 @@ export function WhatsNowWidget({ events, tasks, className = '' }: WhatsNowWidget
             </div>
           )}
 
-          {/* Status badge */}
           <div className="mt-2">
             {currentActivity.type === 'event' && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-primary-700">

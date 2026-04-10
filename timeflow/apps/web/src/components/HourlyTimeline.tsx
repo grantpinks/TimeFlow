@@ -68,6 +68,8 @@ interface HourlyTimelineProps {
   /** When true, do not insert the suggested email block. */
   emailBlockDismissed?: boolean;
   onDismissEmailBlock?: () => void;
+  /** Focus mode: hide suggested email-review block entirely. */
+  hideSuggestedEmailBlock?: boolean;
 }
 
 function mergeIntervals(intervals: { start: Date; end: Date }[]): { start: Date; end: Date }[] {
@@ -140,6 +142,7 @@ export function HourlyTimeline({
   actionableEmailCount = 0,
   emailBlockDismissed = false,
   onDismissEmailBlock,
+  hideSuggestedEmailBlock = false,
 }: HourlyTimelineProps) {
   const now = new Date();
   const currentHour = now.getHours();
@@ -214,6 +217,7 @@ export function HourlyTimeline({
     if (
       actionableEmailCount > 0 &&
       !emailBlockDismissed &&
+      !hideSuggestedEmailBlock &&
       workEnd.getTime() > workStart.getTime()
     ) {
       const busy = sorted.map((it) => ({ start: it.start, end: it.end }));
@@ -241,7 +245,15 @@ export function HourlyTimeline({
     }
 
     return sorted;
-  }, [tasks, events, actionableEmailCount, emailBlockDismissed, wakeHour, sleepHour]);
+  }, [
+    tasks,
+    events,
+    actionableEmailCount,
+    emailBlockDismissed,
+    hideSuggestedEmailBlock,
+    wakeHour,
+    sleepHour,
+  ]);
 
   const timeSlots = useMemo(() => {
     const slots: TimeSlot[] = [];

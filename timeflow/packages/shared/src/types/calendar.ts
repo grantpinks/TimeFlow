@@ -24,6 +24,8 @@ export interface CalendarEvent {
   // Completion tracking (Sprint 17)
   sourceType?: CalendarEventSource; // Identifies if this is a task, habit, or external event
   sourceId?: string; // Task ID or ScheduledHabit ID for completion tracking
+  /** Present for TimeFlow habit blocks — links to `Habit.id` for UI (why statement, identity). */
+  habitId?: string;
   isCompleted?: boolean; // Completion status for tasks and habits
 }
 
