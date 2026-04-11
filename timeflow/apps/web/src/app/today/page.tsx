@@ -24,6 +24,7 @@ import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWi
 import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
 import { WhatsNowContextPanel } from '@/components/today/WhatsNowContextPanel';
 import { ActionableEmailsWidget } from '@/components/today/ActionableEmailsWidget';
+import { HabitsDueSoonWidget } from '@/components/today/HabitsDueSoonWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -71,6 +72,7 @@ export default function TodayPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress();
   const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
+  const [completingHabitId, setCompletingHabitId] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
 
   const sensors = useSensors(
@@ -448,6 +450,7 @@ export default function TodayPage() {
   };
 
   const handleCompleteHabit = async (scheduledHabitId: string) => {
+    setCompletingHabitId(scheduledHabitId);
     try {
       const habitEvent = events.find(
         (e) => e.sourceId === scheduledHabitId || e.id === scheduledHabitId
@@ -466,6 +469,8 @@ export default function TodayPage() {
       }
     } catch (err) {
       console.error('Failed to complete habit:', err);
+    } finally {
+      setCompletingHabitId(null);
     }
   };
 
@@ -682,6 +687,14 @@ Please generate a schedule preview for today.`;
             events={events}
             tasks={tasks}
             className="mt-4"
+          />
+          <HabitsDueSoonWidget
+            events={events}
+            habits={habits}
+            identityFilter={identityFilter}
+            onCompleteHabit={handleCompleteHabit}
+            completingId={completingHabitId}
+            className="mt-3"
           />
           {/* Actionable Emails — emails needing attention */}
           {!focusMode && <ActionableEmailsWidget className="mt-3" />}
