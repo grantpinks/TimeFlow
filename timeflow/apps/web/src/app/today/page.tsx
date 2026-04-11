@@ -34,7 +34,9 @@ import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache'
 import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification, IdentityDayProgress, Habit } from '@timeflow/shared';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
+import { EndOfDayIdentityReportModal } from '@/components/identity/EndOfDayIdentityReportModal';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
+import { ChevronDown } from 'lucide-react';
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -72,8 +74,19 @@ export default function TodayPage() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress();
   const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
+  const [showEodIdentityReport, setShowEodIdentityReport] = useState(false);
   const [completingHabitId, setCompletingHabitId] = useState<string | null>(null);
+  /** Mobile: habit suggestions collapsible (default collapsed). Desktop (lg+): always expanded. */
+  const [mobileHabitsOpen, setMobileHabitsOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setMobileHabitsOpen(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -768,8 +781,8 @@ Please generate a schedule preview for today.`;
             </div>
           )}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* LEFT COLUMN: To Do & Habits (3 columns of 12) */}
-            <div className="lg:col-span-3 space-y-5">
+            {/* LEFT COLUMN: To Do & Habits — order-2 on mobile so timeline stays first (18.C2) */}
+            <div className="order-2 space-y-5 lg:order-none lg:col-span-3">
               <Panel>
                 <SectionHeader
                   title="To Do"
@@ -858,11 +871,24 @@ Please generate a schedule preview for today.`;
                 </div>
               </Panel>
 
-              {/* Habit Suggestions - Moved from right column */}
+              {/* Habit Suggestions — collapsible on small screens (18.C2) */}
               <Panel padding="sm">
-                <SectionHeader
-                  title="Habit Suggestions"
-                />
+                <button
+                  type="button"
+                  className="mb-3 flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-2.5 text-left lg:hidden"
+                  onClick={() => setMobileHabitsOpen((o) => !o)}
+                  aria-expanded={mobileHabitsOpen}
+                >
+                  <span className="text-sm font-semibold text-slate-900">Habit Suggestions</span>
+                  <ChevronDown
+                    className={`h-5 w-5 shrink-0 text-slate-600 transition-transform ${mobileHabitsOpen ? 'rotate-180' : ''}`}
+                    aria-hidden
+                  />
+                </button>
+                <div className="hidden lg:block">
+                  <SectionHeader title="Habit Suggestions" />
+                </div>
+                <div className={mobileHabitsOpen ? 'block' : 'hidden lg:block'}>
                 {habitSuggestionsLoading ? (
                   <div className="flex items-center justify-center py-6">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -920,16 +946,17 @@ Please generate a schedule preview for today.`;
                     ))}
                   </div>
                 )}
+                </div>
               </Panel>
             </div>
 
-            {/* MIDDLE COLUMN: Timeline (6 columns of 12) */}
-            <div className="lg:col-span-6">
+            {/* MIDDLE COLUMN: Timeline — order-1 on mobile (schedule first) */}
+            <div className="order-1 lg:order-none lg:col-span-6">
               <Panel>
                 <SectionHeader
                   title="Today's Schedule"
                 />
-                <div className="max-h-[650px] overflow-y-auto pr-2 -mr-2">
+                <div className="max-h-[min(70vh,560px)] overflow-y-auto pr-2 -mr-2 lg:max-h-[650px]">
                   <HourlyTimeline
                     tasks={tasksView}
                     events={eventsForTimeline}
@@ -947,8 +974,8 @@ Please generate a schedule preview for today.`;
               </Panel>
             </div>
 
-            {/* RIGHT COLUMN: Context, quick actions & stats (3 columns of 12) */}
-            <div className="lg:col-span-3 space-y-5">
+            {/* RIGHT COLUMN: Context + quick actions — order-3 on mobile */}
+            <div className="order-3 space-y-5 lg:order-none lg:col-span-3">
               <WhatsNowContextPanel
                 events={events}
                 tasks={tasks}
@@ -1005,6 +1032,14 @@ Please generate a schedule preview for today.`;
                     </svg>
                     Categories
                   </a>
+                  <button
+                    type="button"
+                    onClick={() => setShowEodIdentityReport(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-violet-200 bg-violet-50/80 px-4 py-3.5 text-sm font-semibold text-violet-900 transition hover:border-violet-300 hover:bg-violet-100"
+                  >
+                    <span aria-hidden>✨</span>
+                    Today&apos;s identity report
+                  </button>
                 </div>
 
                 <div className="mt-6 pt-5 border-t border-slate-100">
@@ -1392,6 +1427,17 @@ Please generate a schedule preview for today.`;
       <IdentityCelebrationModal
         identity={celebration}
         onDismiss={() => setCelebration(null)}
+      />
+
+      <EndOfDayIdentityReportModal
+        open={showEodIdentityReport}
+        onClose={() => setShowEodIdentityReport(false)}
+        identities={identityProgressFull?.identities ?? []}
+        dateLabel={now.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+        })}
       />
     </Layout>
   );
