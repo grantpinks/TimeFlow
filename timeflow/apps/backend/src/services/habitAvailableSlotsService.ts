@@ -175,8 +175,8 @@ export async function getAvailableSlots(
     const dayStart = currentDate.toISO()!;
     const dayEnd = currentDate.toISO()!;
 
-    // Get suggestions for this specific day
-    const daySuggestions = suggestHabitBlocks(
+    // First, try to find slots with the preferred time of day
+    let daySuggestions = suggestHabitBlocks(
       [habitInput],
       schedulerEvents,
       preferences,
@@ -184,16 +184,33 @@ export async function getAvailableSlots(
       dayEnd
     );
 
-    // Filter to only this habit's suggestions
-    const habitSuggestions = daySuggestions.filter(s => s.habitId === habitId);
+    let habitSuggestions = daySuggestions.filter(s => s.habitId === habitId);
+
+    // If no slots found with preferred time, try again WITHOUT the preference
+    // This allows finding slots at any time of day when preferred time is fully booked
+    if (habitSuggestions.length === 0 && habitInput.preferredTimeOfDay) {
+      const habitInputNoPreference = { ...habitInput, preferredTimeOfDay: undefined };
+      daySuggestions = suggestHabitBlocks(
+        [habitInputNoPreference],
+        schedulerEvents,
+        preferences,
+        dayStart,
+        dayEnd
+      );
+      habitSuggestions = daySuggestions.filter(s => s.habitId === habitId);
+    }
 
     // If we got at least one suggestion, try to find more slots by temporarily blocking it
     if (habitSuggestions.length > 0) {
       const slotsForDay: HabitSuggestionBlock[] = [];
       const blockedSlots: SchedulerEvent[] = [...schedulerEvents];
 
+      // Try with preference first, then without
+      const habitInputToUse = habitInput.preferredTimeOfDay ? habitInput : { ...habitInput, preferredTimeOfDay: undefined };
+
       for (let i = 0; i < maxSlotsPerDay; i++) {
-        const suggestions = suggestHabitBlocks(
+        // Try with preference first
+        let suggestions = suggestHabitBlocks(
           [habitInput],
           blockedSlots,
           preferences,
@@ -201,7 +218,20 @@ export async function getAvailableSlots(
           dayEnd
         );
 
-        const habitSlot = suggestions.find(s => s.habitId === habitId);
+        let habitSlot = suggestions.find(s => s.habitId === habitId);
+
+        // If no slot with preference, try without preference
+        if (!habitSlot && habitInput.preferredTimeOfDay) {
+          suggestions = suggestHabitBlocks(
+            [{ ...habitInput, preferredTimeOfDay: undefined }],
+            blockedSlots,
+            preferences,
+            dayStart,
+            dayEnd
+          );
+          habitSlot = suggestions.find(s => s.habitId === habitId);
+        }
+
         if (!habitSlot) break; // No more available slots
 
         slotsForDay.push(habitSlot);
