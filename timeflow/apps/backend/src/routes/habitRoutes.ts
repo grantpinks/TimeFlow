@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as habitController from '../controllers/habitController.js';
-import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler, reorderHabits, rescheduleHabitInstanceHandler } from '../controllers/habitController.js';
+import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler, reorderHabits, rescheduleHabitInstanceHandler, getAvailableSlotsHandler } from '../controllers/habitController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerHabitRoutes(server: FastifyInstance) {
@@ -71,6 +71,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/scheduling-context',
     { preHandler: requireAuth },
     getSchedulingContextHandler
+  );
+
+  // POST /api/habits/:habitId/available-slots - Get available time slots for a habit
+  server.post(
+    '/habits/:habitId/available-slots',
+    { preHandler: requireAuth },
+    getAvailableSlotsHandler
   );
 
   // POST /api/habits/bulk-schedule - Generate bulk schedule suggestions for a date range

@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { Habit } from '@timeflow/shared';
+import { TimeSlotPicker, type TimeSlot } from './TimeSlotPicker';
 
 interface HabitCardProps {
   habit: Habit;
@@ -17,23 +18,31 @@ interface HabitCardProps {
 }
 
 export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCardProps) {
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showDateOptions, setShowDateOptions] = useState(false);
+  const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'tomorrow' | 'this-week' | null>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [isScheduling, setIsScheduling] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = localStorage.getItem('timeflow_token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowTimePicker(false);
+        setShowDateOptions(false);
+        setSelectedDateOption(null);
       }
     };
 
-    if (showTimePicker) {
+    if (showDateOptions || selectedDateOption) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showTimePicker]);
+  }, [showDateOptions, selectedDateOption]);
 
   // Mock status data (will be replaced with real data from API)
   const status = {
@@ -52,30 +61,62 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
     return 'Custom';
   };
 
-  const handleQuickSchedule = (timeOption: 'morning' | 'afternoon' | 'evening' | 'now') => {
-    const now = new Date();
-    let scheduledTime = new Date();
+  const handleDateOptionClick = (option: 'today' | 'tomorrow' | 'this-week') => {
+    setSelectedDateOption(option);
+    setShowDateOptions(false);
+  };
 
-    switch (timeOption) {
-      case 'now':
-        scheduledTime = now;
-        break;
-      case 'morning':
-        scheduledTime.setHours(8, 0, 0, 0);
-        if (scheduledTime < now) scheduledTime.setDate(scheduledTime.getDate() + 1);
-        break;
-      case 'afternoon':
-        scheduledTime.setHours(14, 0, 0, 0);
-        if (scheduledTime < now) scheduledTime.setDate(scheduledTime.getDate() + 1);
-        break;
-      case 'evening':
-        scheduledTime.setHours(18, 0, 0, 0);
-        if (scheduledTime < now) scheduledTime.setDate(scheduledTime.getDate() + 1);
-        break;
+  const handleSlotSelect = async (slot: TimeSlot) => {
+    setIsScheduling(true);
+    try {
+      // Call the commit API to schedule this specific slot
+      const response = await fetch('/api/habits/commit-schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          acceptedBlocks: [
+            {
+              habitId: habit.id,
+              startDateTime: slot.startDateTime,
+              endDateTime: slot.endDateTime,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to schedule habit');
+      }
+
+      const data = await response.json();
+
+      // Check if scheduling was successful
+      if (data.progress && data.progress[0]?.status === 'created') {
+        // Success! Close the picker
+        setSelectedDateOption(null);
+
+        // Optional: Call the onQuickSchedule callback if provided
+        onQuickSchedule?.(habit.id, new Date(slot.startDateTime));
+
+        // Show success notification
+        alert(`${habit.title} scheduled for ${slot.displayTime} on ${slot.dayOfWeek}`);
+      } else {
+        throw new Error('Scheduling failed');
+      }
+    } catch (error) {
+      console.error('Failed to schedule habit:', error);
+      alert(error instanceof Error ? error.message : 'Failed to schedule habit. Please try again.');
+    } finally {
+      setIsScheduling(false);
     }
+  };
 
-    onQuickSchedule?.(habit.id, scheduledTime);
-    setShowTimePicker(false);
+  const handleCancelSlotPicker = () => {
+    setSelectedDateOption(null);
+    setShowDateOptions(false);
   };
 
   return (
@@ -218,52 +259,83 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
           {/* Quick schedule dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
-              onClick={() => setShowTimePicker(!showTimePicker)}
-              disabled={!habit.isActive}
+              onClick={() => setShowDateOptions(!showDateOptions)}
+              disabled={!habit.isActive || isScheduling}
               className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 ${
-                habit.isActive
+                habit.isActive && !isScheduling
                   ? 'bg-primary-600 text-white hover:bg-primary-700'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Quick Schedule
+              {isScheduling ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Scheduling...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Quick Schedule
+                </>
+              )}
             </button>
 
-            {/* Time picker dropdown */}
-            {showTimePicker && (
-              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden">
+            {/* Date option picker */}
+            {showDateOptions && !selectedDateOption && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border-2 border-primary-200 z-50 overflow-hidden">
+                <div className="bg-gradient-to-r from-primary-50 to-blue-50 px-4 py-2 border-b border-primary-200">
+                  <p className="text-xs font-semibold text-slate-700">When should we schedule this?</p>
+                </div>
                 <button
-                  onClick={() => handleQuickSchedule('now')}
+                  onClick={() => handleDateOptionClick('today')}
                   className="w-full px-4 py-3 text-left text-sm hover:bg-primary-50 transition-colors flex items-center justify-between group"
                 >
-                  <span className="font-medium text-slate-700 group-hover:text-primary-700">Right now</span>
-                  <span className="text-xs text-slate-500">Start immediately</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📅</span>
+                    <span className="font-medium text-slate-700 group-hover:text-primary-700">Today</span>
+                  </div>
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
                 <button
-                  onClick={() => handleQuickSchedule('morning')}
+                  onClick={() => handleDateOptionClick('tomorrow')}
                   className="w-full px-4 py-3 text-left text-sm hover:bg-primary-50 transition-colors flex items-center justify-between group border-t border-slate-100"
                 >
-                  <span className="font-medium text-slate-700 group-hover:text-primary-700">Tomorrow morning</span>
-                  <span className="text-xs text-slate-500">8:00 AM</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🌅</span>
+                    <span className="font-medium text-slate-700 group-hover:text-primary-700">Tomorrow</span>
+                  </div>
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
                 <button
-                  onClick={() => handleQuickSchedule('afternoon')}
+                  onClick={() => handleDateOptionClick('this-week')}
                   className="w-full px-4 py-3 text-left text-sm hover:bg-primary-50 transition-colors flex items-center justify-between group border-t border-slate-100"
                 >
-                  <span className="font-medium text-slate-700 group-hover:text-primary-700">Tomorrow afternoon</span>
-                  <span className="text-xs text-slate-500">2:00 PM</span>
-                </button>
-                <button
-                  onClick={() => handleQuickSchedule('evening')}
-                  className="w-full px-4 py-3 text-left text-sm hover:bg-primary-50 transition-colors flex items-center justify-between group border-t border-slate-100"
-                >
-                  <span className="font-medium text-slate-700 group-hover:text-primary-700">Tomorrow evening</span>
-                  <span className="text-xs text-slate-500">6:00 PM</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📆</span>
+                    <span className="font-medium text-slate-700 group-hover:text-primary-700">This Week</span>
+                  </div>
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </button>
               </div>
+            )}
+
+            {/* Time slot picker */}
+            {selectedDateOption && (
+              <TimeSlotPicker
+                habitId={habit.id}
+                habitTitle={habit.title}
+                dateOption={selectedDateOption}
+                onSelectSlot={handleSlotSelect}
+                onCancel={handleCancelSlotPicker}
+              />
             )}
           </div>
 

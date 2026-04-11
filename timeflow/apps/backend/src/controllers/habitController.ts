@@ -17,6 +17,7 @@ import { getSchedulingContext } from '../services/schedulingContextService.js';
 import { generateBulkSchedule } from '../services/bulkScheduleService.js';
 import { commitSchedule } from '../services/commitScheduleService.js';
 import { rescheduleHabitInstance } from '../services/habitRescheduleService.js';
+import { getAvailableSlots } from '../services/habitAvailableSlotsService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { HabitSkipReason, type DismissCoachSuggestionRequest, type ScheduledHabitInstance } from '@timeflow/shared';
 
@@ -822,6 +823,49 @@ export async function getHabitNotifications(
     request.log.error(error, 'Failed to get habit notifications');
     return reply.status(500).send({
       error: error instanceof Error ? error.message : 'Failed to get habit notifications',
+    });
+  }
+}
+
+/**
+ * POST /api/habits/:habitId/available-slots
+ * Find available time slots for a specific habit based on calendar analysis
+ */
+export async function getAvailableSlotsHandler(
+  request: FastifyRequest<{
+    Params: { habitId: string };
+    Body: {
+      date?: string;
+      dateRangeStart?: string;
+      dateRangeEnd?: string;
+      maxSlotsPerDay?: number;
+    };
+  }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const { habitId } = request.params;
+  const { date, dateRangeStart, dateRangeEnd, maxSlotsPerDay } = request.body;
+
+  try {
+    const result = await getAvailableSlots({
+      userId: user.id,
+      habitId,
+      date,
+      dateRangeStart,
+      dateRangeEnd,
+      maxSlotsPerDay,
+    });
+
+    return reply.send(result);
+  } catch (error) {
+    request.log.error(error, 'Failed to get available slots');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to get available slots',
     });
   }
 }

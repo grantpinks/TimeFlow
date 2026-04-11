@@ -29,7 +29,10 @@ interface SchedulePreviewProps {
 
 export function SchedulePreview({ suggestions, onAcceptAll, onCancel }: SchedulePreviewProps) {
   const [blocks, setBlocks] = useState<HabitBlock[]>(suggestions);
-  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  // Auto-expand all days by default so users can see everything
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(
+    new Set(suggestions.map((s) => s.date))
+  );
 
   // Group blocks by date
   const blocksByDate = blocks.reduce((acc, block) => {
@@ -99,6 +102,35 @@ export function SchedulePreview({ suggestions, onAcceptAll, onCancel }: Schedule
     return DateTime.fromISO(isoDate).toFormat('EEEE, MMM d');
   };
 
+  const getTimeOfDay = (isoString: string): 'morning' | 'afternoon' | 'evening' => {
+    const hour = DateTime.fromISO(isoString).hour;
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    return 'evening';
+  };
+
+  const getTimeOfDayIcon = (timeOfDay: 'morning' | 'afternoon' | 'evening') => {
+    switch (timeOfDay) {
+      case 'morning':
+        return '☀️';
+      case 'afternoon':
+        return '🌤️';
+      case 'evening':
+        return '🌙';
+    }
+  };
+
+  const getTimeOfDayColor = (timeOfDay: 'morning' | 'afternoon' | 'evening') => {
+    switch (timeOfDay) {
+      case 'morning':
+        return 'border-amber-400 bg-amber-50/50';
+      case 'afternoon':
+        return 'border-blue-400 bg-blue-50/50';
+      case 'evening':
+        return 'border-indigo-400 bg-indigo-50/50';
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Legend */}
@@ -166,81 +198,94 @@ export function SchedulePreview({ suggestions, onAcceptAll, onCancel }: Schedule
                           snapshot.isDraggingOver ? 'bg-blue-50' : ''
                         }`}
                       >
-                        {dayBlocks.map((block, index) => (
-                          <Draggable key={block.id} draggableId={block.id} index={index}>
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className={`group border-2 border-dashed border-blue-500 bg-blue-50/50 rounded-lg p-3 transition-all ${
-                                  snapshot.isDragging
-                                    ? 'shadow-lg rotate-2 scale-105'
-                                    : 'hover:shadow-md'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {/* Drag handle */}
-                                  <div className="flex flex-col gap-0.5">
-                                    <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                                    <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                                    <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                                    <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                                    <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                                    <div className="w-1 h-1 bg-blue-400 rounded-full" />
-                                  </div>
-
-                                  {/* Block content */}
-                                  <div className="flex-1">
-                                    <div className="flex items-center justify-between">
-                                      <h4 className="font-semibold text-slate-900">
-                                        {block.habitTitle}
-                                      </h4>
-                                      <button
-                                        onClick={() => removeBlock(block.id)}
-                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded"
-                                        title="Remove this block"
-                                      >
-                                        <svg
-                                          className="w-4 h-4 text-red-600"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M6 18L18 6M6 6l12 12"
-                                          />
-                                        </svg>
-                                      </button>
+                        {dayBlocks.map((block, index) => {
+                          const timeOfDay = getTimeOfDay(block.startDateTime);
+                          return (
+                            <Draggable key={block.id} draggableId={block.id} index={index}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  className={`group border-2 border-dashed ${getTimeOfDayColor(timeOfDay)} rounded-lg p-4 transition-all ${
+                                    snapshot.isDragging
+                                      ? 'shadow-lg rotate-2 scale-105'
+                                      : 'hover:shadow-md'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {/* Drag handle */}
+                                    <div className="flex flex-col gap-0.5 cursor-grab active:cursor-grabbing">
+                                      <div className="w-1 h-1 bg-slate-400 rounded-full" />
+                                      <div className="w-1 h-1 bg-slate-400 rounded-full" />
+                                      <div className="w-1 h-1 bg-slate-400 rounded-full" />
+                                      <div className="w-1 h-1 bg-slate-400 rounded-full" />
+                                      <div className="w-1 h-1 bg-slate-400 rounded-full" />
+                                      <div className="w-1 h-1 bg-slate-400 rounded-full" />
                                     </div>
-                                    <div className="flex items-center gap-2 mt-1 text-sm text-slate-600">
-                                      <svg
-                                        className="w-4 h-4"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                        />
-                                      </svg>
-                                      <span>
-                                        {formatTime(block.startDateTime)} -{' '}
-                                        {formatTime(block.endDateTime)}
-                                      </span>
+
+                                    {/* Time of day icon */}
+                                    <div className="text-2xl">
+                                      {getTimeOfDayIcon(timeOfDay)}
+                                    </div>
+
+                                    {/* Block content */}
+                                    <div className="flex-1">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <h4 className="font-bold text-slate-900 text-base">
+                                          {block.habitTitle}
+                                        </h4>
+                                        <button
+                                          onClick={() => removeBlock(block.id)}
+                                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-red-100 rounded"
+                                          title="Remove this block"
+                                        >
+                                          <svg
+                                            className="w-4 h-4 text-red-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M6 18L18 6M6 6l12 12"
+                                            />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 bg-white/80 px-2.5 py-1 rounded-md border border-slate-200">
+                                          <svg
+                                            className="w-4 h-4 text-primary-600"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth={2}
+                                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                            />
+                                          </svg>
+                                          <span className="font-semibold text-sm text-slate-900">
+                                            {formatTime(block.startDateTime)} -{' '}
+                                            {formatTime(block.endDateTime)}
+                                          </span>
+                                        </div>
+                                        <span className="text-xs text-slate-600 capitalize bg-white/60 px-2 py-1 rounded-md">
+                                          {timeOfDay}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
+                              )}
+                            </Draggable>
+                          );
+                        })}
                         {provided.placeholder}
                       </div>
                     )}
