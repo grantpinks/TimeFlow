@@ -172,8 +172,8 @@ export async function getAvailableSlots(
   // For each day in the range, find multiple slots
   let currentDate = start;
   while (currentDate <= end) {
-    const dayStart = currentDate.toISO()!;
-    const dayEnd = currentDate.toISO()!;
+    const dayStart = currentDate.startOf('day').toISO()!;
+    const dayEnd = currentDate.endOf('day').toISO()!;
 
     // First, try to find slots with the preferred time of day
     console.log(`[AvailableSlots] Searching for slots on ${dayStart}`);
