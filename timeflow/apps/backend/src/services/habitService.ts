@@ -81,10 +81,20 @@ export async function updateHabit(
     return null;
   }
 
-  return prisma.habit.update({
+  console.log('[HabitService] Updating habit', { habitId, input });
+
+  const updated = await prisma.habit.update({
     where: { id: habitId },
     data: input,
   });
+
+  console.log('[HabitService] Updated habit', {
+    id: updated.id,
+    title: updated.title,
+    preferredTimeOfDay: updated.preferredTimeOfDay
+  });
+
+  return updated;
 }
 
 /**

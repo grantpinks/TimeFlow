@@ -56,7 +56,8 @@
       "Bash($B/api/tasks)",
       "Bash(\"/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/web/src\" )",
       "Bash(\"/Users/grantpinkerton/Desktop/Time Flow/TimeFlow/timeflow/apps/backend/src\")",
-      "Skill(systematic-debugging)"
+      "Skill(systematic-debugging)",
+      "Bash(pnpm exec prisma:*)"
     ],
     "deny": [],
     "ask": []

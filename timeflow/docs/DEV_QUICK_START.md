@@ -22,8 +22,7 @@ cd ~/Desktop/Time<TAB>/TimeFlow/timeflow
 ### Start Backend + Web + ngrok
 
 ```bash
-cd ~/Desktop/Time\ Flow/TimeFlow/timeflow
-pnpm dev:full
+2pnpm dev:full
 ```
 
 ### Start Both Servers (Recommended)

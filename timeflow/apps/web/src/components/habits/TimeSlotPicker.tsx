@@ -215,18 +215,24 @@ export function TimeSlotPicker({
       <div className="max-h-96 overflow-y-auto p-4 space-y-4">
         {Object.entries(slotsByDay).map(([date, daySlots]) => {
           const firstSlot = daySlots[0];
-          const dateObj = new Date(date);
-          const isToday = dateObj.toDateString() === new Date().toDateString();
-          const isTomorrow = dateObj.toDateString() === new Date(Date.now() + 86400000).toDateString();
+          // Parse date correctly to avoid timezone issues
+          const today = new Date().toISOString().split('T')[0];
+          const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+          const isToday = date === today;
+          const isTomorrow = date === tomorrow;
 
           let dayLabel = firstSlot.dayOfWeek;
           if (isToday) dayLabel = 'Today';
           else if (isTomorrow) dayLabel = 'Tomorrow';
 
+          // Parse date for display (add 'T12:00:00' to avoid timezone shift)
+          const displayDate = new Date(date + 'T12:00:00');
+
           return (
             <div key={date}>
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 px-1">
-                📅 {dayLabel}, {dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                📅 {dayLabel}, {displayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </h4>
               <div className="space-y-2">
                 {daySlots.map((slot, index) => (

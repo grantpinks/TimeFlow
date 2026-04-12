@@ -6,6 +6,7 @@ dist
 coverage
 .env
 .env.*
+!.env.local.example
 pnpm-lock.yaml
 
 
