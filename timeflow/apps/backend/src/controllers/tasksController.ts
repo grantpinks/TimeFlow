@@ -184,6 +184,7 @@ interface UpdateTaskBody {
   durationMinutes?: number;
   priority?: number;
   categoryId?: string;
+  identityId?: string | null;
   dueDate?: string;
   status?: string;
   sourceEmailId?: string;
@@ -218,6 +219,7 @@ export async function updateTask(
     durationMinutes,
     priority,
     categoryId,
+    identityId,
     dueDate,
     status,
     sourceEmailId,
@@ -232,6 +234,7 @@ export async function updateTask(
     durationMinutes,
     priority,
     categoryId,
+    identityId,
     dueDate: dueDate ? new Date(dueDate) : undefined,
     status,
     sourceEmailId,

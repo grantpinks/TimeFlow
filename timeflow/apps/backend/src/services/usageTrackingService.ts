@@ -18,9 +18,25 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { env } from '../config/env.js';
 import { PLAN_CREDITS, type PlanTier } from './stripeService';
 
 const prisma = new PrismaClient();
+
+/**
+ * When true, all credit checks pass and `trackUsage` does not deduct or log usage.
+ * Defaults to **on in development** so local work does not require credits; production always enforces
+ * unless `FLOW_CREDITS_DISABLED` is set to 1/true/yes. Set `FLOW_CREDITS_DISABLED=false` to enforce in dev.
+ */
+export function isFlowCreditsEnforcementDisabled(): boolean {
+  const v = env.FLOW_CREDITS_DISABLED?.trim();
+  if (v) {
+    const s = v.toLowerCase();
+    if (s === '0' || s === 'false' || s === 'no') return false;
+    if (s === '1' || s === 'true' || s === 'yes') return true;
+  }
+  return env.NODE_ENV === 'development';
+}
 
 // Credit costs for different actions
 export const CREDIT_COSTS = {
@@ -59,6 +75,11 @@ export async function hasCreditsAvailable(
 
   if (!user) {
     return { allowed: false, reason: 'User not found' };
+  }
+
+  if (isFlowCreditsEnforcementDisabled()) {
+    const creditsRemaining = user.flowCreditsLimit - user.flowCreditsUsed;
+    return { allowed: true, creditsRemaining };
   }
 
   // Check if credits need to be reset (monthly cycle)
@@ -101,6 +122,20 @@ export async function trackUsage(
   action: UsageAction,
   metadata?: Record<string, any>
 ): Promise<{ success: boolean; creditsRemaining: number; error?: string }> {
+  if (isFlowCreditsEnforcementDisabled()) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { flowCreditsUsed: true, flowCreditsLimit: true },
+    });
+    if (!user) {
+      return { success: false, creditsRemaining: 0, error: 'User not found' };
+    }
+    return {
+      success: true,
+      creditsRemaining: user.flowCreditsLimit - user.flowCreditsUsed,
+    };
+  }
+
   // Check if user has enough credits
   const creditCheck = await hasCreditsAvailable(userId, action);
 
@@ -285,4 +320,5 @@ export default {
   getUsageHistory,
   withUsageTracking,
   CREDIT_COSTS,
+  isFlowCreditsEnforcementDisabled,
 };

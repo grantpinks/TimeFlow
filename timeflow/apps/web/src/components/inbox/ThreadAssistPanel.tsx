@@ -14,6 +14,18 @@ import { AlignLeft, ListTodo, Loader2 } from 'lucide-react';
 const CREDITS_SUMMARY = 5;
 const CREDITS_TASKS = 10;
 
+/** Hide credit hints when enforcement is off (matches backend: dev default, or NEXT_PUBLIC flag). */
+function flowCreditsUiDisabled(): boolean {
+  if (typeof process === 'undefined') return false;
+  const v = process.env.NEXT_PUBLIC_FLOW_CREDITS_DISABLED?.trim();
+  if (v) {
+    const s = v.toLowerCase();
+    if (s === '0' || s === 'false' || s === 'no') return false;
+    if (s === '1' || s === 'true' || s === 'yes') return true;
+  }
+  return process.env.NODE_ENV === 'development';
+}
+
 export interface ThreadAssistPanelProps {
   threadId: string;
   threadMessages: FullEmailMessage[];
@@ -166,11 +178,17 @@ export function ThreadAssistPanel({
             AI thread assist
           </h4>
           <p className="text-xs text-slate-500 mt-0.5" style={{ fontFamily: "'Manrope', sans-serif" }}>
-            Summarize or pull actionable tasks. Uses Flow Credits (see{' '}
-            <Link href="/settings" className="text-[#0BAF9A] hover:underline">
-              Settings
-            </Link>
-            ).
+            Summarize or pull actionable tasks from this thread.
+            {!flowCreditsUiDisabled() && (
+              <>
+                {' '}
+                Uses Flow Credits (see{' '}
+                <Link href="/settings" className="text-[#0BAF9A] hover:underline">
+                  Settings
+                </Link>
+                ).
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -184,7 +202,8 @@ export function ThreadAssistPanel({
           style={{ fontFamily: "'Manrope', sans-serif" }}
         >
           {summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlignLeft className="h-4 w-4" />}
-          Summarize ({CREDITS_SUMMARY} cr)
+          Summarize
+          {!flowCreditsUiDisabled() && ` (${CREDITS_SUMMARY} cr)`}
         </button>
         <button
           type="button"
@@ -194,7 +213,8 @@ export function ThreadAssistPanel({
           style={{ fontFamily: "'Manrope', sans-serif" }}
         >
           {tasksLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListTodo className="h-4 w-4" />}
-          Extract tasks ({CREDITS_TASKS} cr)
+          Extract tasks
+          {!flowCreditsUiDisabled() && ` (${CREDITS_TASKS} cr)`}
         </button>
       </div>
 

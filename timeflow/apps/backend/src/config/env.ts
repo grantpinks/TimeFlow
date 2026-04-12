@@ -33,6 +33,8 @@ const envSchema = z.object({
   GMAIL_WATCH_RENEWAL_ENABLED: z.string().optional(),
   GMAIL_WATCH_RENEWAL_WINDOW_MINUTES: z.string().optional(),
   GMAIL_WATCH_RENEWAL_INTERVAL_MINUTES: z.string().optional(),
+  /** When truthy (1/true/yes), Flow Credits are not enforced and usage is not deducted (dev / staging). */
+  FLOW_CREDITS_DISABLED: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
