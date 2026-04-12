@@ -20,7 +20,7 @@ import { EmailComposer } from '@/components/EmailComposer';
 import { Panel, SectionHeader } from '@/components/ui';
 import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today/PlanningRitualPanel';
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
-import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
+import { IdentityDashboardBanner } from '@/components/identity/IdentityDashboardBanner';
 import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
 import { WhatsNowContextPanel } from '@/components/today/WhatsNowContextPanel';
 import { ActionableEmailsWidget } from '@/components/today/ActionableEmailsWidget';
@@ -35,6 +35,9 @@ import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEm
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
 import { EndOfDayIdentityReportModal } from '@/components/identity/EndOfDayIdentityReportModal';
+import { EndOfDaySummaryModal } from '@/components/today/EndOfDaySummaryModal';
+import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelatedTasksModal';
+import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitRelatedTasks';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 import { ChevronDown } from 'lucide-react';
 
@@ -75,6 +78,8 @@ export default function TodayPage() {
   const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress();
   const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
   const [showEodIdentityReport, setShowEodIdentityReport] = useState(false);
+  const [showEodSummary, setShowEodSummary] = useState(false);
+  const [habitRelatedFollowUp, setHabitRelatedFollowUp] = useState<PostHabitFollowUp | null>(null);
   const [completingHabitId, setCompletingHabitId] = useState<string | null>(null);
   /** Mobile: habit suggestions collapsible (default collapsed). Desktop (lg+): always expanded. */
   const [mobileHabitsOpen, setMobileHabitsOpen] = useState(false);
@@ -468,17 +473,27 @@ export default function TodayPage() {
       const habitEvent = events.find(
         (e) => e.sourceId === scheduledHabitId || e.id === scheduledHabitId
       );
-      const linkedIdentityId = (habitEvent as (typeof habitEvent & { identityId?: string | null }))?.identityId ?? null;
+      const habitId = habitEvent?.habitId;
+      const habit = habitId ? habits.find((h) => h.id === habitId) : undefined;
+      const linkedIdentityId = habit?.identityId ?? null;
 
       await api.completeHabitInstance(scheduledHabitId);
       await fetchTodayEvents(); // Refresh to get updated completion status
 
-      if (linkedIdentityId) {
-        const freshProgress = await refreshProgress();
+      const freshProgress = await refreshProgress();
+
+      const followUp = buildPostHabitFollowUp({
+        habitId,
+        habits,
+        tasks,
+        identityProgress: freshProgress,
+      });
+
+      if (followUp && followUp.tasks.length > 0) {
+        setHabitRelatedFollowUp(followUp);
+      } else if (linkedIdentityId) {
         const updated = freshProgress?.identities.find((i) => i.identityId === linkedIdentityId);
         if (updated) setCelebration(updated);
-      } else {
-        await refreshProgress();
       }
     } catch (err) {
       console.error('Failed to complete habit:', err);
@@ -656,18 +671,15 @@ Please generate a schedule preview for today.`;
           <p className="text-sm text-slate-600">
             {unscheduledTasks.length} tasks to schedule • {scheduledTasks.length} on timeline
           </p>
-          {/* Identity Progress Pills */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <IdentityProgressWidget
+          {/* Identity Dashboard Banner */}
+          <div className="mt-4">
+            <IdentityDashboardBanner
+              identities={identityProgressFull?.identities ?? []}
+              loading={identityProgressFull === null}
               onFilterChange={setIdentityFilter}
               activeFilter={identityFilter}
-              className="flex-1 min-w-0"
-            />
-            <button
-              type="button"
-              role="switch"
-              aria-checked={focusMode}
-              onClick={() => {
+              focusMode={focusMode}
+              onFocusModeToggle={() => {
                 setFocusMode((f) => {
                   const next = !f;
                   if (typeof window !== 'undefined') {
@@ -676,25 +688,9 @@ Please generate a schedule preview for today.`;
                   return next;
                 });
               }}
-              className={`flex-shrink-0 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                focusMode
-                  ? 'border-primary-500 bg-primary-50 text-primary-800'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-              }`}
-              title="Hide low-priority tasks and narrow the timeline to the selected identity"
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${focusMode ? 'bg-primary-500' : 'bg-slate-300'}`}
-                aria-hidden
-              />
-              Focus
-            </button>
+              now={now}
+            />
           </div>
-          {focusMode && (
-            <p className="mt-2 text-xs text-slate-600">
-              Focus mode hides low-priority tasks. Select an identity above to filter by that goal.
-            </p>
-          )}
           {/* What's Now — current and upcoming */}
           <WhatsNowWidget
             events={events}
@@ -1039,6 +1035,14 @@ Please generate a schedule preview for today.`;
                   >
                     <span aria-hidden>✨</span>
                     Today&apos;s identity report
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowEodSummary(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-semibold text-slate-800 transition hover:border-primary-200 hover:bg-primary-50/60"
+                  >
+                    <span aria-hidden>📋</span>
+                    Day summary
                   </button>
                 </div>
 
@@ -1438,6 +1442,24 @@ Please generate a schedule preview for today.`;
           month: 'long',
           day: 'numeric',
         })}
+      />
+
+      <EndOfDaySummaryModal
+        open={showEodSummary}
+        onClose={() => setShowEodSummary(false)}
+        tasks={tasks}
+        eventsToday={events}
+        identityProgress={identityProgressFull}
+        dateLabel={now.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+        })}
+      />
+
+      <PostHabitRelatedTasksModal
+        followUp={habitRelatedFollowUp}
+        onClose={() => setHabitRelatedFollowUp(null)}
       />
     </Layout>
   );

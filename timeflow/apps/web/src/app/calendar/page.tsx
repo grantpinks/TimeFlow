@@ -19,13 +19,27 @@ import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import { filterExternalEvents } from './calendarEventFilters';
-import type { CalendarEvent, ScheduledHabitInstance, Task, HabitInsightsSummary, ScheduledBlock, ApplyScheduleBlock } from '@timeflow/shared';
+import type {
+  CalendarEvent,
+  ScheduledHabitInstance,
+  Task,
+  HabitInsightsSummary,
+  ScheduledBlock,
+  ApplyScheduleBlock,
+  Habit,
+} from '@timeflow/shared';
 import { track, hashHabitId } from '@/lib/analytics';
+import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelatedTasksModal';
+import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitRelatedTasks';
+import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
   const { tasks, loading: tasksLoading, refresh: refreshTasks } = useTasks();
   const { user } = useUser();
+  const { refresh: refreshIdentityProgress } = useIdentityProgress();
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habitRelatedFollowUp, setHabitRelatedFollowUp] = useState<PostHabitFollowUp | null>(null);
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
   const [scheduledHabitInstances, setScheduledHabitInstances] = useState<ScheduledHabitInstance[]>([]);
   const [habitInsights, setHabitInsights] = useState<HabitInsightsSummary | null>(null);
@@ -133,6 +147,17 @@ export default function CalendarPage() {
     fetchCategories();
     fetchExternalEvents();
     fetchHabitInsights();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setHabits([]);
+      return;
+    }
+    api
+      .getHabits()
+      .then(setHabits)
+      .catch(() => setHabits([]));
   }, [user?.id]);
 
   // Handle Escape key to cancel preview
@@ -617,10 +642,22 @@ export default function CalendarPage() {
         });
       }
 
-      setMessage({
-        type: 'success',
-        text: 'Habit completed!',
+      const freshProgress = await refreshIdentityProgress();
+      const followUp = buildPostHabitFollowUp({
+        habitId: habitInstance?.habitId,
+        habits,
+        tasks,
+        identityProgress: freshProgress,
       });
+
+      if (followUp && followUp.tasks.length > 0) {
+        setHabitRelatedFollowUp(followUp);
+      } else {
+        setMessage({
+          type: 'success',
+          text: 'Habit completed!',
+        });
+      }
     } catch (error) {
       setMessage({
         type: 'error',
@@ -1391,6 +1428,11 @@ export default function CalendarPage() {
       />
 
       <FloatingAssistantButton />
+
+      <PostHabitRelatedTasksModal
+        followUp={habitRelatedFollowUp}
+        onClose={() => setHabitRelatedFollowUp(null)}
+      />
     </Layout>
   );
 }
