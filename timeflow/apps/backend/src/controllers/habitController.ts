@@ -28,8 +28,9 @@ const createHabitSchema = z.object({
   daysOfWeek: z.array(z.string()).optional(),
   preferredTimeOfDay: z.enum(['morning', 'afternoon', 'evening']).optional(),
   durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
-  
-  // Identity-based habit tracking
+
+  // Identity-based habit tracking (identityId links to Identity model for progress)
+  identityId: z.string().cuid().optional(),
   identity: z.string().trim().max(50).optional(),
   longTermGoal: z.string().trim().max(200).optional(),
   whyStatement: z.string().trim().max(500).optional(),
@@ -43,8 +44,8 @@ const updateHabitSchema = z.object({
   preferredTimeOfDay: z.enum(['morning', 'afternoon', 'evening']).optional(),
   durationMinutes: z.coerce.number().int().positive().max(24 * 60).optional(),
   isActive: z.boolean().optional(),
-  
-  // Identity-based habit tracking
+
+  identityId: z.string().cuid().nullable().optional(),
   identity: z.string().trim().max(50).optional(),
   longTermGoal: z.string().trim().max(200).optional(),
   whyStatement: z.string().trim().max(500).optional(),
@@ -100,12 +101,28 @@ export async function createHabit(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const habit = await habitService.createHabit({
-    userId: user.id,
-    ...(parsed.data as any),
-  });
-
-  return reply.status(201).send(habit);
+  const d = parsed.data;
+  try {
+    const habit = await habitService.createHabit({
+      userId: user.id,
+      title: d.title,
+      description: d.description,
+      frequency: d.frequency,
+      daysOfWeek: d.daysOfWeek,
+      preferredTimeOfDay: d.preferredTimeOfDay,
+      durationMinutes: d.durationMinutes,
+      identityId: d.identityId,
+      identity: d.identity,
+      longTermGoal: d.longTermGoal,
+      whyStatement: d.whyStatement,
+    });
+    return reply.status(201).send(habit);
+  } catch (err) {
+    if (err instanceof Error && err.message === 'INVALID_IDENTITY_ID') {
+      return reply.status(400).send({ error: 'Invalid identity' });
+    }
+    throw err;
+  }
 }
 
 /**
@@ -128,13 +145,18 @@ export async function updateHabit(
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
-  const habit = await habitService.updateHabit(id, user.id, parsed.data);
-
-  if (!habit) {
-    return reply.status(404).send({ error: 'Habit not found' });
+  try {
+    const habit = await habitService.updateHabit(id, user.id, parsed.data);
+    if (!habit) {
+      return reply.status(404).send({ error: 'Habit not found' });
+    }
+    return habit;
+  } catch (err) {
+    if (err instanceof Error && err.message === 'INVALID_IDENTITY_ID') {
+      return reply.status(400).send({ error: 'Invalid identity' });
+    }
+    throw err;
   }
-
-  return habit;
 }
 
 /**

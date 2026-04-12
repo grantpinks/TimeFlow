@@ -69,7 +69,7 @@ export default function HabitsPage() {
   const [newDaysOfWeek, setNewDaysOfWeek] = useState<string[]>([]);
   const [newTimeOfDay, setNewTimeOfDay] = useState<TimeOfDay | ''>('');
   const [newDuration, setNewDuration] = useState(30);
-  const [newIdentity, setNewIdentity] = useState('');
+  const [newIdentityId, setNewIdentityId] = useState('');
   const [newLongTermGoal, setNewLongTermGoal] = useState('');
   const [newWhyStatement, setNewWhyStatement] = useState('');
 
@@ -81,7 +81,7 @@ export default function HabitsPage() {
   const [editTimeOfDay, setEditTimeOfDay] = useState<TimeOfDay | ''>('');
   const [editDuration, setEditDuration] = useState(30);
   const [editIsActive, setEditIsActive] = useState(true);
-  const [editIdentity, setEditIdentity] = useState('');
+  const [editIdentityId, setEditIdentityId] = useState('');
   const [editLongTermGoal, setEditLongTermGoal] = useState('');
   const [editWhyStatement, setEditWhyStatement] = useState('');
 
@@ -119,7 +119,7 @@ export default function HabitsPage() {
         daysOfWeek: newFrequency === 'weekly' ? newDaysOfWeek : undefined,
         preferredTimeOfDay: newTimeOfDay || undefined,
         durationMinutes: newDuration,
-        identity: newIdentity.trim() || undefined,
+        identityId: newIdentityId || undefined,
         longTermGoal: newLongTermGoal.trim() || undefined,
         whyStatement: newWhyStatement.trim() || undefined,
       });
@@ -131,7 +131,7 @@ export default function HabitsPage() {
       setNewDaysOfWeek([]);
       setNewTimeOfDay('');
       setNewDuration(30);
-      setNewIdentity('');
+      setNewIdentityId('');
       setNewLongTermGoal('');
       setNewWhyStatement('');
       setShowAdd(false);
@@ -150,7 +150,7 @@ export default function HabitsPage() {
     setEditTimeOfDay((habit.preferredTimeOfDay as TimeOfDay) || '');
     setEditDuration(habit.durationMinutes);
     setEditIsActive(habit.isActive);
-    setEditIdentity(habit.identity || '');
+    setEditIdentityId(habit.identityId || '');
     setEditLongTermGoal(habit.longTermGoal || '');
     setEditWhyStatement(habit.whyStatement || '');
     setEditError('');
@@ -171,7 +171,7 @@ export default function HabitsPage() {
         preferredTimeOfDay: editTimeOfDay || undefined,
         durationMinutes: editDuration,
         isActive: editIsActive,
-        identity: editIdentity.trim() || undefined,
+        identityId: editIdentityId === '' ? null : editIdentityId,
         longTermGoal: editLongTermGoal.trim() || undefined,
         whyStatement: editWhyStatement.trim() || undefined,
       });
@@ -453,17 +453,29 @@ export default function HabitsPage() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Identity <span className="text-xs text-slate-500">(optional)</span>
+                      Link to identity <span className="text-xs text-slate-500">(optional)</span>
                     </label>
-                    <input
-                      type="text"
-                      value={newIdentity}
-                      onChange={(e) => setNewIdentity(e.target.value)}
-                      placeholder="e.g., Writer, Athlete, Leader"
-                      maxLength={50}
-                      className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Who are you becoming through this habit?</p>
+                    <select
+                      value={newIdentityId}
+                      onChange={(e) => setNewIdentityId(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded text-sm bg-white"
+                    >
+                      <option value="">None — not tied to a tracked identity</option>
+                      {identities.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.icon} {i.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Completing scheduled instances counts toward this identity on Today.{' '}
+                      <Link
+                        href="/settings/identities"
+                        className="text-primary-600 underline-offset-2 hover:underline"
+                      >
+                        Manage identities
+                      </Link>
+                    </p>
                   </div>
 
                   <div>
@@ -688,16 +700,28 @@ export default function HabitsPage() {
                         <div className="space-y-3">
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Identity <span className="text-xs text-slate-500">(optional)</span>
+                              Link to identity <span className="text-xs text-slate-500">(optional)</span>
                             </label>
-                            <input
-                              type="text"
-                              value={editIdentity}
-                              onChange={(e) => setEditIdentity(e.target.value)}
-                              placeholder="e.g., Writer, Athlete, Leader"
-                              maxLength={50}
-                              className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
-                            />
+                            <select
+                              value={editIdentityId}
+                              onChange={(e) => setEditIdentityId(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-300 rounded text-sm bg-white"
+                            >
+                              <option value="">None — not tied to a tracked identity</option>
+                              {identities.map((i) => (
+                                <option key={i.id} value={i.id}>
+                                  {i.icon} {i.name}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-xs text-slate-500 mt-1">
+                              <Link
+                                href="/settings/identities"
+                                className="text-primary-600 underline-offset-2 hover:underline"
+                              >
+                                Manage identities
+                              </Link>
+                            </p>
                           </div>
 
                           <div>

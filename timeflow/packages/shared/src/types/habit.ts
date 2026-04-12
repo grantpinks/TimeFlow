@@ -19,7 +19,14 @@ export interface Habit {
   
   // Identity-based habit tracking
   identityId?: string | null; // FK to Identity model
-  identity?: string | null; // "Writer", "Athlete", "Leader" - who you're becoming (legacy string field)
+  identity?: string | null; // Legacy label; when identityId is set, usually synced from Identity.name
+  /** Populated when API includes the relation (name/icon for display) */
+  identityModel?: {
+    id: string;
+    name: string;
+    color: string;
+    icon: string;
+  } | null;
   longTermGoal?: string | null; // "Publish a book by 2027" - the bigger picture
   whyStatement?: string | null; // Personal motivation - why this matters
   
@@ -36,6 +43,7 @@ export interface CreateHabitRequest {
   durationMinutes?: number;
   
   // Identity-based fields
+  identityId?: string;
   identity?: string;
   longTermGoal?: string;
   whyStatement?: string;
@@ -50,7 +58,7 @@ export interface UpdateHabitRequest {
   durationMinutes?: number;
   isActive?: boolean;
   
-  // Identity-based fields
+  identityId?: string | null;
   identity?: string;
   longTermGoal?: string;
   whyStatement?: string;

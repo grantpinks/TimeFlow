@@ -192,16 +192,25 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
         )}
 
         {/* Identity-Based Tracking Display */}
-        {(habit.identity || habit.longTermGoal || habit.whyStatement) && (
+        {(habit.identityModel || habit.identity || habit.longTermGoal || habit.whyStatement) && (
           <div className="mb-4 p-3 bg-gradient-to-br from-primary-50/50 to-blue-50/50 border border-primary-100 rounded-lg space-y-2">
-            {habit.identity && (
+            {(habit.identityModel || habit.identity) && (
               <div className="flex items-start gap-2">
                 <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <div>
                   <p className="text-xs font-medium text-slate-600">Identity</p>
-                  <p className="text-sm font-semibold text-primary-800">{habit.identity}</p>
+                  <p className="text-sm font-semibold text-primary-800">
+                    {habit.identityModel ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span aria-hidden>{habit.identityModel.icon}</span>
+                        {habit.identityModel.name}
+                      </span>
+                    ) : (
+                      habit.identity
+                    )}
+                  </p>
                 </div>
               </div>
             )}
