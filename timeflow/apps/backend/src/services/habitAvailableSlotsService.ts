@@ -176,6 +176,10 @@ export async function getAvailableSlots(
     const dayEnd = currentDate.toISO()!;
 
     // First, try to find slots with the preferred time of day
+    console.log(`[AvailableSlots] Searching for slots on ${dayStart}`);
+    console.log(`[AvailableSlots] Habit:`, habit.title, `Preferred:`, habitInput.preferredTimeOfDay);
+    console.log(`[AvailableSlots] Existing events count:`, schedulerEvents.length);
+
     let daySuggestions = suggestHabitBlocks(
       [habitInput],
       schedulerEvents,
@@ -184,6 +188,7 @@ export async function getAvailableSlots(
       dayEnd
     );
 
+    console.log(`[AvailableSlots] Initial suggestions found:`, daySuggestions.length);
     let habitSuggestions = daySuggestions.filter(s => s.habitId === habitId);
 
     // If no slots found with preferred time, try again WITHOUT the preference

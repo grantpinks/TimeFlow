@@ -41,10 +41,12 @@ export function TimeSlotPicker({
   };
 
   useEffect(() => {
+    console.log('[TimeSlotPicker] Component mounted/updated', { habitId, dateOption });
     fetchAvailableSlots();
   }, [habitId, dateOption]);
 
   const fetchAvailableSlots = async () => {
+    console.log('[TimeSlotPicker] fetchAvailableSlots called', { habitId, dateOption });
     setLoading(true);
     setError(null);
 
@@ -71,19 +73,26 @@ export function TimeSlotPicker({
         dateRangeEnd = endOfWeek.toISOString().split('T')[0];
       }
 
-      const response = await fetch(`/api/habits/${habitId}/available-slots`, {
+      const url = `/api/habits/${habitId}/available-slots`;
+      const payload = {
+        date,
+        dateRangeStart,
+        dateRangeEnd,
+        maxSlotsPerDay: 5,
+      };
+
+      console.log('[TimeSlotPicker] Making API request', { url, payload });
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeaders(),
         },
-        body: JSON.stringify({
-          date,
-          dateRangeStart,
-          dateRangeEnd,
-          maxSlotsPerDay: 5,
-        }),
+        body: JSON.stringify(payload),
       });
+
+      console.log('[TimeSlotPicker] Response received', { status: response.status, ok: response.ok });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -91,12 +100,14 @@ export function TimeSlotPicker({
       }
 
       const data = await response.json();
+      console.log('[TimeSlotPicker] Data received', { slotsCount: data.slots?.length || 0, data });
       setSlots(data.slots || []);
     } catch (err) {
-      console.error('Failed to fetch available slots:', err);
+      console.error('[TimeSlotPicker] Error fetching slots:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch available slots');
     } finally {
       setLoading(false);
+      console.log('[TimeSlotPicker] Loading complete');
     }
   };
 
