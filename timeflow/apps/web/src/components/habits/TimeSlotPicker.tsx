@@ -34,6 +34,9 @@ export function TimeSlotPicker({
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [habitDuration, setHabitDuration] = useState<number>(30);
+  const [customTimeDate, setCustomTimeDate] = useState<string | null>(null);
+  const [customTimeValue, setCustomTimeValue] = useState<string>('');
 
   const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('timeflow_token');
@@ -102,6 +105,7 @@ export function TimeSlotPicker({
       const data = await response.json();
       console.log('[TimeSlotPicker] Data received', { slotsCount: data.slots?.length || 0, data });
       setSlots(data.slots || []);
+      setHabitDuration(data.habitDuration || 30);
     } catch (err) {
       console.error('[TimeSlotPicker] Error fetching slots:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch available slots');
@@ -131,6 +135,62 @@ export function TimeSlotPicker({
       case 'evening':
         return 'from-indigo-50 to-purple-50 border-indigo-200 hover:border-indigo-400';
     }
+  };
+
+  const handleCustomTimeClick = (date: string) => {
+    setCustomTimeDate(date);
+    setCustomTimeValue('');
+  };
+
+  const handleCustomTimeSubmit = (date: string) => {
+    if (!customTimeValue) return;
+
+    // Parse the time (format: "HH:mm")
+    const [hours, minutes] = customTimeValue.split(':').map(Number);
+
+    // Create start datetime in ISO format
+    const startDate = new Date(date + 'T00:00:00');
+    startDate.setHours(hours, minutes, 0, 0);
+    const startDateTime = startDate.toISOString();
+
+    // Calculate end datetime based on habit duration
+    const endDate = new Date(startDate);
+    endDate.setMinutes(endDate.getMinutes() + habitDuration);
+    const endDateTime = endDate.toISOString();
+
+    // Determine time of day
+    const timeOfDay: 'morning' | 'afternoon' | 'evening' =
+      hours < 12 ? 'morning' : hours < 17 ? 'afternoon' : 'evening';
+
+    // Format display time
+    const formatTime = (d: Date) => {
+      const h = d.getHours();
+      const m = d.getMinutes();
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayHour = h % 12 || 12;
+      const displayMin = m.toString().padStart(2, '0');
+      return `${displayHour}:${displayMin} ${ampm}`;
+    };
+
+    const displayTime = `${formatTime(startDate)} - ${formatTime(endDate)}`;
+
+    // Get day of week
+    const dayOfWeek = startDate.toLocaleDateString('en-US', { weekday: 'long' });
+
+    const customSlot: TimeSlot = {
+      startDateTime,
+      endDateTime,
+      dayOfWeek,
+      timeOfDay,
+      displayTime,
+    };
+
+    onSelectSlot(customSlot);
+  };
+
+  const cancelCustomTime = () => {
+    setCustomTimeDate(null);
+    setCustomTimeValue('');
   };
 
   // Group slots by day
@@ -259,6 +319,68 @@ export function TimeSlotPicker({
                     </div>
                   </button>
                 ))}
+
+                {/* Custom Time Option */}
+                {customTimeDate === date ? (
+                  <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-300 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-2xl">🕐</span>
+                      <h5 className="font-bold text-slate-900">Custom Time</h5>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Select start time:
+                        </label>
+                        <input
+                          type="time"
+                          value={customTimeValue}
+                          onChange={(e) => setCustomTimeValue(e.target.value)}
+                          className="w-full px-3 py-2 border-2 border-slate-300 rounded-lg focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">
+                          Duration: {habitDuration} minutes
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleCustomTimeSubmit(date)}
+                          disabled={!customTimeValue}
+                          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                            customTimeValue
+                              ? 'bg-primary-600 text-white hover:bg-primary-700'
+                              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          }`}
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={cancelCustomTime}
+                          className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-300 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleCustomTimeClick(date)}
+                    className="w-full p-3 rounded-lg border-2 border-dashed border-slate-300 bg-white hover:bg-slate-50 hover:border-primary-400 transition-all duration-200 text-left"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🕐</span>
+                      <div>
+                        <p className="font-semibold text-slate-700 text-sm">
+                          Custom Time
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Choose your own time
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                )}
               </div>
             </div>
           );
