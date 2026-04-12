@@ -6,6 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as calendarController from '../controllers/calendarController.js';
+import * as meetingActionItemsController from '../controllers/meetingActionItemsController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerCalendarRoutes(server: FastifyInstance) {
@@ -28,6 +29,12 @@ export async function registerCalendarRoutes(server: FastifyInstance) {
     '/calendar/create-habit-events',
     { preHandler: requireAuth },
     calendarController.createHabitEvents
+  );
+
+  server.post(
+    '/calendar/meetings/extract-action-items',
+    { preHandler: requireAuth },
+    meetingActionItemsController.extractMeetingActionItems
   );
 }
 

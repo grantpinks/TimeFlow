@@ -10,6 +10,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import type { Task, CategoryTrainingExampleSnapshot, HabitSkipReason } from '@timeflow/shared';
+import * as api from '@/lib/api';
+import { MeetingActionItemsModal } from '@/components/calendar/MeetingActionItemsModal';
 
 interface Category {
   id: string;
@@ -42,6 +44,7 @@ interface EventDetailPopoverProps {
     categoryName?: string;
     categoryId?: string;
     overflowed?: boolean;
+    attendees?: { email: string }[];
   } | null;
   position: { x: number; y: number };
   categories?: Category[];
@@ -60,6 +63,7 @@ interface EventDetailPopoverProps {
   onHabitSkip?: (scheduledHabitId: string, reasonCode: HabitSkipReason) => Promise<void>;
   onHabitReschedule?: (scheduledHabitId: string, start: Date, end: Date) => Promise<void>;
   onTaskReschedule?: (taskId: string, start: Date, end: Date) => Promise<void>;
+  onTasksRefresh?: () => void | Promise<void>;
 }
 
 export function EventDetailPopover({
@@ -78,6 +82,7 @@ export function EventDetailPopover({
   onHabitSkip,
   onHabitReschedule,
   onTaskReschedule,
+  onTasksRefresh,
 }: EventDetailPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -97,6 +102,13 @@ export function EventDetailPopover({
   const [rescheduleEnd, setRescheduleEnd] = useState('');
   const [taskRescheduleStart, setTaskRescheduleStart] = useState('');
   const [taskRescheduleEnd, setTaskRescheduleEnd] = useState('');
+
+  const [meetingActionModalOpen, setMeetingActionModalOpen] = useState(false);
+  const [meetingActionItems, setMeetingActionItems] = useState<
+    { title: string; identityId: string | null }[]
+  >([]);
+  const [extractingActions, setExtractingActions] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
 
   // Close on Escape key
   useEffect(() => {
@@ -341,6 +353,30 @@ export function EventDetailPopover({
 
   const priority = event.task ? getPriorityLabel(event.task.priority) : null;
 
+  const isExternalEvent = !event.isTask && !event.isHabit;
+  const isMeeting = isExternalEvent && (event.attendees?.length ?? 0) >= 2;
+  const meetingEnded = event.end.getTime() < Date.now();
+
+  const handleExtractMeetingActions = async () => {
+    setExtractingActions(true);
+    setExtractError(null);
+    try {
+      const res = await api.extractMeetingActionItems({
+        summary: event.title,
+        description: event.description,
+        start: event.start.toISOString(),
+        end: event.end.toISOString(),
+        attendees: event.attendees,
+      });
+      setMeetingActionItems(res.items);
+      setMeetingActionModalOpen(true);
+    } catch (e) {
+      setExtractError(e instanceof Error ? e.message : 'Failed to extract action items');
+    } finally {
+      setExtractingActions(false);
+    }
+  };
+
   const handleCategorySave = async () => {
     if (!onCategoryChange || !event) return;
     const newCategoryId = selectedCategoryId;
@@ -380,6 +416,7 @@ export function EventDetailPopover({
   };
 
   return (
+    <>
     <AnimatePresence>
       {isOpen && (
         <motion.div
@@ -408,7 +445,7 @@ export function EventDetailPopover({
                 </h3>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-xs text-slate-600">
-                    {event.isTask ? 'Task' : event.isHabit ? 'Habit' : 'Event'}
+                    {event.isTask ? 'Task' : event.isHabit ? 'Habit' : isMeeting ? 'Meeting' : 'Event'}
                   </span>
                   {event.categoryName && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
@@ -463,6 +500,27 @@ export function EventDetailPopover({
             {event.description && (
               <div className="pt-2 border-t border-slate-100">
                 <p className="text-xs text-slate-600 leading-relaxed">{event.description}</p>
+              </div>
+            )}
+
+            {/* AI follow-ups after meeting ends (18.33) */}
+            {isMeeting && meetingEnded && (
+              <div className="pt-2 border-t border-slate-100">
+                <p className="text-xs font-medium text-slate-800">After the meeting</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {event.attendees!.length} people on this invite · turn notes into tasks
+                </p>
+                <button
+                  type="button"
+                  onClick={handleExtractMeetingActions}
+                  disabled={extractingActions}
+                  className="mt-2 w-full rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:opacity-50"
+                >
+                  {extractingActions ? 'Working…' : 'Extract action items with AI'}
+                </button>
+                {extractError && (
+                  <p className="mt-1.5 text-xs text-red-600">{extractError}</p>
+                )}
               </div>
             )}
 
@@ -828,5 +886,13 @@ export function EventDetailPopover({
         </motion.div>
       )}
     </AnimatePresence>
+    <MeetingActionItemsModal
+      open={meetingActionModalOpen}
+      onClose={() => setMeetingActionModalOpen(false)}
+      meetingTitle={event.title}
+      initialRows={meetingActionItems}
+      onCreated={onTasksRefresh}
+    />
+    </>
   );
 }

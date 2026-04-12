@@ -53,6 +53,8 @@ interface CalendarViewProps {
     training?: { useForTraining?: boolean; example?: CategoryTrainingExampleSnapshot },
     eventSummary?: string
   ) => Promise<void>;
+  /** Called after tasks are created from meeting action-item flow (refresh list). */
+  onTasksRefresh?: () => void | Promise<void>;
 }
 
 export interface CalendarEventItem {
@@ -68,6 +70,7 @@ export interface CalendarEventItem {
   isHabit?: boolean;
   scheduledHabitId?: string;
   eventId?: string;
+  attendees?: { email: string }[];
   // Completion tracking
   sourceType?: 'task' | 'habit' | 'external';
   sourceId?: string; // task ID or scheduledHabit ID
@@ -95,6 +98,7 @@ export function CalendarView({
   onUnscheduleTask,
   onDeleteTask,
   onCategoryChange,
+  onTasksRefresh,
 }: CalendarViewProps) {
   const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(selectedDate || new Date());
@@ -130,6 +134,7 @@ export function CalendarView({
     categoryName?: string;
     categoryId?: string;
     overflowed?: boolean;
+    attendees?: { email: string }[];
   } | null>(null);
 
   const prefersReducedMotion = useReducedMotion() ?? false;
@@ -187,6 +192,7 @@ export function CalendarView({
         scheduledHabitId: isHabitEvent ? event.sourceId : undefined,
         eventId: event.id ?? undefined,
         description: event.description,
+        attendees: event.attendees,
         categoryColor: isHabitEvent
           ? habitColor
           : (categoryFromId?.color ?? categorization?.categoryColor),
@@ -332,6 +338,7 @@ export function CalendarView({
           ? (task?.category?.id ?? categoryFromId?.id)
           : (categorizationCategory?.id ?? categorization?.categoryId),
         overflowed: event.overflowed,
+        attendees: event.attendees,
       });
       setPopoverOpen(true);
 
@@ -414,6 +421,7 @@ export function CalendarView({
         onHabitSkip={onSkipHabit}
         onHabitReschedule={onHabitReschedule}
         onTaskReschedule={onRescheduleTask}
+        onTasksRefresh={onTasksRefresh}
       />
     </div>
   );

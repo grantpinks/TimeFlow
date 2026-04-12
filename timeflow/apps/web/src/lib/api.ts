@@ -605,6 +605,20 @@ export async function createHabitEvents(events: Array<{ habitId: string; title: 
   });
 }
 
+/** AI-suggested follow-ups from a calendar meeting (18.33). */
+export async function extractMeetingActionItems(body: {
+  summary: string;
+  description?: string;
+  start: string;
+  end: string;
+  attendees?: { email: string }[];
+}): Promise<{ items: { title: string; identityId: string | null }[] }> {
+  return request('/calendar/meetings/extract-action-items', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 // ===== Scheduling =====
 
 /**

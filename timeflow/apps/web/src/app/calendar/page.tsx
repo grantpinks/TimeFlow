@@ -1209,6 +1209,7 @@ export default function CalendarPage() {
                   onUnscheduleTask={handleUnscheduleTaskById}
                   onDeleteTask={handleDeleteTaskById}
                   onCategoryChange={handleCategoryChange}
+                  onTasksRefresh={refreshTasks}
                 />
               )}
             </div>

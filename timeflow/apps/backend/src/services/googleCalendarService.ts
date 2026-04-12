@@ -209,6 +209,10 @@ export async function getEvents(
       end: event.end!.dateTime!,
       description: event.description ?? undefined,
       transparency: (event.transparency as 'opaque' | 'transparent') ?? undefined,
+      attendees:
+        event.attendees
+          ?.filter((a): a is { email: string } => Boolean(a.email))
+          .map((a) => ({ email: a.email! })) ?? undefined,
     }));
 }
 
