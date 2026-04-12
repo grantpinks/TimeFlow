@@ -55,6 +55,10 @@ import type {
   EmailActionState,
   ScheduledHabitInstance,
   WritingVoiceProfile,
+  EmailThreadSummaryRequest,
+  EmailThreadSummaryResponse,
+  EmailThreadTasksRequest,
+  EmailThreadTasksResponse,
 } from '@timeflow/shared';
 import { getAiDebugEnabled } from './aiDebug';
 
@@ -78,6 +82,25 @@ export interface EmailCategoryConfig {
 }
 
 const API_BASE = '/api';
+
+/** Thrown for non-OK API responses; includes optional `code` (e.g. INSUFFICIENT_CREDITS). */
+export class ApiRequestError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  readonly creditsRemaining?: number;
+
+  constructor(
+    message: string,
+    init: { status: number; code?: string; creditsRemaining?: number }
+  ) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = init.status;
+    this.code = init.code;
+    this.creditsRemaining = init.creditsRemaining;
+    Object.setPrototypeOf(this, ApiRequestError.prototype);
+  }
+}
 
 /**
  * Get auth token from localStorage.
@@ -203,7 +226,14 @@ async function request<T>(
       (typeof error.message === 'string' && error.message) ||
       (typeof error.raw === 'string' && error.raw) ||
       `API error: ${response.status}`;
-    throw new Error(message);
+    const code = typeof error.code === 'string' ? error.code : undefined;
+    const creditsRemaining =
+      typeof error.creditsRemaining === 'number' ? error.creditsRemaining : undefined;
+    throw new ApiRequestError(message, {
+      status: response.status,
+      code,
+      creditsRemaining,
+    });
   }
 
   // Handle 204 No Content
@@ -1011,6 +1041,30 @@ export async function draftLabelExplanationAi(emailId: string): Promise<InboxLab
     method: 'POST',
     body: JSON.stringify({ emailId }),
   });
+}
+
+export async function postThreadSummary(
+  body: EmailThreadSummaryRequest
+): Promise<EmailThreadSummaryResponse & { creditsRemaining?: number }> {
+  return request<EmailThreadSummaryResponse & { creditsRemaining?: number }>(
+    '/email/ai/thread-summary',
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }
+  );
+}
+
+export async function postThreadTasks(
+  body: EmailThreadTasksRequest
+): Promise<EmailThreadTasksResponse & { creditsRemaining?: number }> {
+  return request<EmailThreadTasksResponse & { creditsRemaining?: number }>(
+    '/email/ai/thread-tasks',
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }
+  );
 }
 
 // ===== AI Email Draft (Sprint 16 Phase B+) =====

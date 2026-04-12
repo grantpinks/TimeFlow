@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { runThreadAssistTask } from '../services/assistantService.js';
+import * as usageTrackingService from '../services/usageTrackingService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 
 const threadMessageSchema = z.object({
@@ -48,9 +49,28 @@ export async function summarizeEmailThread(
   const { threadId, messages } = parsed.data;
   const contextPrompt = buildThreadContext(messages);
 
+  const creditCheck = await usageTrackingService.hasCreditsAvailable(user.id, 'EMAIL_THREAD_SUMMARY');
+  if (!creditCheck.allowed) {
+    return reply.status(402).send({
+      error: creditCheck.reason || 'Insufficient Flow Credits for thread summary',
+      code: 'INSUFFICIENT_CREDITS',
+      creditsRemaining: creditCheck.creditsRemaining ?? 0,
+    });
+  }
+
   try {
     const result = await runThreadAssistTask('email-summary', { contextPrompt });
-    return reply.send({ threadId, summary: (result as any).summary || '' });
+    const tracking = await usageTrackingService.trackUsage(user.id, 'EMAIL_THREAD_SUMMARY', {
+      threadId,
+    });
+    if (!tracking.success) {
+      request.log.warn({ userId: user.id, threadId }, 'Thread summary usage tracking failed');
+    }
+    return reply.send({
+      threadId,
+      summary: 'summary' in result ? result.summary : '',
+      creditsRemaining: tracking.success ? tracking.creditsRemaining : undefined,
+    });
   } catch (error) {
     console.error('[EmailThreadAssist] Summary failed', {
       userId: user.id,
@@ -78,9 +98,28 @@ export async function extractTasksFromThread(
   const { threadId, messages } = parsed.data;
   const contextPrompt = buildThreadContext(messages);
 
+  const creditCheck = await usageTrackingService.hasCreditsAvailable(user.id, 'EMAIL_THREAD_TASKS');
+  if (!creditCheck.allowed) {
+    return reply.status(402).send({
+      error: creditCheck.reason || 'Insufficient Flow Credits for task extraction',
+      code: 'INSUFFICIENT_CREDITS',
+      creditsRemaining: creditCheck.creditsRemaining ?? 0,
+    });
+  }
+
   try {
     const result = await runThreadAssistTask('email-tasks', { contextPrompt });
-    return reply.send({ threadId, tasks: (result as any).tasks || [] });
+    const tracking = await usageTrackingService.trackUsage(user.id, 'EMAIL_THREAD_TASKS', {
+      threadId,
+    });
+    if (!tracking.success) {
+      request.log.warn({ userId: user.id, threadId }, 'Thread tasks usage tracking failed');
+    }
+    return reply.send({
+      threadId,
+      tasks: 'tasks' in result ? result.tasks : [],
+      creditsRemaining: tracking.success ? tracking.creditsRemaining : undefined,
+    });
   } catch (error) {
     console.error('[EmailThreadAssist] Task extraction failed', {
       userId: user.id,

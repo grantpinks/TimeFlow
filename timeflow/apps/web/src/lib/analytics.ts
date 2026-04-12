@@ -51,6 +51,13 @@ export type AnalyticsEvent =
   | { name: 'email_opened'; properties: { category: string; importance: string } }
   | { name: 'email_converted_to_task'; properties: { email_id: string } }
   | { name: 'email_focus_mode_toggled'; properties: { enabled: boolean } }
+  | {
+      name: 'inbox.thread_assist';
+      properties: {
+        action: 'summary' | 'extract_tasks' | 'create_task' | 'create_tasks_all';
+        task_count?: number;
+      };
+    }
   // Calendar events
   | { name: 'calendar_view_changed'; properties: { view: 'day' | 'week' | 'month' } }
   | { name: 'calendar_event_clicked'; properties: { event_type: string } }

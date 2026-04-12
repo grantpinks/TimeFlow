@@ -25,6 +25,7 @@ import { filterInboxEmails } from '@/lib/inboxFilters';
 import { CategoryPills } from '@/components/inbox/CategoryPills';
 import { InboxViewEditor } from '@/components/inbox/InboxViewEditor';
 import { DraftPanel } from '@/components/inbox/DraftPanel';
+import { ThreadAssistPanel } from '@/components/inbox/ThreadAssistPanel';
 import { InboxAiDraftPanel, type InboxAiDraft } from '@/components/inbox/InboxAiDraftPanel';
 import { loadInboxViews, saveInboxViews } from '@/lib/inboxViewsStorage';
 import { track } from '@/lib/analytics';
@@ -1229,6 +1230,7 @@ export default function InboxPage() {
                   setDraftEmail(email);
                   setDraftPanelOpen(true);
                 }}
+                identities={identities}
               />
             )}
           </div>
@@ -1641,6 +1643,7 @@ interface ReadingPaneProps {
   onToggleExplanation: () => void;
   onOpenDraft: (email: FullEmailMessage) => void;
   onBack?: () => void;
+  identities: Identity[];
 }
 
 function ReadingPane({
@@ -1667,6 +1670,7 @@ function ReadingPane({
   onToggleExplanation,
   onOpenDraft,
   onBack,
+  identities,
 }: ReadingPaneProps) {
   const [selectedCategory, setSelectedCategory] = useState(categoryId || '');
   const [correctionScope, setCorrectionScope] = useState<'sender' | 'domain' | 'thread'>('sender');
@@ -1975,6 +1979,14 @@ function ReadingPane({
               </div>
             </div>
           </div>
+
+          <ThreadAssistPanel
+            threadId={email.threadId || email.id}
+            threadMessages={threadMessages}
+            listEmail={email}
+            identities={identities}
+            disabled={aiDraftLoading}
+          />
 
           {/* Why This Label */}
           <button

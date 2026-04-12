@@ -1473,10 +1473,47 @@ type ThreadAssistTask =
   | { summary: string }
   | { tasks: { title: string; details?: string | null }[] };
 
-function parseJsonResponse(raw: string): ThreadAssistTask {
+function parseThreadAssistJsonPayload(raw: string): unknown {
   const fencedMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   const payload = (fencedMatch ? fencedMatch[1] : raw).trim();
-  return JSON.parse(payload) as ThreadAssistTask;
+  return JSON.parse(payload) as unknown;
+}
+
+function normalizeThreadAssistResult(mode: 'email-summary' | 'email-tasks', data: unknown): ThreadAssistTask {
+  if (mode === 'email-summary') {
+    const summary =
+      data &&
+      typeof data === 'object' &&
+      data !== null &&
+      'summary' in data &&
+      typeof (data as { summary: unknown }).summary === 'string'
+        ? (data as { summary: string }).summary.trim()
+        : '';
+    return { summary };
+  }
+
+  const rawTasks =
+    data &&
+    typeof data === 'object' &&
+    data !== null &&
+    'tasks' in data &&
+    Array.isArray((data as { tasks: unknown }).tasks)
+      ? (data as { tasks: unknown[] }).tasks
+      : [];
+
+  const tasks = rawTasks
+    .filter((t): t is Record<string, unknown> => t !== null && typeof t === 'object')
+    .map((t) => {
+      const title = typeof t.title === 'string' ? t.title.trim() : '';
+      const detailsRaw = t.details;
+      const details =
+        typeof detailsRaw === 'string' && detailsRaw.trim() ? detailsRaw.trim() : null;
+      return { title, details };
+    })
+    .filter((t) => t.title.length > 0)
+    .slice(0, 5);
+
+  return { tasks };
 }
 
 export async function runThreadAssistTask(
@@ -1486,7 +1523,14 @@ export async function runThreadAssistTask(
   const systemPrompt = promptManager.getPrompt(mode);
   const llmResponse = await callLocalLLM(options.contextPrompt, undefined, systemPrompt, mode);
 
-  return parseJsonResponse(llmResponse);
+  let data: unknown;
+  try {
+    data = parseThreadAssistJsonPayload(llmResponse);
+  } catch {
+    throw new Error('AI returned an invalid response. Please try again.');
+  }
+
+  return normalizeThreadAssistResult(mode, data);
 }
 
 /**
@@ -2046,7 +2090,16 @@ async function callLocalLLM(
             ? 0.3
           : 0.7;
   const parsedMaxTokens = parseInt(env.LLM_MAX_TOKENS || '4000', 10);
-  const maxTokens = Number.isNaN(parsedMaxTokens) ? 4000 : parsedMaxTokens;
+  const defaultMax = Number.isNaN(parsedMaxTokens) ? 4000 : parsedMaxTokens;
+  /** Fixed caps for inbox thread assist (Sprint 16.B9) */
+  const THREAD_ASSIST_SUMMARY_MAX = 512;
+  const THREAD_ASSIST_TASKS_MAX = 1024;
+  const maxTokens =
+    mode === 'email-summary'
+      ? THREAD_ASSIST_SUMMARY_MAX
+      : mode === 'email-tasks'
+        ? THREAD_ASSIST_TASKS_MAX
+        : defaultMax;
 
   logDebug('[AssistantService][Debug] LLM request:', {
     mode,

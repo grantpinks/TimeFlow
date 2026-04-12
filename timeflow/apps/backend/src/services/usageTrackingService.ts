@@ -8,6 +8,8 @@
  * - Complex AI Command / Proactive Suggestion: 5 credits
  * - Third-Party Integration Sync: 1 credit
  * - AI Email Summarization/Drafting: 15 credits
+ * - Inbox thread summary (AI): 5 credits
+ * - Inbox thread task extraction (AI): 10 credits
  *
  * Monthly Allotments:
  * - FREE: 200 credits
@@ -28,6 +30,10 @@ export const CREDIT_COSTS = {
   SYNC: 1,
   EMAIL_DRAFT: 15,
   EMAIL_SUMMARY: 10,
+  /** Inbox “Summarize thread” (Sprint 16.B9) */
+  EMAIL_THREAD_SUMMARY: 5,
+  /** Inbox “Extract tasks” (Sprint 16.B9) */
+  EMAIL_THREAD_TASKS: 10,
 } as const;
 
 export type UsageAction = keyof typeof CREDIT_COSTS;
