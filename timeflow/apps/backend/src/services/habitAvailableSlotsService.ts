@@ -84,9 +84,17 @@ export async function getAvailableSlots(
     rangeEnd = dateRangeEnd!;
   }
 
-  // Validate date range
-  const start = DateTime.fromISO(rangeStart);
-  const end = DateTime.fromISO(rangeEnd);
+  // Get user FIRST to get timezone for date parsing
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const userTimeZone = user.timeZone || 'UTC';
+
+  // Parse dates with user's timezone to avoid timezone bugs
+  const start = DateTime.fromISO(rangeStart, { zone: userTimeZone });
+  const end = DateTime.fromISO(rangeEnd, { zone: userTimeZone });
   const daysDiff = end.diff(start, 'days').days;
 
   if (daysDiff > 14) {
@@ -97,12 +105,7 @@ export async function getAvailableSlots(
     throw new Error('End date must be after start date');
   }
 
-  // Get user and habit
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    throw new Error('User not found');
-  }
-
+  // Get habit
   const habit = await prisma.habit.findFirst({
     where: { id: habitId, userId },
   });
