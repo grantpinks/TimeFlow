@@ -7,7 +7,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { HabitCard } from './HabitCard';
-import type { Habit } from '@timeflow/shared';
+import type { Habit, Identity } from '@timeflow/shared';
 import { useState } from 'react';
 
 interface SortableHabitCardProps {
@@ -16,6 +16,8 @@ interface SortableHabitCardProps {
   onDelete: (id: string) => void;
   onQuickSchedule: (habitId: string, time: Date) => void;
   isDisabled?: boolean;
+  identities?: Identity[];
+  onIdentityLink?: (habitId: string, identityId: string | null) => Promise<void>;
 }
 
 export function SortableHabitCard({
@@ -24,6 +26,8 @@ export function SortableHabitCard({
   onDelete,
   onQuickSchedule,
   isDisabled = false,
+  identities,
+  onIdentityLink,
 }: SortableHabitCardProps) {
   const [isInteracting, setIsInteracting] = useState(false);
 
@@ -82,6 +86,8 @@ export function SortableHabitCard({
           onEdit={onEdit}
           onDelete={onDelete}
           onQuickSchedule={onQuickSchedule}
+          identities={identities}
+          onIdentityLink={onIdentityLink}
         />
       </div>
     </div>

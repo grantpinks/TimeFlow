@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import type { Identity } from '@timeflow/shared';
 export type { Identity };
 import { hexWithOpacity } from '@/lib/identityConstants';
@@ -12,6 +13,7 @@ interface IdentitySelectorProps {
   placeholder?: string;
   label?: string;
   showLinkPrompt?: boolean; // Show subtle "Link to identity?" styling
+  disabled?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export function IdentitySelector({
   placeholder = 'Link to identity (optional)',
   label,
   showLinkPrompt = false,
+  disabled = false,
 }: IdentitySelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -38,7 +41,22 @@ export function IdentitySelector({
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
-  if (identities.length === 0) return null;
+  if (identities.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-amber-200/90 bg-amber-50/70 px-3 py-3 text-left">
+        <p className="text-sm font-medium text-amber-950">No identities yet</p>
+        <p className="text-xs text-amber-900/85 mt-0.5 leading-relaxed">
+          Add identities in Settings, then link them here so habits count toward your Today progress.
+        </p>
+        <Link
+          href="/settings/identities"
+          className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-teal-700 hover:text-teal-800"
+        >
+          Create identities →
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="relative" ref={ref}>
@@ -49,10 +67,12 @@ export function IdentitySelector({
       {/* Trigger button */}
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        disabled={disabled}
+        onClick={() => !disabled && setOpen((o) => !o)}
         className={`
           w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-sm text-left
           transition-all duration-150
+          disabled:opacity-50 disabled:cursor-not-allowed
           ${selected
             ? 'bg-white border-slate-200 hover:border-slate-300'
             : showLinkPrompt

@@ -7,17 +7,30 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { Habit } from '@timeflow/shared';
+import Link from 'next/link';
+import type { Habit, Identity } from '@timeflow/shared';
 import { TimeSlotPicker, type TimeSlot } from './TimeSlotPicker';
+import { IdentitySelector } from '@/components/identity/IdentitySelector';
 
 interface HabitCardProps {
   habit: Habit;
   onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
   onQuickSchedule?: (habitId: string, time: Date) => void;
+  /** When set, shows inline identity picker on each card */
+  identities?: Identity[];
+  onIdentityLink?: (habitId: string, identityId: string | null) => Promise<void>;
 }
 
-export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCardProps) {
+export function HabitCard({
+  habit,
+  onEdit,
+  onDelete,
+  onQuickSchedule,
+  identities,
+  onIdentityLink,
+}: HabitCardProps) {
+  const [identitySaving, setIdentitySaving] = useState(false);
   const [showDateOptions, setShowDateOptions] = useState(false);
   const [selectedDateOption, setSelectedDateOption] = useState<'today' | 'tomorrow' | 'this-week' | null>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -119,6 +132,18 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
     setShowDateOptions(false);
   };
 
+  const handleIdentityChange = async (identityId: string | null) => {
+    if (!onIdentityLink) return;
+    setIdentitySaving(true);
+    try {
+      await onIdentityLink(habit.id, identityId);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Could not update identity link');
+    } finally {
+      setIdentitySaving(false);
+    }
+  };
+
   return (
     <div
       className={`relative rounded-xl border-2 transition-all duration-200 ${
@@ -186,15 +211,53 @@ export function HabitCard({ habit, onEdit, onDelete, onQuickSchedule }: HabitCar
           </div>
         </div>
 
+        {/* Inline identity — primary UX for linking habits to Today progress */}
+        {onIdentityLink && (
+          <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+              Identity
+            </p>
+            {!identities?.length ? (
+              <p className="text-sm text-slate-600">
+                <Link
+                  href="/settings/identities"
+                  className="font-semibold text-primary-600 underline-offset-2 hover:underline"
+                >
+                  Create an identity
+                </Link>{' '}
+                first, then pick it here so completions count on Today.
+              </p>
+            ) : (
+              <>
+                <IdentitySelector
+                  identities={identities}
+                  value={habit.identityId ?? null}
+                  onChange={(id) => {
+                    void handleIdentityChange(id);
+                  }}
+                  placeholder="Link this habit to an identity…"
+                  showLinkPrompt={!habit.identityId}
+                  disabled={identitySaving}
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  Completing scheduled instances updates that identity on the Today page.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Description */}
         {habit.description && (
           <p className="text-sm text-slate-600 mb-3">{habit.description}</p>
         )}
 
         {/* Identity-Based Tracking Display */}
-        {(habit.identityModel || habit.identity || habit.longTermGoal || habit.whyStatement) && (
+        {((!onIdentityLink && (habit.identityModel || habit.identity)) ||
+          habit.longTermGoal ||
+          habit.whyStatement) && (
           <div className="mb-4 p-3 bg-gradient-to-br from-primary-50/50 to-blue-50/50 border border-primary-100 rounded-lg space-y-2">
-            {(habit.identityModel || habit.identity) && (
+            {!onIdentityLink && (habit.identityModel || habit.identity) && (
               <div className="flex items-start gap-2">
                 <svg className="w-4 h-4 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />

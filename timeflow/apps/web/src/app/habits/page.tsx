@@ -34,6 +34,7 @@ import {
 import Link from 'next/link';
 import type { Habit, HabitFrequency, TimeOfDay, Identity } from '@timeflow/shared';
 import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
+import { IdentitySelector } from '@/components/identity/IdentitySelector';
 import * as api from '@/lib/api';
 
 export default function HabitsPage() {
@@ -181,6 +182,10 @@ export default function HabitsPage() {
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to update habit');
     }
+  };
+
+  const handleIdentityLink = async (habitId: string, identityId: string | null) => {
+    await updateHabit(habitId, { identityId: identityId === null ? null : identityId });
   };
 
   const handleDelete = async (id: string) => {
@@ -363,6 +368,31 @@ export default function HabitsPage() {
                 />
               </div>
 
+              <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/90 via-white to-primary-50/40 p-4 shadow-sm">
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="text-2xl leading-none" aria-hidden>
+                    🎯
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Who is this habit for?</p>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Link an identity so completions move your progress on{' '}
+                      <Link href="/today" className="font-medium text-primary-600 hover:underline">
+                        Today
+                      </Link>
+                      . Optional but recommended.
+                    </p>
+                  </div>
+                </div>
+                <IdentitySelector
+                  identities={identities}
+                  value={newIdentityId || null}
+                  onChange={(id) => setNewIdentityId(id ?? '')}
+                  placeholder="Pick an identity…"
+                  showLinkPrompt
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -436,48 +466,21 @@ export default function HabitsPage() {
                 />
               </div>
 
-              {/* Identity-Based Tracking Section */}
+              {/* Extra motivation (optional) */}
               <div className="border-t border-slate-200 pt-4 mt-2">
                 <div className="flex items-start gap-2 mb-3">
                   <svg className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <div>
-                    <h3 className="font-semibold text-slate-800 text-sm">Identity-Based Habit Tracking</h3>
+                    <h3 className="font-semibold text-slate-800 text-sm">Extra motivation (optional)</h3>
                     <p className="text-xs text-slate-600 mt-0.5">
-                      Link this habit to who you&apos;re becoming. Research shows connecting daily actions to your identity makes habits stick.
+                      Add context that helps on hard days — separate from the identity link above.
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Link to identity <span className="text-xs text-slate-500">(optional)</span>
-                    </label>
-                    <select
-                      value={newIdentityId}
-                      onChange={(e) => setNewIdentityId(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded text-sm bg-white"
-                    >
-                      <option value="">None — not tied to a tracked identity</option>
-                      {identities.map((i) => (
-                        <option key={i.id} value={i.id}>
-                          {i.icon} {i.name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Completing scheduled instances counts toward this identity on Today.{' '}
-                      <Link
-                        href="/settings/identities"
-                        className="text-primary-600 underline-offset-2 hover:underline"
-                      >
-                        Manage identities
-                      </Link>
-                    </p>
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Long-Term Goal <span className="text-xs text-slate-500">(optional)</span>
@@ -683,47 +686,28 @@ export default function HabitsPage() {
                         </div>
                       </div>
 
-                      {/* Identity-Based Tracking Section */}
+                      <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/90 via-white to-primary-50/40 p-4 shadow-sm">
+                        <p className="text-sm font-semibold text-slate-900 mb-1">Who is this habit for?</p>
+                        <p className="text-xs text-slate-600 mb-3">
+                          Link an identity for Today progress.{' '}
+                          <Link href="/settings/identities" className="font-medium text-primary-600 hover:underline">
+                            Manage identities
+                          </Link>
+                        </p>
+                        <IdentitySelector
+                          identities={identities}
+                          value={editIdentityId || null}
+                          onChange={(id) => setEditIdentityId(id ?? '')}
+                          placeholder="Pick an identity…"
+                          showLinkPrompt={!editIdentityId}
+                        />
+                      </div>
+
+                      {/* Extra motivation */}
                       <div className="border-t border-slate-200 pt-4 mt-2">
-                        <div className="flex items-start gap-2 mb-3">
-                          <svg className="w-5 h-5 text-primary-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          <div>
-                            <h3 className="font-semibold text-slate-800 text-sm">Identity-Based Habit Tracking</h3>
-                            <p className="text-xs text-slate-600 mt-0.5">
-                              Link this habit to who you&apos;re becoming for stronger motivation.
-                            </p>
-                          </div>
-                        </div>
+                        <h3 className="font-semibold text-slate-800 text-sm mb-3">Extra motivation (optional)</h3>
 
                         <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Link to identity <span className="text-xs text-slate-500">(optional)</span>
-                            </label>
-                            <select
-                              value={editIdentityId}
-                              onChange={(e) => setEditIdentityId(e.target.value)}
-                              className="w-full px-3 py-2 border border-slate-300 rounded text-sm bg-white"
-                            >
-                              <option value="">None — not tied to a tracked identity</option>
-                              {identities.map((i) => (
-                                <option key={i.id} value={i.id}>
-                                  {i.icon} {i.name}
-                                </option>
-                              ))}
-                            </select>
-                            <p className="text-xs text-slate-500 mt-1">
-                              <Link
-                                href="/settings/identities"
-                                className="text-primary-600 underline-offset-2 hover:underline"
-                              >
-                                Manage identities
-                              </Link>
-                            </p>
-                          </div>
-
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">
                               Long-Term Goal <span className="text-xs text-slate-500">(optional)</span>
@@ -787,6 +771,8 @@ export default function HabitsPage() {
                         alert(`Scheduling ${habit.title} for ${time.toLocaleString()}`);
                       }}
                       isDisabled={isReordering}
+                      identities={identities}
+                      onIdentityLink={handleIdentityLink}
                     />
                   )
                 )}
