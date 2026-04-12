@@ -467,7 +467,10 @@ export default function TodayPage() {
     }
   };
 
-  const handleCompleteHabit = async (scheduledHabitId: string) => {
+  const handleCompleteHabit = async (
+    scheduledHabitId: string,
+    actualDurationMinutes?: number
+  ) => {
     setCompletingHabitId(scheduledHabitId);
     try {
       const habitEvent = events.find(
@@ -477,7 +480,7 @@ export default function TodayPage() {
       const habit = habitId ? habits.find((h) => h.id === habitId) : undefined;
       const linkedIdentityId = habit?.identityId ?? null;
 
-      await api.completeHabitInstance(scheduledHabitId);
+      await api.completeHabitInstance(scheduledHabitId, actualDurationMinutes);
       await fetchTodayEvents(); // Refresh to get updated completion status
 
       const freshProgress = await refreshProgress();

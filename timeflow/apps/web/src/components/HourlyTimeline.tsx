@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useMemo, memo } from 'react';
+import { useMemo, memo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useDroppable } from '@dnd-kit/core';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -61,7 +61,7 @@ interface HourlyTimelineProps {
   wakeTime?: string;
   sleepTime?: string;
   onCompleteTask?: (taskId: string) => void;
-  onCompleteHabit?: (scheduledHabitId: string) => void;
+  onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => void;
   enableDropTargets?: boolean;
   /** Count of actionable inbox emails (needs reply / response / unread). */
   actionableEmailCount?: number;
@@ -316,7 +316,7 @@ type TimelineSlotProps = {
   slot: TimeSlot;
   isCurrent: boolean;
   onCompleteTask?: (taskId: string) => void;
-  onCompleteHabit?: (scheduledHabitId: string) => void;
+  onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => void;
   onDismissEmailBlock?: () => void;
   enableDropTargets: boolean;
   formatHour: (hour: number) => string;
@@ -400,11 +400,19 @@ const TimelineCard = memo(function TimelineCard({
 }: {
   item: TimelineItem;
   onCompleteTask?: (taskId: string) => void;
-  onCompleteHabit?: (scheduledHabitId: string) => void;
+  onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => void;
   onDismissEmailBlock?: () => void;
   formatTime: (date: Date) => string;
 }) {
   const prefersReducedMotion = useReducedMotion();
+  const mins = durationMinutes(item.start, item.end);
+  const [habitActualMins, setHabitActualMins] = useState(() => String(mins));
+
+  useEffect(() => {
+    if (item.type === 'habit') {
+      setHabitActualMins(String(mins));
+    }
+  }, [item.type, item.sourceId, item.id, mins]);
 
   const stripeColor = (() => {
     if (item.type === 'email') return BLUE_EMAIL;
@@ -430,11 +438,15 @@ const TimelineCard = memo(function TimelineCard({
     if (item.type === 'task' && onCompleteTask) {
       onCompleteTask(item.id);
     } else if (item.type === 'habit' && item.sourceId && onCompleteHabit) {
-      onCompleteHabit(item.sourceId);
+      const raw = habitActualMins.trim();
+      let actual: number | undefined;
+      if (raw) {
+        const n = parseInt(raw, 10);
+        if (!Number.isNaN(n) && n >= 1 && n <= 24 * 60) actual = n;
+      }
+      onCompleteHabit(item.sourceId, actual);
     }
   };
-
-  const mins = durationMinutes(item.start, item.end);
 
   const surfaceClass =
     item.type === 'email'
@@ -535,19 +547,37 @@ const TimelineCard = memo(function TimelineCard({
           </Link>
         )}
         {canComplete && (
-          <motion.button
-            type="button"
-            onClick={handleComplete}
-            className="text-slate-400 hover:text-green-600 transition-colors flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded p-1"
-            title="Mark complete"
-            aria-label={`Mark ${item.title} as complete`}
-            whileTap={prefersReducedMotion ? undefined : { scale: 0.9 }}
-            whileHover={prefersReducedMotion ? undefined : { scale: 1.05 }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </motion.button>
+          <div className="flex flex-col items-end gap-1">
+            {item.type === 'habit' && (
+              <label className="flex items-center gap-1 text-[10px] text-slate-500 whitespace-nowrap">
+                <span className="hidden sm:inline">Actual min</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={24 * 60}
+                  inputMode="numeric"
+                  value={habitActualMins}
+                  onChange={(e) => setHabitActualMins(e.target.value)}
+                  className="w-11 rounded border border-slate-200 px-1 py-0.5 text-[11px] text-slate-800"
+                  title="Minutes spent (optional; empty = planned)"
+                  aria-label="Actual minutes spent"
+                />
+              </label>
+            )}
+            <motion.button
+              type="button"
+              onClick={handleComplete}
+              className="text-slate-400 hover:text-green-600 transition-colors flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 rounded p-1"
+              title="Mark complete"
+              aria-label={`Mark ${item.title} as complete`}
+              whileTap={prefersReducedMotion ? undefined : { scale: 0.9 }}
+              whileHover={prefersReducedMotion ? undefined : { scale: 1.05 }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </motion.button>
+          </div>
         )}
       </div>
     </div>

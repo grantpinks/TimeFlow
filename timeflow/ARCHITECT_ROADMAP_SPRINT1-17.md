@@ -956,7 +956,7 @@
 
 #### Goals
 - [x] 🟡 Users can **mark habit blocks complete** (calendar-first) and see streaks/adherence update reliably.
-- [ ] Users can record **actual time spent** on a habit block when completing it, so analytics/recommendations reflect reality (not just planned duration).
+- [x] Users can record **actual time spent** on a habit block when completing it, so analytics/recommendations reflect reality (not just planned duration).
 - [x] ✅ Habits page becomes an **Insights hub**: consistency charts + best windows + 1–3 explainable recommendations.
 - [x] 🟡 Habits feels like a **Coach**: a “Next Action” card drives daily behavior (not just charts).
 - [x] 🟡 Insights are **actionable**: every insight includes a 1-click “Do this now” action (**A/B/D**: schedule rescue block, adjust habit window, snooze/skip with reason).
@@ -986,7 +986,7 @@
 
 #### Acceptance Criteria
 - [ ] Users can complete/uncomplete/skip habit blocks reliably; streaks/adherence update correctly.
-- [ ] Users can enter (and later edit) **actual time spent** for a habit instance; analytics uses actual durations for minutes/week and insights.
+- [x] Users can enter (and later edit) **actual time spent** for a habit instance; analytics uses actual durations for minutes/week and insights.
 - [ ] Habit priority ranking exists and is used by Coach/Next Actions (and any reminder selection logic).
 - [ ] Non-adherence (“missed”) is detected with a documented grace window; notifications are opt-in and configurable.
 - [ ] Insights and recommendations include “why” explanations and are robust to timezone/DST edge cases.

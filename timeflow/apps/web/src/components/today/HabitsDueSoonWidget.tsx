@@ -95,12 +95,22 @@ function formatCountdown(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/** Empty or invalid → let backend use planned/default; otherwise 1–1440. */
+function parseActualMinutes(raw: string): number | undefined {
+  const t = raw.trim();
+  if (!t) return undefined;
+  const n = parseInt(t, 10);
+  if (Number.isNaN(n) || n < 1 || n > 24 * 60) return undefined;
+  return n;
+}
+
 export interface HabitsDueSoonWidgetProps {
   events: CalendarEvent[];
   habits: Habit[];
   identityFilter: string | null;
   className?: string;
-  onCompleteHabit?: (scheduledHabitId: string) => void;
+  /** Pass optional actual minutes spent (Sprint 17); omit or undefined to use server default / planned. */
+  onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => void;
   completingId?: string | null;
 }
 
@@ -113,6 +123,7 @@ export function HabitsDueSoonWidget({
   completingId,
 }: HabitsDueSoonWidgetProps) {
   const [now, setNow] = useState(() => new Date());
+  const [actualMinutesInput, setActualMinutesInput] = useState('');
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -123,6 +134,17 @@ export function HabitsDueSoonWidget({
     () => pickNextHabitDueSoon(events, habits, identityFilter, now),
     [events, habits, identityFilter, now]
   );
+
+  useEffect(() => {
+    if (!picked) return;
+    const pm = Math.max(
+      1,
+      Math.round(
+        (new Date(picked.event.end).getTime() - new Date(picked.event.start).getTime()) / 60000
+      )
+    );
+    setActualMinutesInput(String(pm));
+  }, [picked?.event.sourceId, picked?.event.start, picked?.event.end]);
 
   if (!picked) return null;
 
@@ -158,16 +180,34 @@ export function HabitsDueSoonWidget({
           <p className="mt-0.5 text-xs text-slate-600">
             {picked.kind === 'in-progress' ? 'In progress — wrap up or mark done.' : 'Starting within the hour.'}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
             {onCompleteHabit && (
-              <button
-                type="button"
-                onClick={() => onCompleteHabit(scheduledHabitId)}
-                disabled={!!completingId}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50"
-              >
-                {completingId === scheduledHabitId ? '…' : 'Mark done'}
-              </button>
+              <>
+                <label className="flex flex-col gap-0.5 text-xs text-slate-600 min-w-[8rem]">
+                  <span className="font-medium text-slate-700">Minutes spent</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24 * 60}
+                    inputMode="numeric"
+                    value={actualMinutesInput}
+                    onChange={(e) => setActualMinutesInput(e.target.value)}
+                    className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 shadow-sm"
+                    aria-label="Actual minutes spent on this habit"
+                  />
+                  <span className="text-[10px] text-slate-500">Clear to use planned block length.</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onCompleteHabit(scheduledHabitId, parseActualMinutes(actualMinutesInput))
+                  }
+                  disabled={!!completingId}
+                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50 self-start sm:self-auto"
+                >
+                  {completingId === scheduledHabitId ? '…' : 'Mark done'}
+                </button>
+              </>
             )}
             <Link
               href="/calendar"
