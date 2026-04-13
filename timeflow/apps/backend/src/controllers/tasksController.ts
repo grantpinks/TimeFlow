@@ -29,31 +29,36 @@ function formatZodError(error: z.ZodError): string {
 /**
  * Flexible date validator that accepts:
  * - ISO datetime strings (2025-12-04T17:00:00Z)
+ * - Date + time without seconds from DueDatePicker / datetime-local (2025-12-04T17:00)
  * - Plain date strings (2025-12-04)
- * Converts plain dates to ISO datetime at start of day.
+ * Converts plain dates to ISO datetime at start of day UTC.
  */
 const flexibleDateString = z
   .string()
   .refine(
     (val) => {
-      // Check if it's a valid ISO datetime
+      // Full ISO datetime (includes seconds)
       if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
-        return !isNaN(Date.parse(val));
+        return !Number.isNaN(Date.parse(val));
       }
-      // Check if it's a valid YYYY-MM-DD date
+      // YYYY-MM-DDTHH:mm — browsers + DueDatePicker omit seconds
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val)) {
+        return !Number.isNaN(Date.parse(`${val}:00`));
+      }
       if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-        return !isNaN(Date.parse(val));
+        return !Number.isNaN(Date.parse(val));
       }
       return false;
     },
     { message: 'Invalid date format. Use YYYY-MM-DD or ISO datetime' }
   )
   .transform((val) => {
-    // If it's already ISO datetime, return as-is
     if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
       return val;
     }
-    // Convert YYYY-MM-DD to ISO datetime at start of day
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val)) {
+      return `${val}:00`;
+    }
     return `${val}T00:00:00.000Z`;
   });
 

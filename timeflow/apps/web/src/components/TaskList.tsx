@@ -95,6 +95,7 @@ export function TaskList({
     categoryId: string;
   } | null>(null);
   const [editingSubmitting, setEditingSubmitting] = useState(false);
+  const [editingError, setEditingError] = useState<string | null>(null);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
   const [customCategoryTarget, setCustomCategoryTarget] = useState<'create' | 'edit' | null>(null);
@@ -152,15 +153,23 @@ export function TaskList({
     setEditingTask(null);
     setEditingState(null);
     setEditingSubmitting(false);
+    setEditingError(null);
   };
 
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingTask || !editingState?.title.trim()) return;
+    console.log('[TaskList] handleUpdateSubmit called', { editingTask, editingState });
+
+    if (!editingTask || !editingState?.title.trim()) {
+      console.log('[TaskList] Early return - missing task or title');
+      return;
+    }
+
     setEditingSubmitting(true);
+    setEditingError(null);
 
     try {
-      await onUpdateTask(editingTask.id, {
+      const updateData = {
         title: editingState.title.trim(),
         description: editingState.description.trim() || undefined,
         durationMinutes: editingState.durationMinutes,
@@ -168,10 +177,17 @@ export function TaskList({
         dueDate: editingState.dueDate || undefined,
         categoryId: editingState.categoryId || undefined,
         identityId: editingIdentityId,
-      });
+      };
+      console.log('[TaskList] Calling onUpdateTask with:', updateData);
+
+      await onUpdateTask(editingTask.id, updateData);
+      console.log('[TaskList] onUpdateTask completed successfully');
       closeEditModal();
     } catch (err) {
-      console.error('Failed to update task:', err);
+      console.error('[TaskList] Failed to update task:', err);
+      setEditingError(
+        err instanceof Error ? err.message : 'Could not save changes. Please try again.'
+      );
       setEditingSubmitting(false);
     }
   };
@@ -528,6 +544,14 @@ export function TaskList({
               )}
 
               <form onSubmit={handleUpdateSubmit} className="px-5 py-4 space-y-4">
+                {editingError && (
+                  <div
+                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                    role="alert"
+                  >
+                    {editingError}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label required>Title</Label>
                   <Input
