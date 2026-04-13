@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import type { FullEmailMessage, WritingVoiceProfile } from '@timeflow/shared';
 import * as api from '@/lib/api';
+import { LoadingSpinner } from '@/components/ui';
 import { buildReplyAllRecipients, shouldShowReplyAll } from './draftPanelUtils';
 
 interface DraftPanelProps {
@@ -581,7 +582,7 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
 
               {panelState === 'generating' && (
                 <div className="flex flex-col items-center justify-center h-64 gap-4">
-                  <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+                  <LoadingSpinner size="lg" label="Generating draft" />
                   <p className="text-sm text-slate-600">Generating draft...</p>
                   <button
                     onClick={handleClose}
@@ -813,7 +814,7 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
                     >
                       {panelState === 'generating' ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <LoadingSpinner size="sm" variant="inverse" label="Generating" />
                           Generating...
                         </>
                       ) : (
@@ -852,7 +853,7 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
                       >
                         {previewing ? (
                           <>
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <LoadingSpinner size="sm" variant="inverse" label="Loading preview" />
                             Loading...
                           </>
                         ) : (
@@ -887,7 +888,7 @@ export function DraftPanel({ isOpen, onClose, email, onSuccess, userEmails }: Dr
                       >
                         {panelState === 'sending' ? (
                           <>
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <LoadingSpinner size="sm" variant="inverse" label="Sending" />
                             Sending...
                           </>
                         ) : (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { FullEmailMessage } from '@timeflow/shared';
 import * as api from '@/lib/api';
+import { LoadingSpinner } from '@/components/ui';
 
 interface EmailComposerProps {
   isOpen: boolean;
@@ -249,7 +250,7 @@ export function EmailComposer({
                 >
                   {sending ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <LoadingSpinner size="sm" variant="inverse" label="Sending email" />
                       Sending...
                     </>
                   ) : (

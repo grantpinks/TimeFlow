@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { FullEmailMessage } from '@timeflow/shared';
 import * as api from '@/lib/api';
+import { LoadingSpinner } from '@/components/ui';
 
 interface EmailViewerProps {
   emailId: string | null;
@@ -169,7 +170,7 @@ export function EmailViewer({
               {loading && (
                 <div className="flex items-center justify-center h-64">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+                    <LoadingSpinner size="lg" label="Loading email" />
                     <p className="text-slate-600">Loading email...</p>
                   </div>
                 </div>
