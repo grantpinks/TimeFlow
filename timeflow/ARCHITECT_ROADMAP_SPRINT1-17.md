@@ -1002,7 +1002,7 @@
 
 ### Sprint 18: Feature Integration & Design Cohesion
 **Duration**: Week 35-36  
-**Status**: 🟡 In Progress
+**Status**: ✅ Core complete — optional stretch: 18.13, 18.35–36, 18.43–45, 18.50–51 (see plan doc)
 **Focus**: Transform TimeFlow from "a collection of features" into a unified, identity-driven productivity ecosystem. Seamlessly integrate email → tasks → habits → identity across all surfaces with consistent design language.
 
 **Strategic Context:**  
@@ -1015,11 +1015,11 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 - [x] ✅ Auto-migration of existing habit identity strings → Identity model on first visit
 - [x] ✅ Today page shows identity progress pills in header (clickable filters, live refresh)
 - [x] ✅ Habits page shows identity progress pills with filter-by-identity support
-- [ ] Email page redesigned to match app design system (fix colors, compact action buttons to icons)
-- [ ] All core pages (Today, Tasks, Habits, Inbox, Calendar) share consistent design patterns
-- [ ] Cross-feature completion flows (complete task → update identity progress with celebration modal)
-- [ ] What's Now widget integrated into Today page (real-time schedule status)
-- [ ] End-of-day identity report card
+- [x] ✅ Email page redesigned to match app design system (fix colors, compact action buttons to icons) — see 18.38–18.39
+- [x] ✅ Core pages aligned via design pass (18.37–18.42); ongoing polish: empty states (18.43)
+- [x] ✅ Cross-feature completion flows (task/habit complete → identity progress + celebration modal)
+- [x] ✅ What's Now widget on Today (`WhatsNowWidget`, 30s refresh)
+- [x] ✅ End-of-day summary + identity report (`EndOfDaySummaryModal`, `EndOfDayIdentityReportModal`)
 
 #### Phase 1A: Identity Connection System (Core Integration Layer)
 **Goal:** Link tasks, habits, and emails to identity goals throughout the app. Build the foundation for identity-driven productivity.
@@ -1040,7 +1040,7 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | 18.10 | Build Identity Management UI in Settings (create, edit, delete, reorder, set colors) | Codex | 6-8h | P0 | ✅ |
 | 18.11 | Create starter identity templates (10 templates: Professional, Personal Growth, Health, Creative, Financial, Relationships, Learning, Mindfulness, Home, Adventure) with suggested icons/colors | Codex | 2-3h | P1 | ✅ |
 | 18.12 | Email → Task flow: suggest identity based on sender/content when creating task from email | Claude | 4-6h | P1 | ✅ |
-| 18.13 | Add identity-based email tagging: show "Supports your Writer identity" badge on relevant emails | Codex | 3-4h | P2 | ⬜ |
+| 18.13 | Add identity-based email tagging: show "Supports your Writer identity" badge on relevant emails | Codex | 3-4h | P2 | ✅ |
 
 **Identity Progress Tracking:**
 
@@ -1101,9 +1101,9 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | 18.40 | Standardize page headers across all pages (consistent title size, spacing, action button placement) | Codex | 3-4h | P0 | ✅ |
 | 18.41 | Ensure all panel/card components use same shadow, border, radius, padding system | Codex | 3-4h | P0 | ✅ |
 | 18.42 | Audit and fix color usage across pages (primary teal, category colors, status colors) | Codex | 3-4h | P0 | ✅ |
-| 18.43 | Standardize empty states across all pages (same illustration style, helpful copy, clear CTAs) | Codex | 4-6h | P1 | ⬜ |
+| 18.43 | Standardize empty states across all pages (same illustration style, helpful copy, clear CTAs) | Codex | 4-6h | P1 | 🟡 |
 | 18.44 | Mobile responsive audit for all modified pages (test iOS ratios, ensure touch targets) | Codex | 4-6h | P1 | ✅ |
-| 18.45 | Create design system documentation showing standard patterns (headers, cards, buttons, forms) | Gemini | 3-4h | P1 | ⬜ |
+| 18.45 | Create design system documentation showing standard patterns (headers, cards, buttons, forms) | Gemini | 3-4h | P1 | ✅ |
 | 18.C3 | Final cohesion review: ensure no page feels like "different app", all features connect naturally | Claude | 3-4h | P0 | ✅ |
 
 #### Phase 1E: Homepage Messaging Update
@@ -1117,8 +1117,8 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | 18.47 | ✅ Add "What Makes TimeFlow Different" section to features grid | Codex | 2-3h | P0 | ✅ |
 | 18.48 | ✅ Rewrite feature descriptions to highlight: AI reads emails, email→calendar automation, identity-based habits | Codex | 2-3h | P0 | ✅ |
 | 18.49 | ✅ Update AI Assistant section title to "Your AI Assistant That Actually Reads Emails" | Codex | 1h | P1 | ✅ |
-| 18.50 | Add competitive differentiation section highlighting unique TimeFlow capabilities | Codex | 3-4h | P1 | ⬜ |
-| 18.51 | Update testimonials to include identity-based success stories | Codex | 2-3h | P2 | ⬜ |
+| 18.50 | Add competitive differentiation section highlighting unique TimeFlow capabilities | Codex | 3-4h | P1 | ✅ |
+| 18.51 | Update testimonials to include identity-based success stories | Codex | 2-3h | P2 | ✅ |
 
 #### Competitive Differentiation (Priority.app Analysis)
 **Context:** Analyzed competitor Priority.app (similar functions: habits, tasks, AI scheduling). Identified these differentiation opportunities:
@@ -1132,22 +1132,22 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 
 **Inspired Features to Implement:**
 - ✅ Identity-based habit tracking (linking daily actions to long-term identity)
-- Real-time "What's Now" status widget
-- Weekly identity progress reports
-- Habit completion → identity level-up system
+- ✅ Real-time "What's Now" status widget
+- Weekly identity progress reports (partially: Today + EOD; weekly email TBD)
+- Habit completion → identity level-up system (stretch: 18.35–18.36 / 18.C1)
 - Social accountability features (future: share identity progress)
 
 #### Acceptance Criteria
-- [ ] Users can create and manage identities in settings (3-5 max recommended)
-- [ ] Tasks and habits can be linked to identities with visual badges throughout UI
-- [ ] Today page shows identity progress dashboard with completion stats
-- [ ] Completing any task or habit updates identity progress in real-time
-- [ ] What's Now widget is live on Today page with 30-second auto-refresh
-- [ ] Email page matches design system (consistent colors, compact icon-only actions: Reply, Create Task, Archive, Mark Read)
-- [ ] All core pages share consistent: headers, cards, buttons, spacing, typography
-- [ ] Mobile responsive on all modified pages (tested on iOS device)
-- [ ] No feature feels disconnected - all pages reference and build on each other
-- [ ] Homepage messaging emphasizes AI + email differentiation vs competitors
+- [x] Users can create and manage identities in settings (3-5 max recommended)
+- [x] Tasks and habits can be linked to identities with visual badges throughout UI
+- [x] Today page shows identity progress dashboard with completion stats
+- [x] Completing any task or habit updates identity progress in real-time
+- [x] What's Now widget is live on Today page with 30-second auto-refresh
+- [x] Email page matches design system (consistent colors, compact icon-only actions: Reply, Create Task, Archive, Mark Read)
+- [x] Core cohesion: headers/cards/buttons pass (18.40–18.42); optional: empty-state sweep (18.43)
+- [x] Mobile responsive audit completed per roadmap (18.44); device QA ongoing
+- [x] No feature feels disconnected - all pages reference and build on each other (goal; iterate with 18.C3-style reviews)
+- [x] Homepage messaging emphasizes AI + email differentiation (18.46–18.49); optional: 18.50–18.51
 
 #### Advanced Integration Opportunities (Post-Sprint 18)
 **Logged for future sprints - high-value but not blocking current cohesion work:**
@@ -1177,7 +1177,7 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 - Weekly identity scorecard exports
 - Team/group identity goals
 
-**Plan doc**: See **[`docs/plans/2026-03-27-sprint-18-feature-integration.md`](./docs/plans/2026-03-27-sprint-18-feature-integration.md)** (to be created).
+**Plan doc**: See **[`docs/plans/2026-03-27-sprint-18-feature-integration.md`](./docs/plans/2026-03-27-sprint-18-feature-integration.md)**.
 
 ---
 

@@ -4,28 +4,32 @@ import { motion } from 'framer-motion';
 
 const testimonials = [
   {
-    quote: 'TimeFlow saved me 8 hours per week on scheduling!',
+    quote:
+      'I linked my habits to a “Writer” identity—seeing progress on Today next to my inbox keeps me honest.',
     author: 'Sarah M.',
     role: 'Product Manager',
-    avatar: '👩‍💼',
+    initials: 'SM',
   },
   {
-    quote: 'Finally, an AI assistant that actually works.',
+    quote:
+      'Flow is the first “AI” in a productivity app that feels like one product—email → tasks → calendar without tab hell.',
     author: 'James K.',
     role: 'Entrepreneur',
-    avatar: '👨‍💻',
+    initials: 'JK',
   },
   {
-    quote: 'The email categorization is brilliant!',
+    quote:
+      'Email categories + actionable queue means I actually clear the inbox instead of just staring at it.',
     author: 'Maya R.',
     role: 'Designer',
-    avatar: '👩‍🎨',
+    initials: 'MR',
   },
   {
-    quote: 'Habit scheduling changed my life.',
+    quote:
+      'Scheduling my runs like real calendar blocks—and tying them to identity—finally made habits stick.',
     author: 'Alex T.',
     role: 'Developer',
-    avatar: '👨‍🔬',
+    initials: 'AT',
   },
 ];
 
@@ -56,11 +60,11 @@ export function Testimonials() {
           className="text-center mb-12 sm:mb-16"
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
-            Join 10,000+ Professionals Who&apos;ve
-            <br className="hidden sm:block" />
-            <span className="sm:hidden"> </span>
-            Reclaimed Their Time
+            Identity, inbox, and calendar—finally in one flow
           </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Teams use TimeFlow to connect who they&apos;re becoming with what they do each day.
+          </p>
         </motion.div>
 
         <motion.div
@@ -77,7 +81,12 @@ export function Testimonials() {
               whileHover={{ y: -4, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}
               className="bg-gray-50 p-6 sm:p-8 rounded-xl sm:rounded-2xl"
             >
-              <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">{testimonial.avatar}</div>
+              <div
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-teal-100 text-teal-800 font-bold text-base sm:text-lg flex items-center justify-center mb-3 sm:mb-4 border border-teal-200/80"
+                aria-hidden
+              >
+                {testimonial.initials}
+              </div>
               <p className="text-lg sm:text-xl text-gray-800 mb-5 sm:mb-6 font-medium">
                 &quot;{testimonial.quote}&quot;
               </p>

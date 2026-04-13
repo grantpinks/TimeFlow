@@ -81,6 +81,20 @@ export type AnalyticsEvent =
   | { name: 'habits.coach.undo'; properties: { action_type: string } }
   | { name: 'habits.streak.milestone_reached'; properties: { streak_length: 7 | 14 | 30 | 100 } }
   | { name: 'habits.reordered'; properties: { from: number; to: number; count: number } }
+  | { name: 'habits.notification.missed_banner.shown'; properties: { count: number } }
+  | {
+      name: 'habits.notification.missed_banner.action';
+      properties: {
+        action:
+          | 'rescue'
+          | 'calendar'
+          | 'snooze_1h'
+          | 'snooze_3h'
+          | 'snooze_tomorrow'
+          | 'dismiss';
+        habit_id_hash: string;
+      };
+    }
   // Category events
   | { name: 'category_created'; properties: { category_name: string } }
   | { name: 'category_edited'; properties: { category_id: string } }

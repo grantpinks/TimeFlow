@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { FlowMascot } from '@/components/FlowMascot';
 
 export function FloatingAssistantButton() {
   const pathname = usePathname();
 
-  // Hide on the assistant page itself
   if (pathname === '/assistant') {
     return null;
   }
@@ -15,27 +15,14 @@ export function FloatingAssistantButton() {
     <Link
       href="/assistant"
       className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-40 inline-flex items-center gap-2 sm:gap-3 rounded-full bg-primary-600 px-4 sm:px-5 py-3 sm:py-3.5 min-h-[56px] text-white shadow-lg transition hover:bg-primary-700 active:bg-primary-800 active:scale-95 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2"
-      aria-label="Open AI assistant"
+      aria-label="Open Flow assistant"
     >
-      <span className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/15 flex-shrink-0">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          className="h-5 w-5"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M7 8h10M7 12h6m8 0c0 4.418-4.03 8-9 8-.86 0-1.693-.09-2.488-.263a1 1 0 00-.565.033L6 21l.61-2.113a1 1 0 00-.252-.973C4.853 16.663 4 14.45 4 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-          />
-        </svg>
+      <span className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/35 flex-shrink-0 overflow-hidden">
+        <FlowMascot size="sm" expression="happy" className="scale-[1.08]" />
       </span>
       <div className="text-left hidden sm:block">
         <p className="text-xs uppercase tracking-wide text-white/80">Need a hand?</p>
-        <p className="text-sm font-semibold leading-tight">Ask the Assistant</p>
+        <p className="text-sm font-semibold leading-tight">Ask Flow</p>
       </div>
     </Link>
   );

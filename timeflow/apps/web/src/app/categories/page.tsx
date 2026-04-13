@@ -8,6 +8,8 @@
 
 import { useState } from 'react';
 import { Layout } from '@/components/Layout';
+import { BrandedEmptyState, LoadingSpinner } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 import { useCategories } from '@/hooks/useCategories';
 import ColorPicker from '@/components/ColorPicker';
 import { CategoryTrainingPanel } from '@/components/CategoryTrainingPanel';
@@ -85,8 +87,9 @@ export default function CategoriesPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col items-center justify-center h-64 gap-3">
+          <FlowMascot size="md" expression="happy" />
+          <LoadingSpinner size="md" label="Loading categories" />
         </div>
       </Layout>
     );
@@ -109,6 +112,24 @@ export default function CategoriesPage() {
         </div>
 
         <div className="space-y-3">
+          {categories.length === 0 && !showAdd && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50/80">
+              <BrandedEmptyState
+                title="No categories yet"
+                description="Categories help AI and filters group your tasks. Create one to get started."
+                mascotExpression="thinking"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setShowAdd(true)}
+                    className="px-5 py-2.5 min-h-[48px] bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium text-sm"
+                  >
+                    Add category
+                  </button>
+                }
+              />
+            </div>
+          )}
           {categories.map((category) => (
             <div
               key={category.id}

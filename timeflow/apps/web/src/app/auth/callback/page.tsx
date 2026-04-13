@@ -3,6 +3,8 @@
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { setAuthToken, setRefreshToken } from '../../../lib/api';
+import { LoadingSpinner } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -37,8 +39,11 @@ function AuthCallbackContent() {
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-        <p className="text-slate-600">Signing you in...</p>
+        <div className="flex justify-center mb-3">
+          <FlowMascot size="md" expression="happy" />
+        </div>
+        <LoadingSpinner size="lg" label="Signing in" />
+        <p className="text-slate-600 mt-4">Signing you in…</p>
       </div>
     </div>
   );
@@ -50,8 +55,11 @@ export default function AuthCallbackPage() {
       fallback={
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">Signing you in...</p>
+            <div className="flex justify-center mb-3">
+              <FlowMascot size="md" expression="happy" />
+            </div>
+            <LoadingSpinner size="lg" label="Signing in" />
+            <p className="text-slate-600 mt-4">Signing you in…</p>
           </div>
         </div>
       }

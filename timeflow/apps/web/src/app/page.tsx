@@ -11,8 +11,10 @@ import { FinalCTA } from '@/components/homepage/FinalCTA';
 import { HomepageFooter } from '@/components/homepage/HomepageFooter';
 import { StructuredData } from '@/components/homepage/StructuredData';
 import { HabitPlannerPreview } from '@/components/homepage/HabitPlannerPreview';
+import { CompetitiveDifferentiation } from '@/components/homepage/CompetitiveDifferentiation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { User } from 'lucide-react';
 import { getGoogleAuthUrl } from '@/lib/api';
 import { track } from '@/lib/analytics';
 
@@ -55,6 +57,13 @@ export default function HomePage() {
               className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Pricing
+            </a>
+            <a
+              href="#why-timeflow"
+              onClick={() => track('homepage_navigation_clicked', { destination: 'why-timeflow' })}
+              className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
+            >
+              Why TimeFlow
             </a>
             <Link
               href="/today"
@@ -113,7 +122,12 @@ export default function HomePage() {
             <div className="bg-gradient-to-br from-teal-50 to-orange-50 rounded-2xl p-8 shadow-xl border border-teal-100">
               <div className="bg-white rounded-xl p-6 space-y-4 shadow-sm">
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full flex-shrink-0"></div>
+                  <div
+                    className="w-8 h-8 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center border border-slate-200"
+                    aria-hidden
+                  >
+                    <User className="w-4 h-4 text-slate-500" strokeWidth={2} />
+                  </div>
                   <div className="flex-1">
                     <div className="bg-gray-100 rounded-lg p-3">
                       <p className="text-gray-700">Schedule my tasks for tomorrow morning</p>
@@ -216,6 +230,8 @@ export default function HomePage() {
           }
           gradient={true}
         />
+
+        <CompetitiveDifferentiation />
 
         <Testimonials />
 

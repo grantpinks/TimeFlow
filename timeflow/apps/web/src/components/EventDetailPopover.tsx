@@ -12,6 +12,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import type { Task, CategoryTrainingExampleSnapshot, HabitSkipReason } from '@timeflow/shared';
 import * as api from '@/lib/api';
 import { MeetingActionItemsModal } from '@/components/calendar/MeetingActionItemsModal';
+import { Lightbulb } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -743,8 +744,9 @@ export function EventDetailPopover({
                             className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                           <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                            <p className="text-xs text-blue-800 font-medium">
-                              💡 Why track actual time?
+                            <p className="text-xs text-blue-800 font-medium flex items-center gap-1.5">
+                              <Lightbulb className="w-3.5 h-3.5 shrink-0 text-blue-600" strokeWidth={2} aria-hidden />
+                              Why track actual time?
                             </p>
                             <p className="mt-1 text-xs text-blue-700">
                               TimeFlow uses your actual durations to suggest better habit lengths and identify patterns. Your data stays private and is never shared.

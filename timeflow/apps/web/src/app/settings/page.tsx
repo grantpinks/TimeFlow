@@ -806,7 +806,10 @@ export default function SettingsPage() {
           <MeetingManagerPanel />
 
           {/* Habit Notifications */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div
+            id="habit-notifications"
+            className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 scroll-mt-24"
+          >
             <h2 className="text-lg font-semibold text-slate-900 mb-2">
               Habit Notifications
             </h2>

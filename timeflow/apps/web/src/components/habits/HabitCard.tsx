@@ -11,6 +11,7 @@ import Link from 'next/link';
 import type { Habit, Identity } from '@timeflow/shared';
 import { TimeSlotPicker, type TimeSlot } from './TimeSlotPicker';
 import { IdentitySelector } from '@/components/identity/IdentitySelector';
+import { LoadingSpinner } from '@/components/ui';
 
 interface HabitCardProps {
   habit: Habit;
@@ -341,7 +342,7 @@ export function HabitCard({
             >
               {isScheduling ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <LoadingSpinner size="sm" variant="inverse" label="Scheduling" />
                   Scheduling...
                 </>
               ) : (

@@ -14,7 +14,9 @@ import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
 import { SchedulePreviewOverlay } from '@/components/calendar/SchedulePreviewOverlay';
-import { Button, Input, Select, Textarea, Label } from '@/components/ui';
+import { Button, Input, Select, Textarea, Label, LoadingSpinner } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
+import Link from 'next/link';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
@@ -992,13 +994,27 @@ export default function CalendarPage() {
         {/* Header */}
         <div className="px-6 py-5 flex-shrink-0 bg-white border-b border-slate-200">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-slate-900">
-                Calendar
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                AI-powered scheduling and intelligent time management
-              </p>
+            <div className="flex flex-1 items-start gap-3 min-w-0">
+              <div className="hidden sm:flex flex-shrink-0 pt-1">
+                <FlowMascot size="md" expression="guiding-up" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-3xl font-bold text-slate-900">
+                  Calendar
+                </h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  Flow-powered scheduling—drag tasks, smart schedule, or ask AI to categorize events.
+                </p>
+                <Link
+                  href="/assistant"
+                  className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700"
+                >
+                  <span className="hidden sm:inline">
+                    <FlowMascot size="sm" expression="happy" />
+                  </span>
+                  Open Flow assistant
+                </Link>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
                 <CalendarFiltersPopover
@@ -1026,25 +1042,11 @@ export default function CalendarPage() {
                   >
                     {categorizingEvents ? (
                       <>
-                        <svg
-                          className="animate-spin w-4 h-4"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
+                        <LoadingSpinner
+                          size="sm"
+                          label="Categorizing events"
+                          className="border-white/30 border-t-white"
+                        />
                         Categorizing...
                       </>
                     ) : (
@@ -1073,25 +1075,11 @@ export default function CalendarPage() {
                   >
                     {scheduling ? (
                       <>
-                        <svg
-                          className="animate-spin w-5 h-5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
+                        <LoadingSpinner
+                          size="sm"
+                          label="Scheduling"
+                          className="!h-5 !w-5 border-white/30 border-t-white"
+                        />
                         Scheduling...
                       </>
                     ) : (
@@ -1186,8 +1174,12 @@ export default function CalendarPage() {
             {/* Main Panel - Calendar */}
             <div className="col-span-12 lg:col-span-10 xl:col-span-10 h-full overflow-hidden">
               {tasksLoading || eventsLoading ? (
-                <div className="h-full surface-card rounded-lg flex items-center justify-center">
-                  <div className="text-muted">Loading calendar...</div>
+                <div className="h-full surface-card rounded-lg flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
+                  <FlowMascot size="lg" expression="happy" />
+                  <LoadingSpinner size="lg" label="Loading calendar" />
+                  <p className="text-sm text-slate-600 max-w-sm">
+                    Flow is syncing your tasks and calendar events…
+                  </p>
                 </div>
               ) : (
                 <CalendarView

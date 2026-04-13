@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import type { Task } from '@timeflow/shared';
+import { FlowMascot } from '@/components/FlowMascot';
 
 interface UnscheduledTasksPanelProps {
   tasks: Task[];
@@ -46,20 +47,10 @@ export function UnscheduledTasksPanel({
       {expanded && (
         <div className="max-h-96 overflow-y-auto">
           {tasks.length === 0 ? (
-            <div className="p-8 text-center">
-              <svg
-                className="w-10 h-10 mx-auto mb-2 text-slate-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
+            <div className="p-6 text-center">
+              <div className="flex justify-center mb-2">
+                <FlowMascot size="sm" expression="encouraging" />
+              </div>
               <p className="text-xs font-medium text-slate-700">All caught up!</p>
               <p className="text-[11px] text-slate-500 mt-0.5">No unscheduled tasks</p>
             </div>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Layout } from '@/components/Layout';
+import { LoadingSpinner } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 import ColorPicker from '@/components/ColorPicker';
 import GmailColorPicker, { type GmailColor } from '@/components/GmailColorPicker';
 import * as api from '@/lib/api';
@@ -446,8 +448,9 @@ export default function EmailCategoriesSettingsPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col items-center justify-center h-64 gap-3">
+          <FlowMascot size="md" expression="happy" />
+          <LoadingSpinner size="lg" label="Loading email categories" />
         </div>
       </Layout>
     );

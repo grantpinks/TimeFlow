@@ -7,15 +7,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Panel } from '@/components/ui';
+import { Panel, LoadingSpinner } from '@/components/ui';
 import { getHabitInsights, acceptHabitSuggestion, getHabitNotifications, updateHabit } from '@/lib/api';
 import { buildRescueBlockForAtRisk, parseTimeSlotStartHour } from '@/lib/habitRescue';
 import { CoachCard } from './CoachCard';
 import { Recommendations } from './Recommendations';
 import { StreakReminderBanner } from './StreakReminderBanner';
+import { MissedHighPriorityBanner } from './MissedHighPriorityBanner';
 import { MetricsTooltip } from './MetricsTooltip';
 import { track, hashHabitId } from '@/lib/analytics';
-import type { HabitInsightsSummary, PerHabitInsights, HabitRecommendation, StreakAtRiskNotification } from '@timeflow/shared';
+import type {
+  HabitInsightsSummary,
+  PerHabitInsights,
+  HabitRecommendation,
+  StreakAtRiskNotification,
+  MissedHabitNotification,
+} from '@timeflow/shared';
 
 export function HabitsInsights() {
   const [insights, setInsights] = useState<HabitInsightsSummary | null>(null);
@@ -23,6 +30,7 @@ export function HabitsInsights() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<14 | 28>(14);
   const [streakNotifications, setStreakNotifications] = useState<StreakAtRiskNotification[]>([]);
+  const [missedNotifications, setMissedNotifications] = useState<MissedHabitNotification[]>([]);
 
   useEffect(() => {
     loadInsights();
@@ -41,6 +49,7 @@ export function HabitsInsights() {
       ]);
       setInsights(data);
       setStreakNotifications(notifications.streakAtRisk ?? []);
+      setMissedNotifications(notifications.missedHighPriority ?? []);
 
       // Track insights viewed (privacy-safe - only period length)
       track('habits.insight.viewed', { days_filter: selectedPeriod });
@@ -257,7 +266,7 @@ export function HabitsInsights() {
     return (
       <Panel>
         <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          <LoadingSpinner size="md" label="Loading habit insights" />
         </div>
       </Panel>
     );
@@ -295,6 +304,7 @@ export function HabitsInsights() {
   }
 
   const atRiskHabits = streakNotifications;
+  const missedHabits = missedNotifications;
 
   return (
     <div className="space-y-6">
@@ -324,6 +334,24 @@ export function HabitsInsights() {
           </button>
         </div>
       </div>
+
+      <div className="border-b border-slate-200 pb-4">
+        <h2 className="text-lg font-semibold text-slate-900">Coach &amp; next actions</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Your top recommendation from Flow, then more steps you can take—rescue blocks, time windows, and duration tweaks.
+        </p>
+      </div>
+
+      {/* Missed high-priority (non-adherence) — shown when opted in */}
+      {missedHabits.length > 0 && (
+        <MissedHighPriorityBanner
+          missedHabits={missedHabits}
+          onScheduleRescue={handleRescueBlockFromBanner}
+          onOpenCalendar={() => {
+            window.location.href = '/calendar';
+          }}
+        />
+      )}
 
       {/* Streak Reminder Banner */}
       {atRiskHabits.length > 0 && (

@@ -1,6 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
+import { Sparkles } from 'lucide-react';
 import type { Habit, SchedulePreview, Task } from '@timeflow/shared';
 
 interface SchedulePreviewCardProps {
@@ -82,7 +83,7 @@ export default function SchedulePreviewCard({
       <div className="bg-gradient-to-r from-primary-500 to-blue-500 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-xl sm:text-2xl">✨</span>
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white/95 shrink-0" strokeWidth={2} aria-hidden />
             <h3 className="text-base sm:text-lg font-semibold text-white">Schedule Recommendation</h3>
           </div>
           <motion.span

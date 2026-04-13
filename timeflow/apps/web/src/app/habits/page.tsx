@@ -9,9 +9,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
-import { Panel, SectionHeader } from '@/components/ui';
+import { Panel, SectionHeader, LoadingSpinner } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
 import { HabitsInsights } from '@/components/habits/HabitsInsights';
+import { HabitNotificationPrefs } from '@/components/habits/HabitNotificationPrefs';
 import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
 import { FlowMascot } from '@/components/FlowMascot';
 import { FlowSchedulingBanner } from '@/components/habits/FlowSchedulingBanner';
@@ -253,8 +254,9 @@ export default function HabitsPage() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col items-center justify-center h-64 gap-3">
+          <FlowMascot size="md" expression="happy" />
+          <LoadingSpinner size="md" label="Loading habits" />
         </div>
       </Layout>
     );
@@ -334,7 +336,10 @@ export default function HabitsPage() {
           </div>
         )}
 
-        {/* Insights Dashboard */}
+        {/* Opt-in reminder toggles (same prefs as Settings → Habit Notifications) */}
+        {habits.length > 0 && <HabitNotificationPrefs />}
+
+        {/* Insights Dashboard: Coach card + next actions + metrics */}
         {habits.length > 0 && <HabitsInsights />}
 
         {/* Add Habit Form */}

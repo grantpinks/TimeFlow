@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { FlowMascot } from '@/components/FlowMascot';
 
 const steps = [
   {
@@ -8,18 +9,21 @@ const steps = [
     title: 'Tell Us What You Need To Do',
     description: 'Create tasks with priorities, deadlines, and durations. Or just tell our AI assistant what you need to accomplish.',
     icon: '📝',
+    useFlowMascot: false as const,
   },
   {
     number: 2,
-    title: 'AI Finds Perfect Time Slots',
-    description: 'Our AI analyzes your calendar, priorities, and habits to find the optimal time for each task.',
-    icon: '🤖',
+    title: 'Flow Finds Perfect Time Slots',
+    description:
+      'Flow analyzes your calendar, priorities, and habits to find the optimal time for each task—same assistant you use in the app.',
+    useFlowMascot: true as const,
   },
   {
     number: 3,
     title: 'Your Schedule Syncs Everywhere',
     description: 'Tasks automatically appear in Google Calendar, synced across all your devices in real-time.',
     icon: '📅',
+    useFlowMascot: false as const,
   },
 ];
 
@@ -75,7 +79,15 @@ export function HowItWorks() {
                   {step.number}
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                  <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">{step.icon}</div>
+                  <div className="mb-2 sm:mb-3 flex justify-center md:justify-start min-h-[3rem] sm:min-h-[3.5rem] items-center">
+                    {step.useFlowMascot ? (
+                      <FlowMascot size="lg" expression="thinking" />
+                    ) : (
+                      <span className="text-3xl sm:text-4xl" aria-hidden>
+                        {step.icon}
+                      </span>
+                    )}
+                  </div>
                   <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">
                     {step.title}
                   </h3>

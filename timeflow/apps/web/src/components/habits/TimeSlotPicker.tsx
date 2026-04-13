@@ -7,6 +7,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { LoadingSpinner } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 
 export interface TimeSlot {
   startDateTime: string;
@@ -207,8 +209,9 @@ export function TimeSlotPicker({
     return (
       <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border-2 border-primary-200 z-50 p-6">
         <div className="flex flex-col items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600 mb-4"></div>
-          <p className="text-slate-600 font-medium">Finding available time slots...</p>
+          <FlowMascot size="sm" expression="happy" className="mb-3" />
+          <LoadingSpinner size="lg" label="Finding time slots" />
+          <p className="text-slate-600 font-medium mt-4">Finding available time slots…</p>
           <p className="text-sm text-slate-500 mt-1">Analyzing your calendar</p>
         </div>
       </div>
@@ -220,7 +223,7 @@ export function TimeSlotPicker({
       <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border-2 border-red-200 z-50 p-6">
         <div className="text-center py-4">
           <div className="text-4xl mb-3">⚠️</div>
-          <h3 className="text-lg font-semibold text-slate-900 mb-2">Couldn't find slots</h3>
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Could not find slots</h3>
           <p className="text-sm text-slate-600 mb-4">{error}</p>
           <div className="flex gap-2 justify-center">
             <button

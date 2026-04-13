@@ -17,7 +17,8 @@ import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
 import { HourlyTimeline } from '@/components/HourlyTimeline';
 import { EmailViewer } from '@/components/EmailViewer';
 import { EmailComposer } from '@/components/EmailComposer';
-import { Panel, SectionHeader } from '@/components/ui';
+import { Panel, SectionHeader, LoadingSpinner } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today/PlanningRitualPanel';
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { IdentityDashboardBanner } from '@/components/identity/IdentityDashboardBanner';
@@ -39,7 +40,7 @@ import { EndOfDaySummaryModal } from '@/components/today/EndOfDaySummaryModal';
 import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelatedTasksModal';
 import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitRelatedTasks';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Sparkles, ClipboardList } from 'lucide-react';
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -605,8 +606,11 @@ Please generate a schedule preview for today.`;
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
+          <div className="flex justify-center mb-3">
+            <FlowMascot size="md" expression="happy" />
+          </div>
+          <LoadingSpinner size="lg" label="Loading" />
+          <p className="text-slate-600 mt-4">Loading…</p>
         </div>
       </div>
     );
@@ -763,8 +767,11 @@ Please generate a schedule preview for today.`;
 
         {loading ? (
           <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl shadow-lg border border-slate-200 p-16 text-center">
-            <div className="animate-spin rounded-full h-14 w-14 border-4 border-primary-200 border-t-primary-600 mx-auto mb-5"></div>
-            <p className="text-slate-600 font-medium text-lg">Loading today&apos;s schedule...</p>
+            <div className="flex justify-center mb-4">
+              <FlowMascot size="lg" expression="happy" />
+            </div>
+            <LoadingSpinner size="xl" label="Loading today schedule" />
+            <p className="text-slate-600 font-medium text-lg mt-5">Loading today&apos;s schedule…</p>
           </div>
         ) : (
           <>
@@ -850,20 +857,10 @@ Please generate a schedule preview for today.`;
                   )}
 
                   {unscheduledTasks.length === 0 && (
-                    <div className="text-center py-8 text-slate-400">
-                      <svg
-                        className="w-12 h-12 mx-auto mb-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
+                    <div className="text-center py-8 text-slate-500">
+                      <div className="flex justify-center mb-2">
+                        <FlowMascot size="md" expression="encouraging" />
+                      </div>
                       <p className="text-sm">Nothing to do right now</p>
                     </div>
                   )}
@@ -890,7 +887,7 @@ Please generate a schedule preview for today.`;
                 <div className={mobileHabitsOpen ? 'block' : 'hidden lg:block'}>
                 {habitSuggestionsLoading ? (
                   <div className="flex items-center justify-center py-6">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <LoadingSpinner size="md" label="Loading habit suggestions" />
                   </div>
                 ) : habitSuggestionsError ? (
                   <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
@@ -1036,7 +1033,7 @@ Please generate a schedule preview for today.`;
                     onClick={() => setShowEodIdentityReport(true)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-violet-200 bg-violet-50/80 px-4 py-3.5 text-sm font-semibold text-violet-900 transition hover:border-violet-300 hover:bg-violet-100"
                   >
-                    <span aria-hidden>✨</span>
+                    <Sparkles className="h-4 w-4 shrink-0 text-violet-600" strokeWidth={2} aria-hidden />
                     Today&apos;s identity report
                   </button>
                   <button
@@ -1044,7 +1041,7 @@ Please generate a schedule preview for today.`;
                     onClick={() => setShowEodSummary(true)}
                     className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-semibold text-slate-800 transition hover:border-primary-200 hover:bg-primary-50/60"
                   >
-                    <span aria-hidden>📋</span>
+                    <ClipboardList className="h-4 w-4 shrink-0 text-slate-600" strokeWidth={2} aria-hidden />
                     Day summary
                   </button>
                 </div>
@@ -1237,8 +1234,9 @@ Please generate a schedule preview for today.`;
                 {/* Email List */}
                 <div className="flex-1 overflow-y-auto">
                   {inboxLoading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+                    <div className="flex flex-col items-center justify-center h-full gap-3">
+                      <FlowMascot size="sm" expression="happy" />
+                      <LoadingSpinner size="lg" variant="inbox" label="Loading inbox" />
                     </div>
                   ) : inboxError ? (
                     <div className="p-4">
@@ -1247,10 +1245,8 @@ Please generate a schedule preview for today.`;
                       </div>
                     </div>
                   ) : displayedEmails.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                      <svg className="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
+                    <div className="flex flex-col items-center justify-center h-full text-slate-500 px-4">
+                      <FlowMascot size="md" expression="encouraging" className="mb-3" />
                       <p className="text-base font-medium">No emails to show</p>
                     </div>
                   ) : (

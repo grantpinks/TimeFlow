@@ -7,7 +7,7 @@ import type { Task, CreateTaskRequest, UpdateTaskRequest, Identity, IdentityDayP
 import { useCategories } from '@/hooks/useCategories';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { TaskCard } from '@/components/ui/TaskCard';
-import { Button, Input, Select, Textarea, Label, TemplateModal, DueDatePicker } from '@/components/ui';
+import { Button, Input, Select, Textarea, Label, TemplateModal, DueDatePicker, BrandedEmptyState } from '@/components/ui';
 import { saveTaskTemplate } from '@/utils/taskTemplates';
 import type { TaskTemplate } from '@/utils/taskTemplates';
 import { CategoryTrainingModal } from '@/components/CategoryTrainingModal';
@@ -430,14 +430,15 @@ export function TaskList({
       ) : totalTasks === 0 ? (
         <div
           ref={setNodeRef}
-          className={`text-center py-10 rounded-lg border transition-colors ${
-            isOver ? 'border-primary-300 bg-primary-50/70 text-primary-700' : 'border-slate-200 bg-slate-50/60 text-slate-600'
+          className={`rounded-lg border transition-colors ${
+            isOver ? 'border-primary-300 bg-primary-50/70' : 'border-slate-200 bg-slate-50/60'
           }`}
         >
-          <p className="text-sm font-medium">{emptyTitle}</p>
-          {emptyDescription && (
-            <p className="text-xs text-slate-500 mt-1">{emptyDescription}</p>
-          )}
+          <BrandedEmptyState
+            title={emptyTitle}
+            description={emptyDescription}
+            mascotExpression="happy"
+          />
         </div>
       ) : (
         <motion.div

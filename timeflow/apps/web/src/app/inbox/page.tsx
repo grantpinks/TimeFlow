@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 // Disable static generation for this page due to dynamic content
 export const dynamic = 'force-dynamic';
 import { Layout } from '@/components/Layout';
+import { LoadingSpinner } from '@/components/ui';
+import { FlowMascot } from '@/components/FlowMascot';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import type { EmailCategoryConfig } from '@/lib/api';
@@ -926,7 +928,7 @@ export default function InboxPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                   {searchLoading && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#0BAF9A]" />
+                      <LoadingSpinner size="sm" variant="inbox" label="Searching" />
                     </div>
                   )}
                   {searchMode === 'server' && !searchLoading && searchQuery && (
@@ -1075,26 +1077,18 @@ export default function InboxPage() {
           <div className={`${selectedThreadId ? 'hidden sm:flex' : 'flex'} flex-col w-full sm:w-[380px] flex-none border-r border-[#e0e0e0] bg-white overflow-y-auto`}>
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <Image
-                  src="/branding/flow-thinking.png"
-                  alt="Loading"
-                  width={96}
-                  height={96}
-                  className="mb-4"
-                />
-                <div className="text-[#0BAF9A] text-sm" style={{ fontFamily: "'Manrope', sans-serif" }}>
-                  Loading inbox...
+                <FlowMascot size="lg" expression="thinking" className="mb-4" />
+                <LoadingSpinner size="lg" variant="inbox" label="Loading inbox" />
+                <div
+                  className="text-[#0BAF9A] text-sm mt-4"
+                  style={{ fontFamily: "'Manrope', sans-serif" }}
+                >
+                  Loading inbox…
                 </div>
               </div>
             ) : displayEmails.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                <Image
-                  src="/branding/flow-celebrating.png"
-                  alt="Empty"
-                  width={120}
-                  height={120}
-                  className="mb-4"
-                />
+                <FlowMascot size="xl" expression="celebrating" className="mb-4" />
                 <h3 className="text-2xl font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
                   {searchQuery ? 'No matches' : 'Inbox Zero!'}
                 </h3>
@@ -1119,6 +1113,7 @@ export default function InboxPage() {
                       categoryLabel={getCategoryLabel(email.category)}
                       formatTimestamp={formatTimestamp}
                       needsResponse={email.needsResponse}
+                      identities={identities}
                     />
                   ))}
                 </div>
@@ -1158,8 +1153,9 @@ export default function InboxPage() {
                 </div>
               </div>
             ) : loadingThread || threadMessages.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0BAF9A]"></div>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                <FlowMascot size="sm" expression="happy" />
+                <LoadingSpinner size="lg" variant="inbox" label="Loading thread" />
               </div>
             ) : threadError ? (
               <div className="flex-1 flex items-center justify-center">
@@ -1453,6 +1449,7 @@ interface EmailListItemProps {
   categoryLabel: string;
   formatTimestamp: (date: string) => string;
   needsResponse?: boolean;
+  identities: Identity[];
 }
 
 function EmailListItem({
@@ -1467,10 +1464,21 @@ function EmailListItem({
   categoryLabel,
   formatTimestamp,
   needsResponse,
+  identities,
 }: EmailListItemProps) {
   const threadId = email.threadId || email.id;
   const isNeedsReply = email.actionState === 'needs_reply';
   const isReadLater = email.actionState === 'read_later';
+
+  const identityMatch = suggestIdentityFromEmail({
+    identities,
+    from: email.from,
+    subject: email.subject,
+    snippet: email.snippet,
+  });
+  const matchedIdentity = identityMatch.identityId
+    ? identities.find((i) => i.id === identityMatch.identityId)
+    : null;
 
   return (
     <div
@@ -1559,8 +1567,20 @@ function EmailListItem({
         </div>
       </div>
 
-      {(categoryLabel || needsResponse || email.actionState) && (
-        <div className="mt-2 flex items-center gap-2">
+      {(categoryLabel || needsResponse || email.actionState || matchedIdentity) && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {matchedIdentity && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border border-teal-200 bg-teal-50 text-teal-800 max-w-full"
+              style={{ fontFamily: "'Manrope', sans-serif" }}
+              title={identityMatch.hint ?? `Aligns with your ${matchedIdentity.name} identity`}
+            >
+              <span className="truncate" aria-hidden>
+                {matchedIdentity.icon}
+              </span>
+              <span className="truncate">Supports {matchedIdentity.name}</span>
+            </span>
+          )}
           {categoryLabel && (
             <span
               className="inline-block px-2 py-0.5 text-xs font-medium rounded-full"

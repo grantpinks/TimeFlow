@@ -11,6 +11,7 @@ import { DraftPanel } from '@/components/inbox/DraftPanel';
 import { InboxAiDraftPanel, type InboxAiDraft } from '@/components/inbox/InboxAiDraftPanel';
 import { useUser } from '@/hooks/useUser';
 import toast from 'react-hot-toast';
+import { LoadingSpinner } from '@/components/ui';
 
 const COLLAPSED_KEY = 'timeflow_actionable_emails_collapsed';
 const MAX_SHOWN = 5;
@@ -285,7 +286,7 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
                         className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 disabled:opacity-60 transition-all shadow-sm"
                       >
                         {replyLoading[email.id] ? (
-                          <span className="h-3 w-3 animate-spin rounded-full border border-white border-t-transparent" />
+                          <LoadingSpinner size="sm" variant="inverse" label="Sending reply" />
                         ) : null}
                         Reply
                       </button>
@@ -298,7 +299,7 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
                         className="inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-teal-700 border border-teal-300 hover:bg-teal-50 disabled:opacity-60 transition-all"
                       >
                         {taskLoading[email.id] ? (
-                          <span className="h-3 w-3 animate-spin rounded-full border border-teal-600 border-t-transparent" />
+                          <LoadingSpinner size="sm" variant="inbox" label="Creating task" />
                         ) : (
                           <Sparkles className="h-3 w-3" />
                         )}
@@ -314,7 +315,11 @@ export function ActionableEmailsWidget({ className }: ActionableEmailsWidgetProp
                         aria-label="Archive email"
                       >
                         {archiveLoading[email.id] ? (
-                          <span className="h-3.5 w-3.5 animate-spin rounded-full border border-slate-400 border-t-transparent" />
+                          <LoadingSpinner
+                            size="sm"
+                            label="Archiving"
+                            className="!border-slate-300 !border-t-slate-600"
+                          />
                         ) : (
                           <Archive className="h-3.5 w-3.5" />
                         )}

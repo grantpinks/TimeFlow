@@ -123,9 +123,9 @@ function DonutRing({
   );
 }
 
-// ─── Flow mascot SVG ─────────────────────────────────────────────────────────
+// ─── Inline Flow-style mascot SVG (identity banner only; not @/components/FlowMascot) ─
 
-function FlowMascot({ mood }: { mood: 'happy' | 'excited' | 'neutral' }) {
+function IdentityBannerMascotSvg({ mood }: { mood: 'happy' | 'excited' | 'neutral' }) {
   const eyeY = 52;
   const smileD =
     mood === 'excited'
@@ -281,7 +281,7 @@ export function IdentityDashboardBanner({
           />
 
           <div className="relative h-20 w-16 flex-shrink-0">
-            <FlowMascot mood={mood} />
+            <IdentityBannerMascotSvg mood={mood} />
           </div>
 
           <div className="min-w-0">
