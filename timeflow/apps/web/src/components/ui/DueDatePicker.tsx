@@ -101,6 +101,11 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
   const handleTimeChange = (newTime: string) => {
     setSelectedTime(newTime);
 
+    // Only update parent if time is complete (HH:mm format - 5 characters)
+    if (newTime.length !== 5 || !newTime.includes(':')) {
+      return; // Wait for complete time input
+    }
+
     if (!selectedOption || selectedOption === 'custom') {
       // For custom, the date picker will handle the update
       if (customDate) {
@@ -113,6 +118,12 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     // For quick options, recalculate the date with new time
     const today = new Date();
     const [hours, minutes] = newTime.split(':').map(Number);
+
+    // Validate hours and minutes
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      return; // Invalid time, don't update
+    }
+
     today.setHours(hours, minutes, 0, 0);
 
     let targetDate: Date;
