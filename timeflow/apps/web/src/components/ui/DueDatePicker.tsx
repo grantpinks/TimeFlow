@@ -10,12 +10,14 @@ interface DueDatePickerProps {
 }
 
 type QuickOption = 'today' | 'tomorrow' | 'in-2-days' | 'custom' | null;
+type TimePreset = 'in-1-hour' | 'in-4-hours' | 'eod' | 'custom-time' | null;
 
 export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
   const [selectedOption, setSelectedOption] = useState<QuickOption>(null);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customDate, setCustomDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('09:00');
+  const [timePreset, setTimePreset] = useState<TimePreset>(null);
 
   // Determine which quick option matches the current value
   useEffect(() => {
@@ -66,33 +68,68 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     if (option === 'custom') {
       setSelectedOption('custom');
       setShowCustomPicker(true);
+      setTimePreset(null);
       return;
     }
 
-    const today = new Date();
-    const [hours, minutes] = selectedTime.split(':').map(Number);
-    today.setHours(hours, minutes, 0, 0);
+    setSelectedOption(option);
+    setShowCustomPicker(false);
+    setTimePreset(null); // Reset time preset when changing date option
 
+    // Don't set a time immediately - let user choose preset or custom time
+  };
+
+  const handleTimePreset = (preset: TimePreset) => {
+    if (!selectedOption || selectedOption === 'custom') return;
+
+    setTimePreset(preset);
+
+    if (preset === 'custom-time') {
+      // Just show the time input, don't update parent yet
+      return;
+    }
+
+    const now = new Date();
     let targetDate: Date;
 
-    switch (option) {
-      case 'today':
-        targetDate = today;
+    // Calculate time based on preset
+    switch (preset) {
+      case 'in-1-hour':
+        // Calculate from current time
+        targetDate = new Date(now.getTime() + 60 * 60 * 1000); // Add 1 hour in milliseconds
         break;
-      case 'tomorrow':
-        targetDate = new Date(today);
-        targetDate.setDate(targetDate.getDate() + 1);
+      case 'in-4-hours':
+        // Calculate from current time
+        targetDate = new Date(now.getTime() + 4 * 60 * 60 * 1000); // Add 4 hours in milliseconds
         break;
-      case 'in-2-days':
-        targetDate = new Date(today);
-        targetDate.setDate(targetDate.getDate() + 2);
+      case 'eod':
+        // End of day = 5:00 PM on the selected date
+        targetDate = new Date(now);
+
+        // Adjust date based on selected option
+        switch (selectedOption) {
+          case 'today':
+            // Keep today
+            break;
+          case 'tomorrow':
+            targetDate.setDate(targetDate.getDate() + 1);
+            break;
+          case 'in-2-days':
+            targetDate.setDate(targetDate.getDate() + 2);
+            break;
+        }
+
+        targetDate.setHours(17, 0, 0, 0);
         break;
       default:
         return;
     }
 
-    setSelectedOption(option);
-    setShowCustomPicker(false);
+    // Update selected time for display
+    const hours = targetDate.getHours().toString().padStart(2, '0');
+    const minutes = targetDate.getMinutes().toString().padStart(2, '0');
+    setSelectedTime(`${hours}:${minutes}`);
+
     // Format as YYYY-MM-DDTHH:mm
     const isoString = targetDate.toISOString().slice(0, 16);
     onChange(isoString);
@@ -153,6 +190,7 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     setShowCustomPicker(false);
     setCustomDate('');
     setSelectedTime('09:00');
+    setTimePreset(null);
     onChange('');
   };
 
@@ -214,15 +252,67 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
         )}
       </div>
 
-      {/* Time picker for quick options */}
+      {/* Time preset options for quick date selections */}
       {selectedOption && selectedOption !== 'custom' && (
-        <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
+        <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
           <Label>Time</Label>
-          <Input
-            type="time"
-            value={selectedTime}
-            onChange={(e) => handleTimeChange(e.target.value)}
-          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => handleTimePreset('in-1-hour')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                timePreset === 'in-1-hour'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+              }`}
+            >
+              In 1 Hour
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTimePreset('in-4-hours')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                timePreset === 'in-4-hours'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+              }`}
+            >
+              In 4 Hours
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTimePreset('eod')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                timePreset === 'eod'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+              }`}
+            >
+              End of Day
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTimePreset('custom-time')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                timePreset === 'custom-time'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+              }`}
+            >
+              Custom Time
+            </button>
+          </div>
+
+          {/* Show time input only when Custom Time is selected */}
+          {timePreset === 'custom-time' && (
+            <div className="mt-3">
+              <Input
+                type="time"
+                value={selectedTime}
+                onChange={(e) => handleTimeChange(e.target.value)}
+              />
+            </div>
+          )}
         </div>
       )}
 
