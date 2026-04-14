@@ -456,18 +456,21 @@ body {
   border-radius: var(--radius-md);
   padding: var(--spacing-1) var(--spacing-2);
   border: none;
-  font-size: var(--font-size-sm);
+  font-size: 0.75rem; /* Smaller font to fit more text */
   font-weight: var(--font-weight-medium);
   transition: all var(--transition-base) var(--transition-ease);
   cursor: pointer;
   white-space: normal;
   word-break: break-word;
+  overflow: visible; /* Allow events to expand if needed */
+  line-height: 1.2; /* Tighter line height for better fit */
 }
 
 .rbc-event:hover {
   opacity: 0.9;
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
+  z-index: 100; /* Ensure hovered events appear on top */
 }
 
 .rbc-event:active {
@@ -476,8 +479,33 @@ body {
 }
 
 .rbc-event-content {
-  font-size: var(--font-size-sm);
-  line-height: var(--line-height-tight);
+  font-size: 0.75rem;
+  line-height: 1.2;
+  overflow: visible;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Ensure event labels are fully visible */
+.rbc-event-label {
+  font-size: 0.7rem;
+  white-space: normal;
+  overflow: visible;
+}
+
+/* For very small events, use ellipsis but expand on hover */
+.rbc-event.rbc-selected {
+  z-index: 101;
+}
+
+/* Week/Day view events */
+.rbc-time-slot .rbc-event {
+  min-height: 20px; /* Ensure minimum visibility */
+}
+
+/* Prevent event content from being cut off */
+.rbc-events-container {
+  margin-right: 0 !important;
 }
 
 /* Task event styling */

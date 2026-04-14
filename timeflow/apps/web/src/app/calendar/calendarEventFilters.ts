@@ -44,11 +44,17 @@ export function filterExternalEvents(
       : false;
     const isLegacyHabit = summary ? isLegacyTimeflowHabit(summary) : false;
 
-    if (scheduledIds.has(event.id ?? '')) {
-      return Boolean(event.sourceType && event.sourceType !== 'external');
+    // Filter out task events - they're already displayed from the tasks array
+    // Only keep habit events since they need to be displayed from external events
+    if (event.sourceType === 'task') {
+      return false;
     }
 
-    if (event.sourceType && event.sourceType !== 'external') {
+    if (scheduledIds.has(event.id ?? '')) {
+      return Boolean(event.sourceType && event.sourceType === 'habit');
+    }
+
+    if (event.sourceType === 'habit') {
       return true;
     }
 
