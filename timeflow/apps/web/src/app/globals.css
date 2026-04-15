@@ -813,3 +813,172 @@ body {
   font-weight: 600;
   color: #0f172a;
 }
+
+/* ===== Analytics Panel Animations ===== */
+
+/* Gentle Bounce - Flow Mascot */
+@keyframes gentle-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-gentle-bounce {
+  animation: gentle-bounce 3s ease-in-out infinite;
+}
+
+/* Float - For metric cards on hover */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+.animate-float {
+  animation: float 2s ease-in-out infinite;
+}
+
+/* Glow Pulse - Neon effect */
+@keyframes glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px rgba(11,175,154,0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(11,175,154,0.6));
+  }
+}
+
+.animate-glow {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* Slide in from right - AI Panel */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Analytics Panel Styling */
+.analytics-panel {
+  background: linear-gradient(135deg, rgba(11,175,154,0.05) 0%, rgba(59,130,246,0.05) 100%);
+  backdrop-filter: blur(20px);
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 2px solid transparent;
+  background-image:
+    linear-gradient(white, white),
+    linear-gradient(135deg, #0BAF9A, #3B82F6);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 10px 15px -3px rgba(0, 0, 0, 0.05),
+    0 0 30px rgba(11, 175, 154, 0.15);
+  border-radius: 24px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+[data-theme='dark'] .analytics-panel {
+  background: linear-gradient(135deg, rgba(11,175,154,0.1) 0%, rgba(59,130,246,0.1) 100%);
+  background-color: rgba(30, 41, 59, 0.95);
+  background-image:
+    linear-gradient(rgba(30, 41, 59, 0.95), rgba(30, 41, 59, 0.95)),
+    linear-gradient(135deg, #0BAF9A, #3B82F6);
+}
+
+/* Metric Card Styling */
+.metric-card {
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 20px;
+  padding: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(11,175,154,0.4);
+  border-color: #0BAF9A;
+}
+
+[data-theme='dark'] .metric-card {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(71, 85, 105, 0.6);
+}
+
+[data-theme='dark'] .metric-card:hover {
+  background: rgba(51, 65, 85, 1);
+  border-color: #0BAF9A;
+}
+
+/* AI Assistant Panel */
+.ai-assistant-panel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 420px;
+  height: 100vh;
+  background: linear-gradient(135deg, rgba(11,175,154,0.05) 0%, rgba(59,130,246,0.05) 100%);
+  backdrop-filter: blur(20px);
+  background-color: rgba(255, 255, 255, 0.95);
+  border-left: 3px solid;
+  border-image: linear-gradient(to bottom, #0BAF9A, #3B82F6) 1;
+  box-shadow: -2px 0 20px rgba(11,175,154,0.3);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+[data-theme='dark'] .ai-assistant-panel {
+  background: linear-gradient(135deg, rgba(11,175,154,0.1) 0%, rgba(59,130,246,0.1) 100%);
+  background-color: rgba(30, 41, 59, 0.98);
+}
+
+.ai-quick-action {
+  background: white;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+  border-radius: 9999px;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-quick-action:hover {
+  background: linear-gradient(135deg, #0BAF9A, #14B8A6);
+  color: white;
+  box-shadow: 0 4px 12px rgba(11,175,154,0.4);
+  transform: translateY(-2px);
+}
+
+[data-theme='dark'] .ai-quick-action {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: rgba(71, 85, 105, 0.6);
+  color: white;
+}
+
+[data-theme='dark'] .ai-quick-action:hover {
+  background: linear-gradient(135deg, #0BAF9A, #14B8A6);
+}

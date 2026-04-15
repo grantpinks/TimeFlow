@@ -62,6 +62,12 @@ import type {
   EmailThreadSummaryResponse,
   EmailThreadTasksRequest,
   EmailThreadTasksResponse,
+  GoalTrackingResponse,
+  CompletionMetricsResponse,
+  TimeInsightsResponse,
+  ProductivityTrendsResponse,
+  StreakResponse,
+  CategoryBreakdownResponse,
 } from '@timeflow/shared';
 import { getAiDebugEnabled } from './aiDebug';
 import { track } from './analytics';
@@ -1774,4 +1780,52 @@ export async function runIdentityMigration(): Promise<{ success: boolean; identi
 export async function getIdentityProgress(date?: string): Promise<IdentityProgressResponse> {
   const qs = date ? `?date=${date}` : '';
   return request<IdentityProgressResponse>(`/identities/progress${qs}`);
+}
+
+// ===== Analytics API Functions =====
+
+/**
+ * Get goal tracking analytics (overdue, due today, due this week, upcoming deadlines)
+ */
+export async function getGoalTracking(): Promise<GoalTrackingResponse> {
+  return request<GoalTrackingResponse>('/tasks/goal-tracking');
+}
+
+/**
+ * Get completion metrics for specified time range
+ */
+export async function getCompletionMetrics(
+  range: 'today' | 'week' | 'month' = 'today'
+): Promise<CompletionMetricsResponse> {
+  return request<CompletionMetricsResponse>(`/tasks/completion-metrics?range=${range}`);
+}
+
+/**
+ * Get time insights (scheduled hours, average duration, time by category)
+ */
+export async function getTimeInsights(): Promise<TimeInsightsResponse> {
+  return request<TimeInsightsResponse>('/tasks/time-insights');
+}
+
+/**
+ * Get productivity trends (best time of day, productive days, weekly trend)
+ */
+export async function getProductivityTrends(
+  days: number = 7
+): Promise<ProductivityTrendsResponse> {
+  return request<ProductivityTrendsResponse>(`/tasks/productivity-trends?days=${days}`);
+}
+
+/**
+ * Get task completion streak data
+ */
+export async function getStreak(): Promise<StreakResponse> {
+  return request<StreakResponse>('/tasks/streak');
+}
+
+/**
+ * Get category breakdown (task distribution by category)
+ */
+export async function getCategoryBreakdown(): Promise<CategoryBreakdownResponse> {
+  return request<CategoryBreakdownResponse>('/tasks/category-breakdown');
 }
