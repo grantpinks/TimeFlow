@@ -17,3 +17,4 @@ export * from './assistant.js';
 export * from './email.js';
 export * from './meeting.js';
 export * from './identity.js';
+export * from './analytics.js';
