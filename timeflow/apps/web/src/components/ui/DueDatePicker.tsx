@@ -10,7 +10,7 @@ interface DueDatePickerProps {
 }
 
 type QuickOption = 'today' | 'tomorrow' | 'in-2-days' | 'custom' | null;
-type TimePreset = 'in-1-hour' | 'in-4-hours' | 'eod' | 'custom-time' | null;
+type TimePreset = 'in-1-hour' | 'in-4-hours' | 'eod' | 'eow' | 'custom-time' | null;
 
 export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
   const [selectedOption, setSelectedOption] = useState<QuickOption>(null);
@@ -103,7 +103,7 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
         targetDate = new Date(now.getTime() + 4 * 60 * 60 * 1000); // Add 4 hours in milliseconds
         break;
       case 'eod':
-        // End of day = 5:00 PM on the selected date
+        // End of day = 11:59 PM on the selected date
         targetDate = new Date(now);
 
         // Adjust date based on selected option
@@ -119,7 +119,17 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
             break;
         }
 
-        targetDate.setHours(17, 0, 0, 0);
+        targetDate.setHours(23, 59, 0, 0);
+        break;
+      case 'eow':
+        // End of week = 10:00 PM on Sunday
+        targetDate = new Date(now);
+        const currentDay = targetDate.getDay(); // 0 = Sunday, 6 = Saturday
+
+        // Calculate days until next Sunday (0 = today if Sunday, 7 = next Sunday)
+        const daysUntilSunday = currentDay === 0 ? 7 : (7 - currentDay);
+        targetDate.setDate(targetDate.getDate() + daysUntilSunday);
+        targetDate.setHours(22, 0, 0, 0);
         break;
       default:
         return;
@@ -289,6 +299,17 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
               }`}
             >
               End of Day
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTimePreset('eow')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                timePreset === 'eow'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+              }`}
+            >
+              End of Week
             </button>
             <button
               type="button"
