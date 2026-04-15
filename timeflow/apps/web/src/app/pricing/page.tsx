@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { getGoogleAuthUrl, createCheckoutSession } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { LoadingSpinner } from '@/components/ui';
-import { FlowMascot } from '@/components/FlowMascot';
+import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
 
 // Plan definitions — prices match docs/PRICING_MODEL.md
 const PLANS = [
@@ -137,43 +137,8 @@ function PricingPageContent() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center flex-shrink-0">
-            <Image
-              src="/branding/main_logo.png"
-              alt="TimeFlow"
-              width={120}
-              height={32}
-              className="w-28 sm:w-36 h-auto"
-              priority
-            />
-          </Link>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/"
-              onClick={() => track('homepage_navigation_clicked', { destination: 'home' })}
-              className="text-gray-600 hover:text-teal-600 active:text-teal-700 font-medium transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center px-2 sm:px-3"
-            >
-              Home
-            </Link>
-            <a
-              href={getGoogleAuthUrl()}
-              onClick={() => track('homepage_cta_clicked', { cta_text: 'Join Beta', location: 'header' })}
-              className="bg-teal-600 text-white px-4 sm:px-5 py-2.5 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium transition-colors text-sm sm:text-base inline-flex items-center justify-center"
-            >
-              <span className="hidden sm:inline">Join the Beta</span>
-              <span className="sm:hidden">Join</span>
-            </a>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+  const pricingMain = (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
         {/* Hero */}
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
@@ -326,8 +291,52 @@ function PricingPageContent() {
         <p className="text-center text-xs text-gray-400 mt-10 sm:mt-12 px-4">
           All prices in USD. Annual billing is charged as a single payment at the start of each year.
         </p>
-      </main>
     </div>
+  );
+
+  return (
+    <AppShellWhenAuthed
+      fallback={
+        <div className="min-h-screen bg-white">
+          <header className="border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+              <Link href="/" className="flex items-center flex-shrink-0">
+                <Image
+                  src="/branding/main_logo.png"
+                  alt="TimeFlow"
+                  width={120}
+                  height={32}
+                  className="w-28 sm:w-36 h-auto"
+                  priority
+                />
+              </Link>
+
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Link
+                  href="/"
+                  onClick={() => track('homepage_navigation_clicked', { destination: 'home' })}
+                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 font-medium transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center px-2 sm:px-3"
+                >
+                  Home
+                </Link>
+                <a
+                  href={getGoogleAuthUrl()}
+                  onClick={() => track('homepage_cta_clicked', { cta_text: 'Join Beta', location: 'header' })}
+                  className="bg-teal-600 text-white px-4 sm:px-5 py-2.5 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium transition-colors text-sm sm:text-base inline-flex items-center justify-center"
+                >
+                  <span className="hidden sm:inline">Join the Beta</span>
+                  <span className="sm:hidden">Join</span>
+                </a>
+              </div>
+            </div>
+          </header>
+
+          <main>{pricingMain}</main>
+        </div>
+      }
+    >
+      {pricingMain}
+    </AppShellWhenAuthed>
   );
 }
 
@@ -337,10 +346,9 @@ export default function PricingPage() {
       fallback={
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <div className="flex justify-center mb-3">
-              <FlowMascot size="md" expression="happy" />
+            <div className="flex justify-center">
+              <LoadingSpinner size="lg" label="Loading pricing" />
             </div>
-            <LoadingSpinner size="lg" label="Loading pricing" />
             <p className="text-slate-600 mt-4">Loading…</p>
           </div>
         </div>

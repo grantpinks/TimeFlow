@@ -9,7 +9,13 @@ import { MeetingManagerPanel } from '@/components/MeetingManagerPanel';
 import * as api from '@/lib/api';
 import type { BillingSubscriptionStatus } from '@/lib/api';
 import { canShowAiDebugToggle, getAiDebugEnabled, setAiDebugEnabled as persistAiDebugEnabled } from '@/lib/aiDebug';
-import type { Calendar, DailyScheduleConfig, DailyMeetingConfig } from '@timeflow/shared';
+import { track } from '@/lib/analytics';
+import type {
+  Calendar,
+  DailyScheduleConfig,
+  DailyMeetingConfig,
+  UserRestDaysResponse,
+} from '@timeflow/shared';
 
 export default function SettingsPage() {
   const { user, loading, updatePreferences } = useUser();
@@ -42,6 +48,11 @@ export default function SettingsPage() {
   // Habit notification preferences (opt-in)
   const [notifyStreakAtRisk, setNotifyStreakAtRisk] = useState(false);
   const [notifyMissedHighPriority, setNotifyMissedHighPriority] = useState(false);
+  const [notifyWeeklyIdentityRecap, setNotifyWeeklyIdentityRecap] = useState(false);
+
+  const [restDaysInfo, setRestDaysInfo] = useState<UserRestDaysResponse | null>(null);
+  const [restDateInput, setRestDateInput] = useState('');
+  const [restReason, setRestReason] = useState<'sick' | 'travel' | 'rest' | 'other'>('rest');
 
   // Billing
   const [billing, setBilling] = useState<BillingSubscriptionStatus | null>(null);
@@ -87,7 +98,20 @@ export default function SettingsPage() {
       // Load habit notification preferences
       setNotifyStreakAtRisk(user.notifyStreakAtRisk ?? false);
       setNotifyMissedHighPriority(user.notifyMissedHighPriority ?? false);
+      setNotifyWeeklyIdentityRecap(user.notifyWeeklyIdentityRecap ?? false);
     }
+  }, [user]);
+
+  useEffect(() => {
+    async function loadRestDays() {
+      try {
+        const data = await api.getRestDays();
+        setRestDaysInfo(data);
+      } catch {
+        setRestDaysInfo(null);
+      }
+    }
+    if (user) loadRestDays();
   }, [user]);
 
   useEffect(() => {
@@ -185,6 +209,7 @@ export default function SettingsPage() {
         // Habit notification preferences
         notifyStreakAtRisk,
         notifyMissedHighPriority,
+        notifyWeeklyIdentityRecap,
       });
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
     } catch (err) {
@@ -853,7 +878,114 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={notifyWeeklyIdentityRecap}
+                  onChange={(e) => setNotifyWeeklyIdentityRecap(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                />
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-slate-700 block">
+                    Weekly identity recap email
+                  </span>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Sends a Sunday snapshot to your Gmail address using your connected Google account. Requires Gmail
+                    access.
+                  </p>
+                </div>
+              </label>
             </div>
+          </div>
+
+          {/* Rest days (streak preservation) */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">Rest &amp; sick days</h2>
+            <p className="text-sm text-slate-600 mb-4">
+              Mark days when you cannot complete identity-linked work. Rest days bridge streaks without breaking them.
+              Limit: {restDaysInfo?.restDaysLimit ?? 2} per rolling 30 days (
+              {restDaysInfo?.restDaysUsedInRolling30 ?? 0} used).
+            </p>
+            <div className="flex flex-wrap gap-2 items-end mb-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Date (YYYY-MM-DD)</label>
+                <input
+                  type="text"
+                  value={restDateInput}
+                  onChange={(e) => setRestDateInput(e.target.value)}
+                  placeholder={new Date().toISOString().slice(0, 10)}
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm w-44"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">Reason</label>
+                <select
+                  value={restReason}
+                  onChange={(e) =>
+                    setRestReason(e.target.value as 'sick' | 'travel' | 'rest' | 'other')
+                  }
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="rest">Rest</option>
+                  <option value="sick">Sick</option>
+                  <option value="travel">Travel</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const d = restDateInput.trim() || new Date().toISOString().slice(0, 10);
+                  try {
+                    await api.addRestDay({ localDate: d, reason: restReason });
+                    track('identity.rest_day_marked', { local_date: d, reason: restReason });
+                    const data = await api.getRestDays();
+                    setRestDaysInfo(data);
+                    setRestDateInput('');
+                    setMessage({ type: 'success', text: 'Rest day saved.' });
+                  } catch (err) {
+                    setMessage({
+                      type: 'error',
+                      text: err instanceof Error ? err.message : 'Could not save rest day',
+                    });
+                  }
+                }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+              >
+                Add rest day
+              </button>
+            </div>
+            {restDaysInfo && restDaysInfo.restDays.length > 0 && (
+              <ul className="divide-y divide-slate-100 border border-slate-200 rounded-lg">
+                {restDaysInfo.restDays.map((rd) => (
+                  <li
+                    key={rd.id}
+                    className="flex items-center justify-between px-3 py-2 text-sm"
+                  >
+                    <span>
+                      {rd.localDate}{' '}
+                      <span className="text-slate-500">({rd.reason})</span>
+                    </span>
+                    <button
+                      type="button"
+                      className="text-red-600 hover:underline"
+                      onClick={async () => {
+                        try {
+                          await api.deleteRestDay(rd.localDate);
+                          const data = await api.getRestDays();
+                          setRestDaysInfo(data);
+                        } catch {
+                          setMessage({ type: 'error', text: 'Failed to remove rest day' });
+                        }
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* Identities */}

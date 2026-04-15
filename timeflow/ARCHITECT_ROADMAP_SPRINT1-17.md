@@ -1002,7 +1002,7 @@
 
 ### Sprint 18: Feature Integration & Design Cohesion
 **Duration**: Week 35-36  
-**Status**: ✅ Core complete — optional stretch: 18.13, 18.35–36, 18.43–45, 18.50–51 (see plan doc)
+**Status**: ✅ Core complete — shipped: 18.35–36, 18.C1 (milestones/streaks/rest days + weekly recap opt-in); optional stretch: 18.43–45, 18.50–51 (see plan doc)
 **Focus**: Transform TimeFlow from "a collection of features" into a unified, identity-driven productivity ecosystem. Seamlessly integrate email → tasks → habits → identity across all surfaces with consistent design language.
 
 **Strategic Context:**  
@@ -1052,7 +1052,7 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | 18.17 | Integrate identity progress into Today page header (below date, clickable filter pills) | Codex | 2-3h | P0 | ✅ |
 | 18.18 | Add identity filter quick-access buttons to Today page (click identity pill to filter view) | Codex | 3-4h | P1 | ✅ |
 | 18.19 | Build end-of-day identity report card (modal/panel showing all identity progress) | Codex | 4-6h | P1 | ✅ |
-| 18.C1 | Define identity achievement/milestone system (level up after X completions, unlock badges) | Claude | 3-4h | P2 | ⬜ |
+| 18.C1 | Define identity achievement/milestone system (level up after X completions, unlock badges) | Claude | 3-4h | P2 | ✅ |
 
 #### Phase 1B: Unified Today Page (Command Center)
 **Goal:** Make Today page the hub where everything connects - email, tasks, habits, and identity progress in one view.
@@ -1085,8 +1085,8 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 | 18.32 | After completing habit, suggest related tasks ("You finished your run! Schedule meal prep?") | Claude | 4-6h | P1 | ✅ |
 | 18.33 | After completing meeting, offer AI action item extraction → create tasks with identity tags | Codex | 6-8h | P1 | ✅ |
 | 18.34 | Build end-of-day summary view (all completions: tasks + habits, identity progress, tomorrow preview) | Codex | 6-8h | P1 | ✅ |
-| 18.35 | Add identity milestone achievements (unlock badges at 25/50/100 completions per identity) | Codex | 4-6h | P2 | ⬜ |
-| 18.36 | Create identity streak tracking (X consecutive days advancing this identity) | Codex | 4-6h | P2 | ⬜ |
+| 18.35 | Add identity milestone achievements (unlock badges at 25/50/100 completions per identity) | Codex | 4-6h | P2 | ✅ |
+| 18.36 | Create identity streak tracking (X consecutive days advancing this identity) | Codex | 4-6h | P2 | ✅ |
 
 #### Phase 1D: Design Consistency Pass
 **Goal:** Make all pages look and feel unified with consistent design patterns.
@@ -1133,8 +1133,8 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 **Inspired Features to Implement:**
 - ✅ Identity-based habit tracking (linking daily actions to long-term identity)
 - ✅ Real-time "What's Now" status widget
-- Weekly identity progress reports (partially: Today + EOD; weekly email TBD)
-- Habit completion → identity level-up system (stretch: 18.35–18.36 / 18.C1)
+- ✅ Weekly identity recap email (opt-in, Gmail; cron `POST /internal/cron/weekly-recap`) plus Today + EOD
+- ✅ Habit/task completion → identity milestones & streaks (18.35–18.36 / 18.C1)
 - Social accountability features (future: share identity progress)
 
 #### Acceptance Criteria

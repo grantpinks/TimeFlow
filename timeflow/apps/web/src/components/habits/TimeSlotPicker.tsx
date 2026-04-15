@@ -8,7 +8,6 @@
 
 import { useState, useEffect } from 'react';
 import { LoadingSpinner } from '@/components/ui';
-import { FlowMascot } from '@/components/FlowMascot';
 
 export interface TimeSlot {
   startDateTime: string;
@@ -209,7 +208,6 @@ export function TimeSlotPicker({
     return (
       <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border-2 border-primary-200 z-50 p-6">
         <div className="flex flex-col items-center justify-center py-8">
-          <FlowMascot size="sm" expression="happy" className="mb-3" />
           <LoadingSpinner size="lg" label="Finding time slots" />
           <p className="text-slate-600 font-medium mt-4">Finding available time slots…</p>
           <p className="text-sm text-slate-500 mt-1">Analyzing your calendar</p>

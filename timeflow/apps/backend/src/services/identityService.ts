@@ -210,6 +210,16 @@ export async function getIdentityProgress(userId: string, date: string) {
   const identities = await prisma.identity.findMany({
     where: { userId, isActive: true },
     orderBy: [{ sortOrder: 'asc' }],
+    select: {
+      id: true,
+      name: true,
+      color: true,
+      icon: true,
+      completionCountTotal: true,
+      milestoneTier: true,
+      currentStreak: true,
+      longestStreak: true,
+    },
   });
 
   // Completed tasks linked to identities today
@@ -290,6 +300,10 @@ export async function getIdentityProgress(userId: string, date: string) {
       name: identity.name,
       color: identity.color,
       icon: identity.icon,
+      completionCountTotal: identity.completionCountTotal,
+      milestoneTier: identity.milestoneTier,
+      currentStreak: identity.currentStreak,
+      longestStreak: identity.longestStreak,
       ...progressMap.get(identity.id)!,
     })),
   };

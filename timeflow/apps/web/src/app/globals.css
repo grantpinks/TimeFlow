@@ -680,6 +680,29 @@ body {
   background: #94a3b8;
 }
 
+/* Flow mascot inside loading rings — subtle breathe (pairs with LoadingSpinner center mode) */
+@keyframes flow-mascot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+.animate-flow-mascot-pulse {
+  animation: flow-mascot-pulse 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flow-mascot-pulse {
+    animation: none;
+  }
+}
+
 /* ===== Homepage Animations ===== */
 
 /* Hero gradient animation */

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getGoogleAuthUrl } from '@/lib/api';
 import { track } from '@/lib/analytics';
+import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
 
 const impactStats = [
   {
@@ -139,30 +140,9 @@ const sections = [
   },
 ];
 
-export default function FeaturesPage() {
+function FeaturesPageBody() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center">
-            <Image src="/branding/main_logo.png" alt="TimeFlow" width={150} height={40} priority />
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link href="/" className="text-gray-600 hover:text-teal-600">Home</Link>
-            <Link href="/about" className="text-gray-600 hover:text-teal-600">About</Link>
-            <Link href="/pricing" className="text-gray-600 hover:text-teal-600">Pricing</Link>
-            <a
-              href={getGoogleAuthUrl()}
-              onClick={() => track('homepage_cta_clicked', { cta_text: 'Get Started', location: 'features-header' })}
-              className="px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium"
-            >
-              Get Started
-            </a>
-          </nav>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-20">
+    <div className="max-w-7xl mx-auto px-6 py-20">
         <section className="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 items-center mb-20">
           <div>
             <span className="inline-flex items-center rounded-full bg-teal-50 text-teal-700 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
@@ -349,13 +329,54 @@ export default function FeaturesPage() {
             Start Free Beta
           </a>
         </section>
-      </main>
-
-      <footer className="border-t border-gray-200 py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-6 text-center text-gray-600 text-sm">
-          © 2025 TimeFlow. All rights reserved.
-        </div>
-      </footer>
     </div>
+  );
+}
+
+export default function FeaturesPage() {
+  return (
+    <AppShellWhenAuthed
+      fallback={
+        <div className="min-h-screen bg-white">
+          <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+              <Link href="/" className="flex items-center">
+                <Image src="/branding/main_logo.png" alt="TimeFlow" width={150} height={40} priority />
+              </Link>
+              <nav className="flex items-center gap-6">
+                <Link href="/" className="text-gray-600 hover:text-teal-600">
+                  Home
+                </Link>
+                <Link href="/about" className="text-gray-600 hover:text-teal-600">
+                  About
+                </Link>
+                <Link href="/pricing" className="text-gray-600 hover:text-teal-600">
+                  Pricing
+                </Link>
+                <a
+                  href={getGoogleAuthUrl()}
+                  onClick={() => track('homepage_cta_clicked', { cta_text: 'Get Started', location: 'features-header' })}
+                  className="px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium"
+                >
+                  Get Started
+                </a>
+              </nav>
+            </div>
+          </header>
+
+          <main>
+            <FeaturesPageBody />
+          </main>
+
+          <footer className="border-t border-gray-200 py-8 mt-16">
+            <div className="max-w-7xl mx-auto px-6 text-center text-gray-600 text-sm">
+              © 2025 TimeFlow. All rights reserved.
+            </div>
+          </footer>
+        </div>
+      }
+    >
+      <FeaturesPageBody />
+    </AppShellWhenAuthed>
   );
 }

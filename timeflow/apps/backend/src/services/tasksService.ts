@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '../config/prisma.js';
+import * as identityEngagementService from './identityEngagementService.js';
 
 export interface CreateTaskInput {
   userId: string;
@@ -195,7 +196,7 @@ export async function updateTask(
     }
   }
 
-  return prisma.task.update({
+  const updated = await prisma.task.update({
     where: { id: taskId },
     data: input,
     include: {
@@ -204,6 +205,17 @@ export async function updateTask(
       identity: true,
     },
   });
+
+  if (
+    input.status !== undefined &&
+    existing.status === 'completed' &&
+    input.status !== 'completed' &&
+    existing.identityId
+  ) {
+    await identityEngagementService.revokeIdentityCompletion(userId, existing.identityId);
+  }
+
+  return updated;
 }
 
 /**
@@ -259,8 +271,19 @@ export async function completeTask(taskId: string, userId: string) {
     return null;
   }
 
-  return prisma.task.update({
+  if (existing.status === 'completed') {
+    return { task: existing, identityEngagement: null };
+  }
+
+  const task = await prisma.task.update({
     where: { id: taskId },
     data: { status: 'completed' },
   });
+
+  let identityEngagement: identityEngagementService.RecordCompletionResult | null = null;
+  if (task.identityId) {
+    identityEngagement = await identityEngagementService.recordIdentityCompletion(userId, task.identityId);
+  }
+
+  return { task, identityEngagement };
 }

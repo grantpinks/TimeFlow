@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import * as api from '@/lib/api';
 import { DateTime } from 'luxon';
+import { PublicBookingTopBar } from '@/components/PublicBookingTopBar';
 
 export default function BookingPage() {
   const params = useParams();
@@ -127,7 +128,9 @@ export default function BookingPage() {
     const calendarDownloadUrl = `${API_BASE}/api/meetings/${meetingId}/calendar`;
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <>
+        <PublicBookingTopBar />
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden">
           {/* Gradient Header */}
           <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-center">
@@ -220,11 +223,14 @@ export default function BookingPage() {
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4">
+    <>
+      <PublicBookingTopBar />
+      <div className="min-h-screen bg-slate-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
           {/* Header */}
@@ -393,5 +399,6 @@ export default function BookingPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

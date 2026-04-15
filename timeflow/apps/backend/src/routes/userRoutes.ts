@@ -6,6 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as userController from '../controllers/userController.js';
+import * as userRestDayController from '../controllers/userRestDayController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerUserRoutes(server: FastifyInstance) {
@@ -23,4 +24,8 @@ export async function registerUserRoutes(server: FastifyInstance) {
     { preHandler: requireAuth },
     userController.updatePreferences
   );
+
+  server.get('/user/rest-days', { preHandler: requireAuth }, userRestDayController.listRestDays);
+  server.post('/user/rest-days', { preHandler: requireAuth }, userRestDayController.addRestDay);
+  server.delete('/user/rest-days', { preHandler: requireAuth }, userRestDayController.deleteRestDay);
 }

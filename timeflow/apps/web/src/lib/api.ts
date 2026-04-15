@@ -13,6 +13,9 @@ import type {
   UpdateIdentityRequest,
   ReorderIdentitiesRequest,
   IdentityProgressResponse,
+  IdentityCompletionEngagement,
+  UserRestDaysResponse,
+  UserRestDay,
   UserProfile,
   UserPreferencesUpdate,
   EmailAccount,
@@ -61,6 +64,7 @@ import type {
   EmailThreadTasksResponse,
 } from '@timeflow/shared';
 import { getAiDebugEnabled } from './aiDebug';
+import { track } from './analytics';
 
 /**
  * Email category configuration type (matches backend)
@@ -315,6 +319,26 @@ export async function updatePreferences(
   });
 }
 
+export async function getRestDays(): Promise<UserRestDaysResponse> {
+  return request<UserRestDaysResponse>('/user/rest-days');
+}
+
+export async function addRestDay(body: {
+  localDate: string;
+  reason?: 'sick' | 'travel' | 'rest' | 'other';
+}): Promise<{ restDay: UserRestDay }> {
+  return request<{ restDay: UserRestDay }>('/user/rest-days', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function deleteRestDay(localDate: string): Promise<void> {
+  return request<void>(`/user/rest-days?localDate=${encodeURIComponent(localDate)}`, {
+    method: 'DELETE',
+  });
+}
+
 // ===== Tasks =====
 
 /**
@@ -360,10 +384,15 @@ export async function deleteTask(id: string): Promise<void> {
 /**
  * Mark a task as complete.
  */
-export async function completeTask(id: string): Promise<Task> {
-  return request<Task>(`/tasks/${id}/complete`, {
-    method: 'POST',
-  });
+export async function completeTask(
+  id: string
+): Promise<Task & { identityEngagement?: IdentityCompletionEngagement | null }> {
+  return request<Task & { identityEngagement?: IdentityCompletionEngagement | null }>(
+    `/tasks/${id}/complete`,
+    {
+      method: 'POST',
+    }
+  );
 }
 
 // ===== Categories =====
@@ -511,10 +540,18 @@ export async function rejectHabitSuggestion(data: { habitId: string; start: stri
  * track('habit.instance.complete', { habit_id_hash: hashHabitId(habitId) })
  */
 export async function completeHabitInstance(scheduledHabitId: string, actualDurationMinutes?: number): Promise<HabitCompletionResponse> {
-  return request<HabitCompletionResponse>(`/habits/instances/${scheduledHabitId}/complete`, {
+  const res = await request<HabitCompletionResponse>(`/habits/instances/${scheduledHabitId}/complete`, {
     method: 'POST',
     body: actualDurationMinutes !== undefined ? JSON.stringify({ actualDurationMinutes }) : undefined,
   });
+  const tier = res.identityEngagement?.milestoneUnlocked;
+  if (tier === 25 || tier === 50 || tier === 100) {
+    track('identity.milestone_unlocked', { tier });
+  }
+  if (res.identityEngagement) {
+    track('identity.streak_updated', { current_streak: res.identityEngagement.currentStreak });
+  }
+  return res;
 }
 
 /**

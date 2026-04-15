@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Layout } from '@/components/Layout';
 import { LoadingSpinner } from '@/components/ui';
-import { FlowMascot } from '@/components/FlowMascot';
 import ColorPicker from '@/components/ColorPicker';
 import GmailColorPicker, { type GmailColor } from '@/components/GmailColorPicker';
 import * as api from '@/lib/api';
@@ -449,7 +448,6 @@ export default function EmailCategoriesSettingsPage() {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-64 gap-3">
-          <FlowMascot size="md" expression="happy" />
           <LoadingSpinner size="lg" label="Loading email categories" />
         </div>
       </Layout>

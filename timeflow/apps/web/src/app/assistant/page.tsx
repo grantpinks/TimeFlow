@@ -7,7 +7,6 @@ import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Layout } from '../../components/Layout';
 import { LoadingSpinner } from '@/components/ui';
-import { FlowMascot } from '@/components/FlowMascot';
 import SchedulePreviewCard from '../../components/SchedulePreviewCard';
 import ThinkingState from '../../components/ThinkingState';
 import { SchedulePreviewOverlay } from '../../components/calendar/SchedulePreviewOverlay';
@@ -308,10 +307,9 @@ export default function AssistantPage() {
     return (
       <div className="min-h-screen flex items-center justify-center app-shell">
         <div className="text-center">
-          <div className="flex justify-center mb-3">
-            <FlowMascot size="md" expression="happy" />
+          <div className="flex justify-center">
+            <LoadingSpinner size="lg" label="Loading assistant" />
           </div>
-          <LoadingSpinner size="lg" label="Loading assistant" />
           <p className="text-muted mt-4">Loading…</p>
         </div>
       </div>

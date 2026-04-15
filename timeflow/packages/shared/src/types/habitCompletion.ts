@@ -3,6 +3,8 @@
  * Shared types for habit completion tracking
  */
 
+import type { IdentityCompletionEngagement } from './identity.js';
+
 export enum HabitSkipReason {
   NO_TIME = 'NO_TIME',                    // "No time / too busy"
   LOW_ENERGY = 'LOW_ENERGY',              // "Low energy / not feeling well"
@@ -26,6 +28,8 @@ export interface HabitCompletionResponse {
     status: 'completed' | 'skipped';
     completedAt: string;
   };
+  /** Present when completion advanced identity stats */
+  identityEngagement?: IdentityCompletionEngagement | null;
 }
 
 export interface HabitSkipRequest {

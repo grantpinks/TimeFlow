@@ -65,11 +65,12 @@ const preferencesSchema = z.object({
   dailyMeetingSchedule: dailyMeetingScheduleSchema,
 
   // Habit notification preferences
-  notifyStreakAtRisk: z.boolean().optional(),
-  notifyMissedHighPriority: z.boolean().optional(),
+    notifyStreakAtRisk: z.boolean().optional(),
+    notifyMissedHighPriority: z.boolean().optional(),
+    notifyWeeklyIdentityRecap: z.boolean().optional(),
 
-  // Action-state label sync
-  actionStateLabelSyncEnabled: z.boolean().optional(),
+    // Action-state label sync
+    actionStateLabelSyncEnabled: z.boolean().optional(),
 });
 
 /**
@@ -111,6 +112,7 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     dailyMeetingSchedule: record.dailyMeetingSchedule || null,
     notifyStreakAtRisk: record.notifyStreakAtRisk,
     notifyMissedHighPriority: record.notifyMissedHighPriority,
+    notifyWeeklyIdentityRecap: record.notifyWeeklyIdentityRecap,
     actionStateLabelSyncEnabled: record.actionStateLabelSyncEnabled,
   };
 }
@@ -201,6 +203,7 @@ interface UpdatePreferencesBody {
   dailyMeetingSchedule?: DailyMeetingScheduleConfig | null;
   notifyStreakAtRisk?: boolean;
   notifyMissedHighPriority?: boolean;
+  notifyWeeklyIdentityRecap?: boolean;
   actionStateLabelSyncEnabled?: boolean;
 }
 
@@ -240,6 +243,7 @@ export async function updatePreferences(
     dailyMeetingSchedule,
     notifyStreakAtRisk,
     notifyMissedHighPriority,
+    notifyWeeklyIdentityRecap,
     actionStateLabelSyncEnabled,
   } =
     parsed.data;
@@ -272,6 +276,7 @@ export async function updatePreferences(
       // Habit notification preferences
       ...(notifyStreakAtRisk !== undefined && { notifyStreakAtRisk }),
       ...(notifyMissedHighPriority !== undefined && { notifyMissedHighPriority }),
+      ...(notifyWeeklyIdentityRecap !== undefined && { notifyWeeklyIdentityRecap }),
 
       // Action-state label sync
       ...(actionStateLabelSyncEnabled !== undefined && { actionStateLabelSyncEnabled }),
@@ -309,6 +314,7 @@ export async function updatePreferences(
     dailyMeetingSchedule: updated.dailyMeetingSchedule || null,
     notifyStreakAtRisk: updated.notifyStreakAtRisk,
     notifyMissedHighPriority: updated.notifyMissedHighPriority,
+    notifyWeeklyIdentityRecap: updated.notifyWeeklyIdentityRecap,
     actionStateLabelSyncEnabled: updated.actionStateLabelSyncEnabled,
   };
 }

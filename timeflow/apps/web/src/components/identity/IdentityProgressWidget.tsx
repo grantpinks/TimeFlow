@@ -106,6 +106,24 @@ export function IdentityProgressWidget({
                 {item.name}
               </span>
 
+              {(item.currentStreak ?? 0) > 0 && (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-900"
+                  title="Day streak for this identity"
+                >
+                  {item.currentStreak}d
+                </span>
+              )}
+
+              {(item.milestoneTier ?? 0) > 0 && (
+                <span
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-800 text-white"
+                  title={`Milestone tier ${item.milestoneTier} (${item.completionCountTotal ?? 0} lifetime completions)`}
+                >
+                  M{item.milestoneTier}
+                </span>
+              )}
+
               {/* Stats — only shown when there's progress */}
               {hasProgress && (
                 <span className="text-xs font-medium text-slate-600">

@@ -292,11 +292,11 @@ export async function completeTask(
   }
 
   const { id } = request.params;
-  const task = await tasksService.completeTask(id, user.id);
+  const result = await tasksService.completeTask(id, user.id);
 
-  if (!task) {
+  if (!result) {
     return reply.status(404).send({ error: 'Task not found' });
   }
 
-  return task;
+  return { ...result.task, identityEngagement: result.identityEngagement };
 }

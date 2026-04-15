@@ -2,19 +2,11 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
 
-export default function TermsPage() {
+function TermsPageBody() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center">
-            <Image src="/branding/main_logo.png" alt="TimeFlow" width={150} height={40} priority />
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-6 py-20">
+    <div className="max-w-5xl mx-auto px-6 py-20">
         <section className="grid lg:grid-cols-[1.2fr_0.8fr] gap-12 items-center mb-12">
           <div>
             <span className="inline-flex items-center rounded-full bg-teal-50 text-teal-700 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
@@ -190,13 +182,44 @@ export default function TermsPage() {
             </p>
           </section>
         </div>
-      </main>
-
-      <footer className="border-t border-gray-200 py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-6 text-center text-gray-600 text-sm">
-          © 2025 TimeFlow. All rights reserved. | <Link href="/privacy" className="hover:text-teal-600">Privacy</Link>
-        </div>
-      </footer>
     </div>
+  );
+}
+
+export default function TermsPage() {
+  return (
+    <AppShellWhenAuthed
+      fallback={
+        <div className="min-h-screen bg-white">
+          <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+              <Link href="/" className="flex items-center">
+                <Image src="/branding/main_logo.png" alt="TimeFlow" width={150} height={40} priority />
+              </Link>
+              <nav className="flex items-center gap-4">
+                <Link href="/" className="text-sm font-medium text-gray-600 hover:text-teal-600">
+                  Home
+                </Link>
+              </nav>
+            </div>
+          </header>
+
+          <main>
+            <TermsPageBody />
+          </main>
+
+          <footer className="border-t border-gray-200 py-8 mt-16">
+            <div className="max-w-7xl mx-auto px-6 text-center text-gray-600 text-sm">
+              © 2025 TimeFlow. All rights reserved. |{' '}
+              <Link href="/privacy" className="hover:text-teal-600">
+                Privacy
+              </Link>
+            </div>
+          </footer>
+        </div>
+      }
+    >
+      <TermsPageBody />
+    </AppShellWhenAuthed>
   );
 }

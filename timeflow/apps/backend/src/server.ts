@@ -32,6 +32,7 @@ import { startWatchRenewalJob } from './services/gmailWatchScheduler.js';
 import { registerGmailSyncRoutes } from './routes/gmailSyncRoutes.js';
 import { registerBillingRoutes, registerStripeWebhookRoute } from './routes/billingRoutes.js';
 import { registerIdentityRoutes } from './routes/identityRoutes.js';
+import { registerInternalCronRoutes } from './routes/internalCronRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -74,6 +75,8 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // Health check
   server.get('/health', async () => ({ status: 'ok' }));
+
+  await registerInternalCronRoutes(server);
 
   // Register API routes under /api prefix
   await server.register(

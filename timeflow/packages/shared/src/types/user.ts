@@ -76,6 +76,8 @@ export interface UserProfile {
   // Habit notification preferences (opt-in)
   notifyStreakAtRisk?: boolean;            // Notify when streak will break if not completed today
   notifyMissedHighPriority?: boolean;      // Notify when high-priority habit is missed
+  /** Weekly identity recap via Gmail (requires Gmail connected) */
+  notifyWeeklyIdentityRecap?: boolean;
 }
 
 /**
@@ -102,6 +104,7 @@ export interface UserPreferencesUpdate {
   // Habit notification preferences
   notifyStreakAtRisk?: boolean;
   notifyMissedHighPriority?: boolean;
+  notifyWeeklyIdentityRecap?: boolean;
 }
 
 export type EmailAccountProvider = 'google';

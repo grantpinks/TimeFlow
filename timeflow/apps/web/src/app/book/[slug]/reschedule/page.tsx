@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import * as api from '@/lib/api';
 import { DateTime } from 'luxon';
+import { PublicBookingTopBar } from '@/components/PublicBookingTopBar';
 
 export default function ReschedulePage() {
   const params = useParams();
@@ -101,21 +102,26 @@ export default function ReschedulePage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
-          <div className="text-red-500 text-5xl mb-4">✕</div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Link</h1>
-          <p className="text-slate-600">
-            This reschedule link is invalid or has expired.
-          </p>
+      <>
+        <PublicBookingTopBar />
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
+            <div className="text-red-500 text-5xl mb-4">✕</div>
+            <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Link</h1>
+            <p className="text-slate-600">
+              This reschedule link is invalid or has expired.
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <>
+        <PublicBookingTopBar />
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
           <div className="text-green-500 text-5xl mb-4">✓</div>
           <h1 className="text-2xl font-bold text-slate-800 mb-2">Meeting Rescheduled!</h1>
@@ -133,11 +139,14 @@ export default function ReschedulePage() {
           )}
         </div>
       </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4">
+    <>
+      <PublicBookingTopBar />
+      <div className="min-h-screen bg-slate-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
           <div className="bg-primary-600 text-white p-6">
@@ -262,5 +271,6 @@ export default function ReschedulePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

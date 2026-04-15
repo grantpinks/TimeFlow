@@ -255,8 +255,7 @@ export default function HabitsPage() {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-64 gap-3">
-          <FlowMascot size="md" expression="happy" />
-          <LoadingSpinner size="md" label="Loading habits" />
+          <LoadingSpinner size="lg" label="Loading habits" />
         </div>
       </Layout>
     );

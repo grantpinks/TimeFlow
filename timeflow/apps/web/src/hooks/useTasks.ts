@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@timeflow/shared';
 import * as api from '../lib/api';
+import { track } from '../lib/analytics';
 
 export function useTasks(initialStatus?: string) {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -52,6 +53,15 @@ export function useTasks(initialStatus?: string) {
   const completeTask = async (id: string) => {
     const updated = await api.completeTask(id);
     setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    const tier = updated.identityEngagement?.milestoneUnlocked;
+    if (tier === 25 || tier === 50 || tier === 100) {
+      track('identity.milestone_unlocked', { tier });
+    }
+    if (updated.identityEngagement) {
+      track('identity.streak_updated', {
+        current_streak: updated.identityEngagement.currentStreak,
+      });
+    }
     return updated;
   };
 

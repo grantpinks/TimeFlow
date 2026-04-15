@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { track } from '@/lib/analytics';
+import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
 
 const milestones = [
   { year: '2024', title: 'The first prototype', detail: 'An AI agent that scheduled a single day in 90 seconds.' },
@@ -31,30 +32,9 @@ const impact = [
   { label: 'Habits protected', value: '4x', note: 'Illustrative' },
 ];
 
-export default function AboutPage() {
+function AboutPageBody() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center flex-shrink-0">
-            <Image 
-              src="/branding/main_logo.png" 
-              alt="TimeFlow" 
-              width={120}
-              height={32}
-              className="w-28 sm:w-36 h-auto"
-              priority 
-            />
-          </Link>
-          <nav className="flex items-center gap-3 sm:gap-6">
-            <Link href="/" className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center">Home</Link>
-            <Link href="/pricing" className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center">Pricing</Link>
-            <Link href="/features" className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center hidden sm:inline-flex">Features</Link>
-          </nav>
-        </div>
-      </header>
-
-      <main>
+    <>
         <section className="py-12 sm:py-20 px-4 sm:px-6">
           <div className="max-w-6xl mx-auto grid lg:grid-cols-[1.1fr_0.9fr] gap-8 sm:gap-12 items-center">
             <div>
@@ -240,13 +220,63 @@ export default function AboutPage() {
             </Link>
           </div>
         </section>
-      </main>
+    </>
+  );
+}
 
-      <footer className="border-t border-gray-200 py-6 sm:py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-gray-600 text-xs sm:text-sm">
-          © 2025 TimeFlow. All rights reserved.
+export default function AboutPage() {
+  return (
+    <AppShellWhenAuthed
+      fallback={
+        <div className="min-h-screen bg-white">
+          <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+              <Link href="/" className="flex items-center flex-shrink-0">
+                <Image
+                  src="/branding/main_logo.png"
+                  alt="TimeFlow"
+                  width={120}
+                  height={32}
+                  className="w-28 sm:w-36 h-auto"
+                  priority
+                />
+              </Link>
+              <nav className="flex items-center gap-3 sm:gap-6">
+                <Link
+                  href="/"
+                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center"
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="/features"
+                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center hidden sm:inline-flex"
+                >
+                  Features
+                </Link>
+              </nav>
+            </div>
+          </header>
+
+          <main>
+            <AboutPageBody />
+          </main>
+
+          <footer className="border-t border-gray-200 py-6 sm:py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-gray-600 text-xs sm:text-sm">
+              © 2025 TimeFlow. All rights reserved.
+            </div>
+          </footer>
         </div>
-      </footer>
-    </div>
+      }
+    >
+      <AboutPageBody />
+    </AppShellWhenAuthed>
   );
 }

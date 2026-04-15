@@ -60,6 +60,12 @@ export interface IdentityDayProgress {
   completedCount: number; // Tasks + habits completed today linked to this identity
   totalMinutes: number; // Sum of durations for completed items
   inProgressCount: number; // Scheduled for today, not yet complete
+  /** Lifetime qualifying completions (tasks + habit instances) */
+  completionCountTotal: number;
+  /** Highest milestone tier achieved: 0, 25, 50, or 100 */
+  milestoneTier: number;
+  currentStreak: number;
+  longestStreak: number;
 }
 
 /**
@@ -68,4 +74,27 @@ export interface IdentityDayProgress {
 export interface IdentityProgressResponse {
   date: string; // ISO date YYYY-MM-DD
   identities: IdentityDayProgress[];
+}
+
+/**
+ * Returned when completing a task or habit instance that advances identity stats.
+ */
+export interface IdentityCompletionEngagement {
+  milestoneUnlocked: number | null;
+  currentStreak: number;
+  completionCountTotal: number;
+}
+
+export interface UserRestDay {
+  id: string;
+  userId: string;
+  localDate: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface UserRestDaysResponse {
+  restDays: UserRestDay[];
+  restDaysUsedInRolling30: number;
+  restDaysLimit: number;
 }

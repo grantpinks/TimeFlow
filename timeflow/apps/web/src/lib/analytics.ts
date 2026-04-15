@@ -106,7 +106,14 @@ export type AnalyticsEvent =
   | { name: 'billing.subscription_canceled'; properties: { plan: string } }
   | { name: 'billing.portal_opened'; properties: {} }
   | { name: 'billing.checkout_resumed_after_auth'; properties: { planKey: string } }
-  | { name: 'billing.redirecting_to_auth'; properties: { planKey: string } };
+  | { name: 'billing.redirecting_to_auth'; properties: { planKey: string } }
+  // Identity milestones & streaks (privacy-safe where possible)
+  | { name: 'identity.milestone_unlocked'; properties: { tier: 25 | 50 | 100 } }
+  | {
+      name: 'identity.streak_updated';
+      properties: { current_streak: number; longest_streak?: number };
+    }
+  | { name: 'identity.rest_day_marked'; properties: { local_date: string; reason: string } };
 
 // Track event
 export function track<T extends AnalyticsEvent>(event: T['name'], properties?: T['properties']) {

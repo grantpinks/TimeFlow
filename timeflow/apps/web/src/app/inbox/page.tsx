@@ -1077,7 +1077,6 @@ export default function InboxPage() {
           <div className={`${selectedThreadId ? 'hidden sm:flex' : 'flex'} flex-col w-full sm:w-[380px] flex-none border-r border-[#e0e0e0] bg-white overflow-y-auto`}>
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <FlowMascot size="lg" expression="thinking" className="mb-4" />
                 <LoadingSpinner size="lg" variant="inbox" label="Loading inbox" />
                 <div
                   className="text-[#0BAF9A] text-sm mt-4"

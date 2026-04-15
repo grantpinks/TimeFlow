@@ -377,7 +377,7 @@ export async function completeHabitInstance(
   const { actualDurationMinutes } = parsed.data;
 
   try {
-    const completion = await habitCompletionService.markScheduledHabitComplete(
+    const { completion, identityEngagement } = await habitCompletionService.markScheduledHabitComplete(
       user.id,
       scheduledHabitId,
       actualDurationMinutes
@@ -390,6 +390,7 @@ export async function completeHabitInstance(
         completedAt: completion.completedAt.toISOString(),
         actualDurationMinutes: completion.actualDurationMinutes,
       },
+      identityEngagement,
     });
   } catch (error) {
     request.log.error(error, 'Failed to complete habit instance');

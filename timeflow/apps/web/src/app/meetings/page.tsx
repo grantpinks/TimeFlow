@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { getUserMeetings, type HostMeeting } from '@/lib/api';
 import { DateTime } from 'luxon';
 import { Layout } from '@/components/Layout';
-import { FlowMascot } from '@/components/FlowMascot';
 import { BrandedEmptyState, LoadingSpinner } from '@/components/ui';
 
 export default function MeetingsPage() {
@@ -57,8 +56,7 @@ export default function MeetingsPage() {
     return (
       <Layout>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col items-center justify-center min-h-[55vh] text-center">
-          <FlowMascot size="lg" expression="happy" />
-          <div className="mt-5">
+          <div className="flex justify-center">
             <LoadingSpinner size="lg" label="Loading meetings" />
           </div>
           <p className="mt-4 text-sm text-slate-600 max-w-sm">

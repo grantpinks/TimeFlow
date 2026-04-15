@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import * as api from '@/lib/api';
+import { PublicBookingTopBar } from '@/components/PublicBookingTopBar';
 
 export default function CancelPage() {
   const params = useParams();
@@ -35,34 +36,42 @@ export default function CancelPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
-          <div className="text-red-500 text-5xl mb-4">✕</div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Link</h1>
-          <p className="text-slate-600">
-            This cancellation link is invalid or has expired.
-          </p>
+      <>
+        <PublicBookingTopBar />
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
+            <div className="text-red-500 text-5xl mb-4">✕</div>
+            <h1 className="text-2xl font-bold text-slate-800 mb-2">Invalid Link</h1>
+            <p className="text-slate-600">
+              This cancellation link is invalid or has expired.
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (success) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
-          <div className="text-green-500 text-5xl mb-4">✓</div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Meeting Cancelled</h1>
-          <p className="text-slate-600">
-            Your meeting has been cancelled successfully. You&apos;ll receive a confirmation email shortly.
-          </p>
+      <>
+        <PublicBookingTopBar />
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8 text-center">
+            <div className="text-green-500 text-5xl mb-4">✓</div>
+            <h1 className="text-2xl font-bold text-slate-800 mb-2">Meeting Cancelled</h1>
+            <p className="text-slate-600">
+              Your meeting has been cancelled successfully. You&apos;ll receive a confirmation email shortly.
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+    <>
+      <PublicBookingTopBar />
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-8">
         <h1 className="text-2xl font-bold text-slate-800 mb-4 text-center">Cancel Meeting</h1>
 
@@ -100,5 +109,6 @@ export default function CancelPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -3,8 +3,10 @@
  * Handles marking habits complete, skipping, and undo operations
  */
 
+import type { HabitCompletion } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { HabitSkipReason } from '@timeflow/shared';
+import * as identityEngagementService from './identityEngagementService.js';
 
 /**
  * Mark a scheduled habit as complete
@@ -17,7 +19,10 @@ export async function markScheduledHabitComplete(
   userId: string,
   scheduledHabitId: string,
   actualDurationMinutes?: number
-) {
+): Promise<{
+  completion: HabitCompletion;
+  identityEngagement: identityEngagementService.RecordCompletionResult | null;
+}> {
   // Verify scheduled habit belongs to user
   const scheduledHabit = await prisma.scheduledHabit.findFirst({
     where: { id: scheduledHabitId, userId },
@@ -27,19 +32,23 @@ export async function markScheduledHabitComplete(
     throw new Error('Scheduled habit not found or does not belong to user');
   }
 
+  const alreadyDone = await prisma.habitCompletion.findUnique({
+    where: { scheduledHabitId },
+  });
+  if (alreadyDone?.status === 'completed') {
+    return { completion: alreadyDone, identityEngagement: null };
+  }
+
+  let recordIdentityEngagement = false;
+
   // Use transaction for atomicity
-  return await prisma.$transaction(async (tx) => {
+  const completion = await prisma.$transaction(async (tx) => {
     // Check if completion already exists
     const existing = await tx.habitCompletion.findUnique({
       where: { scheduledHabitId },
     });
 
     if (existing) {
-      // If already completed, return it (idempotent)
-      if (existing.status === 'completed') {
-        return existing;
-      }
-
       // If was skipped, update to completed and record history
       const previousState = {
         status: existing.status,
@@ -68,11 +77,12 @@ export async function markScheduledHabitComplete(
         },
       });
 
+      recordIdentityEngagement = true;
       return updated;
     }
 
     // Create new completion
-    const completion = await tx.habitCompletion.create({
+    const created = await tx.habitCompletion.create({
       data: {
         userId,
         habitId: scheduledHabit.habitId,
@@ -94,8 +104,25 @@ export async function markScheduledHabitComplete(
       },
     });
 
-    return completion;
+    recordIdentityEngagement = true;
+    return created;
   });
+
+  let identityEngagement: identityEngagementService.RecordCompletionResult | null = null;
+  if (recordIdentityEngagement) {
+    const habit = await prisma.habit.findUnique({
+      where: { id: scheduledHabit.habitId },
+      select: { identityId: true },
+    });
+    if (habit?.identityId) {
+      identityEngagement = await identityEngagementService.recordIdentityCompletion(
+        userId,
+        habit.identityId
+      );
+    }
+  }
+
+  return { completion, identityEngagement };
 }
 
 /**
@@ -116,7 +143,7 @@ export async function undoScheduledHabitComplete(
     throw new Error('Scheduled habit not found or does not belong to user');
   }
 
-  return await prisma.$transaction(async (tx) => {
+  const txResult = await prisma.$transaction(async (tx) => {
     // Find most recent action history for this scheduled habit
     const history = await tx.habitActionHistory.findFirst({
       where: {
@@ -131,6 +158,11 @@ export async function undoScheduledHabitComplete(
       throw new Error('Undo window expired (>24h) or no action found');
     }
 
+    const completionRow = await tx.habitCompletion.findUnique({
+      where: { scheduledHabitId },
+    });
+    const wasCompleted = completionRow?.status === 'completed';
+
     // Delete the completion
     await tx.habitCompletion.delete({
       where: { scheduledHabitId },
@@ -141,8 +173,20 @@ export async function undoScheduledHabitComplete(
       where: { id: history.id },
     });
 
-    return { success: true };
+    return { wasCompleted, habitId: scheduledHabit.habitId };
   });
+
+  if (txResult.wasCompleted) {
+    const habit = await prisma.habit.findUnique({
+      where: { id: txResult.habitId },
+      select: { identityId: true },
+    });
+    if (habit?.identityId) {
+      await identityEngagementService.revokeIdentityCompletion(userId, habit.identityId);
+    }
+  }
+
+  return { success: true };
 }
 
 /**

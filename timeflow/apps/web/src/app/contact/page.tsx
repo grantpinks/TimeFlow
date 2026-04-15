@@ -3,31 +3,11 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { track } from '@/lib/analytics';
+import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
 
-export default function ContactPage() {
+function ContactPageBody() {
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
-          <Link href="/" className="flex items-center flex-shrink-0">
-            <Image 
-              src="/branding/main_logo.png" 
-              alt="TimeFlow" 
-              width={120}
-              height={32}
-              className="w-28 sm:w-36 h-auto"
-              priority 
-            />
-          </Link>
-          <nav className="flex items-center gap-3 sm:gap-6">
-            <Link href="/" className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center">Home</Link>
-            <Link href="/about" className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center hidden sm:inline-flex">About</Link>
-            <Link href="/pricing" className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center">Pricing</Link>
-          </nav>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
         <section className="grid lg:grid-cols-[1.2fr_0.8fr] gap-8 sm:gap-12 items-center mb-12 sm:mb-16">
           <div>
             <span className="inline-flex items-center rounded-full bg-teal-50 text-teal-700 px-3 py-1 text-xs font-semibold uppercase tracking-widest">
@@ -124,13 +104,63 @@ export default function ContactPage() {
             View all FAQs →
           </Link>
         </div>
-      </main>
-
-      <footer className="border-t border-gray-200 py-6 sm:py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-gray-600 text-xs sm:text-sm">
-          © 2025 TimeFlow. All rights reserved.
-        </div>
-      </footer>
     </div>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <AppShellWhenAuthed
+      fallback={
+        <div className="min-h-screen bg-white">
+          <header className="border-b border-gray-200 bg-white/80 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+              <Link href="/" className="flex items-center flex-shrink-0">
+                <Image
+                  src="/branding/main_logo.png"
+                  alt="TimeFlow"
+                  width={120}
+                  height={32}
+                  className="w-28 sm:w-36 h-auto"
+                  priority
+                />
+              </Link>
+              <nav className="flex items-center gap-3 sm:gap-6">
+                <Link
+                  href="/"
+                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/about"
+                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center hidden sm:inline-flex"
+                >
+                  About
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center"
+                >
+                  Pricing
+                </Link>
+              </nav>
+            </div>
+          </header>
+
+          <main>
+            <ContactPageBody />
+          </main>
+
+          <footer className="border-t border-gray-200 py-6 sm:py-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-gray-600 text-xs sm:text-sm">
+              © 2025 TimeFlow. All rights reserved.
+            </div>
+          </footer>
+        </div>
+      }
+    >
+      <ContactPageBody />
+    </AppShellWhenAuthed>
   );
 }

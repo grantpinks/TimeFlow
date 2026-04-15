@@ -9,7 +9,6 @@
 import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { BrandedEmptyState, LoadingSpinner } from '@/components/ui';
-import { FlowMascot } from '@/components/FlowMascot';
 import { useCategories } from '@/hooks/useCategories';
 import ColorPicker from '@/components/ColorPicker';
 import { CategoryTrainingPanel } from '@/components/CategoryTrainingPanel';
@@ -88,8 +87,7 @@ export default function CategoriesPage() {
     return (
       <Layout>
         <div className="flex flex-col items-center justify-center h-64 gap-3">
-          <FlowMascot size="md" expression="happy" />
-          <LoadingSpinner size="md" label="Loading categories" />
+          <LoadingSpinner size="lg" label="Loading categories" />
         </div>
       </Layout>
     );

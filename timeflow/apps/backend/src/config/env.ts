@@ -35,6 +35,8 @@ const envSchema = z.object({
   GMAIL_WATCH_RENEWAL_INTERVAL_MINUTES: z.string().optional(),
   /** When truthy (1/true/yes), Flow Credits are not enforced and usage is not deducted (dev / staging). */
   FLOW_CREDITS_DISABLED: z.string().optional(),
+  /** Secret for POST /internal/cron/* (Render cron, etc.) */
+  CRON_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

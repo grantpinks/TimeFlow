@@ -37,6 +37,10 @@ model User {
   notifyStreakAtRisk       Boolean @default(false) // Notify when streak will break if not completed today
   notifyMissedHighPriority Boolean @default(false) // Notify when high-priority habit is missed
 
+  // Weekly identity recap (Gmail send — opt-in)
+  notifyWeeklyIdentityRecap Boolean   @default(false)
+  lastWeeklyRecapSentAt     DateTime?
+
   // Meeting-specific availability preferences
   meetingStartTime     String? // HH:mm - default earliest meeting time
   meetingEndTime       String? // HH:mm - default latest meeting time
@@ -82,6 +86,7 @@ model User {
   writingVoiceProfile      WritingVoiceProfile?
   subscriptions            Subscription[]
   usageLogs                UsageLog[]
+  restDays                 UserRestDay[]
 }
 
 model Task {
@@ -189,6 +194,13 @@ model Identity {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  /// Total qualifying completions (tasks + habit instances) linked to this identity
+  completionCountTotal Int @default(0)
+  /// Highest milestone tier achieved: 0, 25, 50, or 100
+  milestoneTier        Int @default(0)
+  currentStreak        Int @default(0)
+  longestStreak        Int @default(0)
+
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks  Task[]
   habits Habit[]
@@ -196,6 +208,20 @@ model Identity {
   @@unique([userId, name])
   @@index([userId])
   @@index([userId, sortOrder])
+}
+
+/// User-marked rest/sick days (preserve identity streaks). localDate = YYYY-MM-DD in user's calendar.
+model UserRestDay {
+  id        String   @id @default(cuid())
+  userId    String
+  localDate String // YYYY-MM-DD
+  reason    String   @default("rest") // sick | travel | rest | other
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, localDate])
+  @@index([userId])
 }
 
 model Habit {

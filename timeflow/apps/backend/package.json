@@ -13,6 +13,7 @@
     "pretest": "pnpm -C ../../packages/scheduling build",
     "test": "vitest run",
     "test:watch": "vitest watch",
+    "backfill:identity-engagement": "tsx scripts/backfillIdentityEngagement.ts",
     "rename-timeflow-events": "tsx scripts/rename-timeflow-events.ts",
     "rewrite-timeflow-events": "tsx scripts/rename-timeflow-events.ts",
     "ai:regression": "AI_REGRESSION_PROMPTS=./scripts/prompts/sprint13-regression.txt node scripts/test-ai-prompts.js",
