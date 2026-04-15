@@ -9,8 +9,8 @@ interface DueDatePickerProps {
   onChange: (value: string) => void;
 }
 
-type QuickOption = 'today' | 'tomorrow' | 'in-2-days' | 'custom' | null;
-type TimePreset = 'in-1-hour' | 'in-4-hours' | 'eod' | 'eow' | 'custom-time' | null;
+type QuickOption = 'today' | 'tomorrow' | 'in-2-days' | 'end-of-week' | 'custom' | null;
+type TimePreset = 'in-1-hour' | 'in-4-hours' | 'eod' | 'custom-time' | null;
 
 export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
   const [selectedOption, setSelectedOption] = useState<QuickOption>(null);
@@ -37,6 +37,12 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     const inTwoDays = new Date(today);
     inTwoDays.setDate(inTwoDays.getDate() + 2);
 
+    // Calculate next Sunday
+    const currentDay = today.getDay();
+    const daysUntilSunday = currentDay === 0 ? 7 : (7 - currentDay);
+    const nextSunday = new Date(today);
+    nextSunday.setDate(nextSunday.getDate() + daysUntilSunday);
+
     const valueDateOnly = new Date(valueDate);
     valueDateOnly.setHours(0, 0, 0, 0);
 
@@ -54,6 +60,9 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
       setShowCustomPicker(false);
     } else if (valueDateOnly.getTime() === inTwoDays.getTime()) {
       setSelectedOption('in-2-days');
+      setShowCustomPicker(false);
+    } else if (valueDateOnly.getTime() === nextSunday.getTime()) {
+      setSelectedOption('end-of-week');
       setShowCustomPicker(false);
     } else {
       setSelectedOption('custom');
@@ -76,7 +85,27 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     setShowCustomPicker(false);
     setTimePreset(null); // Reset time preset when changing date option
 
-    // Don't set a time immediately - let user choose preset or custom time
+    // For end-of-week, automatically set to 10pm Sunday
+    if (option === 'end-of-week') {
+      const now = new Date();
+      const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
+
+      // Calculate days until next Sunday (0 = today if Sunday, 7 = next Sunday)
+      const daysUntilSunday = currentDay === 0 ? 7 : (7 - currentDay);
+      const targetDate = new Date(now);
+      targetDate.setDate(targetDate.getDate() + daysUntilSunday);
+      targetDate.setHours(22, 0, 0, 0);
+
+      // Update selected time for display
+      setSelectedTime('22:00');
+
+      // Format as YYYY-MM-DDTHH:mm
+      const isoString = targetDate.toISOString().slice(0, 16);
+      onChange(isoString);
+      return;
+    }
+
+    // Don't set a time immediately for other options - let user choose preset or custom time
   };
 
   const handleTimePreset = (preset: TimePreset) => {
@@ -117,19 +146,15 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
           case 'in-2-days':
             targetDate.setDate(targetDate.getDate() + 2);
             break;
+          case 'end-of-week':
+            // Calculate days until next Sunday
+            const currentDay = targetDate.getDay();
+            const daysUntilSunday = currentDay === 0 ? 7 : (7 - currentDay);
+            targetDate.setDate(targetDate.getDate() + daysUntilSunday);
+            break;
         }
 
         targetDate.setHours(23, 59, 0, 0);
-        break;
-      case 'eow':
-        // End of week = 10:00 PM on Sunday
-        targetDate = new Date(now);
-        const currentDay = targetDate.getDay(); // 0 = Sunday, 6 = Saturday
-
-        // Calculate days until next Sunday (0 = today if Sunday, 7 = next Sunday)
-        const daysUntilSunday = currentDay === 0 ? 7 : (7 - currentDay);
-        targetDate.setDate(targetDate.getDate() + daysUntilSunday);
-        targetDate.setHours(22, 0, 0, 0);
         break;
       default:
         return;
@@ -242,6 +267,17 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
         </button>
         <button
           type="button"
+          onClick={() => handleQuickOption('end-of-week')}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            selectedOption === 'end-of-week'
+              ? 'bg-primary-600 text-white'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          End of Week
+        </button>
+        <button
+          type="button"
           onClick={() => handleQuickOption('custom')}
           className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
             selectedOption === 'custom'
@@ -299,17 +335,6 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
               }`}
             >
               End of Day
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTimePreset('eow')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                timePreset === 'eow'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
-              }`}
-            >
-              End of Week
             </button>
             <button
               type="button"
