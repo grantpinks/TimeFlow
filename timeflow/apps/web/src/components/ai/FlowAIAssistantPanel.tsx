@@ -8,6 +8,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { ChatMessage } from './ChatMessage';
 import { QuickActionButton } from './QuickActionButton';
 import { FlowMascot } from '../FlowMascot';
@@ -40,6 +41,7 @@ export function FlowAIAssistantPanel({
   timeZone,
   onTasksUpdate,
 }: FlowAIAssistantPanelProps) {
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -60,6 +62,7 @@ export function FlowAIAssistantPanel({
   const saveInFlightRef = useRef(false);
   const latestMessagesRef = useRef<ChatMessageType[]>([]);
   const conversationIdRef = useRef<string | null>(null); // Fix #1: Use ref to prevent split conversations
+  const sessionGenerationRef = useRef(0); // Fix #4: Session token to prevent old saves writing to new session
 
   // Quick actions for common queries
   const quickActions: QuickAction[] = [
@@ -102,6 +105,7 @@ export function FlowAIAssistantPanel({
       setTimeout(() => inputRef.current?.focus(), 300);
       // Phase 3B: Start fresh each time (as requested by user)
       // Previous conversation is auto-saved, new conversation starts
+      sessionGenerationRef.current += 1; // Fix #4: Increment generation to invalidate old saves
       setMessages([]);
       conversationIdRef.current = null; // Fix #1: Reset ref
       setSchedulePreview(null);
@@ -249,6 +253,14 @@ export function FlowAIAssistantPanel({
     }
   };
 
+  // Fix #5: Navigate to assistant after flushing saves
+  const handleNavigateToAssistant = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await flushAutoSave();
+    onClose();
+    router.push('/assistant');
+  };
+
   // Phase 3B: Auto-save conversation functions
   const generateSmartTitle = (messages: ChatMessageType[]): string => {
     if (messages.length === 0) return `Tasks Chat - ${new Date().toLocaleDateString()}`;
@@ -284,6 +296,9 @@ export function FlowAIAssistantPanel({
     const pending = pendingSaveRef.current.slice();
     if (pending.length === 0) return;
 
+    // Fix #4: Capture session generation to detect stale saves
+    const saveGeneration = sessionGenerationRef.current;
+
     pendingSaveRef.current = [];
     saveInFlightRef.current = true;
     setSaveStatus('saving');
@@ -298,9 +313,19 @@ export function FlowAIAssistantPanel({
           title,
           messages: latestMessagesRef.current,
         });
-        conversationIdRef.current = conversation.id;
+        // Fix #4: Only write conversation ID if session hasn't changed
+        if (sessionGenerationRef.current === saveGeneration) {
+          conversationIdRef.current = conversation.id;
+        } else {
+          console.log('Ignoring stale save completion from previous session');
+        }
       } else {
-        await api.addMessagesToConversation(conversationIdRef.current, pending);
+        // Fix #4: Only append if session hasn't changed
+        if (sessionGenerationRef.current === saveGeneration) {
+          await api.addMessagesToConversation(conversationIdRef.current, pending);
+        } else {
+          console.log('Ignoring stale save completion from previous session');
+        }
       }
       setSaveStatus('idle');
     } catch (error) {
@@ -406,8 +431,8 @@ export function FlowAIAssistantPanel({
                       💡 <strong>Tip:</strong> Your conversations are auto-saved. View all past conversations in the{' '}
                       <a
                         href="/assistant"
-                        className="underline hover:text-blue-800 dark:hover:text-blue-200 font-medium"
-                        onClick={onClose}
+                        className="underline hover:text-blue-800 dark:hover:text-blue-200 font-medium cursor-pointer"
+                        onClick={handleNavigateToAssistant}
                       >
                         main Assistant page
                       </a>
