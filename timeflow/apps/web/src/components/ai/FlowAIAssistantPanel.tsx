@@ -12,13 +12,17 @@ import { ChatMessage } from './ChatMessage';
 import { QuickActionButton } from './QuickActionButton';
 import { FlowMascot } from '../FlowMascot';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import SchedulePreviewCard from '../SchedulePreviewCard';
 import * as api from '@/lib/api';
-import type { ChatMessage as ChatMessageType, Task } from '@timeflow/shared';
+import type { ChatMessage as ChatMessageType, Task, SchedulePreview, ApplyScheduleBlock, Habit } from '@timeflow/shared';
 
 interface FlowAIAssistantPanelProps {
   isOpen: boolean;
   onClose: () => void;
   tasks?: Task[];
+  habits?: Habit[];
+  timeZone?: string;
+  onTasksUpdate?: () => void; // Callback to refresh tasks after schedule apply
 }
 
 interface QuickAction {
@@ -32,11 +36,19 @@ export function FlowAIAssistantPanel({
   isOpen,
   onClose,
   tasks = [],
+  habits = [],
+  timeZone,
+  onTasksUpdate,
 }: FlowAIAssistantPanelProps) {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fix #1: Handle schedule preview responses
+  const [schedulePreview, setSchedulePreview] = useState<SchedulePreview | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,11 +118,71 @@ export function FlowAIAssistantPanel({
       );
 
       setMessages((prev) => [...prev, response.message]);
+
+      // Fix #1: Handle schedule preview in response
+      if (response.suggestions) {
+        setSchedulePreview(response.suggestions);
+        setApplyError(null);
+      } else if (response.message.metadata?.schedulePreview) {
+        setSchedulePreview(response.message.metadata.schedulePreview);
+        setApplyError(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
       console.error('Failed to send message:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fix #1: Apply schedule handler
+  const handleApplySchedule = async () => {
+    if (!schedulePreview) return;
+
+    setApplying(true);
+    setApplyError(null);
+
+    try {
+      const applyBlocks: ApplyScheduleBlock[] = [];
+
+      schedulePreview.blocks.forEach((block) => {
+        if ('taskId' in block && block.taskId) {
+          applyBlocks.push({
+            taskId: block.taskId,
+            start: block.start,
+            end: block.end,
+          });
+        } else if ('habitId' in block && block.habitId) {
+          applyBlocks.push({
+            habitId: block.habitId,
+            title: (block as any).title,
+            start: block.start,
+            end: block.end,
+          });
+        }
+      });
+
+      await api.applySchedule(applyBlocks);
+
+      // Trigger tasks refresh
+      onTasksUpdate?.();
+
+      setSchedulePreview(null);
+
+      // Add success message to chat
+      const successMessage: ChatMessageType = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: `✅ Schedule applied successfully! ${applyBlocks.length} ${applyBlocks.length === 1 ? 'task' : 'tasks'} scheduled.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, successMessage]);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to apply schedule';
+      setApplyError(errorMsg);
+      console.error('Failed to apply schedule:', err);
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -162,7 +234,7 @@ export function FlowAIAssistantPanel({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-900 dark:text-white"
                 aria-label="Close"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,6 +304,30 @@ export function FlowAIAssistantPanel({
                 </div>
               )}
 
+              {/* Fix #1: Render schedule preview */}
+              {schedulePreview && (
+                <div className="mt-4">
+                  <SchedulePreviewCard
+                    preview={schedulePreview}
+                    tasks={tasks}
+                    habits={habits}
+                    timeZone={timeZone}
+                    onApply={handleApplySchedule}
+                    onCancel={() => {
+                      setSchedulePreview(null);
+                      setApplyError(null);
+                    }}
+                    applying={applying}
+                    applied={false}
+                  />
+                  {applyError && (
+                    <div className="mt-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+                      <p className="text-sm text-red-700 dark:text-red-400">{applyError}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -247,7 +343,7 @@ export function FlowAIAssistantPanel({
                     onKeyPress={handleKeyPress}
                     placeholder="Ask Flow anything..."
                     disabled={loading}
-                    className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
                 <button

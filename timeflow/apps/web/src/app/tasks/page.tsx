@@ -14,6 +14,8 @@ import { FlowAIAssistantPanel } from '@/components/ai/FlowAIAssistantPanel';
 import { useTasks } from '@/hooks/useTasks';
 import { useCategories } from '@/hooks/useCategories';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useHabits } from '@/hooks/useHabits';
+import { useUser } from '@/hooks/useUser';
 import { exportTasksToCSV } from '@/utils/exportTasks';
 import * as api from '@/lib/api';
 import type { Task } from '@timeflow/shared';
@@ -32,6 +34,9 @@ export default function TasksPage() {
     deleteTask,
     refresh,
   } = useTasks();
+
+  const { habits } = useHabits();
+  const { user } = useUser();
 
   // Tab state (replaces 3-column layout)
   const [activeTab, setActiveTab] = useState<TabType>('unscheduled');
@@ -356,6 +361,7 @@ export default function TasksPage() {
         }!`
       );
       refresh();
+      triggerAnalyticsRefresh(); // Fix #2: Refresh analytics after Smart Schedule
     } catch (err) {
       setScheduleError(
         err instanceof Error ? err.message : 'Failed to run scheduling'
@@ -395,6 +401,7 @@ export default function TasksPage() {
       } else {
         await updateTask(taskId, { status: newStatus });
       }
+      triggerAnalyticsRefresh(); // Fix #2: Refresh analytics after drag/drop
     } catch (err) {
       console.error('Failed to update task status:', err);
     }
@@ -422,6 +429,7 @@ export default function TasksPage() {
         Array.from(selectedTasks).map((taskId) => completeTask(taskId))
       );
       clearSelection();
+      triggerAnalyticsRefresh(); // Fix #2: Refresh analytics after bulk complete
     } catch (err) {
       console.error('Failed to complete tasks:', err);
     }
@@ -437,6 +445,7 @@ export default function TasksPage() {
         Array.from(selectedTasks).map((taskId) => deleteTask(taskId))
       );
       clearSelection();
+      triggerAnalyticsRefresh(); // Fix #2: Refresh analytics after bulk delete
     } catch (err) {
       console.error('Failed to delete tasks:', err);
     }
@@ -454,6 +463,7 @@ export default function TasksPage() {
         );
       }
       clearSelection();
+      triggerAnalyticsRefresh(); // Fix #2: Refresh analytics after bulk status change
     } catch (err) {
       console.error('Failed to change task status:', err);
     }
@@ -845,10 +855,17 @@ export default function TasksPage() {
       />
 
       {/* AI Assistant Panel - Phase 2C */}
+      {/* Fix #1: Pass habits, timeZone, and refresh callback for schedule preview */}
       <FlowAIAssistantPanel
         isOpen={showAIPanel}
         onClose={() => setShowAIPanel(false)}
         tasks={tasks}
+        habits={habits}
+        timeZone={user?.timeZone}
+        onTasksUpdate={() => {
+          refresh();
+          triggerAnalyticsRefresh();
+        }}
       />
     </Layout>
   );
