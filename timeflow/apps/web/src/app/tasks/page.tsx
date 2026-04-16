@@ -9,6 +9,7 @@ import { Button, SearchBar, FilterPanel, Panel, SectionHeader } from '@/componen
 import type { TaskFilters } from '@/components/ui/FilterPanel';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { BulkActionToolbar } from '@/components/BulkActionToolbar';
+import { FlowAnalyticsPanel } from '@/components/analytics/FlowAnalyticsPanel';
 import { useTasks } from '@/hooks/useTasks';
 import { useCategories } from '@/hooks/useCategories';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -45,6 +46,9 @@ export default function TasksPage() {
   // Keyboard shortcuts state
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+
+  // AI Assistant state (TODO: Implement AI Assistant Panel in Phase 2C)
+  // const [showAIAssistant, setShowAIAssistant] = useState(false);
 
   // Bulk selection state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -479,6 +483,9 @@ export default function TasksPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        {/* Analytics Panel */}
+        <FlowAnalyticsPanel onOpenAI={() => console.log('AI Assistant not yet implemented')} />
+
         {/* Header with Smart Schedule primary action */}
         <SectionHeader
           title="Tasks"
