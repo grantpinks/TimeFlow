@@ -18,13 +18,14 @@ import {
 
 interface FlowAnalyticsPanelProps {
   onOpenAI?: () => void;
+  onRefresh?: () => void;
 }
 
-export function FlowAnalyticsPanel({ onOpenAI }: FlowAnalyticsPanelProps) {
-  const { data: goalTracking, loading: goalLoading } = useGoalTracking();
-  const { data: completion, loading: completionLoading } = useCompletionMetrics('today');
-  const { data: timeInsights, loading: timeLoading } = useTimeInsights();
-  const { data: streak, loading: streakLoading } = useStreak();
+export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelProps) {
+  const { data: goalTracking, loading: goalLoading, error: goalError, refetch: refetchGoal } = useGoalTracking();
+  const { data: completion, loading: completionLoading, error: completionError, refetch: refetchCompletion } = useCompletionMetrics('today');
+  const { data: timeInsights, loading: timeLoading, error: timeError, refetch: refetchTime } = useTimeInsights();
+  const { data: streak, loading: streakLoading, error: streakError, refetch: refetchStreak } = useStreak();
 
   // Determine mascot expression based on analytics
   const mascotExpression = useMemo(() => {
@@ -53,12 +54,41 @@ export function FlowAnalyticsPanel({ onOpenAI }: FlowAnalyticsPanelProps) {
   }, [completion, goalTracking]);
 
   const isLoading = goalLoading || completionLoading || timeLoading || streakLoading;
+  const hasError = goalError || completionError || timeError || streakError;
 
-  if (isLoading) {
+  // Expose refetch function to parent
+  const handleRefresh = () => {
+    refetchGoal();
+    refetchCompletion();
+    refetchTime();
+    refetchStreak();
+    onRefresh?.();
+  };
+
+  if (isLoading && !goalTracking && !completion) {
     return (
       <div className="analytics-panel">
         <div className="flex items-center justify-center py-8">
           <LoadingSpinner size="lg" label="Loading analytics" />
+        </div>
+      </div>
+    );
+  }
+
+  // Fix #3: Handle error state properly
+  if (hasError && !goalTracking && !completion) {
+    return (
+      <div className="analytics-panel">
+        <div className="flex items-center justify-center py-8 flex-col gap-3">
+          <p className="text-sm text-red-600 dark:text-red-400">
+            Failed to load analytics. Please try again.
+          </p>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -145,7 +175,7 @@ export function FlowAnalyticsPanel({ onOpenAI }: FlowAnalyticsPanelProps) {
             )}
           </div>
 
-          {/* AI Assistant Button */}
+          {/* AI Assistant Button - Fix #1: Only show if handler is provided (Phase 2C) */}
           {onOpenAI && (
             <button
               onClick={onOpenAI}
@@ -154,6 +184,13 @@ export function FlowAnalyticsPanel({ onOpenAI }: FlowAnalyticsPanelProps) {
               <span>💬</span>
               <span>Ask Flow AI about your tasks...</span>
             </button>
+          )}
+
+          {/* Partial data warning */}
+          {hasError && (goalTracking || completion) && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+              Some analytics could not be loaded. Displaying partial data.
+            </p>
           )}
         </div>
       </div>

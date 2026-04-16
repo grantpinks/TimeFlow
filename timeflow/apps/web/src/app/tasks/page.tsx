@@ -47,8 +47,11 @@ export default function TasksPage() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
-  // AI Assistant state (TODO: Implement AI Assistant Panel in Phase 2C)
-  // const [showAIAssistant, setShowAIAssistant] = useState(false);
+  // Analytics refresh trigger - Fix #2: Refresh analytics after task mutations
+  const [analyticsRefreshKey, setAnalyticsRefreshKey] = useState(0);
+  const triggerAnalyticsRefresh = () => {
+    setAnalyticsRefreshKey(prev => prev + 1);
+  };
 
   // Bulk selection state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -464,27 +467,36 @@ export default function TasksPage() {
   };
 
   // Wrapper functions to match TaskList interface (Promise<void>)
+  // Fix #2: Trigger analytics refresh after mutations
   const handleCreateTask = async (data: any): Promise<void> => {
     await createTask(data);
+    triggerAnalyticsRefresh();
   };
 
   const handleUpdateTask = async (id: string, data: any): Promise<void> => {
     await updateTask(id, data);
+    triggerAnalyticsRefresh();
   };
 
   const handleCompleteTask = async (id: string): Promise<void> => {
     await completeTask(id);
+    triggerAnalyticsRefresh();
   };
 
   const handleDeleteTask = async (id: string): Promise<void> => {
     await deleteTask(id);
+    triggerAnalyticsRefresh();
   };
 
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Analytics Panel */}
-        <FlowAnalyticsPanel onOpenAI={() => console.log('AI Assistant not yet implemented')} />
+        {/* Analytics Panel - Fix #1: Removed onOpenAI prop (dead CTA) until Phase 2C */}
+        {/* Fix #2: Pass refresh key to force re-fetch after task mutations */}
+        <FlowAnalyticsPanel
+          key={analyticsRefreshKey}
+          onRefresh={triggerAnalyticsRefresh}
+        />
 
         {/* Header with Smart Schedule primary action */}
         <SectionHeader
