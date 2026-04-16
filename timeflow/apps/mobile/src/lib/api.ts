@@ -206,6 +206,38 @@ export interface AssistantChatResponse {
   credits?: { used: number; remaining: number };
 }
 
+/** Mirrors web `Conversation` — persisted assistant threads. */
+export interface Conversation {
+  id: string;
+  userId: string;
+  title: string | null;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+  messages?: ChatMessage[];
+  _count?: { messages: number };
+}
+
+export async function createConversation(data: {
+  title?: string;
+  messages?: ChatMessage[];
+}): Promise<Conversation> {
+  return request<Conversation>('/conversations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function addMessagesToConversation(
+  id: string,
+  messages: ChatMessage[]
+): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/conversations/${id}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ messages }),
+  });
+}
+
 export async function sendChatMessage(
   message: string,
   conversationHistory?: ChatMessage[],

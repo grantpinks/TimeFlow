@@ -88,7 +88,7 @@ export async function chat(
     const trackingResult = await usageTrackingService.trackUsage(user.id, action, {
       messageLength: message.length,
       conversationId,
-      hasSchedulePreview: !!response.schedulePreview,
+      hasSchedulePreview: !!response.suggestions,
     });
 
     if (!trackingResult.success) {

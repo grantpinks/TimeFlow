@@ -60,6 +60,7 @@ export function FlowAIAssistantPanel({
   const pendingSaveRef = useRef<ChatMessageType[]>([]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveInFlightRef = useRef(false);
+  const saveInFlightPromiseRef = useRef<Promise<void> | null>(null);
   const latestMessagesRef = useRef<ChatMessageType[]>([]);
   const conversationIdRef = useRef<string | null>(null); // Fix #1: Use ref to prevent split conversations
   const sessionGenerationRef = useRef(0); // Fix #4: Session token to prevent old saves writing to new session
@@ -291,8 +292,13 @@ export function FlowAIAssistantPanel({
     }, delayMs);
   };
 
-  const flushAutoSave = async () => {
-    if (saveInFlightRef.current) return;
+  const flushAutoSave = async (): Promise<void> => {
+    // Drain in-flight work first so await flushAutoSave() (e.g. before navigate) cannot return early.
+    if (saveInFlightRef.current && saveInFlightPromiseRef.current) {
+      await saveInFlightPromiseRef.current;
+      return flushAutoSave();
+    }
+
     const pending = pendingSaveRef.current.slice();
     if (pending.length === 0) return;
 
@@ -301,44 +307,60 @@ export function FlowAIAssistantPanel({
 
     pendingSaveRef.current = [];
     saveInFlightRef.current = true;
-    setSaveStatus('saving');
+    if (sessionGenerationRef.current === saveGeneration) {
+      setSaveStatus('saving');
+    }
 
-    let hadError = false;
-
-    try {
-      // Fix #1: Use ref to prevent split conversations from closure staleness
-      if (!conversationIdRef.current) {
-        const title = generateSmartTitle(latestMessagesRef.current);
-        const conversation = await api.createConversation({
-          title,
-          messages: latestMessagesRef.current,
-        });
-        // Fix #4: Only write conversation ID if session hasn't changed
-        if (sessionGenerationRef.current === saveGeneration) {
-          conversationIdRef.current = conversation.id;
+    const saveWork = async (): Promise<void> => {
+      let hadError = false;
+      try {
+        // Fix #1: Use ref to prevent split conversations from closure staleness
+        if (!conversationIdRef.current) {
+          const title = generateSmartTitle(latestMessagesRef.current);
+          const conversation = await api.createConversation({
+            title,
+            messages: latestMessagesRef.current,
+          });
+          // Fix #4: Only write conversation ID if session hasn't changed
+          if (sessionGenerationRef.current === saveGeneration) {
+            conversationIdRef.current = conversation.id;
+          } else {
+            console.log('Ignoring stale save completion from previous session');
+          }
         } else {
-          console.log('Ignoring stale save completion from previous session');
+          // Fix #4: Only append if session hasn't changed
+          if (sessionGenerationRef.current === saveGeneration) {
+            await api.addMessagesToConversation(conversationIdRef.current, pending);
+          } else {
+            console.log('Ignoring stale save completion from previous session');
+          }
         }
-      } else {
-        // Fix #4: Only append if session hasn't changed
         if (sessionGenerationRef.current === saveGeneration) {
-          await api.addMessagesToConversation(conversationIdRef.current, pending);
-        } else {
-          console.log('Ignoring stale save completion from previous session');
+          setSaveStatus('idle');
+        }
+      } catch (error) {
+        console.error('Failed to auto-save conversation:', error);
+        hadError = true;
+        pendingSaveRef.current = pending.concat(pendingSaveRef.current);
+        if (sessionGenerationRef.current === saveGeneration) {
+          setSaveStatus('error');
+        }
+        scheduleAutoSaveFlush(4000);
+      } finally {
+        saveInFlightRef.current = false;
+        saveInFlightPromiseRef.current = null;
+        if (!hadError && pendingSaveRef.current.length > 0) {
+          scheduleAutoSaveFlush(800);
         }
       }
-      setSaveStatus('idle');
-    } catch (error) {
-      console.error('Failed to auto-save conversation:', error);
-      hadError = true;
-      pendingSaveRef.current = pending.concat(pendingSaveRef.current);
-      setSaveStatus('error');
-      scheduleAutoSaveFlush(4000);
-    } finally {
-      saveInFlightRef.current = false;
-      if (!hadError && pendingSaveRef.current.length > 0) {
-        scheduleAutoSaveFlush(800);
-      }
+    };
+
+    const savePromise = saveWork();
+    saveInFlightPromiseRef.current = savePromise;
+    await savePromise;
+
+    if (pendingSaveRef.current.length > 0) {
+      return flushAutoSave();
     }
   };
 

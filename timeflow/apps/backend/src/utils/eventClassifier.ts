@@ -307,8 +307,12 @@ export function buildAvailableWindowsContext(
     const isToday = days.indexOf(dayLabel) === 0;
     let dayWakeMs = wakeHour * 60 + wakeMin; // minutes since midnight
 
-    let cursorMinutes = dayWakeMs;
     const sleepMinutes = sleepHour * 60 + sleepMin;
+    let cursorMinutes = dayWakeMs;
+    if (isToday) {
+      const nowMinutes = nowLocal.getHours() * 60 + nowLocal.getMinutes();
+      cursorMinutes = Math.max(dayWakeMs, nowMinutes);
+    }
 
     for (const f of fixed) {
       const localFixed = new Date(f.start.toLocaleString('en-US', { timeZone: timezone }));

@@ -28,6 +28,51 @@ const QUICK_PROMPTS = [
   'When am I free this week?',
 ];
 
+function generateSmartTitle(msgs: ChatMessage[]): string {
+  if (msgs.length === 0) return `Chat - ${new Date().toLocaleDateString()}`;
+  const firstUser = msgs.find((m) => m.role === 'user');
+  if (!firstUser) return `Chat - ${new Date().toLocaleDateString()}`;
+  let title = firstUser.content.trim();
+  const firstSentence = title.match(/^[^.!?]+/);
+  if (firstSentence) title = firstSentence[0];
+  if (title.length > 40) title = `${title.substring(0, 40)}...`;
+  return title;
+}
+
+/** Persist user + assistant turns to the server (parity with web assistant auto-save). */
+async function persistAssistantExchange(
+  priorMessages: ChatMessage[],
+  userMessage: ChatMessage,
+  assistantMessage: ChatMessage,
+  cid: string | null,
+  setCid: React.Dispatch<React.SetStateAction<string | null>>
+): Promise<void> {
+  try {
+    if (cid) {
+      await api.addMessagesToConversation(cid, [userMessage, assistantMessage]);
+      return;
+    }
+    const all = [...priorMessages, userMessage, assistantMessage];
+    const title = generateSmartTitle(all);
+    const conv = await api.createConversation({ title, messages: all });
+    setCid(conv.id);
+  } catch (e) {
+    console.warn('[Assistant] Failed to persist conversation', e);
+  }
+}
+
+async function persistAssistantMessagesOnly(
+  msgs: ChatMessage[],
+  cid: string | null
+): Promise<void> {
+  if (!cid || msgs.length === 0) return;
+  try {
+    await api.addMessagesToConversation(cid, msgs);
+  } catch (e) {
+    console.warn('[Assistant] Failed to persist messages', e);
+  }
+}
+
 export function AssistantScreen() {
   const { tasks, refresh: refreshTasks } = useTasks();
   const [habits, setHabits] = useState<api.Habit[]>([]);
@@ -69,6 +114,8 @@ export function AssistantScreen() {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
 
+    const priorMessages = messages;
+
     const userMessage: ChatMessage = {
       id: `m_${Date.now()}`,
       role: 'user',
@@ -82,10 +129,17 @@ export function AssistantScreen() {
     setApplyError(null);
 
     try {
-      const historyForApi = [...messages, userMessage];
+      const historyForApi = [...priorMessages, userMessage];
       const res = await api.sendChatMessage(trimmed, historyForApi, conversationId ?? undefined);
 
       setMessages((prev) => [...prev, res.message]);
+      await persistAssistantExchange(
+        priorMessages,
+        userMessage,
+        res.message,
+        conversationId,
+        setConversationId
+      );
 
       if (res.suggestions) {
         setSchedulePreview(res.suggestions);
@@ -99,15 +153,20 @@ export function AssistantScreen() {
         text =
           'You are out of Flow Credits for this action. Upgrade your plan or try again tomorrow.';
       }
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `m_err_${Date.now()}`,
-          role: 'assistant',
-          content: text,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      const errorMessage: ChatMessage = {
+        id: `m_err_${Date.now()}`,
+        role: 'assistant',
+        content: text,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      await persistAssistantExchange(
+        priorMessages,
+        userMessage,
+        errorMessage,
+        conversationId,
+        setConversationId
+      );
     } finally {
       setLoading(false);
     }
@@ -148,23 +207,31 @@ export function AssistantScreen() {
         successText = `Schedule applied! ${h} habit instance(s) added to your calendar.`;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `m_ok_${Date.now()}`,
-          role: 'assistant',
-          content: successText,
-          timestamp: new Date().toISOString(),
-          metadata: { mascotState: 'celebrating' },
-        },
-      ]);
+      const successMessage: ChatMessage = {
+        id: `m_ok_${Date.now()}`,
+        role: 'assistant',
+        content: successText,
+        timestamp: new Date().toISOString(),
+        metadata: { mascotState: 'celebrating' },
+      };
+      setMessages((prev) => [...prev, successMessage]);
+      await persistAssistantMessagesOnly([successMessage], conversationId);
     } catch (error) {
       const raw = error instanceof Error ? error.message : '';
-      setApplyError(friendlyApplyError(raw));
+      const friendly = friendlyApplyError(raw);
+      setApplyError(friendly);
+      const errorMessage: ChatMessage = {
+        id: `m_apply_err_${Date.now()}`,
+        role: 'assistant',
+        content: friendly,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      await persistAssistantMessagesOnly([errorMessage], conversationId);
     } finally {
       setApplying(false);
     }
-  }, [schedulePreview, refreshTasks]);
+  }, [schedulePreview, refreshTasks, conversationId]);
 
   const handleCancelPreview = useCallback(async () => {
     setSchedulePreview(null);
