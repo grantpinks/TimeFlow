@@ -10,6 +10,7 @@ import type { TaskFilters } from '@/components/ui/FilterPanel';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { BulkActionToolbar } from '@/components/BulkActionToolbar';
 import { FlowAnalyticsPanel } from '@/components/analytics/FlowAnalyticsPanel';
+import { FlowAIAssistantPanel } from '@/components/ai/FlowAIAssistantPanel';
 import { useTasks } from '@/hooks/useTasks';
 import { useCategories } from '@/hooks/useCategories';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -52,6 +53,9 @@ export default function TasksPage() {
   const triggerAnalyticsRefresh = () => {
     setAnalyticsRefreshKey(prev => prev + 1);
   };
+
+  // AI Assistant Panel state - Phase 2C
+  const [showAIPanel, setShowAIPanel] = useState(false);
 
   // Bulk selection state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -491,11 +495,12 @@ export default function TasksPage() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* Analytics Panel - Fix #1: Removed onOpenAI prop (dead CTA) until Phase 2C */}
+        {/* Analytics Panel with AI Assistant integration (Phase 2C) */}
         {/* Fix #2: Pass refresh key to force re-fetch after task mutations */}
         <FlowAnalyticsPanel
           key={analyticsRefreshKey}
           onRefresh={triggerAnalyticsRefresh}
+          onOpenAI={() => setShowAIPanel(true)}
         />
 
         {/* Header with Smart Schedule primary action */}
@@ -837,6 +842,13 @@ export default function TasksPage() {
         onDelete={handleBulkDelete}
         onChangeStatus={handleBulkChangeStatus}
         onClearSelection={clearSelection}
+      />
+
+      {/* AI Assistant Panel - Phase 2C */}
+      <FlowAIAssistantPanel
+        isOpen={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+        tasks={tasks}
       />
     </Layout>
   );
