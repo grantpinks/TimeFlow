@@ -50,8 +50,16 @@ export function FlowAIAssistantPanel({
   const [applying, setApplying] = useState(false);
   const [applyError, setApplyError] = useState<string | null>(null);
 
+  // Phase 3B: Conversation persistence
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingSaveRef = useRef<ChatMessageType[]>([]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveInFlightRef = useRef(false);
+  const latestMessagesRef = useRef<ChatMessageType[]>([]);
 
   // Quick actions for common queries
   const quickActions: QuickAction[] = [
@@ -88,12 +96,34 @@ export function FlowAIAssistantPanel({
     }
   }, [messages, isOpen]);
 
-  // Focus input when panel opens
+  // Focus input when panel opens and start fresh
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 300);
+      // Phase 3B: Start fresh each time (as requested by user)
+      // Previous conversation is auto-saved, new conversation starts
+      setMessages([]);
+      setCurrentConversationId(null);
+      setSchedulePreview(null);
+      setError(null);
+      pendingSaveRef.current = [];
+      latestMessagesRef.current = [];
+      setSaveStatus('idle');
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
     }
   }, [isOpen]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSend = async (messageText: string) => {
     if (!messageText.trim()) return;
@@ -127,9 +157,18 @@ export function FlowAIAssistantPanel({
         setSchedulePreview(response.message.metadata.schedulePreview);
         setApplyError(null);
       }
+
+      // Phase 3B: Auto-save conversation
+      const newMessages = [userMessage, response.message];
+      latestMessagesRef.current = messages.concat(newMessages);
+      queueAutoSave(newMessages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');
       console.error('Failed to send message:', err);
+
+      // Still save failed conversations (just the user message)
+      latestMessagesRef.current = [...messages, userMessage];
+      queueAutoSave([userMessage]);
     } finally {
       setLoading(false);
     }
@@ -177,6 +216,10 @@ export function FlowAIAssistantPanel({
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, successMessage]);
+
+      // Phase 3B: Save success message
+      latestMessagesRef.current = [...latestMessagesRef.current, successMessage];
+      queueAutoSave([successMessage]);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to apply schedule';
       setApplyError(errorMsg);
@@ -195,6 +238,78 @@ export function FlowAIAssistantPanel({
       e.preventDefault();
       handleSend(input);
     }
+  };
+
+  // Phase 3B: Auto-save conversation functions
+  const generateSmartTitle = (messages: ChatMessageType[]): string => {
+    if (messages.length === 0) return `Tasks Chat - ${new Date().toLocaleDateString()}`;
+
+    const firstUserMessage = messages.find(msg => msg.role === 'user');
+    if (!firstUserMessage) return `Tasks Chat - ${new Date().toLocaleDateString()}`;
+
+    let title = firstUserMessage.content.trim();
+    const firstSentence = title.match(/^[^.!?]+/);
+    if (firstSentence) {
+      title = firstSentence[0];
+    }
+
+    if (title.length > 40) {
+      title = title.substring(0, 40) + '...';
+    }
+
+    return `Tasks: ${title}`;
+  };
+
+  const scheduleAutoSaveFlush = (delayMs: number = 800) => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      void flushAutoSave();
+    }, delayMs);
+  };
+
+  const flushAutoSave = async () => {
+    if (saveInFlightRef.current) return;
+    const pending = pendingSaveRef.current.slice();
+    if (pending.length === 0) return;
+
+    pendingSaveRef.current = [];
+    saveInFlightRef.current = true;
+    setSaveStatus('saving');
+
+    let hadError = false;
+
+    try {
+      if (!currentConversationId) {
+        const title = generateSmartTitle(latestMessagesRef.current);
+        const conversation = await api.createConversation({
+          title,
+          messages: latestMessagesRef.current,
+        });
+        setCurrentConversationId(conversation.id);
+      } else {
+        await api.addMessagesToConversation(currentConversationId, pending);
+      }
+      setSaveStatus('idle');
+    } catch (error) {
+      console.error('Failed to auto-save conversation:', error);
+      hadError = true;
+      pendingSaveRef.current = pending.concat(pendingSaveRef.current);
+      setSaveStatus('error');
+      scheduleAutoSaveFlush(4000);
+    } finally {
+      saveInFlightRef.current = false;
+      if (!hadError && pendingSaveRef.current.length > 0) {
+        scheduleAutoSaveFlush(800);
+      }
+    }
+  };
+
+  const queueAutoSave = (newMessages: ChatMessageType[]) => {
+    pendingSaveRef.current.push(...newMessages);
+    scheduleAutoSaveFlush(800);
   };
 
   return (
@@ -266,15 +381,29 @@ export function FlowAIAssistantPanel({
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
               {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <FlowMascot size="lg" expression="guiding-up" />
                   <h3 className="text-lg font-semibold text-slate-900 dark:text-white mt-4 mb-2">
                     How can I help you today?
                   </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs">
+                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs mb-4">
                     Ask me anything about your tasks, schedule, or productivity.
                     I can help you plan, organize, and optimize your work.
                   </p>
+                  {/* Phase 3B: Hint about main assistant page */}
+                  <div className="mt-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg max-w-sm">
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      💡 <strong>Tip:</strong> Your conversations are auto-saved. View all past conversations in the{' '}
+                      <a
+                        href="/assistant"
+                        className="underline hover:text-blue-800 dark:hover:text-blue-200 font-medium"
+                        onClick={onClose}
+                      >
+                        main Assistant page
+                      </a>
+                      .
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -360,9 +489,18 @@ export function FlowAIAssistantPanel({
                   )}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 text-center">
-                Press Enter to send
-              </p>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span className="text-slate-500 dark:text-slate-400">
+                  Press Enter to send
+                  {saveStatus === 'saving' && <span className="ml-2 text-blue-600 dark:text-blue-400">• Saving...</span>}
+                  {saveStatus === 'error' && <span className="ml-2 text-red-600 dark:text-red-400">• Save failed</span>}
+                </span>
+                {messages.length > 0 && (
+                  <span className="text-slate-400 dark:text-slate-500">
+                    Auto-saved
+                  </span>
+                )}
+              </div>
             </div>
           </motion.div>
         </>
