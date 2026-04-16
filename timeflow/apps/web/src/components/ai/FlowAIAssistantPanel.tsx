@@ -51,7 +51,6 @@ export function FlowAIAssistantPanel({
   const [applyError, setApplyError] = useState<string | null>(null);
 
   // Phase 3B: Conversation persistence
-  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -60,6 +59,7 @@ export function FlowAIAssistantPanel({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveInFlightRef = useRef(false);
   const latestMessagesRef = useRef<ChatMessageType[]>([]);
+  const conversationIdRef = useRef<string | null>(null); // Fix #1: Use ref to prevent split conversations
 
   // Quick actions for common queries
   const quickActions: QuickAction[] = [
@@ -103,7 +103,7 @@ export function FlowAIAssistantPanel({
       // Phase 3B: Start fresh each time (as requested by user)
       // Previous conversation is auto-saved, new conversation starts
       setMessages([]);
-      setCurrentConversationId(null);
+      conversationIdRef.current = null; // Fix #1: Reset ref
       setSchedulePreview(null);
       setError(null);
       pendingSaveRef.current = [];
@@ -113,15 +113,24 @@ export function FlowAIAssistantPanel({
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = null;
       }
+    } else {
+      // Fix #2: Flush pending saves when panel closes
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      void flushAutoSave();
     }
   }, [isOpen]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Fix #2: Flush pending saves on unmount
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
+      void flushAutoSave();
     };
   }, []);
 
@@ -282,15 +291,16 @@ export function FlowAIAssistantPanel({
     let hadError = false;
 
     try {
-      if (!currentConversationId) {
+      // Fix #1: Use ref to prevent split conversations from closure staleness
+      if (!conversationIdRef.current) {
         const title = generateSmartTitle(latestMessagesRef.current);
         const conversation = await api.createConversation({
           title,
           messages: latestMessagesRef.current,
         });
-        setCurrentConversationId(conversation.id);
+        conversationIdRef.current = conversation.id;
       } else {
-        await api.addMessagesToConversation(currentConversationId, pending);
+        await api.addMessagesToConversation(conversationIdRef.current, pending);
       }
       setSaveStatus('idle');
     } catch (error) {
@@ -495,7 +505,8 @@ export function FlowAIAssistantPanel({
                   {saveStatus === 'saving' && <span className="ml-2 text-blue-600 dark:text-blue-400">• Saving...</span>}
                   {saveStatus === 'error' && <span className="ml-2 text-red-600 dark:text-red-400">• Save failed</span>}
                 </span>
-                {messages.length > 0 && (
+                {/* Fix #3: Only show "Auto-saved" when actually idle and saved */}
+                {messages.length > 0 && saveStatus === 'idle' && (
                   <span className="text-slate-400 dark:text-slate-500">
                     Auto-saved
                   </span>
