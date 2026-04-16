@@ -6,6 +6,7 @@
   "packageManager": "pnpm@9.15.9",
   "workspaces": [
     "apps/web",
+    "apps/mobile",
     "packages/shared",
     "packages/scheduling"
   ],

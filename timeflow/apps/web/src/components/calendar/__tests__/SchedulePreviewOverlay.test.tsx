@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import SchedulePreviewOverlay from '../SchedulePreviewOverlay';
+import { SchedulePreviewOverlay } from '../SchedulePreviewOverlay';
 import type { ScheduledBlock } from '@timeflow/shared';
 
 const mockBlock: ScheduledBlock = {

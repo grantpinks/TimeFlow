@@ -214,3 +214,149 @@ export function buildMovableEventsContext(
 
   return context;
 }
+
+/**
+ * Build a context string that explicitly lists FREE scheduling windows for a given day.
+ *
+ * A3 fix: The LLM was returning 0 blocks when a fixed event existed later in the
+ * day, even though ample free time preceded it. Explicitly surfacing the free
+ * windows prevents this reasoning error.
+ *
+ * @param fixedEvents - All fixed events for the window
+ * @param wakeTime - "HH:mm" user wake time
+ * @param sleepTime - "HH:mm" user sleep time
+ * @param timezone - IANA timezone string
+ * @param windowStart - ISO string for start of the scheduling window (default: now)
+ * @param windowEnd - ISO string for end of scheduling window (default: 7 days from now)
+ * @returns Formatted context string showing free windows per day
+ */
+export function buildAvailableWindowsContext(
+  fixedEvents: CalendarEvent[],
+  wakeTime: string,
+  sleepTime: string,
+  timezone: string,
+  windowStart?: string,
+  windowEnd?: string
+): string {
+  const now = windowStart ? new Date(windowStart) : new Date();
+  const end = windowEnd ? new Date(windowEnd) : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  // Parse HH:mm times
+  const [wakeHour, wakeMin] = wakeTime.split(':').map(Number);
+  const [sleepHour, sleepMin] = sleepTime.split(':').map(Number);
+
+  // Collect unique days in the window (in user's timezone)
+  const days: string[] = [];
+  const dayMs = 24 * 60 * 60 * 1000;
+  const nowLocal = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+  const endLocal = new Date(end.toLocaleString('en-US', { timeZone: timezone }));
+
+  // Walk day-by-day
+  let cursor = new Date(nowLocal);
+  cursor.setHours(0, 0, 0, 0);
+  const endDay = new Date(endLocal);
+  endDay.setHours(0, 0, 0, 0);
+
+  while (cursor <= endDay) {
+    days.push(cursor.toLocaleDateString('en-US', {
+      timeZone: timezone,
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    }));
+    cursor = new Date(cursor.getTime() + dayMs);
+  }
+
+  // For each day, compute available windows around fixed events
+  const lines: string[] = [];
+  lines.push('**Available Scheduling Windows** (you MUST schedule tasks in these windows):');
+  lines.push('A fixed event does NOT block the whole day — only its exact time slot.');
+  lines.push('');
+
+  // Group fixed events by local date
+  const fixedByDate = new Map<string, { start: Date; end: Date; summary: string }[]>();
+  for (const event of fixedEvents) {
+    const localDate = new Date(event.start).toLocaleDateString('en-US', {
+      timeZone: timezone,
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    });
+    if (!fixedByDate.has(localDate)) fixedByDate.set(localDate, []);
+    fixedByDate.get(localDate)!.push({
+      start: new Date(event.start),
+      end: new Date(event.end),
+      summary: event.summary || 'event',
+    });
+  }
+
+  for (const day of days) {
+    const fixed = (fixedByDate.get(day) || []).sort(
+      (a, b) => a.start.getTime() - b.start.getTime()
+    );
+
+    // Build windows: wake → first fixed, gaps between fixed events, last fixed → sleep
+    type Window = { from: string; to: string };
+    const windows: Window[] = [];
+
+    const fmtLocalTime = (d: Date): string =>
+      d.toLocaleTimeString('en-US', { timeZone: timezone, hour: 'numeric', minute: '2-digit', hour12: true });
+
+    // Determine today's actual wake start (use current time if it's today and after wake)
+    const dayLabel = day;
+    const isToday = days.indexOf(dayLabel) === 0;
+    let dayWakeMs = wakeHour * 60 + wakeMin; // minutes since midnight
+
+    let cursorMinutes = dayWakeMs;
+    const sleepMinutes = sleepHour * 60 + sleepMin;
+
+    for (const f of fixed) {
+      const localFixed = new Date(f.start.toLocaleString('en-US', { timeZone: timezone }));
+      const localFixedEnd = new Date(f.end.toLocaleString('en-US', { timeZone: timezone }));
+      const fixedStartMin = localFixed.getHours() * 60 + localFixed.getMinutes();
+      const fixedEndMin = localFixedEnd.getHours() * 60 + localFixedEnd.getMinutes();
+
+      if (fixedStartMin > cursorMinutes) {
+        // Free window from cursorMinutes to fixedStartMin
+        const fromH = Math.floor(cursorMinutes / 60);
+        const fromM = cursorMinutes % 60;
+        const toH = Math.floor(fixedStartMin / 60);
+        const toM = fixedStartMin % 60;
+        const durationMin = fixedStartMin - cursorMinutes;
+        if (durationMin >= 15) {
+          windows.push({
+            from: `${fromH > 12 ? fromH - 12 : fromH || 12}:${String(fromM).padStart(2, '0')} ${fromH >= 12 ? 'PM' : 'AM'}`,
+            to: `${toH > 12 ? toH - 12 : toH || 12}:${String(toM).padStart(2, '0')} ${toH >= 12 ? 'PM' : 'AM'}`,
+          });
+        }
+      }
+      cursorMinutes = Math.max(cursorMinutes, fixedEndMin);
+    }
+
+    // Final window: last fixed end → sleep
+    if (sleepMinutes > cursorMinutes) {
+      const fromH = Math.floor(cursorMinutes / 60);
+      const fromM = cursorMinutes % 60;
+      const toH = Math.floor(sleepMinutes / 60);
+      const toM = sleepMinutes % 60;
+      const durationMin = sleepMinutes - cursorMinutes;
+      if (durationMin >= 15) {
+        windows.push({
+          from: `${fromH > 12 ? fromH - 12 : fromH || 12}:${String(fromM).padStart(2, '0')} ${fromH >= 12 ? 'PM' : 'AM'}`,
+          to: `${toH > 12 ? toH - 12 : toH || 12}:${String(toM).padStart(2, '0')} ${toH >= 12 ? 'PM' : 'AM'}`,
+        });
+      }
+    }
+
+    if (windows.length > 0) {
+      lines.push(`**${day}**: FREE windows → ${windows.map(w => `${w.from}–${w.to}`).join(', ')}`);
+    } else {
+      lines.push(`**${day}**: No free windows (all time is blocked by fixed events or wake/sleep)`);
+    }
+  }
+
+  lines.push('');
+  lines.push('CRITICAL: If a task fits in ANY of the windows above, you MUST schedule it there. Do NOT return 0 blocks when free windows exist.');
+
+  return lines.join('\n') + '\n';
+}

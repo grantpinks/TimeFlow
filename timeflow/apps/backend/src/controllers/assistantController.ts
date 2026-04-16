@@ -75,7 +75,7 @@ export async function chat(
       });
     }
 
-    // Process the message
+    // Process the message (may call the LLM more than once internally, e.g. scheduling retry)
     const response = await assistantService.processMessage(
       user.id,
       message,
@@ -84,7 +84,7 @@ export async function chat(
       { debugEnabled }
     );
 
-    // Track usage (deduct credits)
+    // Flow Credits: exactly one charge per successful POST /assistant/chat — not per internal LLM call.
     const trackingResult = await usageTrackingService.trackUsage(user.id, action, {
       messageLength: message.length,
       conversationId,
@@ -113,20 +113,24 @@ export async function chat(
 
 /**
  * GET /api/assistant/history
- * Get conversation history for the user
- *
- * For MVP: Returns empty array (client manages state)
- * For Phase 2: Will fetch from database
+ * Query: optional `conversationId` — load that thread; omit for latest conversation.
+ * Response includes `conversationId` so clients can pass it on chat for DB history fallback.
  */
-export async function getHistory(
-  request: FastifyRequest,
-  reply: FastifyReply
-) {
+export async function getHistory(request: FastifyRequest, reply: FastifyReply) {
   const user = request.user;
   if (!user) {
     return reply.status(401).send({ error: 'Not authenticated' });
   }
 
-  const messages = await conversationService.getLatestConversationHistory(user.id);
-  return reply.status(200).send({ messages });
+  const q = request.query as { conversationId?: string } | undefined;
+  const conversationId =
+    typeof q?.conversationId === 'string' && q.conversationId.trim()
+      ? q.conversationId.trim()
+      : undefined;
+
+  const { messages, conversationId: resolvedId } = await conversationService.getAssistantHistory(
+    user.id,
+    conversationId
+  );
+  return reply.status(200).send({ messages, conversationId: resolvedId });
 }

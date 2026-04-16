@@ -59,9 +59,31 @@ export async function getConversation(conversationId: string, userId: string) {
 }
 
 /**
- * Get the most recent conversation history for a user.
+ * Assistant history: latest conversation, or a specific conversation when `conversationId` is set.
+ * Verifies ownership (userId) for targeted loads.
  */
-export async function getLatestConversationHistory(userId: string): Promise<ChatMessage[]> {
+export async function getAssistantHistory(
+  userId: string,
+  conversationId?: string
+): Promise<{ messages: ChatMessage[]; conversationId: string | null }> {
+  if (conversationId) {
+    const conversation = await prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!conversation) {
+      return { messages: [], conversationId: null };
+    }
+    return {
+      messages: convertToChatMessages(conversation.messages),
+      conversationId: conversation.id,
+    };
+  }
+
   const conversation = await prisma.conversation.findFirst({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
@@ -73,10 +95,21 @@ export async function getLatestConversationHistory(userId: string): Promise<Chat
   });
 
   if (!conversation) {
-    return [];
+    return { messages: [], conversationId: null };
   }
 
-  return convertToChatMessages(conversation.messages);
+  return {
+    messages: convertToChatMessages(conversation.messages),
+    conversationId: conversation.id,
+  };
+}
+
+/**
+ * Get the most recent conversation history for a user (messages only).
+ */
+export async function getLatestConversationHistory(userId: string): Promise<ChatMessage[]> {
+  const { messages } = await getAssistantHistory(userId);
+  return messages;
 }
 
 /**

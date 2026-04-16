@@ -43,6 +43,13 @@ export interface AssistantChatResponse {
   suggestions?: SchedulePreview; // If AI generated schedule suggestions
 }
 
+/** Response from GET /api/assistant/history */
+export interface AssistantHistoryResponse {
+  messages: ChatMessage[];
+  /** Conversation these messages belong to; null if none */
+  conversationId: string | null;
+}
+
 export interface PlanningState {
   missingInfo: boolean;
   missingTime: boolean;

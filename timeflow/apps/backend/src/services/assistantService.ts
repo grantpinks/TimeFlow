@@ -16,6 +16,7 @@ import {
   separateFixedAndMovable,
   buildFixedEventsContext,
   buildMovableEventsContext,
+  buildAvailableWindowsContext,
 } from '../utils/eventClassifier.js';
 import {
   validateSchedulePreview,
@@ -1073,7 +1074,12 @@ export async function processMessage(
     // Task 13.18: Fetch more messages from DB (intelligent selection will trim later)
     let resolvedHistory = conversationHistory;
     let usedHistoryFallback = false;
-    if (resolvedHistory === undefined && conversationId) {
+    const shouldLoadHistoryFromDb =
+      Boolean(conversationId) &&
+      (resolvedHistory === undefined ||
+        (Array.isArray(resolvedHistory) && resolvedHistory.length === 0));
+
+    if (shouldLoadHistoryFromDb) {
       logDebug('[AssistantService][Debug] No history provided, attempting DB fallback...');
       const fallbackConversation = await prisma.conversation.findFirst({
         where: { id: conversationId, userId },
@@ -1360,7 +1366,8 @@ export async function processMessage(
         schedulePreview,
         calendarEvents,
         userPrefs,
-        taskIds
+        taskIds,
+        habitIds  // A1: validate habit IDs too — catches hallucinated habitId values
       );
 
       // Apply validation results to preview (adds errors/warnings, adjusts confidence)
@@ -1881,6 +1888,20 @@ async function buildContextPrompt(
       prompt += '\n';
       prompt += buildMovableEventsContext(movableEvents, user.timeZone);
       prompt += '\n';
+
+      // A3 fix: Explicitly show free windows around fixed events so the LLM
+      // never returns 0 blocks when schedulable time exists before/after a fixed event.
+      if (mode === 'scheduling' && fixedEvents.length > 0) {
+        prompt += buildAvailableWindowsContext(
+          fixedEvents,
+          user.wakeTime,
+          user.sleepTime,
+          user.timeZone,
+          now.toISOString(),
+          sevenDaysLater.toISOString()
+        );
+        prompt += '\n';
+      }
     } else {
       prompt += '**Calendar Events**: No events in the next 7 days.\n\n';
     }
@@ -2611,26 +2632,86 @@ function fillMissingHabitBlocks(
 /**
  * Strip technical markers and IDs from the user-facing response.
  */
+/**
+ * B1 — Sprint 25: Strip all technical artifacts from LLM-generated text before
+ * it reaches the client. Users must never see JSON, code fences, internal IDs,
+ * ISO timestamps, or structured-output markers in assistant messages.
+ *
+ * Layers (applied in order):
+ *   1. Structured output marker + everything after it
+ *   2. Closed AND unclosed fenced code blocks
+ *   3. Inline JSON objects containing known technical keys
+ *   4. Bare JSON arrays that look like schedule block arrays
+ *   5. Quoted JSON key-value pairs (e.g. "taskId": "xxx")
+ *   6. ISO 8601 timestamps (e.g. 2025-12-24T15:00:00.000Z)
+ *   7. CUID / ULID / UUID patterns (e.g. cm4nqfxyz000abc, uuid v4)
+ *   8. Internal tag tokens ([TimeFlow], [FIXED:…], ID: xxx, task_xxx)
+ *   9. Line-level filter: drop any line still referencing known technical fields
+ *  10. Whitespace normalisation + empty-content fallback
+ */
 function sanitizeAssistantContent(
   content: string,
-  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings',
+  mode: 'conversation' | 'scheduling' | 'availability' | 'planning' | 'meetings' | 'task-creation',
   hasSchedulePreview: boolean
 ): string {
   let sanitized = content;
 
-  // Remove structured output marker and anything after it.
+  // 1. Remove [STRUCTURED_OUTPUT] marker and everything that follows it
+  //    (handles both end-of-string and mid-text occurrences)
   sanitized = sanitized.replace(/\[STRUCTURED_OUTPUT\][\s\S]*$/gi, '');
 
-  // Remove fenced code blocks (JSON or otherwise).
-  sanitized = sanitized.replace(/```[\s\S]*?```/g, '');
+  // 2a. Remove closed fenced code blocks (any language tag)
+  sanitized = sanitized.replace(/```[^\n]*\n[\s\S]*?```/g, '');
 
-  // Remove inline JSON objects that look like schedule payloads.
+  // 2b. Remove unclosed fenced blocks — opening fence with no matching close
+  //     Catches: ```json\n{ ... (truncated / missing closing ```)
+  sanitized = sanitized.replace(/```[^\n]*\n[\s\S]*$/g, (match) => {
+    // Only strip if there's NO closing fence in the match (unclosed block)
+    return match.includes('```') ? match : '';
+  });
+  // Simpler sweep for any remaining stray opening fences
+  sanitized = sanitized.replace(/```[\s\S]*$/g, '');
+
+  // 3. Remove inline JSON objects that contain known structured-output keys
+  sanitized = sanitized.replace(
+    /\{[^{}]*"(taskId|habitId|blocks|conflicts|confidence|summary|schedulePreview|durationMinutes|calendarId|eventId|dueDate|priority)"\s*:[^{}]*\}/gi,
+    ''
+  );
+  // Also handle nested objects with a greedy sweep for { ... } blocks containing those keys
   sanitized = sanitized.replace(
     /\{[\s\S]*?"(taskId|habitId|blocks|conflicts|confidence|summary)"[\s\S]*?\}/gi,
     ''
   );
 
-  // Remove internal tags and identifiers.
+  // 4. Remove bare JSON arrays that look like schedule block arrays
+  sanitized = sanitized.replace(/\[\s*\{[\s\S]*?\}\s*\]/g, '');
+
+  // 5. Remove quoted JSON key-value pairs that leaked outside code fences
+  //    e.g.  "taskId": "cm4abc123"   or   "blocks": []
+  sanitized = sanitized.replace(
+    /"(taskId|habitId|blocks|conflicts|confidence|summary|schedulePreview|durationMinutes|calendarId|eventId|dueDate|priority)"\s*:\s*("([^"\\]|\\.)*"|\[[^\]]*\]|\{[^}]*\}|\d+|true|false|null)/gi,
+    ''
+  );
+
+  // 6. Remove ISO 8601 timestamps — they should never appear in user-facing prose
+  //    Matches: 2025-12-24T15:00:00.000Z  or  2025-12-24T15:00:00Z  etc.
+  sanitized = sanitized.replace(
+    /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?\b/g,
+    ''
+  );
+
+  // 7. Remove CUID / ULID / UUID patterns that are likely internal IDs
+  //    CUID: starts with c/cm followed by 20-30 alphanumeric chars (e.g. cm4nqfxyz000abc...)
+  sanitized = sanitized.replace(/\bcm[a-z0-9]{20,30}\b/gi, '');
+  //    Generic UUID v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  sanitized = sanitized.replace(
+    /\b[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi,
+    ''
+  );
+  //    ULID-like: 26-char base32 uppercase strings
+  sanitized = sanitized.replace(/\b[0-9A-Z]{26}\b/g, '');
+
+  // 8. Remove internal tag tokens and identifier patterns
   sanitized = sanitized
     .replace(/\[TimeFlow\]/gi, '')
     .replace(/\[FIXED:[^\]]*\]/gi, '')
@@ -2638,17 +2719,19 @@ function sanitizeAssistantContent(
     .replace(/\bID:\s*[A-Za-z0-9_-]+\b/g, '')
     .replace(/\b(task|habit|event)_(?:[A-Za-z0-9_-]+)\b/gi, '');
 
-  // Remove lines that still mention technical fields.
+  // 9. Line-level filter: drop any line that still references known technical fields
+  //    (catches residual fragments after JSON object removal)
   sanitized = sanitized
     .split('\n')
     .filter((line) => {
-      return !/(taskId|habitId|eventId|calendarId|schedulePreview|structured_output|\"blocks\"|\"conflicts\"|\"confidence\"|\"summary\")/i.test(
-        line
-      );
+      const techPattern =
+        /taskId|habitId|eventId|calendarId|schedulePreview|structured_output|"blocks"|"conflicts"|"confidence"|"summary"|STRUCTURED_OUTPUT/i;
+      // Keep the line only if it does NOT match technical patterns
+      return !techPattern.test(line);
     })
     .join('\n');
 
-  // Normalize whitespace after removals.
+  // 10. Normalise whitespace and handle fully-empty result
   sanitized = sanitized
     .replace(/[ \t]+\n/g, '\n')
     .replace(/ {2,}/g, ' ')

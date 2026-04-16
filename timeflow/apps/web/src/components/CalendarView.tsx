@@ -8,6 +8,11 @@ import { DateTime } from 'luxon';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { Task, CalendarEvent, CategoryTrainingExampleSnapshot, HabitSkipReason } from '@timeflow/shared';
 import { EventDetailPopover } from './EventDetailPopover';
+import {
+  formatDropPreviewTime,
+  snapResizeDuration,
+  type CalendarDropPreview,
+} from '@/app/calendar/calendarDragUtils';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 // Setup luxon localizer
@@ -35,6 +40,7 @@ interface CalendarViewProps {
   habitStreakMap?: Map<string, { current: number; atRisk: boolean }>;
   scheduledHabitInstances?: Array<{ scheduledHabitId: string; habitId: string }>;
   selectedDate?: Date;
+  dropPreview?: CalendarDropPreview | null;
   onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void;
   onSelectEvent?: (event: CalendarEventItem) => void;
   onRescheduleTask?: (taskId: string, start: Date, end: Date) => Promise<void>;
@@ -85,6 +91,7 @@ export function CalendarView({
   habitStreakMap,
   scheduledHabitInstances,
   selectedDate,
+  dropPreview,
   onSelectSlot,
   onSelectEvent,
   onRescheduleTask,
@@ -347,13 +354,18 @@ export function CalendarView({
         onSelectEvent(event);
       }
     },
-    [tasks, eventCategorizations, onSelectEvent, externalEvents, scheduledHabitInstances, habitStreakMap, categories]
+    [tasks, eventCategorizations, onSelectEvent, scheduledHabitInstances, habitStreakMap, categories]
   );
 
   const TimeSlotWrapper: ComponentType<any> = (slotProps: any) => {
     const start = slotProps.value as Date;
+    const slotPreview =
+      dropPreview && dropPreview.start.getTime() === start.getTime()
+        ? dropPreview
+        : null;
+
     return (
-      <DroppableSlot start={start} durationMinutes={15}>
+      <DroppableSlot start={start} dropPreview={slotPreview}>
         {slotProps.children}
       </DroppableSlot>
     );
@@ -429,11 +441,11 @@ export function CalendarView({
 
 function DroppableSlot({
   start,
-  durationMinutes,
+  dropPreview,
   children,
 }: {
   start: Date;
-  durationMinutes: number;
+  dropPreview?: CalendarDropPreview | null;
   children: React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -441,15 +453,39 @@ function DroppableSlot({
     data: { slotStart: start },
   });
 
+  const previewDurationMinutes = dropPreview
+    ? Math.max(15, Math.round((dropPreview.end.getTime() - dropPreview.start.getTime()) / 60000))
+    : 15;
+  const previewSlotHeight = `${Math.max(1, previewDurationMinutes / 15) * 100}%`;
+  const previewColor = dropPreview?.color ?? (dropPreview?.kind === 'habit' ? '#6366F1' : '#0BAF9A');
+  const previewTime = dropPreview ? formatDropPreviewTime(dropPreview.start, dropPreview.end) : '';
+
   return (
     <div
       ref={setNodeRef}
-      className={`${isOver ? 'bg-primary-50/70 ring-2 ring-primary-200 rounded-sm' : ''} transition-colors relative`}
-      style={{ minHeight: `${durationMinutes * 1.25}px` }}
+      className={`${isOver || dropPreview ? 'bg-primary-50/70 ring-2 ring-primary-200 rounded-sm' : ''} transition-colors relative h-full`}
     >
       {children}
-      {isOver && (
-        <div className="pointer-events-none absolute inset-0 border border-dashed border-primary-300 rounded-sm"></div>
+      {(isOver || dropPreview) && (
+        <div className="pointer-events-none absolute inset-0 border border-dashed border-primary-300 rounded-sm" />
+      )}
+      {dropPreview && (
+        <div
+          className="pointer-events-none absolute left-1 right-1 top-0 z-30 overflow-hidden rounded-md border-2 bg-white/95 px-2 py-1.5 text-left shadow-lg"
+          style={{
+            height: previewSlotHeight,
+            minHeight: 34,
+            borderColor: previewColor,
+            boxShadow: `0 10px 24px -14px ${previewColor}`,
+          }}
+        >
+          <div className="truncate text-[11px] font-semibold leading-tight text-slate-900">
+            {dropPreview.title}
+          </div>
+          <div className="mt-0.5 text-[10px] font-medium leading-tight text-slate-600">
+            {previewTime}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -470,11 +506,14 @@ function DraggableEvent({
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [resizePreviewEnd, setResizePreviewEnd] = useState<Date | null>(null);
   const resizeStartY = useRef<number>(0);
   const initialEnd = useRef<Date>(event.end);
+  const initialDurationMinutes = useRef<number>(15);
+  const pixelsPerMinute = useRef<number>(2);
   const eventRef = useRef<HTMLDivElement | null>(null);
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: {
       task: event.isTask
@@ -490,6 +529,7 @@ function DraggableEvent({
         scheduledHabitId: event.scheduledHabitId,
         start: event.start,
         end: event.end,
+        categoryColor: event.categoryColor,
       },
     },
     disabled: (!event.isTask && !event.isHabit) || isResizing,
@@ -502,16 +542,38 @@ function DraggableEvent({
     setIsResizing(true);
     resizeStartY.current = e.clientY;
     initialEnd.current = event.end;
+    initialDurationMinutes.current = Math.max(
+      15,
+      Math.round((event.end.getTime() - event.start.getTime()) / 60000)
+    );
+    pixelsPerMinute.current = Math.max(
+      0.1,
+      (eventRef.current?.getBoundingClientRect().height ?? initialDurationMinutes.current * 2) /
+        initialDurationMinutes.current
+    );
 
-    const handleMouseMove = () => {
-      // Visual feedback placeholder (no live preview yet).
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+
+    const calculateEnd = (clientY: number) => {
+      const deltaY = clientY - resizeStartY.current;
+      const newDuration = snapResizeDuration({
+        originalDurationMinutes: initialDurationMinutes.current,
+        deltaY,
+        pixelsPerMinute: pixelsPerMinute.current,
+      });
+
+      return new Date(event.start.getTime() + newDuration * 60000);
+    };
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      setResizePreviewEnd(calculateEnd(moveEvent.clientY));
     };
 
     const handleMouseUp = async (upEvent: MouseEvent) => {
-      const deltaY = upEvent.clientY - resizeStartY.current;
-      const minutesDelta = Math.round(deltaY / 2);
-      const newDuration = Math.max(15, Math.round((initialEnd.current.getTime() - event.start.getTime()) / 60000) + minutesDelta);
-      const newEnd = new Date(event.start.getTime() + newDuration * 60000);
+      const newEnd = calculateEnd(upEvent.clientY);
 
       if (event.taskId && newEnd.getTime() !== initialEnd.current.getTime()) {
         try {
@@ -522,6 +584,9 @@ function DraggableEvent({
       }
 
       setIsResizing(false);
+      setResizePreviewEnd(null);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -530,13 +595,20 @@ function DraggableEvent({
     document.addEventListener('mouseup', handleMouseUp);
   }, [event, onResize]);
 
+  const originalDuration = Math.max(15, (event.end.getTime() - event.start.getTime()) / (1000 * 60));
+  const previewDuration = resizePreviewEnd
+    ? Math.max(15, (resizePreviewEnd.getTime() - event.start.getTime()) / (1000 * 60))
+    : originalDuration;
+  const canDrag = event.isTask || event.isHabit;
+
   const style: React.CSSProperties = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    opacity: isDragging ? 0.85 : 1,
-    boxShadow: isDragging ? '0 12px 30px -10px rgba(59,130,246,0.35)' : undefined,
+    opacity: isDragging ? 0.35 : 1,
+    boxShadow: isResizing ? '0 12px 28px -14px rgba(15, 23, 42, 0.45)' : undefined,
     position: 'relative',
-    height: '100%',
-    cursor: isResizing ? 'ns-resize' : isDragging ? 'grabbing' : 'grab',
+    height: resizePreviewEnd ? `${(previewDuration / originalDuration) * 100}%` : '100%',
+    minHeight: 24,
+    zIndex: isDragging || isResizing ? 20 : undefined,
+    cursor: !canDrag ? 'default' : isResizing ? 'ns-resize' : isDragging ? 'grabbing' : 'grab',
   };
 
   const motionProps = prefersReducedMotion
@@ -552,13 +624,14 @@ function DraggableEvent({
     minute: '2-digit',
     hour12: true,
   });
-  const endTime = new Date(event.end).toLocaleTimeString('en-US', {
+  const visibleEnd = resizePreviewEnd ?? event.end;
+  const endTime = new Date(visibleEnd).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
 
-  const duration = (event.end.getTime() - event.start.getTime()) / (1000 * 60); // minutes
+  const duration = previewDuration;
   const isShortEvent = duration <= 30;
   const isVeryShortEvent = duration <= 15;
 
@@ -590,7 +663,9 @@ function DraggableEvent({
         setIsHovered(false);
         onHoverEnd?.();
       }}
-      className="overflow-hidden h-full flex flex-col justify-start px-2 py-1.5 gap-0.5"
+      className={`overflow-hidden h-full flex flex-col justify-start px-2 py-1.5 gap-0.5 ${
+        isResizing ? 'ring-2 ring-white/80' : ''
+      }`}
     >
       <div className={`font-semibold leading-snug ${titleClampClass} ${titleSizeClass}`}>
         {event.title}
@@ -602,11 +677,16 @@ function DraggableEvent({
       )}
       {event.isTask && onResize && (isHovered || isResizing) && (
         <div
-          className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/30 hover:bg-white/50 cursor-ns-resize flex items-center justify-center"
+          className="absolute bottom-0 left-0 right-0 h-3 bg-white/25 hover:bg-white/45 cursor-ns-resize flex items-center justify-center"
           onMouseDown={handleResizeStart}
           style={{ touchAction: 'none' }}
         >
           <div className="w-8 h-0.5 bg-white/80 rounded-full"></div>
+        </div>
+      )}
+      {isResizing && resizePreviewEnd && (
+        <div className="pointer-events-none absolute bottom-3 right-1 rounded bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-slate-800 shadow-sm">
+          Ends {endTime}
         </div>
       )}
     </motion.div>

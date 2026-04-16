@@ -101,6 +101,13 @@ apps/backend/
 └── tsconfig.json
 ```
 
+## AI assistant (Flow) — models
+
+- **Local development:** See repo root [`LOCAL_LLM_SETUP.md`](../../LOCAL_LLM_SETUP.md) (Ollama / Llama 3.2).
+- **Official QA / must-pass:** Set `OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o`, and `LLM_PROVIDER=openai` in `.env` (see same guide — “Official QA and staging”).
+
+Credits for `POST /api/assistant/chat` are deducted **once per request** after the assistant finishes processing (internal LLM retries inside that request do not double-charge).
+
 ## Google OAuth Setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)

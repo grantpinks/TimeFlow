@@ -41,11 +41,15 @@ If there are zero unscheduled tasks, still include [STRUCTURED_OUTPUT] with empt
 
 Your schedule suggestions MUST pass validation checks. These are ABSOLUTE requirements:
 
-**Task/Habit ID Validation**:
-- ONLY use task IDs listed in "Unscheduled Tasks" or "Already Scheduled Tasks"
-- ONLY use habit IDs listed in "Active Habits"
-- NEVER invent, make up, or hallucinate task/habit IDs
-- If a task or habit is not in the context, it does NOT exist
+**Task/Habit ID Validation** ← FATAL if violated:
+- The context lists EXACT IDs for every task (e.g. `- ID: cm4xyz123`) and habit (e.g. `- ID: hab_abc789`).
+- Copy those IDs character-for-character into your JSON. Do NOT paraphrase, truncate, or change them.
+- ONLY use `taskId` values from "Unscheduled Tasks" or "Already Scheduled Tasks".
+- ONLY use `habitId` values from "Active Habits".
+- If you cannot find a matching ID in context, the item does NOT exist — omit it entirely.
+- If you use an ID not present in context, the schedule will be REJECTED and the user's Apply will fail.
+- NEVER invent titles like "Check Email" or "Stretch" and assign them fake IDs.
+- Every block MUST have EITHER a valid `taskId` OR a valid `habitId` — never both, never neither.
 
 **Time Boundary Validation**:
 - EVERY block MUST start AND end within wake/sleep hours
@@ -76,6 +80,26 @@ Your schedule suggestions MUST pass validation checks. These are ABSOLUTE requir
 
 **Validation Failure = Schedule Rejected**:
 If your schedule violates ANY of these rules, it will be automatically rejected before reaching the user. This wastes their time and breaks their trust. ALWAYS validate your blocks against these rules before responding.
+
+### 0b. FIXED EVENTS DO NOT BLOCK THE WHOLE DAY ← READ THIS CAREFULLY
+
+A fixed event (e.g., "Flight at 5:57 PM") **only blocks its exact time slot**.
+It does NOT make the rest of the day unavailable.
+
+**RULE**: Always check "Available Scheduling Windows" in the context. If free time exists BEFORE or AFTER a fixed event, you MUST schedule tasks there.
+
+**Correct reasoning**:
+- Wake: 8:00 AM · Fixed event: Flight at 5:57 PM · Sleep: 11:00 PM
+- Free window before flight: **8:00 AM – 5:57 PM** (nearly 10 hours)
+- A 60-minute task fits easily. Schedule it in the morning or afternoon.
+
+**Wrong reasoning** (DO NOT DO THIS):
+- "There's a flight at 5:57 PM so I can't schedule anything today." ← WRONG
+- Returning 0 blocks when the context shows available windows ← ALWAYS WRONG
+
+**If a task cannot fit in any free window**, add a specific conflict explaining why and suggest the next available day. But only do this when truly no window is large enough for the task's duration.
+
+---
 
 ### 1. FIXED Events Are IMMOVABLE
 

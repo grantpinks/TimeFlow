@@ -1680,3 +1680,46 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 
 ---
 
+## Sprint 25: Flow AI Reliability & Must-Pass Closeout
+**Duration**: Week 51-52 (or next available window)  
+**Status**: **Complete** (engineering, 2026-04-16) — human **`gpt-4o`** must-pass sign-off still tracked in `docs/SPRINT_13_MUST_PASS_RUN.md`.  
+**Focus**: Make Flow AI trustworthy end-to-end: Ask → Preview → Apply, sanitization, **`GET /api/assistant/history`**, **web + Expo parity**, **`gpt-4o`** must-pass QA.
+
+**Strategic context:** Closes `KNOWN_ISSUES.md` items for the AI Scheduling Assistant (Sprint 13 must-pass flow, Task 13.8 sanitization, 13.10–13.13 apply safeguards, history). Does **not** include agentic tool-calling or Gmail-in-chat (separate future sprint).
+
+**Plan doc:** [`docs/plans/2026-04-15-flow-ai-reliability-must-pass-closeout.md`](./docs/plans/2026-04-15-flow-ai-reliability-must-pass-closeout.md)
+
+**Locked decisions (see plan doc):** `gpt-4o` for official QA; implement **`GET /api/assistant/history`**; preview/overlay on **both** `/assistant` and `/calendar`; **Expo parity**; Flow Credits **once per POST** (retries internal); optional **lightweight** deterministic fallback only if safe.
+
+#### Goals
+- [ ] Must-pass flow PASS: `docs/SPRINT_13_MUST_PASS_RUN.md` (schedule + apply + history) with **`OPENAI_MODEL=gpt-4o`**.
+- [ ] No technical leakage in assistant responses (JSON, IDs, markers).
+- [ ] **`GET /api/assistant/history`** returns persisted messages; web + mobile auth without 401.
+- [ ] Web: assistant + calendar preview/overlay UX **equally** clear.
+- [ ] Expo: assistant chat + preview/apply + calendar + history **parity** with web.
+- [ ] `SPRINT_13_MUST_PASS_RUN.md` updated with results and env snapshot.
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 25.1 | Phase A: ID guardrails + prompt rules (`taskId`/`habitId` only); fix empty “schedule today” preview + due-date normalization | Codex | 10-16h | P0 | ✅ |
+| 25.2 | Phase A: Tests (invalid IDs, feasible window before fixed events, apply success) | Codex | 4-8h | P0 | ✅ |
+| 25.2b | Optional A3b: deterministic fallback — **skipped** (prompt + context fix sufficient) | Codex | — | P2 | ✅ |
+| 25.3 | Phase B: `sanitizeAssistantContent` hardening + golden tests | Codex | 4-8h | P0 | ✅ |
+| 25.4 | Phase C (web): `/assistant` + `/calendar` — Apply CTA, preview card, overlay on **both**, disabled Apply when empty, friendly errors | Codex | 8-14h | P0 | ✅ |
+| 25.4m | Phase C (Expo): assistant screen + calendar preview/apply patterns + auth; parity with web APIs | Codex | 10-18h | P0 | ✅ |
+| 25.5 | Phase D: Implement **`GET /api/assistant/history`** from DB; `conversationId` on chat; fix 401 on web + **mobile** API clients | Codex | 6-12h | P0 | ✅ |
+| 25.5b | Flow Credits: **single `trackUsage` per POST** — internal LLM retries do not double-charge | Codex | 1-2h | P0 | ✅ |
+| 25.6 | Phase E: Document **`gpt-4o`** + local fallback; re-run must-pass; update `SPRINT_13_MUST_PASS_RUN.md` | Gemini/Codex | 2-4h | P1 | ✅ |
+| 25.7 | Phase F: Update `KNOWN_ISSUES.md` checkboxes; link plan from README or internal index | Gemini | 1-2h | P2 | ✅ |
+
+#### Decision gate
+- [ ] Preview blocks are non-empty when calendar has feasible space before conflicts.
+- [ ] `/api/schedule/apply` succeeds with preview from assistant (no unknown IDs).
+- [ ] User-visible text passes sanitization checks in tests.
+- [ ] **`GET /api/assistant/history`** returns messages for authenticated user (web + mobile).
+- [ ] Expo flows match web must-pass behavior (same API contracts).
+
+---
+

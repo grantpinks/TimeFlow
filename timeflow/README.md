@@ -48,6 +48,10 @@ For detailed instructions on managing the development stack (starting, restartin
 The AI regression prompt harness lives under `apps/backend/scripts`. For full setup and usage,
 see `docs/SPRINT_13_AI_REGRESSION_RUNBOOK.md`.
 
+## Flow AI (assistant)
+
+End-user flow **Ask → Preview → Apply** (no auto-apply) is summarized in [`docs/FLOW_AI_CONTRACT.md`](./docs/FLOW_AI_CONTRACT.md). Sprint 25 reliability work is tracked in [`docs/plans/2026-04-15-flow-ai-reliability-must-pass-closeout.md`](./docs/plans/2026-04-15-flow-ai-reliability-must-pass-closeout.md).
+
 ## Sprint 7 additions
 
 - Habit scheduling suggestions (`GET /api/habits/suggestions`) surfaced on the Today page for active habits (read-only, non-committed).

@@ -29,6 +29,7 @@ import type {
   ChatMessage,
   AssistantChatRequest,
   AssistantChatResponse,
+  AssistantHistoryResponse,
   Category,
   CreateCategoryRequest,
   UpdateCategoryRequest,
@@ -758,10 +759,16 @@ export async function sendChatMessage(
 }
 
 /**
- * Get conversation history (returns empty for MVP).
+ * Get persisted assistant conversation history (latest thread, or a specific `conversationId`).
  */
-export async function getChatHistory(): Promise<{ messages: ChatMessage[] }> {
-  return request<{ messages: ChatMessage[] }>('/assistant/history');
+export async function getChatHistory(
+  conversationId?: string | null
+): Promise<AssistantHistoryResponse> {
+  const q =
+    conversationId && conversationId.trim()
+      ? `?conversationId=${encodeURIComponent(conversationId.trim())}`
+      : '';
+  return request<AssistantHistoryResponse>(`/assistant/history${q}`);
 }
 
 // ===== Email (Gmail) =====

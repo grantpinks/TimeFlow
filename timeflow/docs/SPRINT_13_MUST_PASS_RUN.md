@@ -1,9 +1,9 @@
 # Sprint 13 Must Pass Flow Run
 
-Date: 2025-12-26
-Tester: Codex
-Backend: http://localhost:4000
-Model: OPENAI_MODEL=gpt-4o-mini (apps/backend/.env)
+Date: 2025-12-26  
+Tester: Codex  
+Backend: http://localhost:4000  
+Model: OPENAI_MODEL=gpt-4o-mini (apps/backend/.env)  
 User: grantpinks@gmail.com
 
 ## Preconditions
@@ -46,3 +46,40 @@ User: grantpinks@gmail.com
 - Scheduling preview empty for "today" despite available time; conflicts reference fixed event.
 - LLM generates invalid task IDs for habits; schedule preview should use habitId or only existing tasks.
 - Assistant history endpoint returns empty; persistence missing.
+
+---
+
+## Sprint 25 follow-up — env snapshot and re-run (2026-04-16)
+
+**Canonical QA model (locked):** `gpt-4o` via OpenAI (`OPENAI_MODEL=gpt-4o`, `LLM_PROVIDER=openai`, `OPENAI_API_KEY` set). Documented in [`LOCAL_LLM_SETUP.md`](../../LOCAL_LLM_SETUP.md) and [`apps/backend/README.md`](../../apps/backend/README.md).
+
+**Engineering fixes landed (re-test against this baseline):**
+
+| Area | Change |
+|------|--------|
+| Schedule / IDs | `validateSchedulePreview` validates `habitId`; available-window context for fixed events; stricter scheduling prompts. |
+| Sanitization | `sanitizeAssistantContent` hardened (Phase B). |
+| Web UX | Apply wired; preview persistence to calendar; friendly apply errors. |
+| Mobile | Flow + Calendar tabs; AsyncStorage preview; history + `conversationId` on chat. |
+| History | `GET /api/assistant/history?conversationId=` + `conversationId` in response; web/mobile hydrate; DB fallback when history omitted but `conversationId` set. |
+| Flow Credits | Single `trackUsage` per `POST /api/assistant/chat` (`assistantController.credits.test.ts`). |
+
+**Manual re-run checklist (sign-off requires human tester with `gpt-4o`):**
+
+1. Set `OPENAI_MODEL=gpt-4o` and restart backend.
+2. Repeat steps 1–5 above (same preconditions).
+3. Record PASS/FAIL per step in a new subsection or update the tables below.
+
+**Automated status:** Prior failure modes above are **addressed in code** as of Sprint 25; **official PASS** still requires a fresh run with `gpt-4o` and updated step results.
+
+### Placeholder result table (fill in after re-run)
+
+| Step | Result |
+|------|--------|
+| 1 Daily plan | _pending_ |
+| 2 Schedule today | _pending_ |
+| 3 Schedule tomorrow | _pending_ |
+| 4 Apply | _pending_ |
+| 5 History | _pending_ |
+
+**Must Pass Status (post re-run):** PENDING — awaiting `gpt-4o` run.

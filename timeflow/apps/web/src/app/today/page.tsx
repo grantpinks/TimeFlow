@@ -606,10 +606,9 @@ Please generate a schedule preview for today.`;
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="flex justify-center mb-3">
-            <FlowMascot size="md" expression="happy" />
+          <div className="flex justify-center">
+            <LoadingSpinner size="lg" label="Loading" />
           </div>
-          <LoadingSpinner size="lg" label="Loading" />
           <p className="text-slate-600 mt-4">Loading…</p>
         </div>
       </div>
@@ -767,10 +766,9 @@ Please generate a schedule preview for today.`;
 
         {loading ? (
           <div className="bg-gradient-to-br from-white to-slate-50 rounded-2xl shadow-lg border border-slate-200 p-16 text-center">
-            <div className="flex justify-center mb-4">
-              <FlowMascot size="lg" expression="happy" />
+            <div className="flex justify-center">
+              <LoadingSpinner size="xl" label="Loading today schedule" />
             </div>
-            <LoadingSpinner size="xl" label="Loading today schedule" />
             <p className="text-slate-600 font-medium text-lg mt-5">Loading today&apos;s schedule…</p>
           </div>
         ) : (
@@ -1235,7 +1233,6 @@ Please generate a schedule preview for today.`;
                 <div className="flex-1 overflow-y-auto">
                   {inboxLoading ? (
                     <div className="flex flex-col items-center justify-center h-full gap-3">
-                      <FlowMascot size="sm" expression="happy" />
                       <LoadingSpinner size="lg" variant="inbox" label="Loading inbox" />
                     </div>
                   ) : inboxError ? (

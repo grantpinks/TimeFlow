@@ -4,6 +4,24 @@ This guide explains how to run Llama 3.2 locally using Ollama (recommended) or o
 
 ---
 
+## Official QA and staging: OpenAI `gpt-4o`
+
+For **Sprint 13 must-pass** runs, regression checks, and production-like behavior, the team uses **OpenAI** with **`gpt-4o`** (not local Ollama).
+
+Set in `apps/backend/.env`:
+
+```bash
+OPENAI_API_KEY="sk-..."
+OPENAI_MODEL="gpt-4o"
+LLM_PROVIDER="openai"
+# Optional: explicit chat completions URL if your stack requires it
+# LLM_ENDPOINT="https://api.openai.com/v1/chat/completions"
+```
+
+The backend reads `OPENAI_MODEL` and `OPENAI_API_KEY` when `LLM_PROVIDER=openai` (see `callLocalLLM` / env config in `apps/backend`). **Local Ollama** remains the default path for everyday development without cloud API keys; use `gpt-4o` when you need results comparable to production and for documenting outcomes in `docs/SPRINT_13_MUST_PASS_RUN.md`.
+
+---
+
 ## Option 1: Ollama (Recommended - Easiest)
 
 Ollama provides the simplest way to run Llama 3.2 locally with an OpenAI-compatible API.

@@ -1153,7 +1153,6 @@ export default function InboxPage() {
               </div>
             ) : loadingThread || threadMessages.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3">
-                <FlowMascot size="sm" expression="happy" />
                 <LoadingSpinner size="lg" variant="inbox" label="Loading thread" />
               </div>
             ) : threadError ? (

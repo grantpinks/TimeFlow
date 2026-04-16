@@ -65,6 +65,7 @@ export default function SchedulePreviewCard({
   }, {} as Record<string, { label: string; blocks: typeof preview.blocks }>);
 
   const orderedDates = Array.from(new Set(sortedBlocks.map((block) => dateKey(block.start))));
+  const hasBlocks = preview.blocks.length > 0;
 
   const confidenceColor =
     preview.confidence === 'high'
@@ -107,6 +108,19 @@ export default function SchedulePreviewCard({
         {/* Summary (if provided) */}
         {preview.summary && (
           <p className="text-sm sm:text-base text-slate-700 mb-4 leading-relaxed">{preview.summary}</p>
+        )}
+
+        {/* Empty-blocks state */}
+        {!hasBlocks && (
+          <div className="mb-4 flex items-start gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+            <span className="text-slate-400 text-lg leading-none mt-0.5" aria-hidden>ℹ️</span>
+            <div>
+              <p className="text-sm font-medium text-slate-700">No tasks could be scheduled</p>
+              <p className="text-sm text-slate-500 mt-1">
+                All tasks may already be scheduled, complete, or conflict with fixed events. Try asking Flow to schedule specific tasks or for a different day.
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Time blocks grouped by date */}
@@ -197,9 +211,10 @@ export default function SchedulePreviewCard({
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <motion.button
             onClick={onApply}
-            disabled={applying || applied}
-            whileHover={!reduceMotion && !applying && !applied ? { scale: 1.02 } : {}}
-            whileTap={!reduceMotion && !applying && !applied ? { scale: 0.98 } : {}}
+            disabled={applying || applied || !hasBlocks}
+            whileHover={!reduceMotion && !applying && !applied && hasBlocks ? { scale: 1.02 } : {}}
+            whileTap={!reduceMotion && !applying && !applied && hasBlocks ? { scale: 0.98 } : {}}
+            title={!hasBlocks ? 'No tasks to apply — ask Flow to schedule specific tasks' : undefined}
             className={`w-full sm:flex-1 px-4 sm:px-6 py-3 rounded-lg font-semibold transition-all ${
               applied
                 ? 'bg-green-500 text-white cursor-default'

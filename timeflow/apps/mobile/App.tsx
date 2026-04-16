@@ -10,10 +10,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { TaskListScreen } from './src/screens/TaskListScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { AssistantScreen } from './src/screens/AssistantScreen';
+import { CalendarScreen } from './src/screens/CalendarScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -85,18 +88,40 @@ function AppNavigator() {
           ),
         }}
       />
+      <Tab.Screen
+        name="Flow"
+        component={AssistantScreen}
+        options={{
+          headerTitle: 'Flow AI',
+          tabBarIcon: ({ color }) => (
+            <IconImage source={require('./assets/branding/flow-default.png')} tint={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Calendar"
+        component={CalendarScreen}
+        options={{
+          headerTitle: 'Calendar',
+          tabBarIcon: ({ color }) => (
+            <IconImage source={require('./assets/branding/icon_only.png')} tint={color} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <AppNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NavigationContainer>
+          <StatusBar style="dark" />
+          <AppNavigator />
+        </NavigationContainer>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

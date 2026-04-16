@@ -9,12 +9,32 @@ import { Layout } from '../../components/Layout';
 import { LoadingSpinner } from '@/components/ui';
 import SchedulePreviewCard from '../../components/SchedulePreviewCard';
 import ThinkingState from '../../components/ThinkingState';
-import { SchedulePreviewOverlay } from '../../components/calendar/SchedulePreviewOverlay';
 import { useTasks } from '../../hooks/useTasks';
 import { useHabits } from '../../hooks/useHabits';
 import { useUser } from '../../hooks/useUser';
 import * as api from '../../lib/api';
 import type { ChatMessage, SchedulePreview, ApplyScheduleBlock } from '@timeflow/shared';
+
+/** C4: Map raw API/network errors to user-friendly messages. */
+function friendlyApplyError(raw: string): string {
+  if (!raw) return 'Something went wrong applying your schedule. Please try again.';
+  const lower = raw.toLowerCase();
+  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('auth'))
+    return 'Your session expired. Please refresh the page and try again.';
+  if (lower.includes('429') || lower.includes('rate limit'))
+    return 'Too many requests — please wait a moment and try again.';
+  if (lower.includes('network') || lower.includes('fetch') || lower.includes('failed to fetch'))
+    return 'Network error. Check your connection and try again.';
+  if (lower.includes('invalid') && lower.includes('id'))
+    return "Some task IDs in this schedule are no longer valid. Ask Flow to regenerate your schedule, then try again.";
+  if (lower.includes('conflict') || lower.includes('overlap'))
+    return 'Some blocks overlap existing calendar events. Review the warnings and apply again, or ask Flow to reschedule.';
+  if (lower.includes('500') || lower.includes('internal server'))
+    return 'A server error occurred. Please try again in a moment.';
+  // Fallback: show a cleaned version — truncate long technical messages
+  if (raw.length > 120) return 'Failed to apply schedule. Please try again.';
+  return raw;
+}
 
 export default function AssistantPage() {
   const { user, isAuthenticated, loading: userLoading } = useUser();
@@ -97,6 +117,33 @@ export default function AssistantPage() {
   useEffect(() => {
     conversationIdRef.current = currentConversationId;
   }, [currentConversationId]);
+
+  // Phase D: Load persisted messages from GET /api/assistant/history (Bearer via api.request)
+  useEffect(() => {
+    if (!isAuthenticated || userLoading) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { messages: hist, conversationId: histCid } = await api.getChatHistory();
+        if (cancelled) return;
+        setMessages((prev) => {
+          if (prev.length > 0) return prev;
+          latestMessagesRef.current = hist;
+          return hist;
+        });
+        if (hist.length > 0 && histCid) {
+          setCurrentConversationId((id) => id ?? histCid);
+        }
+      } catch (e) {
+        console.error('Failed to load assistant history:', e);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, userLoading]);
 
   useEffect(() => {
     return () => {
@@ -343,6 +390,12 @@ export default function AssistantPage() {
       if (response.suggestions) {
         setSchedulePreview(response.suggestions);
         setPreviewApplied(false);
+        // Persist preview so calendar page can surface it too
+        try {
+          sessionStorage.setItem('flow_schedule_preview', JSON.stringify(response.suggestions));
+        } catch {
+          // sessionStorage unavailable (private mode) — silently skip
+        }
       }
 
       latestMessagesRef.current = newMessages;
@@ -405,6 +458,7 @@ export default function AssistantPage() {
 
       setSchedulePreview(null);
       setPreviewApplied(true);
+      try { sessionStorage.removeItem('flow_schedule_preview'); } catch { /* ignore */ }
 
       let successText = 'Schedule applied!';
       if (tasksScheduled > 0 && habitsScheduled > 0) {
@@ -430,16 +484,16 @@ export default function AssistantPage() {
       queueAutoSave([successMessage]);
     } catch (error) {
       console.error('Failed to apply schedule:', error);
-      const detailedMessage =
-        error instanceof Error && error.message
-          ? error.message
-          : 'Failed to apply schedule. Please try again.';
-      setApplyError(detailedMessage);
+      const rawMessage =
+        error instanceof Error && error.message ? error.message : '';
+      // C4: Return a user-friendly error — never expose raw API dumps or internal details
+      const friendlyMessage = friendlyApplyError(rawMessage);
+      setApplyError(friendlyMessage);
 
       const errorMessage: ChatMessage = {
         id: `msg_${Date.now()}_error`,
         role: 'assistant',
-        content: detailedMessage,
+        content: friendlyMessage,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => {
@@ -892,7 +946,7 @@ export default function AssistantPage() {
                 </div>
               )}
 
-              {/* Schedule Preview */}
+              {/* Schedule Preview — single Apply surface on /assistant */}
               {schedulePreview && (
                 <div className="mt-4 sm:mt-6">
                   <SchedulePreviewCard
@@ -900,19 +954,25 @@ export default function AssistantPage() {
                     tasks={tasks}
                     habits={habits}
                     timeZone={user.timeZone}
-                    onApply={() => {}}
+                    onApply={handleApplySchedule}
                     onCancel={() => {
                       setSchedulePreview(null);
                       setPreviewApplied(false);
                       setApplyError(null);
+                      try { sessionStorage.removeItem('flow_schedule_preview'); } catch { /* ignore */ }
                     }}
                     applying={applying}
                     applied={previewApplied}
                   />
                   {applyError && (
-                    <div className="mt-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                      {applyError}
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-3 flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3"
+                    >
+                      <span className="shrink-0 mt-0.5" aria-hidden>⚠️</span>
+                      <span>{applyError}</span>
+                    </motion.div>
                   )}
                 </div>
               )}
@@ -989,13 +1049,6 @@ export default function AssistantPage() {
           </div>
         </div>
 
-        <SchedulePreviewOverlay
-          blocks={schedulePreview?.blocks || []}
-          onApply={handleApplySchedule}
-          onCancel={() => setSchedulePreview(null)}
-          applying={applying}
-          applied={previewApplied}
-        />
       </div>
     </Layout>
   );

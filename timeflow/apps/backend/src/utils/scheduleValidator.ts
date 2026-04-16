@@ -30,6 +30,7 @@ export interface UserPreferences {
  * - Tasks scheduled outside wake/sleep hours
  * - Invalid time ranges or formats
  * - Conflicts between scheduled blocks
+ * - Invalid/hallucinated taskId or habitId values
  *
  * Sprint 13.7: Server-side validation ensures we NEVER create schedules
  * that conflict with immovable commitments, even if AI makes a mistake.
@@ -38,13 +39,15 @@ export interface UserPreferences {
  * @param calendarEvents - All calendar events (will be classified internally)
  * @param userPrefs - User's wake/sleep times and timezone
  * @param taskIds - Valid task IDs that exist in the database
+ * @param habitIds - Valid habit IDs that exist in the database (A1: catch hallucinated habit IDs)
  * @returns Validation result with errors and warnings
  */
 export function validateSchedulePreview(
   preview: SchedulePreview,
   calendarEvents: CalendarEvent[],
   userPrefs: UserPreferences,
-  taskIds: string[]
+  taskIds: string[],
+  habitIds: string[] = []
 ): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -57,32 +60,51 @@ export function validateSchedulePreview(
 
   // Validate each block
   for (const block of preview.blocks) {
-    if (!block.taskId) {
+    const hasTaskId = Boolean(block.taskId);
+    const hasHabitId = Boolean((block as any).habitId);
+
+    // A1: Block must identify as a task or a habit — reject anonymous blocks
+    if (!hasTaskId && !hasHabitId) {
+      errors.push('Error: Block is missing both taskId and habitId');
       continue;
     }
-    // Validation 1: Task ID exists
-    if (!taskIds.includes(block.taskId)) {
+
+    // A1: Validate taskId against known tasks
+    if (hasTaskId && !taskIds.includes(block.taskId!)) {
       errors.push(`Error: Invalid task ID: ${block.taskId}`);
-      continue; // Skip further validation for this block
+      continue;
     }
+
+    // A1: Validate habitId against known habits (only when habitIds list is provided)
+    if (hasHabitId && habitIds.length > 0 && !habitIds.includes((block as any).habitId)) {
+      errors.push(`Error: Invalid habit ID: ${(block as any).habitId}`);
+      continue;
+    }
+
+    // Habit blocks: skip time/overlap checks below (they are validated differently)
+    // They still need ISO format and wake/sleep checks applied the same way as task blocks.
+    // Fall through to the shared validations below.
+
+    // Helper to identify the block in error messages regardless of type
+    const blockId = block.taskId || (block as any).habitId || '(unknown)';
 
     // Validation 2: Valid ISO 8601 timestamps
     const startDate = new Date(block.start);
     const endDate = new Date(block.end);
 
     if (isNaN(startDate.getTime())) {
-      errors.push(`Error: Invalid start time for task ${block.taskId}: ${block.start}`);
+      errors.push(`Error: Invalid start time for block ${blockId}: ${block.start}`);
       continue;
     }
 
     if (isNaN(endDate.getTime())) {
-      errors.push(`Error: Invalid end time for task ${block.taskId}: ${block.end}`);
+      errors.push(`Error: Invalid end time for block ${blockId}: ${block.end}`);
       continue;
     }
 
     // Validation 3: Start before end
     if (startDate >= endDate) {
-      errors.push(`Error: Start time must be before end time for task ${block.taskId}`);
+      errors.push(`Error: Start time must be before end time for block ${blockId}`);
       continue;
     }
 

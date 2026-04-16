@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { DndContext, DragOverlay, useSensors, useSensor, PointerSensor } from '@dnd-kit/core';
+import { DndContext, DragOverlay, PointerSensor, pointerWithin, useSensor, useSensors } from '@dnd-kit/core';
 import { Layout } from '@/components/Layout';
 import { CalendarView } from '@/components/CalendarView';
 import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
@@ -21,6 +21,7 @@ import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
 import { filterExternalEvents } from './calendarEventFilters';
+import { buildDropWindow, formatDropPreviewTime, type CalendarDropPreview } from './calendarDragUtils';
 import type {
   CalendarEvent,
   ScheduledHabitInstance,
@@ -53,6 +54,7 @@ export default function CalendarPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [activeDragHabit, setActiveDragHabit] = useState<{ title: string; durationMinutes: number } | null>(null);
+  const [activeDropPreview, setActiveDropPreview] = useState<CalendarDropPreview | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
@@ -74,8 +76,11 @@ export default function CalendarPage() {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [showEvents, setShowEvents] = useState(true);
   const categorizationUpdateTokenRef = useRef(0);
-  // Schedule preview overlay state
+  // Schedule preview overlay state — can be seeded from sessionStorage when navigating from /assistant
   const [schedulePreviewBlocks, setSchedulePreviewBlocks] = useState<ScheduledBlock[]>([]);
+  const [schedulePreviewConflicts, setSchedulePreviewConflicts] = useState<string[]>([]);
+  const [schedulePreviewSummary, setSchedulePreviewSummary] = useState<string | undefined>();
+  const [schedulePreviewConfidence, setSchedulePreviewConfidence] = useState<'high' | 'medium' | 'low' | undefined>();
   const [applyingSchedule, setApplyingSchedule] = useState(false);
 
   const buildEventSummaryMap = (events: CalendarEvent[]) =>
@@ -134,6 +139,24 @@ export default function CalendarPage() {
   };
 
   // Fetch categories on mount
+  // C3: Hydrate schedule preview from sessionStorage if the user navigated from /assistant
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('flow_schedule_preview');
+      if (stored) {
+        const preview = JSON.parse(stored) as import('@timeflow/shared').SchedulePreview;
+        if (preview.blocks && preview.blocks.length > 0) {
+          setSchedulePreviewBlocks(preview.blocks);
+          setSchedulePreviewConflicts(preview.conflicts ?? []);
+          setSchedulePreviewSummary(preview.summary ?? undefined);
+          setSchedulePreviewConfidence(preview.confidence ?? undefined);
+        }
+      }
+    } catch {
+      // sessionStorage unavailable or malformed — silently skip
+    }
+  }, []);
+
   useEffect(() => {
     async function fetchCategories() {
       try {
@@ -543,7 +566,6 @@ export default function CalendarPage() {
 
     setApplyingSchedule(true);
     try {
-      // Convert ScheduledBlock[] to ApplyScheduleBlock[]
       const applyBlocks: ApplyScheduleBlock[] = [];
       schedulePreviewBlocks.forEach((block) => {
         if ('taskId' in block && block.taskId) {
@@ -559,20 +581,35 @@ export default function CalendarPage() {
       });
 
       const result = await api.applySchedule(applyBlocks);
-      await Promise.all([
-        refreshTasks(),
-        fetchExternalEvents(),
-      ]);
-      setMessage({
-        type: 'success',
-        text: `Schedule applied! ${result.tasksScheduled} tasks and ${result.habitsScheduled} habits scheduled.`,
-      });
+      await Promise.all([refreshTasks(), fetchExternalEvents()]);
+
+      const taskCount = result.tasksScheduled ?? 0;
+      const habitCount = result.habitsScheduled ?? 0;
+      const parts: string[] = [];
+      if (taskCount > 0) parts.push(`${taskCount} task${taskCount !== 1 ? 's' : ''}`);
+      if (habitCount > 0) parts.push(`${habitCount} habit${habitCount !== 1 ? 's' : ''}`);
+      const label = parts.length > 0 ? parts.join(' and ') + ' added to your calendar' : 'Schedule applied';
+
+      setMessage({ type: 'success', text: `✓ ${label}!` });
       setSchedulePreviewBlocks([]);
+      setSchedulePreviewConflicts([]);
+      setSchedulePreviewSummary(undefined);
+      setSchedulePreviewConfidence(undefined);
+      try { sessionStorage.removeItem('flow_schedule_preview'); } catch { /* ignore */ }
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to apply schedule',
-      });
+      const raw = error instanceof Error ? error.message : '';
+      const lower = raw.toLowerCase();
+      let friendly = 'Failed to apply schedule. Please try again.';
+      if (lower.includes('invalid') && lower.includes('id'))
+        friendly = 'Some task IDs are no longer valid. Go back to Flow and regenerate your schedule.';
+      else if (lower.includes('401') || lower.includes('unauthorized'))
+        friendly = 'Your session expired. Please refresh and try again.';
+      else if (lower.includes('network') || lower.includes('fetch'))
+        friendly = 'Network error. Check your connection and try again.';
+      else if (raw && raw.length <= 120)
+        friendly = raw;
+
+      setMessage({ type: 'error', text: friendly });
     } finally {
       setApplyingSchedule(false);
     }
@@ -580,6 +617,10 @@ export default function CalendarPage() {
 
   const handleCancelSchedulePreview = () => {
     setSchedulePreviewBlocks([]);
+    setSchedulePreviewConflicts([]);
+    setSchedulePreviewSummary(undefined);
+    setSchedulePreviewConfidence(undefined);
+    try { sessionStorage.removeItem('flow_schedule_preview'); } catch { /* ignore */ }
   };
 
   const handleResizeTask = async (taskId: string, start: Date, end: Date) => {
@@ -857,35 +898,120 @@ export default function CalendarPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
+      activationConstraint: { distance: 4 },
     })
   );
 
-  const handleDragStart = (event: any) => {
-    const activeData = event.active.data?.current;
+  const getActiveDragDetails = (active: any) => {
+    const activeData = active.data?.current;
     const calendarEvent = activeData?.calendarEvent;
-    if (calendarEvent?.sourceType === 'habit') {
+
+    if (calendarEvent?.sourceType === 'habit' && calendarEvent.scheduledHabitId) {
       const durationMinutes = Math.max(
         15,
         Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
       );
-      setActiveDragTask(null);
-      setActiveDragHabit({ title: calendarEvent.title, durationMinutes });
-      return;
+      return {
+        kind: 'habit' as const,
+        title: calendarEvent.title as string,
+        durationMinutes,
+        fromCalendar: true,
+        scheduledHabitId: calendarEvent.scheduledHabitId as string,
+        color: '#6366F1',
+      };
     }
 
-    // Find the task being dragged
-    const taskId = event.active.id.replace('task-', '');
+    if (calendarEvent?.sourceType === 'task' && calendarEvent.taskId) {
+      const task = tasks.find((t) => t.id === calendarEvent.taskId);
+      const durationMinutes = Math.max(
+        15,
+        Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
+      );
+      return {
+        kind: 'task' as const,
+        title: calendarEvent.title as string,
+        durationMinutes,
+        fromCalendar: true,
+        task,
+        taskId: calendarEvent.taskId as string,
+        color: task?.category?.color ?? calendarEvent.categoryColor ?? '#0BAF9A',
+      };
+    }
+
+    const activeId = String(active.id);
+    const taskId = activeId.startsWith('task-') ? activeId.slice('task-'.length) : activeId;
     const taskFromList = tasks.find((t) => t.id === taskId);
     const taskFromDrag =
       activeData?.task && typeof activeData.task === 'object' && 'title' in activeData.task
         ? (activeData.task as Task)
         : null;
     const task = taskFromList || taskFromDrag;
-    if (task) {
-      setActiveDragHabit(null);
-      setActiveDragTask(task);
+
+    if (!task) return null;
+
+    return {
+      kind: 'task' as const,
+      title: task.title,
+      durationMinutes: task.durationMinutes || 30,
+      fromCalendar: false,
+      task,
+      taskId: task.id,
+      color: task.category?.color ?? '#0BAF9A',
+    };
+  };
+
+  const getDropWindowFromDrag = (active: any, over: any) => {
+    const slotStart = over?.data?.current?.slotStart as Date | undefined;
+    if (!slotStart) return null;
+
+    const details = getActiveDragDetails(active);
+    if (!details) return null;
+
+    return {
+      details,
+      window: buildDropWindow(slotStart, details.durationMinutes),
+    };
+  };
+
+  const handleDragStart = (event: any) => {
+    const details = getActiveDragDetails(event.active);
+    setActiveDropPreview(null);
+
+    if (!details) return;
+
+    if (details.kind === 'habit') {
+      setActiveDragTask(null);
+      setActiveDragHabit({ title: details.title, durationMinutes: details.durationMinutes });
+      return;
     }
+
+    if (details.task) {
+      setActiveDragHabit(null);
+      setActiveDragTask(details.task);
+    }
+  };
+
+  const handleDragOver = (event: any) => {
+    const drop = getDropWindowFromDrag(event.active, event.over);
+
+    if (!drop) {
+      setActiveDropPreview(null);
+      return;
+    }
+
+    setActiveDropPreview({
+      start: drop.window.start,
+      end: drop.window.end,
+      title: drop.details.title,
+      kind: drop.details.kind,
+      color: drop.details.color,
+    });
+  };
+
+  const handleDragCancel = () => {
+    setActiveDragTask(null);
+    setActiveDragHabit(null);
+    setActiveDropPreview(null);
   };
 
   const handleConfirmSchedule = async () => {
@@ -933,59 +1059,37 @@ export default function CalendarPage() {
 
   const handleDragEnd = async (event: any) => {
     const { active, over } = event;
+    const drop = getDropWindowFromDrag(active, over);
 
-    if (!over) {
+    if (!drop) {
       setActiveDragTask(null);
       setActiveDragHabit(null);
+      setActiveDropPreview(null);
       return;
     }
 
-    const slotData = over.data?.current;
+    const { details, window } = drop;
 
-    if (slotData?.slotStart) {
-      const slotStart = slotData.slotStart as Date;
-      const activeData = active.data?.current;
-      const calendarEvent = activeData?.calendarEvent;
-
-      if (calendarEvent?.sourceType === 'habit' && calendarEvent.scheduledHabitId) {
-        const durationMinutes = Math.max(
-          15,
-          Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
-        );
-        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-        try {
-          await handleRescheduleHabitInstance(calendarEvent.scheduledHabitId, slotStart, slotEnd);
-        } catch (error) {
-          console.error('Failed to reschedule habit:', error);
-        }
-      } else if (calendarEvent?.sourceType === 'task' && calendarEvent.taskId) {
-        const durationMinutes = Math.max(
-          15,
-          Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
-        );
-        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-        try {
-          await handleRescheduleTask(calendarEvent.taskId, slotStart, slotEnd);
-        } catch (error) {
-          console.error('Failed to reschedule task:', error);
-        }
-      } else {
-        const taskId = active.id.replace('task-', '');
-        const task = activeDragTask || tasks.find((t) => t.id === taskId);
-
-        if (task) {
-          const durationMinutes = task.durationMinutes || 30;
-          const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
-
-          // Set preview state instead of immediately scheduling
-          setPreviewTask(task);
-          setPreviewSlot({ start: slotStart, end: slotEnd });
-        }
+    if (details.kind === 'habit' && details.scheduledHabitId) {
+      try {
+        await handleRescheduleHabitInstance(details.scheduledHabitId, window.start, window.end);
+      } catch (error) {
+        console.error('Failed to reschedule habit:', error);
       }
+    } else if (details.fromCalendar && details.taskId) {
+      try {
+        await handleRescheduleTask(details.taskId, window.start, window.end);
+      } catch (error) {
+        console.error('Failed to reschedule task:', error);
+      }
+    } else if (details.task) {
+      setPreviewTask(details.task);
+      setPreviewSlot({ start: window.start, end: window.end });
     }
 
     setActiveDragTask(null);
     setActiveDragHabit(null);
+    setActiveDropPreview(null);
   };
 
   return (
@@ -1122,7 +1226,14 @@ export default function CalendarPage() {
 
 
         {/* Dashboard Layout: Left Rail + Main Panel */}
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragCancel={handleDragCancel}
+          onDragEnd={handleDragEnd}
+        >
           <div className="grid grid-cols-12 flex-1 overflow-hidden bg-slate-50">
             {/* Left Rail - Unified Sidebar Panel */}
             <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full overflow-y-auto bg-white">
@@ -1175,7 +1286,6 @@ export default function CalendarPage() {
             <div className="col-span-12 lg:col-span-10 xl:col-span-10 h-full overflow-hidden">
               {tasksLoading || eventsLoading ? (
                 <div className="h-full surface-card rounded-lg flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-                  <FlowMascot size="lg" expression="happy" />
                   <LoadingSpinner size="lg" label="Loading calendar" />
                   <p className="text-sm text-slate-600 max-w-sm">
                     Flow is syncing your tasks and calendar events…
@@ -1190,6 +1300,7 @@ export default function CalendarPage() {
                   habitStreakMap={habitStreakMap}
                   scheduledHabitInstances={scheduledHabitInstances}
                   selectedDate={calendarDate}
+                  dropPreview={activeDropPreview}
                   onRescheduleTask={handleRescheduleTask}
                   onResizeEvent={handleResizeTask}
                   onCompleteTask={handleCompleteTaskById}
@@ -1213,15 +1324,20 @@ export default function CalendarPage() {
               <div className="rounded-lg border border-primary-200 bg-white shadow-xl px-4 py-3 w-64">
                 <p className="text-sm font-semibold text-slate-800">{activeDragTask.title}</p>
                 <p className="text-xs text-slate-600 mt-1">
-                  {activeDragTask.durationMinutes} min{' '}
-                  {activeDragTask.category ? `• ${activeDragTask.category.name}` : ''}
+                  {activeDropPreview
+                    ? formatDropPreviewTime(activeDropPreview.start, activeDropPreview.end)
+                    : `${activeDragTask.durationMinutes} min${
+                        activeDragTask.category ? ` • ${activeDragTask.category.name}` : ''
+                      }`}
                 </p>
               </div>
             ) : activeDragHabit ? (
               <div className="rounded-lg border border-indigo-200 bg-white shadow-xl px-4 py-3 w-64">
                 <p className="text-sm font-semibold text-slate-800">{activeDragHabit.title}</p>
                 <p className="text-xs text-slate-600 mt-1">
-                  {activeDragHabit.durationMinutes} min • Habit
+                  {activeDropPreview
+                    ? formatDropPreviewTime(activeDropPreview.start, activeDropPreview.end)
+                    : `${activeDragHabit.durationMinutes} min • Habit`}
                 </p>
               </div>
             ) : null}
@@ -1413,12 +1529,19 @@ export default function CalendarPage() {
         )}
       </AnimatePresence>
 
-      <SchedulePreviewOverlay
-        blocks={schedulePreviewBlocks}
-        onApply={handleApplySchedulePreview}
-        onCancel={handleCancelSchedulePreview}
-        applying={applyingSchedule}
-      />
+      {schedulePreviewBlocks.length > 0 && (
+        <SchedulePreviewOverlay
+          blocks={schedulePreviewBlocks}
+          onApply={handleApplySchedulePreview}
+          onCancel={handleCancelSchedulePreview}
+          applying={applyingSchedule}
+          tasks={tasks}
+          habits={habits}
+          conflicts={schedulePreviewConflicts}
+          summary={schedulePreviewSummary}
+          confidence={schedulePreviewConfidence}
+        />
+      )}
 
       <FloatingAssistantButton />
 

@@ -607,6 +607,12 @@ body {
   cursor: col-resize;
 }
 
+.rbc-time-slot,
+.rbc-day-slot .rbc-event,
+.rbc-day-slot .rbc-event-content {
+  overflow: visible;
+}
+
 /* Time Grid Styling - Hairline Dividers */
 .rbc-time-content {
   border-top: 1px solid rgba(226, 232, 240, 0.5);

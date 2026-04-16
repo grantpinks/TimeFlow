@@ -68,8 +68,17 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || `API error: ${response.status}`);
+    const error = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      code?: string;
+      creditsRemaining?: number;
+    };
+    const msg = error.error || `API error: ${response.status}`;
+    const err = new Error(msg) as Error & { code?: string; status?: number; creditsRemaining?: number };
+    err.code = error.code;
+    err.status = response.status;
+    err.creditsRemaining = error.creditsRemaining;
+    throw err;
   }
 
   if (response.status === 204) {
@@ -159,5 +168,99 @@ export async function runSchedule(
     method: 'POST',
     body: JSON.stringify({ taskIds, dateRangeStart, dateRangeEnd }),
   });
+}
+
+// ===== Assistant & schedule preview (parity with web) =====
+
+export interface ScheduledBlock {
+  taskId?: string;
+  habitId?: string;
+  start: string;
+  end: string;
+  title?: string;
+  overflowedDeadline?: boolean;
+}
+
+export interface SchedulePreview {
+  blocks: ScheduledBlock[];
+  summary: string;
+  conflicts: string[];
+  confidence: 'high' | 'medium' | 'low';
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type ApplyScheduleBlock =
+  | { taskId: string; start: string; end: string }
+  | { habitId: string; start: string; end: string; title?: string };
+
+export interface AssistantChatResponse {
+  message: ChatMessage;
+  suggestions?: SchedulePreview;
+  credits?: { used: number; remaining: number };
+}
+
+export async function sendChatMessage(
+  message: string,
+  conversationHistory?: ChatMessage[],
+  conversationId?: string
+): Promise<AssistantChatResponse> {
+  return request<AssistantChatResponse>('/assistant/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, conversationHistory, conversationId }),
+  });
+}
+
+/**
+ * GET /api/assistant/history (requires Bearer — same as all `request()` calls).
+ */
+export async function getAssistantHistory(
+  conversationId?: string | null
+): Promise<{ messages: ChatMessage[]; conversationId: string | null }> {
+  const q =
+    conversationId && conversationId.trim()
+      ? `?conversationId=${encodeURIComponent(conversationId.trim())}`
+      : '';
+  return request(`/assistant/history${q}`);
+}
+
+export async function applySchedule(blocks: ApplyScheduleBlock[]): Promise<{
+  tasksScheduled: number;
+  habitsScheduled: number;
+}> {
+  return request('/schedule/apply', {
+    method: 'POST',
+    body: JSON.stringify({ blocks }),
+  });
+}
+
+export interface Habit {
+  id: string;
+  title: string;
+  durationMinutes?: number;
+  description?: string | null;
+}
+
+export async function getHabits(): Promise<Habit[]> {
+  return request<Habit[]>('/habits');
+}
+
+export interface CalendarEvent {
+  id?: string;
+  summary?: string;
+  start: string;
+  end: string;
+  source?: string;
+}
+
+export async function getCalendarEvents(from: string, to: string): Promise<CalendarEvent[]> {
+  const q = `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+  return request<CalendarEvent[]>(`/calendar/events${q}`);
 }
 
