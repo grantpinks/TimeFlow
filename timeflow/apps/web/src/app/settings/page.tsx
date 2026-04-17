@@ -34,6 +34,7 @@ export default function SettingsPage() {
   const [defaultCalendarId, setDefaultCalendarId] = useState<string>('');
   const [eventPrefixEnabled, setEventPrefixEnabled] = useState(true);
   const [eventPrefix, setEventPrefix] = useState('TF|');
+  const [calendarDragDropMode, setCalendarDragDropMode] = useState<'instant' | 'confirm'>('instant');
   const [aiDebugEnabled, setAiDebugEnabled] = useState(false);
   const showAiDebugToggle = canShowAiDebugToggle();
 
@@ -69,6 +70,7 @@ export default function SettingsPage() {
       setDefaultCalendarId(user.defaultCalendarId || '');
       setEventPrefixEnabled(user.eventPrefixEnabled ?? true);
       setEventPrefix(user.eventPrefix || 'TF|');
+      setCalendarDragDropMode(user.calendarDragDropMode === 'confirm' ? 'confirm' : 'instant');
 
       // Initialize daily schedule
       const schedule = user.dailyScheduleConstraints || user.dailySchedule;
@@ -199,6 +201,7 @@ export default function SettingsPage() {
         defaultCalendarId: defaultCalendarId || undefined,
         eventPrefixEnabled,
         eventPrefix: eventPrefixEnabled ? eventPrefix.trim() || 'TF|' : eventPrefix,
+        calendarDragDropMode,
 
         // Meeting preferences
         meetingStartTime: useMeetingHours ? meetingStartTime : null,
@@ -784,6 +787,48 @@ export default function SettingsPage() {
                 ))}
               </select>
             )}
+          </div>
+
+          {/* Calendar drag and drop */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Calendar drag and drop
+            </h2>
+            <p className="text-slate-600 mb-4">
+              When you drag an unscheduled task onto the week/day grid, choose whether to schedule it immediately (with a short undo) or confirm the time in a dialog first.
+            </p>
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="calendarDragDropMode"
+                  className="mt-1"
+                  checked={calendarDragDropMode === 'instant'}
+                  onChange={() => setCalendarDragDropMode('instant')}
+                />
+                <span>
+                  <span className="text-sm font-medium text-slate-800">Schedule immediately on drop</span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Recommended. You can undo for 5 seconds after dropping.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="calendarDragDropMode"
+                  className="mt-1"
+                  checked={calendarDragDropMode === 'confirm'}
+                  onChange={() => setCalendarDragDropMode('confirm')}
+                />
+                <span>
+                  <span className="text-sm font-medium text-slate-800">Ask before scheduling</span>
+                  <span className="block text-xs text-slate-500 mt-0.5">
+                    Opens a confirmation step with the chosen time slot before saving.
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
 
           {/* Event Prefix */}

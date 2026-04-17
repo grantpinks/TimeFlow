@@ -86,6 +86,21 @@ export function Toast({ toast, onRemove }: ToastProps) {
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">{getIcon()}</div>
         <p className="flex-1 text-sm font-medium">{toast.message}</p>
+        {toast.action && (
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                toast.action?.onClick();
+              } finally {
+                handleClose();
+              }
+            }}
+            className="flex-shrink-0 text-sm font-semibold text-primary-700 hover:text-primary-800 underline-offset-2 hover:underline"
+          >
+            {toast.action.label}
+          </button>
+        )}
         <button
           onClick={handleClose}
           className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
@@ -109,7 +124,7 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col items-end">
+    <div className="fixed top-4 right-4 z-[1300] flex flex-col items-end">
       {toasts.map((toast) => (
         <Toast key={toast.id} toast={toast} onRemove={onRemove} />
       ))}

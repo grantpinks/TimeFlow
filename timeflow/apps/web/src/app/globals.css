@@ -470,7 +470,7 @@ body {
   opacity: 0.9;
   transform: translateY(-1px);
   box-shadow: var(--shadow-lg);
-  z-index: 100; /* Ensure hovered events appear on top */
+  z-index: 4; /* Keep below app overlays (popovers, toasts) */
 }
 
 .rbc-event:active {
@@ -495,7 +495,25 @@ body {
 
 /* For very small events, use ellipsis but expand on hover */
 .rbc-event.rbc-selected {
-  z-index: 101;
+  z-index: 5;
+}
+
+/* While dragging on the calendar, let pointer hit droppable time slots (not stacked events). */
+body.calendar-dnd-active .rbc-time-content .rbc-event,
+body.calendar-dnd-active .rbc-time-content .rbc-event:hover,
+body.calendar-dnd-active .rbc-time-content .rbc-event.rbc-selected {
+  pointer-events: none;
+}
+
+/* Calendar left rail: soften nested panel chrome (replaces styled-jsx block) */
+.calendar-sidebar-overrides div .border-b {
+  border-bottom: none !important;
+}
+.calendar-sidebar-overrides div .bg-white {
+  background: transparent !important;
+}
+.calendar-sidebar-overrides div .p-3 {
+  padding: 0 !important;
 }
 
 /* Week/Day view events */

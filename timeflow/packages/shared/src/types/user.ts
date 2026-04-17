@@ -65,6 +65,8 @@ export interface UserProfile {
   defaultCalendarId?: string | null;
   eventPrefixEnabled?: boolean;
   eventPrefix?: string;
+  /** Drag task from sidebar / reschedule: instant vs confirm-first */
+  calendarDragDropMode?: 'instant' | 'confirm';
   sidebarNavOrder?: string[];
 
   // Meeting-specific preferences
@@ -93,6 +95,7 @@ export interface UserPreferencesUpdate {
   defaultCalendarId?: string;
   eventPrefixEnabled?: boolean;
   eventPrefix?: string;
+  calendarDragDropMode?: 'instant' | 'confirm';
   sidebarNavOrder?: string[];
 
   // Meeting-specific preferences

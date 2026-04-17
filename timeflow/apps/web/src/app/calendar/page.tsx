@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { DndContext, DragOverlay, PointerSensor, pointerWithin, useSensor, useSensors } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  closestCorners,
+  useSensor,
+  useSensors,
+  type CollisionDetection,
+} from '@dnd-kit/core';
 import { Layout } from '@/components/Layout';
 import { CalendarView } from '@/components/CalendarView';
 import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
@@ -35,11 +44,26 @@ import { track, hashHabitId } from '@/lib/analytics';
 import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelatedTasksModal';
 import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitRelatedTasks';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
+import { ToastContainer } from '@/components/Toast';
+import { useToast } from '@/hooks/useToast';
+
+const calendarCollisionDetection: CollisionDetection = (args) => {
+  const within = pointerWithin(args);
+  if (within.length > 0) return within;
+  return closestCorners(args);
+};
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
   const { tasks, loading: tasksLoading, refresh: refreshTasks } = useTasks();
   const { user } = useUser();
+  const { toasts, showToast, removeToast } = useToast();
+  const rescheduleSnapshotRef = useRef<{
+    taskId?: string;
+    scheduledHabitId?: string;
+    prevStart: Date;
+    prevEnd: Date;
+  } | null>(null);
   const { refresh: refreshIdentityProgress } = useIdentityProgress();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitRelatedFollowUp, setHabitRelatedFollowUp] = useState<PostHabitFollowUp | null>(null);
@@ -974,10 +998,43 @@ export default function CalendarPage() {
   };
 
   const handleDragStart = (event: any) => {
+    if (typeof document !== 'undefined') {
+      document.body.classList.add('calendar-dnd-active');
+    }
+    const activeData = event.active?.data?.current;
+    const cal = activeData?.calendarEvent as
+      | {
+          taskId?: string;
+          scheduledHabitId?: string;
+          start: Date | string;
+          end: Date | string;
+        }
+      | undefined;
+    if (cal?.taskId) {
+      rescheduleSnapshotRef.current = {
+        taskId: cal.taskId,
+        prevStart: new Date(cal.start),
+        prevEnd: new Date(cal.end),
+      };
+    } else if (cal?.scheduledHabitId) {
+      rescheduleSnapshotRef.current = {
+        scheduledHabitId: cal.scheduledHabitId,
+        prevStart: new Date(cal.start),
+        prevEnd: new Date(cal.end),
+      };
+    } else {
+      rescheduleSnapshotRef.current = null;
+    }
+
     const details = getActiveDragDetails(event.active);
     setActiveDropPreview(null);
 
-    if (!details) return;
+    if (!details) {
+      if (typeof document !== 'undefined') {
+        document.body.classList.remove('calendar-dnd-active');
+      }
+      return;
+    }
 
     if (details.kind === 'habit') {
       setActiveDragTask(null);
@@ -1009,6 +1066,10 @@ export default function CalendarPage() {
   };
 
   const handleDragCancel = () => {
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('calendar-dnd-active');
+    }
+    rescheduleSnapshotRef.current = null;
     setActiveDragTask(null);
     setActiveDragHabit(null);
     setActiveDropPreview(null);
@@ -1058,38 +1119,118 @@ export default function CalendarPage() {
   };
 
   const handleDragEnd = async (event: any) => {
+    if (typeof document !== 'undefined') {
+      document.body.classList.remove('calendar-dnd-active');
+    }
     const { active, over } = event;
     const drop = getDropWindowFromDrag(active, over);
+    const preferInstant = user?.calendarDragDropMode !== 'confirm';
 
-    if (!drop) {
+    const finishDragUi = () => {
+      rescheduleSnapshotRef.current = null;
       setActiveDragTask(null);
       setActiveDragHabit(null);
       setActiveDropPreview(null);
+    };
+
+    if (!drop) {
+      finishDragUi();
       return;
     }
 
     const { details, window } = drop;
+    const snap = rescheduleSnapshotRef.current;
 
-    if (details.kind === 'habit' && details.scheduledHabitId) {
-      try {
-        await handleRescheduleHabitInstance(details.scheduledHabitId, window.start, window.end);
-      } catch (error) {
-        console.error('Failed to reschedule habit:', error);
+    try {
+      if (details.kind === 'habit' && details.scheduledHabitId) {
+        await api.rescheduleHabitInstance(
+          details.scheduledHabitId,
+          window.start.toISOString(),
+          window.end.toISOString()
+        );
+        await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+        if (preferInstant && snap?.scheduledHabitId === details.scheduledHabitId) {
+          const prevStart = snap.prevStart;
+          const prevEnd = snap.prevEnd;
+          const hid = details.scheduledHabitId;
+          showToast('Habit rescheduled', 'success', {
+            durationMs: 5000,
+            action: {
+              label: 'Undo',
+              onClick: async () => {
+                await api.rescheduleHabitInstance(
+                  hid,
+                  prevStart.toISOString(),
+                  prevEnd.toISOString()
+                );
+                await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+              },
+            },
+          });
+        } else {
+          setMessage({ type: 'success', text: 'Habit rescheduled successfully!' });
+        }
+      } else if (details.fromCalendar && details.taskId) {
+        await api.rescheduleTask(
+          details.taskId,
+          window.start.toISOString(),
+          window.end.toISOString()
+        );
+        await Promise.all([refreshTasks(), fetchExternalEvents()]);
+        if (preferInstant && snap?.taskId === details.taskId) {
+          const prevStart = snap.prevStart;
+          const prevEnd = snap.prevEnd;
+          const tid = details.taskId;
+          showToast('Task rescheduled', 'success', {
+            durationMs: 5000,
+            action: {
+              label: 'Undo',
+              onClick: async () => {
+                await api.rescheduleTask(
+                  tid,
+                  prevStart.toISOString(),
+                  prevEnd.toISOString()
+                );
+                await Promise.all([refreshTasks(), fetchExternalEvents()]);
+              },
+            },
+          });
+        } else {
+          setMessage({ type: 'success', text: 'Task rescheduled successfully!' });
+        }
+      } else if (details.task && !details.fromCalendar) {
+        if (preferInstant) {
+          await api.rescheduleTask(
+            details.task.id,
+            window.start.toISOString(),
+            window.end.toISOString()
+          );
+          await Promise.all([refreshTasks(), fetchExternalEvents()]);
+          const tid = details.task.id;
+          showToast('Task scheduled', 'success', {
+            durationMs: 5000,
+            action: {
+              label: 'Undo',
+              onClick: async () => {
+                await api.updateTask(tid, { status: 'unscheduled' });
+                await Promise.all([refreshTasks(), fetchExternalEvents()]);
+              },
+            },
+          });
+        } else {
+          setPreviewTask(details.task);
+          setPreviewSlot({ start: window.start, end: window.end });
+        }
       }
-    } else if (details.fromCalendar && details.taskId) {
-      try {
-        await handleRescheduleTask(details.taskId, window.start, window.end);
-      } catch (error) {
-        console.error('Failed to reschedule task:', error);
-      }
-    } else if (details.task) {
-      setPreviewTask(details.task);
-      setPreviewSlot({ start: window.start, end: window.end });
+    } catch (error) {
+      console.error('Drag schedule failed:', error);
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Schedule update failed',
+      });
+    } finally {
+      finishDragUi();
     }
-
-    setActiveDragTask(null);
-    setActiveDragHabit(null);
-    setActiveDropPreview(null);
   };
 
   return (
@@ -1228,7 +1369,7 @@ export default function CalendarPage() {
         {/* Dashboard Layout: Left Rail + Main Panel */}
         <DndContext
           sensors={sensors}
-          collisionDetection={pointerWithin}
+          collisionDetection={calendarCollisionDetection}
           onDragStart={handleDragStart}
           onDragOver={handleDragOver}
           onDragCancel={handleDragCancel}
@@ -1237,20 +1378,7 @@ export default function CalendarPage() {
           <div className="grid grid-cols-12 flex-1 overflow-hidden bg-slate-50">
             {/* Left Rail - Unified Sidebar Panel */}
             <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full overflow-y-auto bg-white">
-              <div className="p-4 space-y-6">
-                {/* Remove border-b from child components via CSS override */}
-                <style jsx>{`
-                  div :global(.border-b) {
-                    border-bottom: none !important;
-                  }
-                  div :global(.bg-white) {
-                    background: transparent !important;
-                  }
-                  div :global(.p-3) {
-                    padding: 0 !important;
-                  }
-                `}</style>
-
+              <div className="p-4 space-y-6 calendar-sidebar-overrides">
                 <div>
                   <MiniCalendar
                     events={filteredExternalEvents}
@@ -1544,6 +1672,8 @@ export default function CalendarPage() {
       )}
 
       <FloatingAssistantButton />
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       <PostHabitRelatedTasksModal
         followUp={habitRelatedFollowUp}

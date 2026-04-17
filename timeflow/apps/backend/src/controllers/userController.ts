@@ -56,6 +56,7 @@ const preferencesSchema = z.object({
   defaultCalendarId: z.string().min(1).optional(),
   eventPrefixEnabled: z.boolean().optional(),
   eventPrefix: z.string().min(1).optional(),
+  calendarDragDropMode: z.enum(['instant', 'confirm']).optional(),
   sidebarNavOrder: z.array(z.string().min(1)).optional(),
 
   // Meeting-specific preferences
@@ -105,6 +106,7 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     defaultCalendarId: record.defaultCalendarId,
     eventPrefixEnabled: record.eventPrefixEnabled,
     eventPrefix: record.eventPrefix,
+    calendarDragDropMode: record.calendarDragDropMode === 'confirm' ? 'confirm' : 'instant',
     sidebarNavOrder: record.sidebarNavOrder || [],
     meetingStartTime: record.meetingStartTime,
     meetingEndTime: record.meetingEndTime,
@@ -196,6 +198,7 @@ interface UpdatePreferencesBody {
   defaultCalendarId?: string;
   eventPrefixEnabled?: boolean;
   eventPrefix?: string;
+  calendarDragDropMode?: 'instant' | 'confirm';
   sidebarNavOrder?: string[];
   meetingStartTime?: string | null;
   meetingEndTime?: string | null;
@@ -236,6 +239,7 @@ export async function updatePreferences(
     defaultCalendarId,
     eventPrefixEnabled,
     eventPrefix,
+    calendarDragDropMode,
     sidebarNavOrder,
     meetingStartTime,
     meetingEndTime,
@@ -265,6 +269,7 @@ export async function updatePreferences(
       ...(defaultCalendarId && { defaultCalendarId }),
       ...(eventPrefixEnabled !== undefined && { eventPrefixEnabled }),
       ...(eventPrefix && { eventPrefix }),
+      ...(calendarDragDropMode !== undefined && { calendarDragDropMode }),
       ...(sidebarNavOrder !== undefined && { sidebarNavOrder }),
 
       // Meeting preferences
@@ -307,6 +312,7 @@ export async function updatePreferences(
     defaultCalendarId: updated.defaultCalendarId,
     eventPrefixEnabled: updated.eventPrefixEnabled,
     eventPrefix: updated.eventPrefix,
+    calendarDragDropMode: updated.calendarDragDropMode === 'confirm' ? 'confirm' : 'instant',
     sidebarNavOrder: updated.sidebarNavOrder,
     meetingStartTime: updated.meetingStartTime,
     meetingEndTime: updated.meetingEndTime,

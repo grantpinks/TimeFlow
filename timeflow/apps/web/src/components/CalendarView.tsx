@@ -611,12 +611,13 @@ function DraggableEvent({
     cursor: !canDrag ? 'default' : isResizing ? 'ns-resize' : isDragging ? 'grabbing' : 'grab',
   };
 
-  const motionProps = prefersReducedMotion
-    ? {}
-    : {
-        whileHover: { scale: 1.01 },
-        whileTap: { scale: 0.98 },
-      };
+  const motionProps =
+    prefersReducedMotion || isDragging
+      ? {}
+      : {
+          whileHover: { scale: 1.01 },
+          whileTap: { scale: 0.98 },
+        };
 
   // Format time for display
   const startTime = new Date(event.start).toLocaleTimeString('en-US', {
@@ -650,8 +651,6 @@ function DraggableEvent({
     <motion.div
       ref={setRefs}
       style={style}
-      {...listeners}
-      {...attributes}
       {...motionProps}
       onMouseEnter={() => {
         setIsHovered(true);
@@ -663,18 +662,34 @@ function DraggableEvent({
         setIsHovered(false);
         onHoverEnd?.();
       }}
-      className={`overflow-hidden h-full flex flex-col justify-start px-2 py-1.5 gap-0.5 ${
-        isResizing ? 'ring-2 ring-white/80' : ''
-      }`}
+      className={`overflow-hidden h-full flex flex-col justify-start py-1.5 gap-0.5 ${
+        canDrag ? 'pl-1 pr-2' : 'px-2'
+      } ${isResizing ? 'ring-2 ring-white/80' : ''}`}
     >
-      <div className={`font-semibold leading-snug ${titleClampClass} ${titleSizeClass}`}>
-        {event.title}
-      </div>
-      {!isShortEvent && (
-        <div className="text-[10px] opacity-90 leading-tight">
-          {startTime} - {endTime}
-        </div>
+      {canDrag && (
+        <button
+          type="button"
+          className="absolute left-0 top-0 z-20 flex h-full w-7 cursor-grab items-start justify-center border-0 bg-transparent pt-1 text-white/90 hover:text-white active:cursor-grabbing"
+          aria-label="Drag to reschedule"
+          {...listeners}
+          {...attributes}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="text-[10px] leading-none opacity-90 select-none" aria-hidden>
+            ⋮⋮
+          </span>
+        </button>
       )}
+      <div className={canDrag ? 'min-w-0 pl-6' : 'min-w-0'}>
+        <div className={`font-semibold leading-snug ${titleClampClass} ${titleSizeClass}`}>
+          {event.title}
+        </div>
+        {!isShortEvent && (
+          <div className="text-[10px] opacity-90 leading-tight">
+            {startTime} - {endTime}
+          </div>
+        )}
+      </div>
       {event.isTask && onResize && (isHovered || isResizing) && (
         <div
           className="absolute bottom-0 left-0 right-0 h-3 bg-white/25 hover:bg-white/45 cursor-ns-resize flex items-center justify-center"

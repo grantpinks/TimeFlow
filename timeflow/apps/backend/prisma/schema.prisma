@@ -24,6 +24,8 @@ model User {
   defaultCalendarId          String?
   eventPrefixEnabled         Boolean   @default(true)
   eventPrefix                String    @default("TF|")
+  /// instant | confirm — drag-to-schedule UX (default instant)
+  calendarDragDropMode       String    @default("instant")
   dailySchedule              Json?
   dailyScheduleConstraints   Json?
   sidebarNavOrder            String[]  @default([])
