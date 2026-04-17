@@ -8,7 +8,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AnimatedFlowMascot } from '../AnimatedFlowMascot';
+import { FlowMascot } from '../FlowMascot';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import {
   useGoalTracking,
@@ -27,16 +27,6 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
   const { data: completion, loading: completionLoading, error: completionError, refetch: refetchCompletion } = useCompletionMetrics('today');
   const { data: timeInsights, loading: timeLoading, error: timeError, refetch: refetchTime } = useTimeInsights();
   const { data: streak, loading: streakLoading, error: streakError, refetch: refetchStreak } = useStreak();
-
-  // Determine mascot expression based on analytics
-  const mascotExpression = useMemo(() => {
-    if (!completion || !goalTracking) return 'happy';
-
-    if (completion.completionRate >= 80) return 'celebrating';
-    if (goalTracking.overdueCount > 0) return 'encouraging';
-    if (completion.completionRate < 40) return 'thinking';
-    return 'happy';
-  }, [completion, goalTracking]);
 
   // Generate personalized message
   const message = useMemo(() => {
@@ -68,7 +58,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
 
   if (isLoading && !goalTracking && !completion) {
     return (
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500/10 via-purple-500/10 to-pink-500/10 border border-primary-200/20 dark:border-primary-500/20 backdrop-blur-sm">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500/10 via-cyan-500/10 to-blue-500/10 border border-primary-200/20 dark:border-primary-500/20 backdrop-blur-sm">
         <div className="flex items-center justify-center py-12">
           <LoadingSpinner size="lg" label="Loading analytics" />
         </div>
@@ -96,35 +86,34 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500/5 via-purple-500/5 to-pink-500/5 border border-primary-200/30 dark:border-primary-500/30 backdrop-blur-sm shadow-xl">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-500/5 via-cyan-500/5 to-blue-500/5 border border-primary-200/30 dark:border-primary-500/30 backdrop-blur-sm shadow-xl">
       {/* Animated gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-purple-500/10 to-pink-500/10 animate-gradient-x opacity-50" />
+      <div className="absolute inset-0 bg-gradient-to-r from-primary-500/10 via-cyan-500/10 to-blue-500/10 animate-gradient-x opacity-50" />
 
       {/* Glow effect */}
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
+      <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl" />
 
       <div className="relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-4 sm:p-6">
         {/* Circular Flow Mascot Section */}
         <div className="flex-shrink-0">
           <div className="relative group">
             {/* Outer glow ring */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500 opacity-75 blur-xl group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500 via-cyan-500 to-blue-500 opacity-75 blur-xl group-hover:opacity-100 transition-opacity duration-300" />
 
             {/* Main circular container */}
-            <div className="relative w-20 h-20 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-primary-400 via-purple-400 to-pink-400 p-1 shadow-2xl">
+            <div className="relative w-20 h-20 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-primary-400 via-cyan-400 to-blue-400 p-1 shadow-2xl">
               {/* Inner circle */}
               <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner">
-                <AnimatedFlowMascot
+                <FlowMascot
                   size="lg"
-                  expression={mascotExpression}
-                  animation="bounce"
+                  expression="guiding-up"
                 />
               </div>
             </div>
 
             {/* Pulse effect */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-30 animate-ping" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500 via-cyan-500 to-blue-500 opacity-0 group-hover:opacity-30 animate-ping" />
           </div>
         </div>
 
@@ -132,7 +121,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
         <div className="flex-1 min-w-0 w-full space-y-4">
           {/* Message Section */}
           <div className="space-y-1">
-            <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 via-primary-600 to-purple-600 dark:from-white dark:via-primary-400 dark:to-purple-400 bg-clip-text text-transparent">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 via-primary-600 to-cyan-600 dark:from-white dark:via-primary-400 dark:to-cyan-400 bg-clip-text text-transparent">
               {message}
             </h3>
             {completion && (
@@ -188,12 +177,12 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {completion && (
               <button
                 onClick={handleRefresh}
-                className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-200/30 dark:border-purple-500/30 p-4 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-primary-500/10 to-cyan-500/10 border border-primary-200/30 dark:border-primary-500/30 p-4 hover:from-primary-500/20 hover:to-cyan-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/10 group-hover:to-pink-500/10 transition-all duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-500/0 to-cyan-500/0 group-hover:from-primary-500/10 group-hover:to-cyan-500/10 transition-all duration-300" />
                 <div className="relative space-y-1">
                   <div className="text-3xl">📊</div>
-                  <div className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
+                  <div className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-cyan-600 dark:from-primary-400 dark:to-cyan-400 bg-clip-text text-transparent">
                     {completion.totalActiveTasks}
                   </div>
                   <div className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">
@@ -227,9 +216,9 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
           {onOpenAI && (
             <button
               onClick={onOpenAI}
-              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500 p-[2px] transition-all duration-300 hover:shadow-2xl hover:shadow-primary-500/50"
+              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-primary-500 via-cyan-500 to-blue-500 p-[2px] transition-all duration-300 hover:shadow-2xl hover:shadow-primary-500/50"
             >
-              <div className="relative flex items-center justify-center gap-2 rounded-[10px] bg-gradient-to-r from-primary-600 via-purple-600 to-pink-600 px-6 py-3 text-white transition-all duration-300 group-hover:from-primary-500 group-hover:via-purple-500 group-hover:to-pink-500">
+              <div className="relative flex items-center justify-center gap-2 rounded-[10px] bg-gradient-to-r from-primary-600 via-cyan-600 to-blue-600 px-6 py-3 text-white transition-all duration-300 group-hover:from-primary-500 group-hover:via-cyan-500 group-hover:to-blue-500">
                 <span className="text-xl">💬</span>
                 <span className="font-semibold">Ask Flow AI about your tasks...</span>
                 <svg
