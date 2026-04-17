@@ -1006,3 +1006,18 @@ body.calendar-dnd-active .rbc-time-content .rbc-event.rbc-selected {
 [data-theme='dark'] .ai-quick-action:hover {
   background: linear-gradient(135deg, #0BAF9A, #14B8A6);
 }
+
+/* Gradient animations for futuristic UI */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 15s ease infinite;
+}
