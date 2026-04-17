@@ -16,6 +16,7 @@ interface ToastProps {
 
 export function Toast({ toast, onRemove }: ToastProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
 
   useEffect(() => {
     // Trigger slide-in animation
@@ -89,16 +90,23 @@ export function Toast({ toast, onRemove }: ToastProps) {
         {toast.action && (
           <button
             type="button"
-            onClick={() => {
+            disabled={actionPending}
+            onClick={async () => {
+              if (!toast.action || actionPending) return;
+              setActionPending(true);
               try {
-                toast.action?.onClick();
-              } finally {
+                await Promise.resolve(toast.action.onClick());
                 handleClose();
+              } catch (err) {
+                toast.onActionError?.(err);
+                handleClose();
+              } finally {
+                setActionPending(false);
               }
             }}
-            className="flex-shrink-0 text-sm font-semibold text-primary-700 hover:text-primary-800 underline-offset-2 hover:underline"
+            className="flex-shrink-0 text-sm font-semibold text-primary-700 hover:text-primary-800 underline-offset-2 hover:underline disabled:opacity-50"
           >
-            {toast.action.label}
+            {actionPending ? '…' : toast.action.label}
           </button>
         )}
         <button

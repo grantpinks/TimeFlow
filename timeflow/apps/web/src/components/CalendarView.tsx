@@ -18,6 +18,27 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 // Setup luxon localizer
 const localizer = luxonLocalizer(DateTime);
 
+/**
+ * Normalize timestamps to minute precision so tiny second/millisecond drift
+ * does not create false overlap lanes in react-big-calendar.
+ */
+const normalizeCalendarDate = (value: string | Date): Date => {
+  const dt = new Date(value);
+  dt.setSeconds(0, 0);
+  return dt;
+};
+
+/**
+ * Treat event end as an exclusive boundary for lane layout.
+ * Back-to-back events (end === next start) should not stack.
+ */
+const toExclusiveLayoutEnd = (start: Date, end: Date): Date => {
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  if (endMs <= startMs) return end;
+  return new Date(endMs - 1);
+};
+
 interface Category {
   id: string;
   name: string;
@@ -68,6 +89,8 @@ export interface CalendarEventItem {
   title: string;
   start: Date;
   end: Date;
+  /** Used by react-big-calendar for overlap lane calculation only. */
+  layoutEnd?: Date;
   isTask: boolean;
   taskId?: string;
   description?: string;
@@ -163,11 +186,14 @@ export function CalendarView({
           ? categoryLookup.get(task.categoryId)
           : undefined;
         const categoryColor = task.category?.color ?? categoryFromId?.color;
+        const start = normalizeCalendarDate(task.scheduledTask.startDateTime);
+        const end = normalizeCalendarDate(task.scheduledTask.endDateTime);
         calendarEvents.push({
           id: `task-${task.id}`,
           title: task.title,
-          start: new Date(task.scheduledTask.startDateTime),
-          end: new Date(task.scheduledTask.endDateTime),
+          start,
+          end,
+          layoutEnd: toExclusiveLayoutEnd(start, end),
           isTask: true,
           taskId: task.id,
           description: task.description ?? undefined,
@@ -188,12 +214,15 @@ export function CalendarView({
         : undefined;
       const isHabitEvent = event.sourceType === 'habit';
       const habitColor = habitCategory?.color;
+      const start = normalizeCalendarDate(event.start);
+      const end = normalizeCalendarDate(event.end);
 
       calendarEvents.push({
         id: `event-${event.id || Math.random().toString()}`,
         title: event.summary,
-        start: new Date(event.start),
-        end: new Date(event.end),
+        start,
+        end,
+        layoutEnd: toExclusiveLayoutEnd(start, end),
         isTask: event.sourceType === 'task', // Preserve task status from merged events
         isHabit: isHabitEvent,
         scheduledHabitId: isHabitEvent ? event.sourceId : undefined,
@@ -384,12 +413,13 @@ export function CalendarView({
           localizer={localizer}
           events={events}
           startAccessor="start"
-          endAccessor="end"
+          endAccessor={(event) => (event as CalendarEventItem).layoutEnd ?? (event as CalendarEventItem).end}
           view={view}
           date={date}
           onNavigate={handleNavigate}
           onView={handleViewChange}
           views={['week', 'day', 'month']}
+          dayLayoutAlgorithm="no-overlap"
           selectable
           onSelectSlot={onSelectSlot}
           onSelectEvent={handleEventClick}

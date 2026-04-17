@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   DndContext,
   DragOverlay,
   PointerSensor,
   pointerWithin,
-  closestCorners,
   useSensor,
   useSensors,
-  type CollisionDetection,
 } from '@dnd-kit/core';
 import { Layout } from '@/components/Layout';
 import { CalendarView } from '@/components/CalendarView';
@@ -47,17 +45,24 @@ import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { ToastContainer } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 
-const calendarCollisionDetection: CollisionDetection = (args) => {
-  const within = pointerWithin(args);
-  if (within.length > 0) return within;
-  return closestCorners(args);
-};
+/** Only droppables under the pointer count — never pick a "nearest" slot when releasing outside the grid. */
+const calendarCollisionDetection = pointerWithin;
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
   const { tasks, loading: tasksLoading, refresh: refreshTasks } = useTasks();
   const { user } = useUser();
   const { toasts, showToast, removeToast } = useToast();
+  const showUndoActionError = useCallback(
+    (err: unknown) => {
+      showToast(
+        err instanceof Error ? err.message : 'Could not undo. Please try again.',
+        'error',
+        { durationMs: 6000 }
+      );
+    },
+    [showToast]
+  );
   const rescheduleSnapshotRef = useRef<{
     taskId?: string;
     scheduledHabitId?: string;
@@ -1155,6 +1160,7 @@ export default function CalendarPage() {
           const hid = details.scheduledHabitId;
           showToast('Habit rescheduled', 'success', {
             durationMs: 5000,
+            onActionError: showUndoActionError,
             action: {
               label: 'Undo',
               onClick: async () => {
@@ -1183,6 +1189,7 @@ export default function CalendarPage() {
           const tid = details.taskId;
           showToast('Task rescheduled', 'success', {
             durationMs: 5000,
+            onActionError: showUndoActionError,
             action: {
               label: 'Undo',
               onClick: async () => {
@@ -1209,6 +1216,7 @@ export default function CalendarPage() {
           const tid = details.task.id;
           showToast('Task scheduled', 'success', {
             durationMs: 5000,
+            onActionError: showUndoActionError,
             action: {
               label: 'Undo',
               onClick: async () => {

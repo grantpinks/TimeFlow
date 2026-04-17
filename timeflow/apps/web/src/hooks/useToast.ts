@@ -13,14 +13,17 @@ export interface Toast {
   type: ToastType;
   message: string;
   durationMs?: number;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void | Promise<void> };
+  /** Called if action onClick rejects (e.g. show a follow-up error toast). */
+  onActionError?: (error: unknown) => void;
 }
 
 let toastId = 0;
 
 export type ShowToastOptions = {
   durationMs?: number;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void | Promise<void> };
+  onActionError?: (error: unknown) => void;
 };
 
 export function useToast() {
@@ -47,7 +50,14 @@ export function useToast() {
     (message: string, type: ToastType = 'info', options?: ShowToastOptions) => {
       const id = `toast-${toastId++}`;
       const durationMs = options?.durationMs ?? 3000;
-      const newToast: Toast = { id, message, type, durationMs, action: options?.action };
+      const newToast: Toast = {
+        id,
+        message,
+        type,
+        durationMs,
+        action: options?.action,
+        onActionError: options?.onActionError,
+      };
 
       setToasts((prev) => [...prev, newToast]);
 
