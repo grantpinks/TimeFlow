@@ -104,7 +104,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl" />
       <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
 
-      <div className="relative flex items-center gap-8 p-6">
+      <div className="relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-4 sm:p-6">
         {/* Circular Flow Mascot Section */}
         <div className="flex-shrink-0">
           <div className="relative group">
@@ -112,7 +112,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500 opacity-75 blur-xl group-hover:opacity-100 transition-opacity duration-300" />
 
             {/* Main circular container */}
-            <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-primary-400 via-purple-400 to-pink-400 p-1 shadow-2xl">
+            <div className="relative w-20 h-20 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-primary-400 via-purple-400 to-pink-400 p-1 shadow-2xl">
               {/* Inner circle */}
               <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner">
                 <AnimatedFlowMascot
@@ -129,7 +129,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
         </div>
 
         {/* Analytics Content */}
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 min-w-0 w-full space-y-4">
           {/* Message Section */}
           <div className="space-y-1">
             <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 via-primary-600 to-purple-600 dark:from-white dark:via-primary-400 dark:to-purple-400 bg-clip-text text-transparent">
@@ -149,7 +149,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {/* Overdue Metric */}
             {goalTracking && (
               <button
-                onClick={onRefresh}
+                onClick={handleRefresh}
                 className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-200/30 dark:border-red-500/30 p-4 hover:from-red-500/20 hover:to-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-red-500/0 to-orange-500/0 group-hover:from-red-500/10 group-hover:to-orange-500/10 transition-all duration-300" />
@@ -168,7 +168,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {/* Scheduled Hours Metric */}
             {timeInsights && (
               <button
-                onClick={onRefresh}
+                onClick={handleRefresh}
                 className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-200/30 dark:border-blue-500/30 p-4 hover:from-blue-500/20 hover:to-cyan-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/0 to-cyan-500/0 group-hover:from-blue-500/10 group-hover:to-cyan-500/10 transition-all duration-300" />
@@ -187,7 +187,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {/* Active Tasks Metric */}
             {completion && (
               <button
-                onClick={onRefresh}
+                onClick={handleRefresh}
                 className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-200/30 dark:border-purple-500/30 p-4 hover:from-purple-500/20 hover:to-pink-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/10 group-hover:to-pink-500/10 transition-all duration-300" />
@@ -206,7 +206,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {/* Streak Metric */}
             {streak && (
               <button
-                onClick={onRefresh}
+                onClick={handleRefresh}
                 className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border border-orange-200/30 dark:border-orange-500/30 p-4 hover:from-orange-500/20 hover:to-yellow-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/0 to-yellow-500/0 group-hover:from-orange-500/10 group-hover:to-yellow-500/10 transition-all duration-300" />
