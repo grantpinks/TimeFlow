@@ -3,21 +3,74 @@
 import { useState, useEffect } from 'react';
 import { Input } from './Input';
 import { Label } from './Label';
+import { CalendarSlotPickerModal } from '@/components/scheduling/CalendarSlotPickerModal';
 
 interface DueDatePickerProps {
   value: string; // ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:mm)
   onChange: (value: string) => void;
+  /** When set with `enableCalendarPicker`, opens a calendar grid for custom time instead of a plain time input. */
+  durationMinutes?: number;
+  enableCalendarPicker?: boolean;
 }
 
 type QuickOption = 'today' | 'tomorrow' | 'in-2-days' | 'end-of-week' | 'custom' | null;
-type TimePreset = 'in-1-hour' | 'in-4-hours' | 'eod' | 'custom-time' | null;
+type TimePreset =
+  | 'in-1-hour'
+  | 'in-4-hours'
+  | 'eod'
+  | 'at-9am'
+  | 'at-12pm'
+  | 'at-6pm'
+  | 'at-9pm'
+  | 'custom-time'
+  | null;
 
-export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
+export function DueDatePicker({
+  value,
+  onChange,
+  durationMinutes = 30,
+  enableCalendarPicker = false,
+}: DueDatePickerProps) {
   const [selectedOption, setSelectedOption] = useState<QuickOption>(null);
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [customDate, setCustomDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('09:00');
   const [timePreset, setTimePreset] = useState<TimePreset>(null);
+  const [showCalendarPicker, setShowCalendarPicker] = useState(false);
+
+  /** Non-today quick dates use fixed clock times instead of "in X hours". */
+  const useFixedClockPresets =
+    selectedOption === 'tomorrow' ||
+    selectedOption === 'in-2-days' ||
+    selectedOption === 'end-of-week';
+
+  const buildBaseDateForOption = (
+    option: Exclude<QuickOption, 'custom' | null>,
+    ref: Date
+  ): Date => {
+    const d = new Date(ref);
+    d.setSeconds(0, 0);
+    d.setMilliseconds(0);
+    if (option === 'today') {
+      return d;
+    }
+    d.setHours(0, 0, 0, 0);
+    switch (option) {
+      case 'tomorrow':
+        d.setDate(d.getDate() + 1);
+        break;
+      case 'in-2-days':
+        d.setDate(d.getDate() + 2);
+        break;
+      case 'end-of-week': {
+        const currentDay = d.getDay();
+        const daysUntilSunday = currentDay === 0 ? 7 : 7 - currentDay;
+        d.setDate(d.getDate() + daysUntilSunday);
+        break;
+      }
+    }
+    return d;
+  };
 
   // Determine which quick option matches the current value
   useEffect(() => {
@@ -78,34 +131,14 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
       setSelectedOption('custom');
       setShowCustomPicker(true);
       setTimePreset(null);
+      setShowCalendarPicker(false);
       return;
     }
 
     setSelectedOption(option);
     setShowCustomPicker(false);
     setTimePreset(null); // Reset time preset when changing date option
-
-    // For end-of-week, automatically set to 10pm Sunday
-    if (option === 'end-of-week') {
-      const now = new Date();
-      const currentDay = now.getDay(); // 0 = Sunday, 6 = Saturday
-
-      // Calculate days until next Sunday (0 = today if Sunday, 7 = next Sunday)
-      const daysUntilSunday = currentDay === 0 ? 7 : (7 - currentDay);
-      const targetDate = new Date(now);
-      targetDate.setDate(targetDate.getDate() + daysUntilSunday);
-      targetDate.setHours(22, 0, 0, 0);
-
-      // Update selected time for display
-      setSelectedTime('22:00');
-
-      // Format as YYYY-MM-DDTHH:mm
-      const isoString = targetDate.toISOString().slice(0, 16);
-      onChange(isoString);
-      return;
-    }
-
-    // Don't set a time immediately for other options - let user choose preset or custom time
+    setShowCalendarPicker(false);
   };
 
   const handleTimePreset = (preset: TimePreset) => {
@@ -114,7 +147,10 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     setTimePreset(preset);
 
     if (preset === 'custom-time') {
-      // Just show the time input, don't update parent yet
+      if (enableCalendarPicker) {
+        setShowCalendarPicker(true);
+      }
+      // Without calendar picker: show the time input only (below)
       return;
     }
 
@@ -124,37 +160,33 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     // Calculate time based on preset
     switch (preset) {
       case 'in-1-hour':
-        // Calculate from current time
-        targetDate = new Date(now.getTime() + 60 * 60 * 1000); // Add 1 hour in milliseconds
+        if (selectedOption !== 'today') return;
+        targetDate = new Date(now.getTime() + 60 * 60 * 1000);
         break;
       case 'in-4-hours':
-        // Calculate from current time
-        targetDate = new Date(now.getTime() + 4 * 60 * 60 * 1000); // Add 4 hours in milliseconds
+        if (selectedOption !== 'today') return;
+        targetDate = new Date(now.getTime() + 4 * 60 * 60 * 1000);
         break;
       case 'eod':
-        // End of day = 11:59 PM on the selected date
+        if (selectedOption !== 'today') return;
         targetDate = new Date(now);
-
-        // Adjust date based on selected option
-        switch (selectedOption) {
-          case 'today':
-            // Keep today
-            break;
-          case 'tomorrow':
-            targetDate.setDate(targetDate.getDate() + 1);
-            break;
-          case 'in-2-days':
-            targetDate.setDate(targetDate.getDate() + 2);
-            break;
-          case 'end-of-week':
-            // Calculate days until next Sunday
-            const currentDay = targetDate.getDay();
-            const daysUntilSunday = currentDay === 0 ? 7 : (7 - currentDay);
-            targetDate.setDate(targetDate.getDate() + daysUntilSunday);
-            break;
-        }
-
         targetDate.setHours(23, 59, 0, 0);
+        break;
+      case 'at-9am':
+        targetDate = buildBaseDateForOption(selectedOption, now);
+        targetDate.setHours(9, 0, 0, 0);
+        break;
+      case 'at-12pm':
+        targetDate = buildBaseDateForOption(selectedOption, now);
+        targetDate.setHours(12, 0, 0, 0);
+        break;
+      case 'at-6pm':
+        targetDate = buildBaseDateForOption(selectedOption, now);
+        targetDate.setHours(18, 0, 0, 0);
+        break;
+      case 'at-9pm':
+        targetDate = buildBaseDateForOption(selectedOption, now);
+        targetDate.setHours(21, 0, 0, 0);
         break;
       default:
         return;
@@ -212,6 +244,13 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
         targetDate = new Date(today);
         targetDate.setDate(targetDate.getDate() + 2);
         break;
+      case 'end-of-week': {
+        const currentDay = today.getDay();
+        const daysUntilSunday = currentDay === 0 ? 7 : 7 - currentDay;
+        targetDate = new Date(today);
+        targetDate.setDate(targetDate.getDate() + daysUntilSunday);
+        break;
+      }
       default:
         return;
     }
@@ -226,7 +265,19 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
     setCustomDate('');
     setSelectedTime('09:00');
     setTimePreset(null);
+    setShowCalendarPicker(false);
     onChange('');
+  };
+
+  const calendarInitialDate = (): Date | undefined => {
+    if (showCustomPicker && customDate) {
+      return new Date(customDate + 'T12:00:00');
+    }
+    if (value) {
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? undefined : d;
+    }
+    return undefined;
   };
 
   return (
@@ -303,39 +354,90 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
         <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
           <Label>Time</Label>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleTimePreset('in-1-hour')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                timePreset === 'in-1-hour'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
-              }`}
-            >
-              In 1 Hour
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTimePreset('in-4-hours')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                timePreset === 'in-4-hours'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
-              }`}
-            >
-              In 4 Hours
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTimePreset('eod')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                timePreset === 'eod'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
-              }`}
-            >
-              End of Day
-            </button>
+            {useFixedClockPresets ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleTimePreset('at-9am')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    timePreset === 'at-9am'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  9:00 AM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTimePreset('at-12pm')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    timePreset === 'at-12pm'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  12:00 PM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTimePreset('at-6pm')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    timePreset === 'at-6pm'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  6:00 PM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTimePreset('at-9pm')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    timePreset === 'at-9pm'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  9:00 PM
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleTimePreset('in-1-hour')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    timePreset === 'in-1-hour'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  In 1 Hour
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTimePreset('in-4-hours')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    timePreset === 'in-4-hours'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  In 4 Hours
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTimePreset('eod')}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    timePreset === 'eod'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  }`}
+                >
+                  End of Day
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => handleTimePreset('custom-time')}
@@ -350,7 +452,7 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
           </div>
 
           {/* Show time input only when Custom Time is selected */}
-          {timePreset === 'custom-time' && (
+          {timePreset === 'custom-time' && !enableCalendarPicker && (
             <div className="mt-3">
               <Input
                 type="time"
@@ -382,13 +484,56 @@ export function DueDatePicker({ value, onChange }: DueDatePickerProps) {
           </div>
           <div>
             <Label>Time</Label>
-            <Input
-              type="time"
-              value={selectedTime}
-              onChange={(e) => handleTimeChange(e.target.value)}
-            />
+            {!enableCalendarPicker ? (
+              <Input
+                type="time"
+                value={selectedTime}
+                onChange={(e) => handleTimeChange(e.target.value)}
+              />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCalendarPicker(true)}
+                  className="px-3 py-2 text-sm rounded-md border border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                >
+                  Pick from calendar…
+                </button>
+                <Input
+                  className="max-w-[140px]"
+                  type="time"
+                  value={selectedTime}
+                  onChange={(e) => handleTimeChange(e.target.value)}
+                />
+              </div>
+            )}
           </div>
         </div>
+      )}
+
+      {enableCalendarPicker && (
+        <CalendarSlotPickerModal
+          isOpen={showCalendarPicker}
+          title="Due date & time"
+          durationMinutes={durationMinutes}
+          initialDate={calendarInitialDate()}
+          onClose={() => setShowCalendarPicker(false)}
+          onSelect={(start, _end) => {
+            const hours = start.getHours().toString().padStart(2, '0');
+            const minutes = start.getMinutes().toString().padStart(2, '0');
+            const y = start.getFullYear();
+            const m = (start.getMonth() + 1).toString().padStart(2, '0');
+            const d = start.getDate().toString().padStart(2, '0');
+            setSelectedTime(`${hours}:${minutes}`);
+            if (showCustomPicker) {
+              setCustomDate(`${y}-${m}-${d}`);
+            }
+            const isoString = start.toISOString().slice(0, 16);
+            onChange(isoString);
+            setTimePreset('custom-time');
+            setShowCalendarPicker(false);
+          }}
+        />
       )}
     </div>
   );

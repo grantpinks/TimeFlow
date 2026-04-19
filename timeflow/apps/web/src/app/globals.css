@@ -491,6 +491,7 @@ body {
   font-size: 0.7rem;
   white-space: normal;
   overflow: visible;
+  display: none;
 }
 
 /* For very small events, use ellipsis but expand on hover */

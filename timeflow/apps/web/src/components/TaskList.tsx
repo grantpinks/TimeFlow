@@ -376,6 +376,8 @@ export function TaskList({
               <DueDatePicker
                 value={dueDate}
                 onChange={setDueDate}
+                durationMinutes={duration}
+                enableCalendarPicker
               />
             </div>
           </div>
@@ -660,6 +662,8 @@ export function TaskList({
                       onChange={(value) =>
                         setEditingState((prev) => prev && { ...prev, dueDate: value })
                       }
+                      durationMinutes={editingState.durationMinutes}
+                      enableCalendarPicker
                     />
                   </div>
                 </div>

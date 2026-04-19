@@ -711,14 +711,12 @@ function DraggableEvent({
         </button>
       )}
       <div className={canDrag ? 'min-w-0 pl-6' : 'min-w-0'}>
+        <div className={`${isVeryShortEvent ? 'text-[9px]' : 'text-[10px]'} opacity-90 leading-tight`}>
+          {startTime} - {endTime}
+        </div>
         <div className={`font-semibold leading-snug ${titleClampClass} ${titleSizeClass}`}>
           {event.title}
         </div>
-        {!isShortEvent && (
-          <div className="text-[10px] opacity-90 leading-tight">
-            {startTime} - {endTime}
-          </div>
-        )}
       </div>
       {event.isTask && onResize && (isHovered || isResizing) && (
         <div
