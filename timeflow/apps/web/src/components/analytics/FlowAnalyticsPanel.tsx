@@ -99,12 +99,12 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
 
       <div className="relative flex flex-col sm:flex-row items-center gap-6 sm:gap-8 p-4 sm:p-6">
         {/* Circular Flow Mascot Section with Pulsing Ring */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 p-4">
           <div className="relative group">
             {/* Pulsing cyan circle animation */}
-            <div className="absolute inset-0 rounded-full">
-              <div className="absolute inset-0 rounded-full bg-cyan-500/20 dark:bg-cyan-400/20 animate-ping" />
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500/30 to-cyan-500/30 dark:from-primary-400/30 dark:to-cyan-400/30 blur-md animate-pulse" />
+            <div className="absolute -inset-2 rounded-full">
+              <div className="absolute inset-0 rounded-full bg-cyan-500/20 dark:bg-cyan-400/20 animate-pulse" />
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary-500/30 to-cyan-500/30 dark:from-primary-400/30 dark:to-cyan-400/30 blur-md animate-pulse" style={{ animationDuration: '2s' }} />
             </div>
 
             {/* Main circular container */}
