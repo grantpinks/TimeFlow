@@ -143,6 +143,10 @@ export function FlowAIAssistantPanel({
     if (!messageText.trim()) return;
 
     setError(null);
+    // Clear previous schedule preview when user sends new message
+    setSchedulePreview(null);
+    setApplyError(null);
+
     const userMessage: ChatMessageType = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -198,6 +202,8 @@ export function FlowAIAssistantPanel({
     try {
       const applyBlocks: ApplyScheduleBlock[] = [];
 
+      console.log('[FlowAI] Schedule preview blocks:', schedulePreview.blocks);
+
       schedulePreview.blocks.forEach((block) => {
         if ('taskId' in block && block.taskId) {
           applyBlocks.push({
@@ -215,7 +221,10 @@ export function FlowAIAssistantPanel({
         }
       });
 
-      await api.applySchedule(applyBlocks);
+      console.log('[FlowAI] Applying schedule with blocks:', applyBlocks);
+
+      const result = await api.applySchedule(applyBlocks);
+      console.log('[FlowAI] Schedule applied successfully:', result);
 
       // Trigger tasks refresh
       onTasksUpdate?.();
@@ -235,6 +244,12 @@ export function FlowAIAssistantPanel({
       latestMessagesRef.current = [...latestMessagesRef.current, successMessage];
       queueAutoSave([successMessage]);
     } catch (err) {
+      console.error('[FlowAI] Failed to apply schedule:', err);
+      console.error('[FlowAI] Error details:', {
+        message: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        schedulePreview,
+      });
       const errorMsg = err instanceof Error ? err.message : 'Failed to apply schedule';
       setApplyError(errorMsg);
       console.error('Failed to apply schedule:', err);
