@@ -10,7 +10,7 @@ interface UpcomingEventsPanelProps {
 }
 
 export function UpcomingEventsPanel({ events, onEventClick }: UpcomingEventsPanelProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   // Filter and sort upcoming events (from now onwards, next 7 days)
   const upcomingEvents = useMemo(() => {

@@ -18,7 +18,7 @@ export function UnscheduledTasksPanel({
   onCompleteTask,
   onDeleteTask,
 }: UnscheduledTasksPanelProps) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   return (
     <div className="bg-white border-b border-slate-200 overflow-hidden flex-shrink-0">

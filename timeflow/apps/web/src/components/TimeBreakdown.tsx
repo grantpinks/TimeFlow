@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Task } from '@timeflow/shared';
 
 interface TimeBreakdownProps {
@@ -15,6 +15,8 @@ interface CategoryTime {
 }
 
 export function TimeBreakdown({ tasks }: TimeBreakdownProps) {
+  const [expanded, setExpanded] = useState(false);
+
   const categoryBreakdown = useMemo(() => {
     // Calculate total time per category
     const categoryMap = new Map<string, { name: string; color: string; minutes: number }>();
@@ -67,45 +69,64 @@ export function TimeBreakdown({ tasks }: TimeBreakdownProps) {
   }
 
   return (
-    <div className="bg-white border-b border-slate-200 p-3 flex-shrink-0">
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-white border-b border-slate-200 overflow-hidden flex-shrink-0">
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
         <h3 className="text-sm font-semibold text-slate-800">Time Breakdown</h3>
-        <span className="text-xs text-slate-500">{formatTime(totalMinutes)} scheduled</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">{formatTime(totalMinutes)}</span>
+          <svg
+            className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
 
-      {/* Horizontal stacked bar */}
-      <div className="flex h-2 rounded-full overflow-hidden mb-4 bg-slate-100">
-        {breakdown.map((cat, index) => (
-          <div
-            key={index}
-            style={{
-              backgroundColor: cat.color,
-              width: `${cat.percentage}%`,
-            }}
-            className="transition-all duration-300"
-            title={`${cat.name}: ${formatTime(cat.minutes)}`}
-          />
-        ))}
-      </div>
-
-      {/* Category list */}
-      <div className="space-y-2">
-        {breakdown.map((cat, index) => (
-          <div key={index} className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+      {/* Content */}
+      {expanded && (
+        <div className="px-3 pb-3">
+          {/* Horizontal stacked bar */}
+          <div className="flex h-2 rounded-full overflow-hidden mb-4 bg-slate-100">
+            {breakdown.map((cat, index) => (
               <div
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: cat.color }}
+                key={index}
+                style={{
+                  backgroundColor: cat.color,
+                  width: `${cat.percentage}%`,
+                }}
+                className="transition-all duration-300"
+                title={`${cat.name}: ${formatTime(cat.minutes)}`}
               />
-              <span className="text-slate-700 truncate font-medium">{cat.name}</span>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-slate-500">{formatTime(cat.minutes)}</span>
-              <span className="text-slate-400 w-10 text-right">{Math.round(cat.percentage)}%</span>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+
+          {/* Category list */}
+          <div className="space-y-2">
+            {breakdown.map((cat, index) => (
+              <div key={index} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: cat.color }}
+                  />
+                  <span className="text-slate-700 truncate font-medium">{cat.name}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-slate-500">{formatTime(cat.minutes)}</span>
+                  <span className="text-slate-400 w-10 text-right">{Math.round(cat.percentage)}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
