@@ -494,6 +494,37 @@ export async function reorderHabits(habitIds: string[]): Promise<{ success: bool
   });
 }
 
+/** Body block for POST /habits/commit-schedule */
+export interface CommitHabitScheduleBlock {
+  habitId: string;
+  startDateTime: string;
+  endDateTime: string;
+}
+
+export interface CommitHabitScheduleProgress {
+  habitId: string;
+  status: 'pending' | 'creating' | 'created' | 'failed';
+  eventId?: string;
+  error?: string;
+}
+
+export interface CommitHabitScheduleResponse {
+  jobId: string;
+  progress: CommitHabitScheduleProgress[];
+}
+
+/**
+ * Commit habit time blocks to Google Calendar and create scheduled instances (same pipeline as Habits quick schedule).
+ */
+export async function commitHabitSchedule(
+  acceptedBlocks: CommitHabitScheduleBlock[]
+): Promise<CommitHabitScheduleResponse> {
+  return request<CommitHabitScheduleResponse>('/habits/commit-schedule', {
+    method: 'POST',
+    body: JSON.stringify({ acceptedBlocks }),
+  });
+}
+
 /**
  * Get proposed scheduling suggestions for habits.
  */

@@ -17,6 +17,7 @@ import { MiniCalendar } from '@/components/MiniCalendar';
 import { TimeBreakdown } from '@/components/TimeBreakdown';
 import { UpcomingEventsPanel } from '@/components/UpcomingEventsPanel';
 import { UnscheduledTasksPanel } from '@/components/UnscheduledTasksPanel';
+import { CalendarHabitsPanel } from '@/components/CalendarHabitsPanel';
 import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
@@ -967,7 +968,35 @@ export default function CalendarPage() {
       };
     }
 
+    const habitPayload = activeData?.habit as Habit | undefined;
+    if (habitPayload?.id) {
+      return {
+        kind: 'habit' as const,
+        title: habitPayload.title,
+        durationMinutes: Math.max(15, habitPayload.durationMinutes || 30),
+        habitId: habitPayload.id,
+        fromCalendar: false,
+        color: '#6366F1',
+      };
+    }
+
     const activeId = String(active.id);
+    const HABIT_PREFIX = 'habit-';
+    if (activeId.startsWith(HABIT_PREFIX)) {
+      const habitIdOnly = activeId.slice(HABIT_PREFIX.length);
+      const habitFromList = habits.find((h) => h.id === habitIdOnly);
+      if (habitFromList) {
+        return {
+          kind: 'habit' as const,
+          title: habitFromList.title,
+          durationMinutes: Math.max(15, habitFromList.durationMinutes || 30),
+          habitId: habitFromList.id,
+          fromCalendar: false,
+          color: '#6366F1',
+        };
+      }
+    }
+
     const taskId = activeId.startsWith('task-') ? activeId.slice('task-'.length) : activeId;
     const taskFromList = tasks.find((t) => t.id === taskId);
     const taskFromDrag =
@@ -1176,6 +1205,20 @@ export default function CalendarPage() {
         } else {
           setMessage({ type: 'success', text: 'Habit rescheduled successfully!' });
         }
+      } else if (details.kind === 'habit' && 'habitId' in details && details.habitId) {
+        const result = await api.commitHabitSchedule([
+          {
+            habitId: details.habitId,
+            startDateTime: window.start.toISOString(),
+            endDateTime: window.end.toISOString(),
+          },
+        ]);
+        const prog = result.progress?.[0];
+        if (prog?.status === 'failed') {
+          throw new Error(prog.error || 'Could not schedule habit');
+        }
+        await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+        showToast('Habit scheduled', 'success', { durationMs: 5000 });
       } else if (details.fromCalendar && details.taskId) {
         await api.rescheduleTask(
           details.taskId,
@@ -1256,7 +1299,7 @@ export default function CalendarPage() {
                   Calendar
                 </h1>
                 <p className="text-sm text-slate-500 mt-1">
-                  Flow-powered scheduling—drag tasks, smart schedule, or ask AI to categorize events.
+                  Flow-powered scheduling—drag tasks or habits from the sidebar, smart schedule, or ask AI to categorize events.
                 </p>
                 <Link
                   href="/assistant"
@@ -1410,6 +1453,10 @@ export default function CalendarPage() {
                     onCompleteTask={handleCompleteTaskById}
                     onDeleteTask={handleDeleteTaskById}
                   />
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <CalendarHabitsPanel habits={habits} />
                 </div>
 
                 <div className="border-t border-slate-100 pt-6">
