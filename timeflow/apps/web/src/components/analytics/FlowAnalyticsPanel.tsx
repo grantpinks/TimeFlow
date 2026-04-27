@@ -113,7 +113,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
               <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner border-2 border-primary-200/50 dark:border-primary-700/50">
                 <FlowMascot
                   size="lg"
-                  expression="guiding-up"
+                  expression="happy"
                 />
               </div>
             </div>
