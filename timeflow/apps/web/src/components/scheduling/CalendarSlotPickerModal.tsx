@@ -255,7 +255,7 @@ export function CalendarSlotPickerModal({
             Click a free slot. Busy times (from your calendar) are blocked.
           </p>
 
-          <div className="border border-slate-200 rounded-lg overflow-hidden">
+          <div className="border border-slate-200 rounded-lg overflow-hidden relative">
             <div className="grid" style={{ gridTemplateColumns: `80px repeat(${visibleDays.length}, minmax(0, 1fr))` }}>
               <div className="bg-slate-50 border-b border-r border-slate-200 h-10" />
               {visibleDays.map((day) => {
@@ -293,6 +293,60 @@ export function CalendarSlotPickerModal({
                   onSelect={handleSelectCell}
                 />
               ))}
+            </div>
+
+            {/* Event overlays */}
+            <div className="absolute inset-0 pointer-events-none" style={{ top: '40px', left: '80px' }}>
+              {visibleDays.map((day, dayIdx) => {
+                const key = localDayKey(day);
+                const dayEvents = eventsByDay.get(key) ?? [];
+
+                return dayEvents.map((event) => {
+                  const eventStart = new Date(event.start);
+                  const eventEnd = new Date(event.end);
+
+                  // Calculate position
+                  const startHour = eventStart.getHours();
+                  const startMinute = eventStart.getMinutes();
+                  const endHour = eventEnd.getHours();
+                  const endMinute = eventEnd.getMinutes();
+
+                  // Skip if outside visible hours
+                  if (startHour < START_HOUR || endHour > END_HOUR) return null;
+
+                  const startSlotIndex = (startHour - START_HOUR) * 2 + (startMinute >= 30 ? 1 : 0);
+                  const totalMinutes = (eventEnd.getTime() - eventStart.getTime()) / 60000;
+                  const heightSlots = totalMinutes / SLOT_MINUTES;
+
+                  const top = startSlotIndex * ROW_HEIGHT;
+                  const height = heightSlots * ROW_HEIGHT;
+                  const colWidth = `calc((100% - 0px) / ${visibleDays.length})`;
+                  const left = `calc(${colWidth} * ${dayIdx})`;
+
+                  return (
+                    <div
+                      key={`${event.id ?? event.start}-overlay`}
+                      className="absolute px-1 py-0.5 pointer-events-auto"
+                      style={{
+                        top: `${top}px`,
+                        left,
+                        width: colWidth,
+                        height: `${height}px`,
+                        zIndex: 10,
+                      }}
+                    >
+                      <div className="h-full w-full rounded-md bg-gradient-to-br from-primary-500/90 to-cyan-600/90 border border-primary-600/50 shadow-sm px-1.5 py-1 overflow-hidden">
+                        <p className="text-[10px] font-semibold text-white leading-tight truncate">
+                          {event.summary || 'Untitled Event'}
+                        </p>
+                        <p className="text-[9px] text-white/80 truncate">
+                          {formatTime(eventStart)} - {formatTime(eventEnd)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                });
+              })}
             </div>
           </div>
 
@@ -402,12 +456,12 @@ function FragmentRow({
             type="button"
             disabled={blocked || loading}
             onClick={() => onSelect(day, hour, minute)}
-            className={`border-b border-slate-200 relative ${
+            className={`border-b border-slate-200 relative transition-colors ${
               blocked
-                ? 'bg-slate-100 cursor-not-allowed'
+                ? 'bg-slate-100/60 cursor-not-allowed'
                 : isSelected
-                  ? 'bg-primary-200 hover:bg-primary-300'
-                  : 'bg-white hover:bg-blue-50'
+                  ? 'bg-gradient-to-br from-primary-200 to-cyan-100 hover:from-primary-300 hover:to-cyan-200 border-l-2 border-l-primary-500'
+                  : 'bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-cyan-50/30'
             }`}
             style={{ height: `${ROW_HEIGHT}px` }}
           />
