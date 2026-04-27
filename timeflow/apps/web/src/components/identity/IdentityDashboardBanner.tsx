@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { IdentityDayProgress } from '@timeflow/shared';
 import { hexWithOpacity } from '@/lib/identityConstants';
+import { FlowMascot } from '@/components/FlowMascot';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -123,93 +124,6 @@ function DonutRing({
   );
 }
 
-// ─── Inline Flow-style mascot SVG (identity banner only; not @/components/FlowMascot) ─
-
-function IdentityBannerMascotSvg({ mood }: { mood: 'happy' | 'excited' | 'neutral' }) {
-  const eyeY = 52;
-  const smileD =
-    mood === 'excited'
-      ? 'M 36 66 Q 44 74 52 66' // bigger grin
-      : 'M 37 65 Q 44 71 51 65'; // gentle smile
-
-  return (
-    <svg
-      viewBox="0 0 88 110"
-      className="w-full h-full drop-shadow-md"
-      aria-label="Flow mascot"
-      role="img"
-    >
-      <defs>
-        <radialGradient id="flowBody" cx="45%" cy="40%" r="58%">
-          <stop offset="0%" stopColor="#2dd4bf" />
-          <stop offset="100%" stopColor="#0d9488" />
-        </radialGradient>
-        <radialGradient id="flowShine" cx="35%" cy="30%" r="40%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-        </radialGradient>
-      </defs>
-
-      {/* Body — teardrop */}
-      <path
-        d="M 44 4 C 72 28, 82 52, 78 70 A 34 34 0 1 1 10 70 C 6 52, 16 28, 44 4 Z"
-        fill="url(#flowBody)"
-      />
-      {/* Shine overlay */}
-      <path
-        d="M 44 4 C 72 28, 82 52, 78 70 A 34 34 0 1 1 10 70 C 6 52, 16 28, 44 4 Z"
-        fill="url(#flowShine)"
-      />
-
-      {/* Eyes */}
-      <circle cx="32" cy={eyeY} r="5.5" fill="white" />
-      <circle cx="56" cy={eyeY} r="5.5" fill="white" />
-      <circle cx="33.5" cy={eyeY + 1} r="3" fill="#0f172a" />
-      <circle cx="57.5" cy={eyeY + 1} r="3" fill="#0f172a" />
-      {/* Eye shine */}
-      <circle cx="35" cy={eyeY - 1} r="1.2" fill="white" />
-      <circle cx="59" cy={eyeY - 1} r="1.2" fill="white" />
-
-      {/* Smile */}
-      <path
-        d={smileD}
-        fill="none"
-        stroke="white"
-        strokeWidth="2.8"
-        strokeLinecap="round"
-      />
-
-      {/* Cheek blush */}
-      {mood === 'excited' && (
-        <>
-          <ellipse cx="24" cy="63" rx="5" ry="3" fill="rgba(251,113,133,0.35)" />
-          <ellipse cx="64" cy="63" rx="5" ry="3" fill="rgba(251,113,133,0.35)" />
-        </>
-      )}
-
-      {/* Arms (small wiggly lines when excited) */}
-      {mood === 'excited' && (
-        <>
-          <path
-            d="M 10 72 Q 2 60, 8 52"
-            fill="none"
-            stroke="#0d9488"
-            strokeWidth="5"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 78 72 Q 86 60, 80 52"
-            fill="none"
-            stroke="#0d9488"
-            strokeWidth="5"
-            strokeLinecap="round"
-          />
-        </>
-      )}
-    </svg>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface IdentityDashboardBannerProps {
@@ -242,9 +156,6 @@ export function IdentityDashboardBanner({
   const identitiesWithProgress = identities.filter(
     (i) => i.completedCount > 0 || i.inProgressCount > 0
   );
-
-  const mood: 'happy' | 'excited' | 'neutral' =
-    totalCompletions >= 5 ? 'excited' : totalCompletions > 0 ? 'happy' : 'neutral';
 
   const outerSegments: ArcSegment[] = identities.map((i) => ({
     color: i.color,
@@ -280,8 +191,8 @@ export function IdentityDashboardBanner({
             style={{ background: 'radial-gradient(circle, #0d9488, transparent)' }}
           />
 
-          <div className="relative h-20 w-16 flex-shrink-0">
-            <IdentityBannerMascotSvg mood={mood} />
+          <div className="relative flex-shrink-0">
+            <FlowMascot size="lg" expression="happy" />
           </div>
 
           <div className="min-w-0">
