@@ -46,6 +46,7 @@ import type {
   Habit,
 } from '@timeflow/shared';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
+import { track } from '@/lib/analytics';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
 import { EndOfDayIdentityReportModal } from '@/components/identity/EndOfDayIdentityReportModal';
 import { EndOfDaySummaryModal } from '@/components/today/EndOfDaySummaryModal';
@@ -148,6 +149,49 @@ export default function TodayPage() {
       cancelled = true;
     };
   }, [isAuthenticated, user?.identityEvolutionEnabled]);
+
+  /** Evolution analytics: at most once per browser tab session (sessionStorage). */
+  useEffect(() => {
+    if (!user?.identityEvolutionEnabled) return;
+    if (!Array.isArray(evolutionStates)) return;
+    try {
+      const k = 'tf_analytics_evolution_state_loaded';
+      if (sessionStorage.getItem(k) === '1') return;
+      sessionStorage.setItem(k, '1');
+      track('identity.evolution.state_loaded', { count: evolutionStates.length });
+    } catch {
+      /* private mode / quota */
+    }
+  }, [user?.identityEvolutionEnabled, evolutionStates]);
+
+  useEffect(() => {
+    if (!user?.identityEvolutionEnabled) return;
+    if (!Array.isArray(evolutionStates) || evolutionStates.length === 0) return;
+    try {
+      const k = 'tf_analytics_evolution_hero_today';
+      if (sessionStorage.getItem(k) === '1') return;
+      sessionStorage.setItem(k, '1');
+      track('identity.evolution.hero_visible', { source: 'today' });
+    } catch {
+      /* private mode */
+    }
+  }, [user?.identityEvolutionEnabled, evolutionStates]);
+
+  useEffect(() => {
+    if (!user?.identityEvolutionEnabled || !leadingEvolutionState) return;
+    const showCheckpointUi =
+      leadingEvolutionState.trialCheckpointDays > 0 ||
+      leadingEvolutionState.trialState === 'CheckpointFailed';
+    if (!showCheckpointUi) return;
+    try {
+      const k = 'tf_analytics_evolution_trial_checkpoint_ui';
+      if (sessionStorage.getItem(k) === '1') return;
+      sessionStorage.setItem(k, '1');
+      track('identity.evolution.trial_checkpoint_visible', {});
+    } catch {
+      /* private mode */
+    }
+  }, [user?.identityEvolutionEnabled, leadingEvolutionState]);
 
   useEffect(() => {
     if (!user?.identityEvolutionEnabled || !leadingEvolutionState) {

@@ -191,6 +191,18 @@ export default function HabitsPage() {
     Array.isArray(evolutionStates) &&
     evolutionStates.length > 0;
 
+  useEffect(() => {
+    if (!showEvolutionHabitsLayout) return;
+    try {
+      const k = 'tf_analytics_evolution_habits_layout';
+      if (sessionStorage.getItem(k) === '1') return;
+      sessionStorage.setItem(k, '1');
+      track('identity.evolution.habits_layout_visible', {});
+    } catch {
+      /* private mode */
+    }
+  }, [showEvolutionHabitsLayout]);
+
   type HabitGroupRow = {
     key: string;
     identity: Identity | null;

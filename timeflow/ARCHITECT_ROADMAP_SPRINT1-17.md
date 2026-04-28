@@ -1462,11 +1462,11 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 #### Goals
 - [x] Progression model finalized (Milestone ladder + hybrid XP + mastery trials + soft-fail checkpoint restarts).
 - [x] Product direction finalized (5 full stages, Flow-as-companion, global customization in v1, hybrid customization deferred).
-- [ ] Identity evolution backend model + APIs are live behind feature flags.
-- [ ] Today page redesigned with Flow Evolution Hero + mastery trial progress.
-- [ ] Habits page redesigned with identity-grouped progression surfaces.
-- [ ] Flow unlock inventory + customization panel + stage animation variants shipped.
-- [ ] Analytics + balancing telemetry in place for safe rollout.
+- [x] Identity evolution backend model + APIs are live behind feature flags.
+- [x] Today page redesigned with Flow Evolution Hero + mastery trial progress.
+- [x] Habits page redesigned with identity-grouped progression surfaces.
+- [ ] Flow unlock inventory + customization panel + stage animation variants shipped (inventory + hero surfaces live; global customization panel still open).
+- [x] Analytics + balancing telemetry in place for safe rollout (initial PostHog events + balancing notes; cohort dashboards optional follow-up).
 
 #### Execution Plan
 - **[Concrete Implementation Plan](./docs/plans/2026-04-27-identity-evolution-flow-companion-implementation-plan.md)**
@@ -1477,11 +1477,11 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 |----|------|-------|-------|----------|--------|
 | 25.0 | Finalize concrete implementation plan doc and roadmap wiring | Codex | 1-2h | P0 | ✅ |
 | 25.1 | Add schema + migration for identity levels, stages, trials, checkpoints, XP events, unlock inventory | Codex | 8-12h | **P0** | ✅ |
-| 25.2 | Implement hybrid XP engine + anti-cheese caps + stage gates + mastery trial checkpoint logic | Codex | 8-12h | **P0** | ⬜ |
-| 25.3 | Add unlock catalog and reward grants (Flow cosmetics/animations + mechanics) | Codex | 6-10h | P0 | ⬜ |
-| 25.4 | Add evolution/trial API endpoints + web client wiring + feature flags | Codex | 6-8h | P0 | ⬜ |
-| 25.5 | Overhaul Today page with Flow Evolution Hero + trial UI + XP feedback moments | Codex | 8-12h | **P0** | ⬜ |
-| 25.6 | Overhaul Habits page with identity-grouped progression and unlock timeline | Codex | 8-12h | P0 | ⬜ |
+| 25.2 | Implement hybrid XP engine + anti-cheese caps + stage gates + mastery trial checkpoint logic | Codex | 8-12h | **P0** | ✅ |
+| 25.3 | Add unlock catalog and reward grants (Flow cosmetics/animations + mechanics) | Codex | 6-10h | P0 | ✅ |
+| 25.4 | Add evolution/trial API endpoints + web client wiring + feature flags | Codex | 6-8h | P0 | ✅ |
+| 25.5 | Overhaul Today page with Flow Evolution Hero + trial UI + XP feedback moments | Codex | 8-12h | **P0** | ✅ |
+| 25.6 | Overhaul Habits page with identity-grouped progression and unlock timeline | Codex | 8-12h | P0 | ✅ |
 | 25.7 | Build global Flow customization panel and stage-based animation variants | Codex | 8-12h | P1 | ⬜ |
 | 25.8 | Add analytics + balancing dashboards; tune thresholds post-internal rollout | Codex | 6-8h | P1 | ⬜ |
 | 25.9 | Roadmap update + rollout readiness check (5% → 25% → 100%) | Codex | 2-4h | P1 | ⬜ |

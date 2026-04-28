@@ -113,7 +113,13 @@ export type AnalyticsEvent =
       name: 'identity.streak_updated';
       properties: { current_streak: number; longest_streak?: number };
     }
-  | { name: 'identity.rest_day_marked'; properties: { local_date: string; reason: string } };
+  | { name: 'identity.rest_day_marked'; properties: { local_date: string; reason: string } }
+  // Identity evolution (PostHog; session-throttled in callers where noted)
+  | { name: 'identity.evolution.state_loaded'; properties: { count: number } }
+  | { name: 'identity.evolution.hero_visible'; properties: { source?: 'today' } }
+  | { name: 'identity.evolution.trial_checkpoint_visible'; properties: {} }
+  | { name: 'identity.evolution.habits_layout_visible'; properties: {} }
+  | { name: 'identity.flow_customization.saved'; properties: { fields: string[] } };
 
 // Track event
 export function track<T extends AnalyticsEvent>(event: T['name'], properties?: T['properties']) {

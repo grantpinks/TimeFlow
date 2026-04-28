@@ -22,12 +22,12 @@
 ## Milestone Tracker
 
 - [x] **P0 Planning:** Finalize progression model decisions (A + hybrid score + mastery trials + 5 stages + Flow global customization).
-- [ ] **P1 Data + Domain:** Schema, shared types, progression engine, trial checkpoint logic.
-- [ ] **P2 API + Events:** Read/write endpoints, completion hooks, XP events, feature flags.
-- [ ] **P3 Today UX Overhaul:** Flow Evolution Hero + trial status + action surfacing.
-- [ ] **P4 Habits UX Overhaul:** Identity-grouped habits + contribution + unlock timeline.
-- [ ] **P5 Flow Customization:** stage forms, unlockable cosmetics, animation packs.
-- [ ] **P6 QA + Rollout:** migration verification, balancing pass, analytics, docs.
+- [x] **P1 Data + Domain:** Schema, shared types, progression engine, trial checkpoint logic.
+- [x] **P2 API + Events:** Read/write endpoints, completion hooks, XP events, feature flags.
+- [x] **P3 Today UX Overhaul:** Flow Evolution Hero + trial status + action surfacing.
+- [x] **P4 Habits UX Overhaul:** Identity-grouped habits + contribution + unlock timeline.
+- [ ] **P5 Flow Customization:** stage forms, unlockable cosmetics, animation packs (API + unlocks exist; dedicated customization panel still pending).
+- [ ] **P6 QA + Rollout:** migration verification, balancing pass, analytics, docs (client evolution events + balancing notes landed; dashboards / full rollout pass still open).
 
 ---
 
@@ -203,21 +203,21 @@
 ### Task 8: Analytics, Balancing, and Hardening
 
 **Files:**
-- Modify: `apps/backend/src/services/analyticsService.ts` (or tracking touchpoints)
+- Modify: `apps/backend/src/services/analyticsService.ts` (or tracking touchpoints) — **skipped:** no server-side analytics service in repo; PostHog remains client-side.
 - Modify: `apps/web/src/lib/analytics.ts`
 - Create: `docs/plans/2026-04-27-identity-evolution-balancing-notes.md`
 - Modify: `timeflow/ARCHITECT_ROADMAP_SPRINT1-17.md` (status updates)
 
 **Implementation steps:**
 1. Track progression funnel:
-   - XP earned/day, trial starts, checkpoint failures, stage evolutions, unlock usage
+   - [x] Initial web events: evolution state loaded, hero visible (Today), trial checkpoint UI visible (Today), habits evolution layout visible (Habits). Further funnel (XP/day aggregates, stage evolutions) can use PostHog insights on existing completion flows or backend audit tables later.
 2. Add initial balancing guardrails and an admin/debug readout.
 3. Validate retention/sentiment and tune thresholds.
 4. Update roadmap and this plan checkboxes as tasks land.
 
 **Acceptance:**
-- [ ] Core analytics events are visible in telemetry.
-- [ ] Balance notes document first tuning iteration.
+- [x] Core analytics events are visible in telemetry (PostHog `capture` via typed `track()`).
+- [x] Balance notes document first tuning iteration (`2026-04-27-identity-evolution-balancing-notes.md`).
 
 ---
 
