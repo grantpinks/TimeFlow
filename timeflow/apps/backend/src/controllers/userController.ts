@@ -116,6 +116,7 @@ export async function getMe(request: FastifyRequest, reply: FastifyReply) {
     notifyMissedHighPriority: record.notifyMissedHighPriority,
     notifyWeeklyIdentityRecap: record.notifyWeeklyIdentityRecap,
     actionStateLabelSyncEnabled: record.actionStateLabelSyncEnabled,
+    identityEvolutionEnabled: record.identityEvolutionEnabled,
   };
 }
 

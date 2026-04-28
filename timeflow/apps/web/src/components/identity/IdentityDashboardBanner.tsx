@@ -11,11 +11,16 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import type { IdentityDayProgress } from '@timeflow/shared';
+import type { IdentityDayProgress, IdentityEvolutionState } from '@timeflow/shared';
 import { hexWithOpacity } from '@/lib/identityConstants';
 import { FlowMascot } from '@/components/FlowMascot';
+import { FlowEvolutionHero } from '@/components/identity/FlowEvolutionHero';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
+
+function pickLeadingEvolution(states: IdentityEvolutionState[]): IdentityEvolutionState {
+  return [...states].sort((a, b) => b.level - a.level || b.xp - a.xp)[0]!;
+}
 
 function greeting(now: Date, totalDone: number): string {
   const h = now.getHours();
@@ -134,6 +139,12 @@ interface IdentityDashboardBannerProps {
   focusMode?: boolean;
   onFocusModeToggle?: () => void;
   now?: Date;
+  /** When set with non-empty `evolutionStates`, shows Flow Evolution hero above the banner */
+  evolutionStates?: IdentityEvolutionState[] | null;
+  evolutionEnabled?: boolean;
+  /** From parent: latest unlock label (e.g. from getIdentityUnlocks) */
+  nextUnlockLabel?: string | null;
+  timeZone?: string;
 }
 
 export function IdentityDashboardBanner({
@@ -144,6 +155,10 @@ export function IdentityDashboardBanner({
   focusMode = false,
   onFocusModeToggle,
   now = new Date(),
+  evolutionStates,
+  evolutionEnabled = false,
+  nextUnlockLabel = null,
+  timeZone,
 }: IdentityDashboardBannerProps) {
   const totalCompletions = useMemo(
     () => identities.reduce((s, i) => s + i.completedCount, 0),
@@ -168,6 +183,26 @@ export function IdentityDashboardBanner({
 
   const greetingText = greeting(now, totalCompletions);
 
+  const showEvolutionHero =
+    evolutionEnabled === true &&
+    Array.isArray(evolutionStates) &&
+    evolutionStates.length > 0;
+
+  const leadingEvolution = useMemo(() => {
+    if (!showEvolutionHero || !Array.isArray(evolutionStates) || !evolutionStates.length) {
+      return null;
+    }
+    return pickLeadingEvolution(evolutionStates);
+  }, [showEvolutionHero, evolutionStates]);
+
+  const leadingIdentityName = useMemo(() => {
+    if (!leadingEvolution) return '';
+    return identities.find((i) => i.identityId === leadingEvolution.identityId)?.name ?? 'Identity';
+  }, [leadingEvolution, identities]);
+
+  const resolvedTimeZone =
+    timeZone ?? (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC');
+
   if (loading) {
     return (
       <div className="h-36 w-full animate-pulse rounded-2xl bg-slate-100" />
@@ -175,6 +210,15 @@ export function IdentityDashboardBanner({
   }
 
   return (
+    <div className="w-full space-y-3">
+      {showEvolutionHero && leadingEvolution && (
+        <FlowEvolutionHero
+          evolution={leadingEvolution}
+          identityName={leadingIdentityName}
+          nextUnlockLabel={nextUnlockLabel}
+          timeZone={resolvedTimeZone}
+        />
+      )}
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -415,5 +459,6 @@ export function IdentityDashboardBanner({
         </div>
       </div>
     </motion.div>
+    </div>
   );
 }

@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, memo } from 'react';
+import { useState, useEffect, useMemo, memo, useCallback } from 'react';
 import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useDraggable, useSensor, useSensors, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Layout } from '@/components/Layout';
@@ -29,10 +29,22 @@ import { HabitsDueSoonWidget } from '@/components/today/HabitsDueSoonWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
+import { ApiRequestError } from '@/lib/api';
 import { buildRescueBlockForAtRisk } from '@/lib/habitRescue';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache';
-import type { CalendarEvent, EnrichedHabitSuggestion, EmailMessage, Task, FullEmailMessage, EmailCategory, StreakAtRiskNotification, IdentityDayProgress, Habit } from '@timeflow/shared';
+import type {
+  CalendarEvent,
+  EnrichedHabitSuggestion,
+  EmailMessage,
+  Task,
+  FullEmailMessage,
+  EmailCategory,
+  StreakAtRiskNotification,
+  IdentityDayProgress,
+  IdentityEvolutionState,
+  Habit,
+} from '@timeflow/shared';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
 import { EndOfDayIdentityReportModal } from '@/components/identity/EndOfDayIdentityReportModal';
@@ -41,6 +53,13 @@ import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelated
 import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitRelatedTasks';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 import { ChevronDown, Sparkles, ClipboardList } from 'lucide-react';
+
+function formatUnlockKeyLabel(key: string): string {
+  const tail = key.replace(/^flow_[^_]+_/, '').replace(/^mechanic_/, '');
+  const words = tail.split('_').filter(Boolean);
+  if (words.length === 0) return key;
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -85,6 +104,72 @@ export default function TodayPage() {
   /** Mobile: habit suggestions collapsible (default collapsed). Desktop (lg+): always expanded. */
   const [mobileHabitsOpen, setMobileHabitsOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const [evolutionStates, setEvolutionStates] = useState<
+    IdentityEvolutionState[] | null | undefined
+  >(undefined);
+  const [nextUnlockLabel, setNextUnlockLabel] = useState<string | null>(null);
+
+  const leadingEvolutionState = useMemo(() => {
+    if (!Array.isArray(evolutionStates) || evolutionStates.length === 0) return null;
+    return [...evolutionStates].sort((a, b) => b.level - a.level || b.xp - a.xp)[0]!;
+  }, [evolutionStates]);
+
+  const refreshEvolution = useCallback(async () => {
+    if (!user?.identityEvolutionEnabled) return;
+    try {
+      const data = await api.getEvolutionState();
+      setEvolutionStates(Array.isArray(data) ? data : []);
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 403) {
+        setEvolutionStates(null);
+      }
+    }
+  }, [user?.identityEvolutionEnabled]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.identityEvolutionEnabled) {
+      setEvolutionStates(undefined);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.getEvolutionState();
+        if (!cancelled) setEvolutionStates(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (e instanceof ApiRequestError && e.status === 403) {
+          if (!cancelled) setEvolutionStates(null);
+        } else if (!cancelled) {
+          setEvolutionStates(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.identityEvolutionEnabled]);
+
+  useEffect(() => {
+    if (!user?.identityEvolutionEnabled || !leadingEvolutionState) {
+      setNextUnlockLabel(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .getIdentityUnlocks(leadingEvolutionState.identityId)
+      .then((res) => {
+        if (cancelled) return;
+        const sorted = [...res.unlocks].sort((a, b) => a.grantedAt.localeCompare(b.grantedAt));
+        const last = sorted[sorted.length - 1];
+        setNextUnlockLabel(last ? formatUnlockKeyLabel(last.unlockKey) : null);
+      })
+      .catch(() => {
+        if (!cancelled) setNextUnlockLabel(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.identityEvolutionEnabled, leadingEvolutionState?.identityId]);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -460,6 +545,7 @@ export default function TodayPage() {
 
       if (linkedIdentityId) {
         const freshProgress = await refreshProgress();
+        void refreshEvolution();
         const updated = freshProgress?.identities.find((i) => i.identityId === linkedIdentityId);
         if (updated) setCelebration(updated);
       }
@@ -485,6 +571,7 @@ export default function TodayPage() {
       await fetchTodayEvents(); // Refresh to get updated completion status
 
       const freshProgress = await refreshProgress();
+      void refreshEvolution();
 
       const followUp = buildPostHabitFollowUp({
         habitId,
@@ -695,6 +782,10 @@ Please generate a schedule preview for today.`;
                 });
               }}
               now={now}
+              evolutionEnabled={user.identityEvolutionEnabled === true}
+              evolutionStates={evolutionStates}
+              nextUnlockLabel={nextUnlockLabel}
+              timeZone={user.timeZone}
             />
           </div>
           {/* What's Now — current and upcoming */}

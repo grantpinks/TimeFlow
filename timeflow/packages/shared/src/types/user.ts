@@ -80,6 +80,9 @@ export interface UserProfile {
   notifyMissedHighPriority?: boolean;      // Notify when high-priority habit is missed
   /** Weekly identity recap via Gmail (requires Gmail connected) */
   notifyWeeklyIdentityRecap?: boolean;
+
+  /** Identity evolution (Flow XP, trials) — when false, evolution APIs return 403 */
+  identityEvolutionEnabled?: boolean;
 }
 
 /**
