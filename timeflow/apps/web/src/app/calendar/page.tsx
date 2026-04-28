@@ -1123,6 +1123,7 @@ export default function CalendarPage() {
           previewSlot.end
         );
       } else if (previewHabit) {
+        // Commit the habit schedule (creates Google event + ScheduledHabit row)
         const result = await api.commitHabitSchedule([
           {
             habitId: previewHabit.habitId,
@@ -1134,18 +1135,32 @@ export default function CalendarPage() {
         if (prog?.status === 'failed') {
           throw new Error(prog.error || 'Could not schedule habit');
         }
-        await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+
+        // Clear preview IMMEDIATELY after successful commit to prevent double-creation
+        // Even if refresh fails below, the habit is already scheduled in backend
+        setPreviewTask(null);
+        setPreviewHabit(null);
+        setPreviewSlot(null);
+
+        // Refresh calendar data (non-critical - don't block on failure)
+        try {
+          await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+        } catch (refreshError) {
+          console.error('Habit scheduled successfully, but refresh failed:', refreshError);
+          // Not critical - calendar will show stale data until next refresh
+        }
       } else {
         return;
       }
 
-      // Clear preview on success
+      // Clear preview for task path
       setPreviewTask(null);
       setPreviewHabit(null);
       setPreviewSlot(null);
     } catch (error) {
       console.error('Failed to confirm schedule:', error);
       // Keep preview open on error so user can retry
+      // Only happens if commit itself failed, not if refresh failed
     } finally {
       setIsSchedulingFromPreview(false);
     }
