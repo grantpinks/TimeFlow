@@ -1476,7 +1476,7 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 | ID | Task | Agent | Hours | Priority | Status |
 |----|------|-------|-------|----------|--------|
 | 25.0 | Finalize concrete implementation plan doc and roadmap wiring | Codex | 1-2h | P0 | ✅ |
-| 25.1 | Add schema + migration for identity levels, stages, trials, checkpoints, XP events, unlock inventory | Codex | 8-12h | **P0** | ⬜ |
+| 25.1 | Add schema + migration for identity levels, stages, trials, checkpoints, XP events, unlock inventory | Codex | 8-12h | **P0** | ✅ |
 | 25.2 | Implement hybrid XP engine + anti-cheese caps + stage gates + mastery trial checkpoint logic | Codex | 8-12h | **P0** | ⬜ |
 | 25.3 | Add unlock catalog and reward grants (Flow cosmetics/animations + mechanics) | Codex | 6-10h | P0 | ⬜ |
 | 25.4 | Add evolution/trial API endpoints + web client wiring + feature flags | Codex | 6-8h | P0 | ⬜ |

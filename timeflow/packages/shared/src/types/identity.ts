@@ -121,6 +121,8 @@ export interface IdentityEvolutionState {
   trialCheckpointDays: number;
   trialStartedAt: string | null;
   trialEndsAt: string | null;
+  xpThisPeriod: number;      // XP earned in current cap window
+  xpCapResetAt: string | null; // ISO timestamp when xpThisPeriod resets
 }
 
 export interface IdentityUnlockItem {
