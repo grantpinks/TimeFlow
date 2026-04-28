@@ -125,6 +125,8 @@ export interface IdentityEvolutionState {
   xpCapResetAt: string | null; // ISO timestamp when xpThisPeriod resets
 }
 
+export type UnlockType = 'flow_palette' | 'flow_emote' | 'flow_accessory' | 'flow_animation_pack' | 'flow_stage_form' | 'mechanic';
+
 export interface IdentityUnlockItem {
   id: string;
   /** Which identity this unlock belongs to */
@@ -132,7 +134,7 @@ export interface IdentityUnlockItem {
   userId: string;
   /** e.g. "flow_palette_ocean", "flow_emote_celebrate", "mechanic_focus_assist" */
   unlockKey: string;
-  unlockType: 'flow_palette' | 'flow_emote' | 'flow_accessory' | 'flow_animation_pack' | 'flow_stage_form' | 'mechanic';
+  unlockType: UnlockType;
   grantedAt: string;
   grantedByStage: IdentityStage | null;
   grantedByLevel: number | null;
@@ -144,7 +146,7 @@ export interface IdentityUnlockItem {
  */
 export interface UnlockCatalogEntry {
   unlockKey: string;
-  unlockType: 'flow_palette' | 'flow_emote' | 'flow_accessory' | 'flow_animation_pack' | 'flow_stage_form' | 'mechanic';
+  unlockType: UnlockType;
   grantedByStage: IdentityStage | null;
   grantedByLevel: number | null;
   displayName: string;

@@ -14,7 +14,8 @@
 import { DateTime } from 'luxon';
 import { prisma } from '../config/prisma.js';
 import type { IdentityEvolutionState, IdentityStage, IdentityTrialState } from '@timeflow/shared';
-import { getUnlocksForEvent } from '../config/identityUnlockCatalog.js';
+import type { IdentityStage as PrismaIdentityStage } from '@prisma/client';
+import { UNLOCK_CATALOG } from '../config/identityUnlockCatalog.js';
 
 export type { IdentityStage, IdentityTrialState };
 
@@ -297,25 +298,33 @@ export async function grantIdentityXp(params: {
     });
 
     // 15. Grant unlocks for this level-up (idempotent upserts)
-    const newUnlocks: string[] = [];
-    if (leveledUp) {
-      const unlocksToGrant = getUnlocksForEvent(newLevel, newStage);
-      for (const unlock of unlocksToGrant) {
-        await tx.identityUnlock.upsert({
+    // Stage-based unlocks are only granted when the stage actually changed to avoid
+    // re-granting them on every level-up within the same stage.
+    const unlocksToGrant = leveledUp
+      ? [
+          ...UNLOCK_CATALOG.filter((e) => e.grantedByLevel === newLevel),
+          ...(stageChanged ? UNLOCK_CATALOG.filter((e) => e.grantedByStage === newStage) : []),
+        ]
+      : [];
+
+    const upsertResults = await Promise.all(
+      unlocksToGrant.map((unlock) =>
+        tx.identityUnlock.upsert({
           where: { identityId_unlockKey: { identityId, unlockKey: unlock.unlockKey } },
           create: {
             identityId,
             userId,
             unlockKey: unlock.unlockKey,
             unlockType: unlock.unlockType,
-            grantedByStage: (unlock.grantedByStage ?? null) as any,
+            grantedByStage: unlock.grantedByStage as PrismaIdentityStage | null,
             grantedByLevel: unlock.grantedByLevel ?? null,
           },
           update: {},
-        });
-        newUnlocks.push(unlock.unlockKey);
-      }
-    }
+        })
+      )
+    );
+    void upsertResults; // results are unused; upserts are fire-and-forget within the tx
+    const newUnlocks = unlocksToGrant.map((u) => u.unlockKey);
 
     // 16. Append XP event record
     await tx.identityXpEvent.create({

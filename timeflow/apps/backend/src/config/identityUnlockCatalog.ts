@@ -6,11 +6,11 @@
  * never both, never neither.
  */
 
-import type { IdentityStage } from '@timeflow/shared';
+import type { IdentityStage, UnlockType } from '@timeflow/shared';
 
 export interface CatalogEntry {
   unlockKey: string;
-  unlockType: 'flow_palette' | 'flow_emote' | 'flow_accessory' | 'flow_animation_pack' | 'flow_stage_form' | 'mechanic';
+  unlockType: UnlockType;
   /** Granted on entering this stage (null if level-based). */
   grantedByStage: IdentityStage | null;
   /** Granted on reaching this level (null if stage-based). */

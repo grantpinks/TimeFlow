@@ -340,6 +340,7 @@ describe('grantIdentityXp — XP formula', () => {
 describe('grantIdentityXp — level-up detection', () => {
   it('detects level-up when XP crosses a threshold', async () => {
     // At 45 XP, level=1. Adding 10 → 55 XP, level=2
+    // Level 2 has no catalog entries, so newUnlocks is empty.
     (prisma.identity.findFirst as any).mockResolvedValue(makeIdentity({ xp: 45, level: 1 }));
     (prisma.identityXpEvent.count as any).mockResolvedValue(0);
 
@@ -349,6 +350,8 @@ describe('grantIdentityXp — level-up detection', () => {
     });
 
     expect(result.leveledUp).toBe(true);
+    // Level 2 has no dedicated catalog entry; newUnlocks should be empty
+    expect(result.newUnlocks).toEqual([]);
   });
 
   it('reports no level-up when XP does not cross a threshold', async () => {
@@ -683,6 +686,82 @@ describe('grantIdentityXp — soft-fail (3+ consecutive missed days)', () => {
         data: expect.objectContaining({ trialState: 'Failed' }),
       })
     );
+  });
+});
+
+// ── newUnlocks reporting ──────────────────────────────────────────────────────
+
+describe('grantIdentityXp — newUnlocks', () => {
+  it('returns level-based unlock keys when leveling up to a level with an unlock', async () => {
+    // Level 3 requires 250 cumulative XP. At 240 XP + 10 XP granted → 250 XP = level 3.
+    // Level 3 has: flow_palette_ocean
+    (prisma.identity.findFirst as any).mockResolvedValue(
+      makeIdentity({ xp: 240, level: 2, stage: 'Seed' })
+    );
+    (prisma.identityXpEvent.count as any).mockResolvedValue(0);
+
+    const result = await grantIdentityXp({
+      userId: USER_ID, identityId: IDENTITY_ID,
+      reason: 'task_completed', sourceId: 'task-1', userTimeZone: TZ,
+    });
+
+    expect(result.leveledUp).toBe(true);
+    expect(result.newUnlocks).toContain('flow_palette_ocean');
+  });
+
+  it('does NOT include stage-based unlocks when leveling up without a stage change', async () => {
+    // Level 3 → 4 within Seed stage (no stage change).
+    // Level 4 has no level-based unlocks in the catalog.
+    // flow_form_seed is stage-based (Seed) and must NOT be re-granted here.
+    (prisma.identity.findFirst as any).mockResolvedValue(
+      makeIdentity({ xp: 690, level: 3, stage: 'Seed' })
+    );
+    (prisma.identityXpEvent.count as any).mockResolvedValue(0);
+
+    const result = await grantIdentityXp({
+      userId: USER_ID, identityId: IDENTITY_ID,
+      reason: 'task_completed', sourceId: 'task-1', userTimeZone: TZ,
+    });
+
+    expect(result.leveledUp).toBe(true);
+    expect(result.newStage).toBeNull(); // still Seed
+    expect(result.newUnlocks).not.toContain('flow_form_seed');
+  });
+
+  it('includes stage-based unlocks when a stage change occurs on level-up', async () => {
+    // Leveling up to 5 transitions from Seed → Builder.
+    // Level 5 has: flow_emote_celebrate (level-based)
+    // Builder stage has: flow_palette_forest, flow_emote_dance, flow_form_builder, mechanic_focus_assist
+    (prisma.identity.findFirst as any).mockResolvedValue(
+      makeIdentity({ xp: 1490, level: 4, stage: 'Seed', trialState: 'NotStarted' })
+    );
+    (prisma.identityXpEvent.count as any).mockResolvedValue(0);
+
+    const result = await grantIdentityXp({
+      userId: USER_ID, identityId: IDENTITY_ID,
+      reason: 'task_completed', sourceId: 'task-1', userTimeZone: TZ,
+    });
+
+    expect(result.leveledUp).toBe(true);
+    expect(result.newStage).toBe('Builder');
+    expect(result.newUnlocks).toContain('flow_emote_celebrate');
+    expect(result.newUnlocks).toContain('flow_palette_forest');
+    expect(result.newUnlocks).toContain('flow_form_builder');
+    expect(result.newUnlocks).toContain('mechanic_focus_assist');
+    expect(result.newUnlocks).not.toContain('flow_form_seed'); // prior stage, not re-granted
+  });
+
+  it('returns empty newUnlocks when no level-up occurs', async () => {
+    (prisma.identity.findFirst as any).mockResolvedValue(makeIdentity({ xp: 0, level: 1 }));
+    (prisma.identityXpEvent.count as any).mockResolvedValue(0);
+
+    const result = await grantIdentityXp({
+      userId: USER_ID, identityId: IDENTITY_ID,
+      reason: 'task_completed', sourceId: 'task-1', userTimeZone: TZ,
+    });
+
+    expect(result.leveledUp).toBe(false);
+    expect(result.newUnlocks).toEqual([]);
   });
 });
 
