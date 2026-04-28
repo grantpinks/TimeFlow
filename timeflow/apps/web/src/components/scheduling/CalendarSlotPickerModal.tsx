@@ -306,7 +306,7 @@ export function CalendarSlotPickerModal({
 
             {/* Event overlays */}
             <div className="absolute inset-0 pointer-events-none" style={{ top: '40px', left: '80px' }}>
-              {visibleDays.map((day, dayIdx) => {
+              {visibleDays.flatMap((day, dayIdx) => {
                 const key = localDayKey(day);
                 const dayEvents = eventsByDay.get(key) ?? [];
 
@@ -490,7 +490,7 @@ function FragmentRow({
               blocked
                 ? 'bg-slate-100/60 cursor-not-allowed'
                 : isSelected
-                  ? 'bg-gradient-to-br from-primary-200 to-cyan-100 hover:from-primary-300 hover:to-cyan-200 border-l-2 border-l-primary-500'
+                  ? 'bg-gradient-to-br from-primary-200 to-cyan-100 hover:from-primary-300 hover:to-cyan-200'
                   : 'bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-cyan-50/30'
             }`}
             style={{ height: `${ROW_HEIGHT}px` }}
