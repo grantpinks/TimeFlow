@@ -491,23 +491,25 @@ export function DueDatePicker({
                 onChange={(e) => handleTimeChange(e.target.value)}
               />
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowCalendarPicker(true)}
                   className="flex-shrink-0 p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 hover:bg-gradient-to-br hover:from-primary-50 hover:to-cyan-50 dark:hover:from-primary-900/20 dark:hover:to-cyan-900/20 hover:border-primary-400 dark:hover:border-primary-500 transition-all duration-200 shadow-sm hover:shadow-md"
                   title="Pick from calendar"
+                  aria-label="Pick time from calendar"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </button>
-                <Input
-                  className="flex-1"
-                  type="time"
-                  value={selectedTime}
-                  onChange={(e) => handleTimeChange(e.target.value)}
-                />
+                <div className="min-w-[140px] flex-1">
+                  <Input
+                    type="time"
+                    value={selectedTime}
+                    onChange={(e) => handleTimeChange(e.target.value)}
+                  />
+                </div>
               </div>
             )}
           </div>
