@@ -96,173 +96,187 @@ export async function grantIdentityXp(params: {
 }): Promise<GrantXpResult> {
   const { userId, identityId, reason, sourceId, userTimeZone } = params;
 
-  // 1. Load identity
-  const identity = await prisma.identity.findFirst({
-    where: { id: identityId, userId },
-    select: {
-      xp: true,
-      level: true,
-      stage: true,
-      xpThisPeriod: true,
-      xpCapResetAt: true,
-      currentStreak: true,
-      trialState: true,
-      trialWindowDays: true,
-      trialTargetDays: true,
-      trialActiveDays: true,
-      trialCheckpointDays: true,
-      trialStartedAt: true,
-      trialEndsAt: true,
-    },
-  });
-
-  if (!identity) {
-    return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false };
-  }
-
-  const nowUtc = DateTime.utc();
-  const todayStr = nowUtc.setZone(userTimeZone).toISODate()!;
-  const dayStart = DateTime.fromISO(todayStr, { zone: userTimeZone }).startOf('day').toUTC().toJSDate();
-  const dayEnd   = DateTime.fromISO(todayStr, { zone: userTimeZone }).endOf('day').toUTC().toJSDate();
-
-  // 2. XP cap reset — rolling 24h window from first action of the day
-  let xpThisPeriod = identity.xpThisPeriod;
-  let xpCapResetAt = identity.xpCapResetAt;
-  const capExpired = !xpCapResetAt || nowUtc.toJSDate() > xpCapResetAt;
-  if (capExpired) {
-    xpThisPeriod = 0;
-    xpCapResetAt = nowUtc.plus({ hours: 24 }).toJSDate();
-  }
-
-  // 3. Count all XP events for this identity today (for diminishing returns)
-  const todayEventCount = await prisma.identityXpEvent.count({
-    where: {
-      identityId,
-      createdAt: { gte: dayStart, lte: dayEnd },
-    },
-  });
-
-  // 4. Compute per-action XP with diminishing returns
-  // todayEventCount is 0-based index of this (about-to-be-recorded) action
-  let baseXp: number;
-  if (todayEventCount >= 6) {
-    baseXp = 0; // 7th+ action
-  } else if (todayEventCount >= 3) {
-    baseXp = Math.floor(BASE_XP / 2); // 4th–6th action: 50%
-  } else {
-    baseXp = BASE_XP; // 1st–3rd action: full
-  }
-
-  const streak = identity.currentStreak;
-  const consistencyBonus = baseXp > 0 && streak >= 2 ? Math.min(streak, 7) * 2 : 0;
-  const rawXp = baseXp + consistencyBonus;
-  const capRemaining = Math.max(0, DAILY_CAP - xpThisPeriod);
-  const xpGranted = Math.min(rawXp, capRemaining);
-
-  // 5. Zero-XP early return — still audit-log the event
-  if (xpGranted === 0) {
-    await prisma.identityXpEvent.create({
-      data: {
-        identityId,
-        userId,
-        xpAmount: 0,
-        reason,
-        metadata: { sourceId },
+  const result = await prisma.$transaction(async (tx) => {
+    // 1. Load identity
+    const identity = await tx.identity.findFirst({
+      where: { id: identityId, userId },
+      select: {
+        xp: true,
+        level: true,
+        stage: true,
+        xpThisPeriod: true,
+        xpCapResetAt: true,
+        currentStreak: true,
+        trialState: true,
+        trialWindowDays: true,
+        trialTargetDays: true,
+        trialActiveDays: true,
+        trialCheckpointDays: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
       },
     });
-    return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false };
-  }
 
-  // 6. Accumulate XP
-  const newXp = identity.xp + xpGranted;
-  const newXpThisPeriod = xpThisPeriod + xpGranted;
+    if (!identity) {
+      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false };
+    }
 
-  // 7. Recompute level
-  const oldLevel = identity.level;
-  const newLevel = computeLevel(newXp);
-  const leveledUp = newLevel > oldLevel;
+    const nowUtc = DateTime.utc();
+    const todayStr = nowUtc.setZone(userTimeZone).toISODate()!;
+    const dayStart = DateTime.fromISO(todayStr, { zone: userTimeZone }).startOf('day').toUTC().toJSDate();
+    const dayEnd   = DateTime.fromISO(todayStr, { zone: userTimeZone }).endOf('day').toUTC().toJSDate();
 
-  // 8. Detect stage transition
-  const oldStage = identity.stage as IdentityStage;
-  const newStage = computeStage(newLevel);
-  const stageChanged = newStage !== oldStage;
+    // 2. XP cap reset — rolling 24h window from first action of the day
+    let xpThisPeriod = identity.xpThisPeriod;
+    let xpCapResetAt = identity.xpCapResetAt;
+    const capExpired = !xpCapResetAt || nowUtc.toJSDate() > xpCapResetAt;
+    let capChanged = false;
+    let newCapResetAt: Date | null = null;
+    if (capExpired) {
+      xpThisPeriod = 0;
+      newCapResetAt = nowUtc.plus({ hours: 24 }).toJSDate();
+      xpCapResetAt = newCapResetAt;
+      capChanged = true;
+    }
 
-  // 9. Auto-start mastery trial when hitting a stage-gate level
-  let trialStarted = false;
-  let trialState = identity.trialState as string;
-  let trialWindowDays = identity.trialWindowDays;
-  let trialTargetDays = identity.trialTargetDays;
-  let trialActiveDays = identity.trialActiveDays;
-  let trialCheckpointDays = identity.trialCheckpointDays;
-  let trialStartedAt: Date | null = identity.trialStartedAt ?? null;
-  let trialEndsAt: Date | null = identity.trialEndsAt ?? null;
-
-  if (leveledUp && STAGE_GATE_LEVELS.has(newLevel) && trialState !== 'Active' && trialState !== 'Passed') {
-    const config = getTrialConfig(newStage);
-    trialState = 'Active';
-    trialWindowDays = config.windowDays;
-    trialTargetDays = config.targetDays;
-    trialActiveDays = 0;
-    trialCheckpointDays = 0;
-    trialStartedAt = nowUtc.toJSDate();
-    trialEndsAt = nowUtc.plus({ days: config.windowDays }).toJSDate();
-    trialStarted = true;
-  }
-
-  // 10. Update trial active days — only on first XP-granting action today
-  if (trialState === 'Active') {
-    const todayPositiveEventCount = await prisma.identityXpEvent.count({
+    // 3. Count all XP events for this identity today (for diminishing returns)
+    const todayEventCount = await tx.identityXpEvent.count({
       where: {
         identityId,
-        xpAmount: { gt: 0 },
         createdAt: { gte: dayStart, lte: dayEnd },
       },
     });
-    const isFirstQualifyingActionToday = todayPositiveEventCount === 0;
 
-    if (isFirstQualifyingActionToday) {
-      // 11. Soft-fail: detect 3+ consecutive missed days before today
-      const lastPositiveEvent = await prisma.identityXpEvent.findFirst({
+    // 4. Compute per-action XP with diminishing returns
+    // todayEventCount is 0-based index of this (about-to-be-recorded) action
+    let baseXp: number;
+    if (todayEventCount >= 6) {
+      baseXp = 0; // 7th+ action
+    } else if (todayEventCount >= 3) {
+      baseXp = Math.floor(BASE_XP / 2); // 4th–6th action: 50%
+    } else {
+      baseXp = BASE_XP; // 1st–3rd action: full
+    }
+
+    const streak = identity.currentStreak;
+    const consistencyBonus = baseXp > 0 && streak >= 2 ? Math.min(streak, 7) * 2 : 0;
+    const rawXp = baseXp + consistencyBonus;
+    const capRemaining = Math.max(0, DAILY_CAP - xpThisPeriod);
+    const xpGranted = Math.min(rawXp, capRemaining);
+
+    // 5. Persist cap reset even if no XP will be earned (avoids stale xpCapResetAt in DB)
+    if (rawXp === 0 && capChanged) {
+      await tx.identity.update({
+        where: { id: identityId },
+        data: { xpThisPeriod: 0, xpCapResetAt: newCapResetAt },
+      });
+    }
+
+    // 6. Zero-XP early return — still audit-log the event
+    if (xpGranted === 0) {
+      await tx.identityXpEvent.create({
+        data: {
+          identityId,
+          userId,
+          xpAmount: 0,
+          reason,
+          metadata: { sourceId },
+        },
+      });
+      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false };
+    }
+
+    // 7. Accumulate XP
+    const newXp = identity.xp + xpGranted;
+    const newXpThisPeriod = xpThisPeriod + xpGranted;
+
+    // 8. Recompute level
+    const oldLevel = identity.level;
+    const newLevel = computeLevel(newXp);
+    const leveledUp = newLevel > oldLevel;
+
+    // 9. Detect stage transition
+    const oldStage = identity.stage as IdentityStage;
+    const newStage = computeStage(newLevel);
+    const stageChanged = newStage !== oldStage;
+
+    // 10. Auto-start mastery trial when hitting a stage-gate level
+    let trialStarted = false;
+    let trialState: IdentityTrialState = identity.trialState as IdentityTrialState;
+    let trialWindowDays = identity.trialWindowDays;
+    let trialTargetDays = identity.trialTargetDays;
+    let trialActiveDays = identity.trialActiveDays;
+    let trialCheckpointDays = identity.trialCheckpointDays;
+    let trialStartedAt: Date | null = identity.trialStartedAt ?? null;
+    let trialEndsAt: Date | null = identity.trialEndsAt ?? null;
+
+    if (leveledUp && STAGE_GATE_LEVELS.has(newLevel) && trialState !== 'Active' && trialState !== 'Passed') {
+      const config = getTrialConfig(newStage);
+      trialState = 'Active';
+      trialWindowDays = config.windowDays;
+      trialTargetDays = config.targetDays;
+      trialActiveDays = 0;
+      trialCheckpointDays = 0;
+      trialStartedAt = nowUtc.toJSDate();
+      trialEndsAt = nowUtc.plus({ days: config.windowDays }).toJSDate();
+      trialStarted = true;
+    }
+
+    // 11. Update trial active days — only on first XP-granting action today
+    if (trialState === 'Active') {
+      const todayPositiveEventCount = await tx.identityXpEvent.count({
         where: {
           identityId,
           xpAmount: { gt: 0 },
-          createdAt: { lt: dayStart },
+          createdAt: { gte: dayStart, lte: dayEnd },
         },
-        orderBy: { createdAt: 'desc' },
       });
+      const isFirstQualifyingActionToday = todayPositiveEventCount === 0;
 
-      if (lastPositiveEvent) {
-        const lastEventDay = DateTime.fromJSDate(lastPositiveEvent.createdAt).setZone(userTimeZone).toISODate()!;
-        const todayDt = DateTime.fromISO(todayStr, { zone: userTimeZone });
-        const lastDt  = DateTime.fromISO(lastEventDay, { zone: userTimeZone });
-        const daysDiff = Math.round(todayDt.diff(lastDt, 'days').days);
-        const missedDays = daysDiff - 1; // days between last active day and today
+      if (isFirstQualifyingActionToday) {
+        // 12. Soft-fail: detect 3+ consecutive missed days before today
+        const lastPositiveEvent = await tx.identityXpEvent.findFirst({
+          where: {
+            identityId,
+            xpAmount: { gt: 0 },
+            createdAt: { lt: dayStart },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
 
-        if (missedDays >= 3) {
-          // Soft fail: checkpoint current progress, restart accumulator
-          trialCheckpointDays = Math.max(trialCheckpointDays, trialActiveDays);
-          trialActiveDays = 0;
-          // Trial remains Active — user keeps going from checkpoint
+        if (lastPositiveEvent) {
+          const lastEventDay = DateTime.fromJSDate(lastPositiveEvent.createdAt).setZone(userTimeZone).toISODate()!;
+          const todayDt = DateTime.fromISO(todayStr, { zone: userTimeZone });
+          const lastDt  = DateTime.fromISO(lastEventDay, { zone: userTimeZone });
+          const daysDiff = Math.round(todayDt.diff(lastDt, 'days').days);
+          const missedDays = daysDiff - 1; // days between last active day and today
+
+          if (missedDays >= 3) {
+            // Soft fail: checkpoint current progress, restart accumulator
+            trialCheckpointDays = Math.max(trialCheckpointDays, trialActiveDays);
+            trialActiveDays = 0;
+            // Trial remains Active — user keeps going from checkpoint
+          }
+        }
+
+        trialActiveDays = Math.min(trialActiveDays + 1, trialWindowDays);
+      }
+
+      // 13. Check trial pass/fail
+      if (trialActiveDays >= trialTargetDays) {
+        trialState = 'Passed';
+      } else if (trialEndsAt && nowUtc.toJSDate() > trialEndsAt) {
+        // Window expired — pass if either accumulator or checkpoint reached target
+        if (trialActiveDays >= trialTargetDays || trialCheckpointDays >= trialTargetDays) {
+          trialState = 'Passed';
+        } else {
+          trialState = 'Failed';
         }
       }
-
-      trialActiveDays = Math.min(trialActiveDays + 1, trialWindowDays);
     }
 
-    // 12. Check trial pass/fail
-    if (trialActiveDays >= trialTargetDays) {
-      trialState = 'Passed';
-    } else if (trialEndsAt && nowUtc.toJSDate() > trialEndsAt) {
-      // Window expired — fail only if neither accumulator nor checkpoint reached target
-      if (trialActiveDays < trialTargetDays && trialCheckpointDays < trialTargetDays) {
-        trialState = 'Failed';
-      }
-    }
-  }
-
-  // 13. Persist atomically
-  await prisma.$transaction([
-    prisma.identity.update({
+    // 14. Persist atomically
+    await tx.identity.update({
       where: { id: identityId },
       data: {
         xp: newXp,
@@ -278,9 +292,10 @@ export async function grantIdentityXp(params: {
         trialStartedAt,
         trialEndsAt,
       },
-    }),
-    // 14. Append XP event record
-    prisma.identityXpEvent.create({
+    });
+
+    // 15. Append XP event record
+    await tx.identityXpEvent.create({
       data: {
         identityId,
         userId,
@@ -288,16 +303,18 @@ export async function grantIdentityXp(params: {
         reason,
         metadata: { sourceId },
       },
-    }),
-  ]);
+    });
 
-  // 15. Return summary
-  return {
-    xpGranted,
-    leveledUp,
-    newStage: stageChanged ? newStage : null,
-    trialStarted,
-  };
+    // 16. Return summary
+    return {
+      xpGranted,
+      leveledUp,
+      newStage: stageChanged ? newStage : null,
+      trialStarted,
+    };
+  });
+
+  return result;
 }
 
 // ── DTO builder ─────────────────────────────────────────────────────────────

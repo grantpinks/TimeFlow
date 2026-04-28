@@ -77,9 +77,9 @@ function makeIdentity(overrides: Partial<{
 beforeEach(() => {
   vi.clearAllMocks();
 
-  // Default: transaction resolves the array
-  (prisma.$transaction as any).mockImplementation((ops: Promise<any>[]) =>
-    Promise.all(ops)
+  // Default: interactive transaction — pass mock prisma as the tx argument
+  (prisma.$transaction as any).mockImplementation(
+    async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)
   );
   // Default: update and create return empty objects
   (prisma.identity.update as any).mockResolvedValue({});
@@ -697,6 +697,19 @@ describe('grantIdentityXp — edge cases', () => {
       xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false,
     });
     expect(prisma.identity.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects when identityXpEvent.create throws', async () => {
+    (prisma.identity.findFirst as any).mockResolvedValue(makeIdentity());
+    (prisma.identityXpEvent.count as any).mockResolvedValue(0);
+    (prisma.identityXpEvent.create as any).mockRejectedValue(new Error('DB write error'));
+
+    await expect(
+      grantIdentityXp({
+        userId: USER_ID, identityId: IDENTITY_ID,
+        reason: 'task_completed', sourceId: 'task-1', userTimeZone: TZ,
+      })
+    ).rejects.toThrow('DB write error');
   });
 });
 
