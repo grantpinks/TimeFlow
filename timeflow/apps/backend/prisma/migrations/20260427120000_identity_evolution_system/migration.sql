@@ -13,6 +13,9 @@ BEGIN
   END IF;
 END $$;
 
+-- AlterTable User: add identityEvolutionEnabled feature flag
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "identityEvolutionEnabled" BOOLEAN NOT NULL DEFAULT false;
+
 -- AlterTable Identity: add evolution fields
 ALTER TABLE "Identity"
   ADD COLUMN IF NOT EXISTS "level"               INTEGER NOT NULL DEFAULT 1,

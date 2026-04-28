@@ -25,6 +25,28 @@ export async function registerIdentityRoutes(server: FastifyInstance) {
     identityController.runMigration
   );
 
+  // Identity Evolution (feature-flagged) — must be registered before /:id
+  server.get(
+    '/identities/evolution-state',
+    { preHandler: requireAuth },
+    identityController.getEvolutionState
+  );
+  server.get(
+    '/identities/flow-customization',
+    { preHandler: requireAuth },
+    identityController.getFlowCustomization
+  );
+  server.post(
+    '/identities/flow-customization',
+    { preHandler: requireAuth },
+    identityController.updateFlowCustomization
+  );
+  server.get(
+    '/identities/:id/unlocks',
+    { preHandler: requireAuth },
+    identityController.getIdentityUnlocks
+  );
+
   // CRUD
   server.get(
     '/identities/:id',

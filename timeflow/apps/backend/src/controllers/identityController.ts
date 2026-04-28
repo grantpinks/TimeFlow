@@ -8,6 +8,9 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import * as identityService from '../services/identityService.js';
+import { getEvolutionState as getEvolutionStateService } from '../services/identityEvolutionService.js';
+import { prisma } from '../config/prisma.js';
+import { UNLOCK_CATALOG } from '../config/identityUnlockCatalog.js';
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -32,6 +35,13 @@ const updateIdentitySchema = z.object({
 
 const reorderSchema = z.object({
   identityIds: z.array(z.string().cuid()).min(1),
+});
+
+const flowCustomizationSchema = z.object({
+  selectedStageVariant: z.string().optional(),
+  selectedPalette: z.string().optional(),
+  selectedEmote: z.string().optional(),
+  selectedAnimationPack: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -163,4 +173,123 @@ export async function getProgress(
 
   const progress = await identityService.getIdentityProgress(userId, date);
   return reply.send(progress);
+}
+
+// ---------------------------------------------------------------------------
+// Identity Evolution endpoints (feature-flagged)
+// ---------------------------------------------------------------------------
+
+async function requireEvolutionEnabled(userId: string, reply: FastifyReply): Promise<boolean> {
+  const user = await prisma.user.findFirst({
+    where: { id: userId },
+    select: { identityEvolutionEnabled: true },
+  });
+  if (!user?.identityEvolutionEnabled) {
+    reply.status(403).send({ error: 'Identity evolution not enabled for this account.' });
+    return false;
+  }
+  return true;
+}
+
+export async function getEvolutionState(request: FastifyRequest, reply: FastifyReply) {
+  const userId = (request.user as any).id;
+  if (!(await requireEvolutionEnabled(userId, reply))) return;
+
+  const identities = await prisma.identity.findMany({
+    where: { userId },
+    select: { id: true },
+  });
+
+  const states = await Promise.all(
+    identities.map((identity) => getEvolutionStateService(userId, identity.id))
+  );
+  return reply.send(states);
+}
+
+export async function getFlowCustomization(request: FastifyRequest, reply: FastifyReply) {
+  const userId = (request.user as any).id;
+
+  const customization = await prisma.userFlowCustomization.findUnique({ where: { userId } });
+
+  if (!customization) {
+    const defaults = {
+      selectedStageVariant: 'default',
+      selectedPalette: 'default',
+      selectedEmote: 'default',
+      selectedAnimationPack: 'default',
+    };
+    return reply.send(defaults);
+  }
+
+  return reply.send(customization);
+}
+
+export async function updateFlowCustomization(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const userId = (request.user as any).id;
+  if (!(await requireEvolutionEnabled(userId, reply))) return;
+
+  const parsed = flowCustomizationSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const updated = await prisma.userFlowCustomization.upsert({
+    where: { userId },
+    create: {
+      userId,
+      selectedStageVariant: parsed.data.selectedStageVariant ?? 'default',
+      selectedPalette: parsed.data.selectedPalette ?? 'default',
+      selectedEmote: parsed.data.selectedEmote ?? 'default',
+      selectedAnimationPack: parsed.data.selectedAnimationPack ?? 'default',
+    },
+    update: {
+      ...(parsed.data.selectedStageVariant !== undefined && {
+        selectedStageVariant: parsed.data.selectedStageVariant,
+      }),
+      ...(parsed.data.selectedPalette !== undefined && {
+        selectedPalette: parsed.data.selectedPalette,
+      }),
+      ...(parsed.data.selectedEmote !== undefined && {
+        selectedEmote: parsed.data.selectedEmote,
+      }),
+      ...(parsed.data.selectedAnimationPack !== undefined && {
+        selectedAnimationPack: parsed.data.selectedAnimationPack,
+      }),
+    },
+  });
+
+  return reply.send(updated);
+}
+
+export async function getIdentityUnlocks(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const userId = (request.user as any).id;
+  if (!(await requireEvolutionEnabled(userId, reply))) return;
+
+  const identityId = request.params.id;
+
+  const unlockRows = await prisma.identityUnlock.findMany({
+    where: { identityId, userId },
+    orderBy: { grantedAt: 'asc' },
+  });
+
+  const catalogMap = new Map(UNLOCK_CATALOG.map((e) => [e.unlockKey, e]));
+
+  const unlocks = unlockRows.map((row) => {
+    const catalog = catalogMap.get(row.unlockKey);
+    return {
+      unlockKey: row.unlockKey,
+      unlockType: row.unlockType,
+      grantedAt: row.grantedAt.toISOString(),
+      displayName: catalog?.displayName ?? row.unlockKey,
+      description: catalog?.description ?? '',
+    };
+  });
+
+  return reply.send({ unlocks });
 }

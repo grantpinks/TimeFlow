@@ -14,6 +14,9 @@ import type {
   ReorderIdentitiesRequest,
   IdentityProgressResponse,
   IdentityCompletionEngagement,
+  IdentityEvolutionState,
+  FlowCustomizationState,
+  IdentityUnlockItem,
   UserRestDaysResponse,
   UserRestDay,
   UserProfile,
@@ -1818,6 +1821,25 @@ export async function runIdentityMigration(): Promise<{ success: boolean; identi
 export async function getIdentityProgress(date?: string): Promise<IdentityProgressResponse> {
   const qs = date ? `?date=${date}` : '';
   return request<IdentityProgressResponse>(`/identities/progress${qs}`);
+}
+
+export function getEvolutionState(): Promise<IdentityEvolutionState[]> {
+  return request<IdentityEvolutionState[]>('/identities/evolution-state');
+}
+
+export function getFlowCustomization(): Promise<FlowCustomizationState> {
+  return request<FlowCustomizationState>('/identities/flow-customization');
+}
+
+export function updateFlowCustomization(body: Partial<FlowCustomizationState>): Promise<FlowCustomizationState> {
+  return request<FlowCustomizationState>('/identities/flow-customization', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function getIdentityUnlocks(identityId: string): Promise<{ unlocks: IdentityUnlockItem[] }> {
+  return request<{ unlocks: IdentityUnlockItem[] }>(`/identities/${identityId}/unlocks`);
 }
 
 // ===== Analytics API Functions =====
