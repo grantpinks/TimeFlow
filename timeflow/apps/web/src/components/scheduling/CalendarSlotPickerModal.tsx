@@ -329,8 +329,6 @@ export function CalendarSlotPickerModal({
 
                   const startHour = visibleStart.getHours();
                   const startMinute = visibleStart.getMinutes();
-                  const endHour = visibleEnd.getHours();
-                  const endMinute = visibleEnd.getMinutes();
 
                   const startSlotIndex = (startHour - START_HOUR) * 2 + (startMinute >= 30 ? 1 : 0);
                   const totalMinutes = (visibleEnd.getTime() - visibleStart.getTime()) / 60000;
