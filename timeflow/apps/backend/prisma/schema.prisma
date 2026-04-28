@@ -89,6 +89,7 @@ model User {
   subscriptions            Subscription[]
   usageLogs                UsageLog[]
   restDays                 UserRestDay[]
+  flowCustomization        UserFlowCustomization?
 }
 
 model Task {
@@ -203,9 +204,25 @@ model Identity {
   currentStreak        Int @default(0)
   longestStreak        Int @default(0)
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tasks  Task[]
-  habits Habit[]
+  // Identity Evolution System (Sprint 17+)
+  level             Int                @default(1)
+  stage             IdentityStage      @default(Seed)
+  xp                Int                @default(0)
+  xpThisPeriod      Int                @default(0)
+  xpCapResetAt      DateTime?
+  trialState        IdentityTrialState @default(NotStarted)
+  trialWindowDays   Int                @default(0)
+  trialTargetDays   Int                @default(0)
+  trialActiveDays   Int                @default(0)
+  trialCheckpointDays Int              @default(0)
+  trialStartedAt    DateTime?
+  trialEndsAt       DateTime?
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks    Task[]
+  habits   Habit[]
+  unlocks  IdentityUnlock[]
+  xpEvents IdentityXpEvent[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -223,6 +240,55 @@ model UserRestDay {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, localDate])
+  @@index([userId])
+}
+
+/// Cosmetic/mechanic unlocks earned by an identity through XP and stage progression
+model IdentityUnlock {
+  id              String        @id @default(cuid())
+  identityId      String
+  userId          String
+  unlockKey       String        // e.g. "flow_palette_ocean", "flow_emote_celebrate", "mechanic_focus_assist"
+  unlockType      String        // flow_palette | flow_emote | flow_accessory | flow_animation_pack | flow_stage_form | mechanic
+  grantedAt       DateTime      @default(now())
+  grantedByStage  IdentityStage?
+  grantedByLevel  Int?
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@unique([identityId, unlockKey])
+  @@index([identityId])
+  @@index([userId])
+}
+
+/// Auditable log of every XP grant for an identity
+model IdentityXpEvent {
+  id         String   @id @default(cuid())
+  identityId String
+  userId     String
+  xpAmount   Int      // Can be negative for corrections
+  reason     String   // e.g. "habit_completion", "task_completion", "streak_bonus"
+  metadata   Json?    // Additional context (habitId, taskId, etc.)
+  createdAt  DateTime @default(now())
+
+  identity Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@index([identityId, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// Per-user global Flow Companion customization choices
+model UserFlowCustomization {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  selectedStageVariant String   @default("default")
+  selectedPalette      String   @default("default")
+  selectedEmote        String   @default("default")
+  selectedAnimationPack String  @default("default")
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
@@ -283,6 +349,22 @@ enum SchedulingJobStatus {
   COMPLETED
   CANCELLED
   FAILED
+}
+
+enum IdentityStage {
+  Seed
+  Builder
+  Disciplined
+  Embodied
+  FutureSelf
+}
+
+enum IdentityTrialState {
+  NotStarted
+  Active
+  CheckpointFailed
+  Passed
+  Failed
 }
 
 model SchedulingJob {

@@ -88,6 +88,7 @@ export default function CalendarPage() {
   const [calendarDate, setCalendarDate] = useState(new Date());
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
+  const [previewHabit, setPreviewHabit] = useState<{ habitId: string; title: string; durationMinutes: number } | null>(null);
   const [previewSlot, setPreviewSlot] = useState<{ start: Date; end: Date } | null>(null);
   const [isSchedulingFromPreview, setIsSchedulingFromPreview] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -218,14 +219,14 @@ export default function CalendarPage() {
   // Handle Escape key to cancel preview
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && previewTask) {
+      if (e.key === 'Escape' && (previewTask || previewHabit)) {
         handleCancelPreview();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [previewTask]);
+  }, [previewTask, previewHabit]);
 
   const unscheduledTasks = tasks.filter((t) => t.status === 'unscheduled');
 
@@ -1110,22 +1111,40 @@ export default function CalendarPage() {
   };
 
   const handleConfirmSchedule = async () => {
-    if (!previewTask || !previewSlot) return;
+    if (!previewSlot) return;
 
     setIsSchedulingFromPreview(true);
 
     try {
-      await handleRescheduleTask(
-        previewTask.id,
-        previewSlot.start,
-        previewSlot.end
-      );
+      if (previewTask) {
+        await handleRescheduleTask(
+          previewTask.id,
+          previewSlot.start,
+          previewSlot.end
+        );
+      } else if (previewHabit) {
+        const result = await api.commitHabitSchedule([
+          {
+            habitId: previewHabit.habitId,
+            startDateTime: previewSlot.start.toISOString(),
+            endDateTime: previewSlot.end.toISOString(),
+          },
+        ]);
+        const prog = result.progress?.[0];
+        if (prog?.status === 'failed') {
+          throw new Error(prog.error || 'Could not schedule habit');
+        }
+        await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+      } else {
+        return;
+      }
 
       // Clear preview on success
       setPreviewTask(null);
+      setPreviewHabit(null);
       setPreviewSlot(null);
     } catch (error) {
-      console.error('Failed to schedule task:', error);
+      console.error('Failed to confirm schedule:', error);
       // Keep preview open on error so user can retry
     } finally {
       setIsSchedulingFromPreview(false);
@@ -1134,6 +1153,7 @@ export default function CalendarPage() {
 
   const handleCancelPreview = () => {
     setPreviewTask(null);
+    setPreviewHabit(null);
     setPreviewSlot(null);
   };
 
@@ -1206,19 +1226,29 @@ export default function CalendarPage() {
           setMessage({ type: 'success', text: 'Habit rescheduled successfully!' });
         }
       } else if (details.kind === 'habit' && 'habitId' in details && details.habitId) {
-        const result = await api.commitHabitSchedule([
-          {
+        if (preferInstant) {
+          const result = await api.commitHabitSchedule([
+            {
+              habitId: details.habitId,
+              startDateTime: window.start.toISOString(),
+              endDateTime: window.end.toISOString(),
+            },
+          ]);
+          const prog = result.progress?.[0];
+          if (prog?.status === 'failed') {
+            throw new Error(prog.error || 'Could not schedule habit');
+          }
+          await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+          showToast('Habit scheduled', 'success', { durationMs: 5000 });
+        } else {
+          setPreviewTask(null);
+          setPreviewHabit({
             habitId: details.habitId,
-            startDateTime: window.start.toISOString(),
-            endDateTime: window.end.toISOString(),
-          },
-        ]);
-        const prog = result.progress?.[0];
-        if (prog?.status === 'failed') {
-          throw new Error(prog.error || 'Could not schedule habit');
+            title: details.title,
+            durationMinutes: details.durationMinutes,
+          });
+          setPreviewSlot({ start: window.start, end: window.end });
         }
-        await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
-        showToast('Habit scheduled', 'success', { durationMs: 5000 });
       } else if (details.fromCalendar && details.taskId) {
         await api.rescheduleTask(
           details.taskId,
@@ -1537,6 +1567,51 @@ export default function CalendarPage() {
           onCancel={handleCancelPreview}
           isScheduling={isSchedulingFromPreview}
         />
+      )}
+      {previewHabit && previewSlot && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">
+              Schedule Habit Preview
+            </h3>
+            <div className="space-y-3 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Habit</label>
+                <p className="text-base text-slate-900">{previewHabit.title}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Duration</label>
+                <p className="text-base text-slate-900">{previewHabit.durationMinutes} minutes</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Scheduled Time</label>
+                <p className="text-base text-slate-900">
+                  {previewSlot.start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}{' '}
+                  at{' '}
+                  {previewSlot.start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}{' '}
+                  -{' '}
+                  {previewSlot.end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelPreview}
+                disabled={isSchedulingFromPreview}
+                className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSchedule}
+                disabled={isSchedulingFromPreview}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSchedulingFromPreview ? 'Scheduling...' : 'Complete'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <AnimatePresence>

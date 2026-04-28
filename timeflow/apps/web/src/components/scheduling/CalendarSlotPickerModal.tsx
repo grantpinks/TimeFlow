@@ -306,6 +306,49 @@ export function CalendarSlotPickerModal({
 
             {/* Event overlays */}
             <div className="absolute inset-0 pointer-events-none" style={{ top: '40px', left: '80px' }}>
+              {/* Selected task preview */}
+              {selectedStart && selectedEnd && (() => {
+                const selectedDayIndex = visibleDays.findIndex(
+                  (day) => startOfDay(day).getTime() === startOfDay(selectedStart).getTime()
+                );
+
+                if (selectedDayIndex === -1) return null;
+
+                const startHour = selectedStart.getHours();
+                const startMinute = selectedStart.getMinutes();
+                const totalMinutes = (selectedEnd.getTime() - selectedStart.getTime()) / 60000;
+                const heightSlots = totalMinutes / SLOT_MINUTES;
+
+                const startSlotIndex = (startHour - START_HOUR) * 2 + (startMinute >= 30 ? 1 : 0);
+                const top = startSlotIndex * ROW_HEIGHT;
+                const height = heightSlots * ROW_HEIGHT;
+                const colWidth = `calc((100% - 0px) / ${visibleDays.length})`;
+                const left = `calc(${colWidth} * ${selectedDayIndex})`;
+
+                return (
+                  <div
+                    key="selected-task-preview"
+                    className="absolute px-1 py-0.5 pointer-events-none"
+                    style={{
+                      top: `${top}px`,
+                      left,
+                      width: colWidth,
+                      height: `${height}px`,
+                      zIndex: 20,
+                    }}
+                  >
+                    <div className="h-full w-full rounded-md bg-gradient-to-br from-green-500/90 to-emerald-600/90 border-2 border-green-600 shadow-lg px-1.5 py-1 overflow-hidden animate-pulse">
+                      <p className="text-[10px] font-bold text-white leading-tight truncate">
+                        {title}
+                      </p>
+                      <p className="text-[9px] text-white/90 truncate">
+                        {formatTime(selectedStart)} - {formatTime(selectedEnd)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {visibleDays.flatMap((day, dayIdx) => {
                 const key = localDayKey(day);
                 const dayEvents = eventsByDay.get(key) ?? [];
@@ -401,36 +444,45 @@ export function CalendarSlotPickerModal({
           </div>
         </div>
 
-        <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between">
-          <div className="text-sm text-slate-700">
-            {selectedStart && selectedEnd
-              ? `Selected: ${formatDayLabel(selectedStart)} • ${formatTime(selectedStart)} - ${formatTime(selectedEnd)}`
-              : 'No slot selected'}
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={!selectedStart || !selectedEnd}
-              onClick={() => {
-                if (selectedStart && selectedEnd) {
-                  onSelect(selectedStart, selectedEnd);
-                }
-              }}
-              className={`px-3 py-1.5 text-sm rounded-md ${
-                selectedStart && selectedEnd
-                  ? 'bg-primary-600 text-white hover:bg-primary-700'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-              }`}
-            >
-              Use this slot
-            </button>
+        <div className="px-4 py-4 border-t border-slate-200 bg-slate-50/50">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="text-sm font-medium text-slate-700">
+              {selectedStart && selectedEnd ? (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide">Selected Time</span>
+                  <span className="text-base font-semibold text-slate-900">
+                    {formatDayLabel(selectedStart)} • {formatTime(selectedStart)} - {formatTime(selectedEnd)}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-slate-500">Click a free slot to schedule "{title}"</span>
+              )}
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 sm:flex-none px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!selectedStart || !selectedEnd}
+                onClick={() => {
+                  if (selectedStart && selectedEnd) {
+                    onSelect(selectedStart, selectedEnd);
+                  }
+                }}
+                className={`flex-1 sm:flex-none px-6 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  selectedStart && selectedEnd
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg shadow-green-500/30 hover:shadow-xl hover:scale-105'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                Schedule Here
+              </button>
+            </div>
           </div>
         </div>
       </div>

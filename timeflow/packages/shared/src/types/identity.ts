@@ -98,3 +98,49 @@ export interface UserRestDaysResponse {
   restDaysUsedInRolling30: number;
   restDaysLimit: number;
 }
+
+// ============================================================================
+// Identity Evolution System (Sprint 17+)
+// ============================================================================
+
+export type IdentityStage = 'Seed' | 'Builder' | 'Disciplined' | 'Embodied' | 'FutureSelf';
+
+export type IdentityTrialState = 'NotStarted' | 'Active' | 'CheckpointFailed' | 'Passed' | 'Failed';
+
+export interface IdentityEvolutionState {
+  identityId: string;
+  level: number;
+  stage: IdentityStage;
+  xp: number;
+  /** Derived: how much XP until next level */
+  xpToNextLevel: number;
+  trialState: IdentityTrialState;
+  trialActiveDays: number;
+  trialTargetDays: number;
+  trialWindowDays: number;
+  trialCheckpointDays: number;
+  trialStartedAt: string | null;
+  trialEndsAt: string | null;
+}
+
+export interface IdentityUnlockItem {
+  id: string;
+  /** Which identity this unlock belongs to */
+  identityId: string;
+  userId: string;
+  /** e.g. "flow_palette_ocean", "flow_emote_celebrate", "mechanic_focus_assist" */
+  unlockKey: string;
+  unlockType: 'flow_palette' | 'flow_emote' | 'flow_accessory' | 'flow_animation_pack' | 'flow_stage_form' | 'mechanic';
+  grantedAt: string;
+  grantedByStage: IdentityStage | null;
+  grantedByLevel: number | null;
+}
+
+export interface FlowCustomizationState {
+  userId: string;
+  selectedStageVariant: string;
+  selectedPalette: string;
+  selectedEmote: string;
+  selectedAnimationPack: string;
+  updatedAt: string;
+}
