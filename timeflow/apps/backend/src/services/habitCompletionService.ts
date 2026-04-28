@@ -117,7 +117,11 @@ export async function markScheduledHabitComplete(
     if (habit?.identityId) {
       identityEngagement = await identityEngagementService.recordIdentityCompletion(
         userId,
-        habit.identityId
+        habit.identityId,
+        {
+          reason: 'habit_completed',
+          sourceId: completion.id,
+        }
       );
     }
   }

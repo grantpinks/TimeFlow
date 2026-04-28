@@ -282,7 +282,11 @@ export async function completeTask(taskId: string, userId: string) {
 
   let identityEngagement: identityEngagementService.RecordCompletionResult | null = null;
   if (task.identityId) {
-    identityEngagement = await identityEngagementService.recordIdentityCompletion(userId, task.identityId);
+    identityEngagement = await identityEngagementService.recordIdentityCompletion(
+      userId,
+      task.identityId,
+      { reason: 'task_completed', sourceId: taskId }
+    );
   }
 
   return { task, identityEngagement };
