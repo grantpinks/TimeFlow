@@ -869,6 +869,85 @@ body.calendar-dnd-active .rbc-time-content .rbc-event.rbc-selected {
   animation: float 2s ease-in-out infinite;
 }
 
+/* Flow mascot — palette (CSS filters; assets unchanged) */
+.flow-mascot-palette-wrap {
+  line-height: 0;
+}
+
+.flow-mascot-palette-default {
+  filter: none;
+}
+
+.flow-mascot-palette-ocean {
+  filter: hue-rotate(168deg) saturate(1.12) brightness(1.02);
+}
+
+.flow-mascot-palette-ember {
+  filter: hue-rotate(-22deg) saturate(1.18) brightness(1.03);
+}
+
+.flow-mascot-palette-forest {
+  filter: hue-rotate(72deg) saturate(1.1) brightness(0.98);
+}
+
+.flow-mascot-palette-storm {
+  filter: hue-rotate(218deg) saturate(1.06) brightness(0.95);
+}
+
+.flow-mascot-palette-gold {
+  filter: hue-rotate(8deg) saturate(1.22) brightness(1.05);
+}
+
+.flow-mascot-palette-aurora {
+  filter: hue-rotate(275deg) saturate(1.14) brightness(1.04);
+}
+
+@keyframes flow-pack-zen {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes flow-pack-energetic {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  35% {
+    transform: translateY(-2px);
+  }
+
+  70% {
+    transform: translateY(1px);
+  }
+}
+
+.flow-mascot-pack-default .flow-mascot-img,
+.flow-mascot-pack-basic .flow-mascot-img {
+  animation: none;
+}
+
+.flow-mascot-pack-energetic .flow-mascot-img {
+  animation: flow-pack-energetic 1.4s ease-in-out infinite;
+}
+
+.flow-mascot-pack-zen .flow-mascot-img {
+  animation: flow-pack-zen 3.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-mascot-pack-energetic .flow-mascot-img,
+  .flow-mascot-pack-zen .flow-mascot-img {
+    animation: none !important;
+  }
+}
+
 /* Glow Pulse - Neon effect */
 @keyframes glow-pulse {
   0%, 100% {

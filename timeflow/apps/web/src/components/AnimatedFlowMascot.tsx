@@ -6,6 +6,7 @@
 
 'use client';
 
+import { useReducedMotion } from 'framer-motion';
 import { FlowMascot } from './FlowMascot';
 
 interface AnimatedFlowMascotProps {
@@ -21,6 +22,7 @@ export function AnimatedFlowMascot({
   animation = 'bounce',
   className = ''
 }: AnimatedFlowMascotProps) {
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const animationClasses = {
     bounce: 'animate-gentle-bounce',
     pulse: 'animate-pulse',
@@ -29,7 +31,8 @@ export function AnimatedFlowMascot({
     none: ''
   };
 
-  const animationClass = animation !== 'none' ? animationClasses[animation] : '';
+  const animationClass =
+    prefersReducedMotion || animation === 'none' ? '' : animationClasses[animation];
   const combinedClassName = `${animationClass} ${className}`.trim();
 
   return (

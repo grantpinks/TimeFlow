@@ -9,6 +9,7 @@ import { useCommandPalette } from './CommandPalette';
 import { ThemeToggle } from './ThemeToggle';
 import { useUser } from '../hooks/useUser';
 import { getGoogleAuthUrl } from '../lib/api';
+import { FlowCustomizationProvider } from './identity/FlowCustomizationProvider';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -201,7 +202,8 @@ export function Layout({ children }: LayoutProps) {
   }
 
   return (
-    <div className="min-h-screen app-shell flex">
+    <FlowCustomizationProvider>
+      <div className="min-h-screen app-shell flex">
       <div
         className={`fixed inset-0 bg-slate-900/40 transition-opacity md:hidden ${
           isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
@@ -473,6 +475,7 @@ export function Layout({ children }: LayoutProps) {
         </footer>
       </div>
     </div>
+    </FlowCustomizationProvider>
   );
 }
 

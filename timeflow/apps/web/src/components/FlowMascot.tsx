@@ -8,18 +8,27 @@
 'use client';
 
 import Image from 'next/image';
+import { useFlowCustomization } from '@/components/identity/FlowCustomizationProvider';
+import { normalizeMascotPackSlug, normalizePaletteSlug } from '@/lib/flowCustomization';
 
 interface FlowMascotProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   expression?: 'happy' | 'encouraging' | 'celebrating' | 'thinking' | 'guiding-up' | 'guiding-left' | 'guiding-right' | 'pointing-down';
   className?: string;
+  /** Optional palette override; otherwise reads identity Flow customization from context. */
+  palette?: string;
 }
 
 export function FlowMascot({
   size = 'md',
   expression = 'happy',
-  className = ''
+  className = '',
+  palette: paletteProp,
 }: FlowMascotProps) {
+  const { customization } = useFlowCustomization();
+  const palette = normalizePaletteSlug(paletteProp ?? customization.selectedPalette);
+  const pack = normalizeMascotPackSlug(customization.selectedAnimationPack);
+
   const sizeMap = {
     sm: 32,
     md: 48,
@@ -43,14 +52,18 @@ export function FlowMascot({
 
   const imageSrc = expressionMap[expression];
 
+  const wrapClass = `flow-mascot-palette-wrap inline-block flow-mascot-palette-${palette} flow-mascot-pack-${pack}`;
+
   return (
-    <Image
-      src={imageSrc}
-      alt={`Flow mascot ${expression}`}
-      width={dimension}
-      height={dimension}
-      className={`object-contain ${className}`}
-      priority
-    />
+    <span className={wrapClass}>
+      <Image
+        src={imageSrc}
+        alt={`Flow mascot ${expression}`}
+        width={dimension}
+        height={dimension}
+        className={`flow-mascot-img object-contain ${className}`}
+        priority
+      />
+    </span>
   );
 }

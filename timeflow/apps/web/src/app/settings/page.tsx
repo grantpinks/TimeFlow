@@ -6,6 +6,7 @@ import { Layout } from '@/components/Layout';
 import { useUser } from '@/hooks/useUser';
 import { SchedulingLinksPanel } from '@/components/SchedulingLinksPanel';
 import { MeetingManagerPanel } from '@/components/MeetingManagerPanel';
+import { FlowCustomizationPanel } from '@/components/identity/FlowCustomizationPanel';
 import * as api from '@/lib/api';
 import type { BillingSubscriptionStatus } from '@/lib/api';
 import { canShowAiDebugToggle, getAiDebugEnabled, setAiDebugEnabled as persistAiDebugEnabled } from '@/lib/aiDebug';
@@ -313,6 +314,12 @@ export default function SettingsPage() {
             {message.text}
           </div>
         )}
+
+        {user?.identityEvolutionEnabled ? (
+          <div className="mb-8">
+            <FlowCustomizationPanel evolutionEnabled />
+          </div>
+        ) : null}
 
         <form onSubmit={handleSave} className="space-y-8">
           {/* Google / Gmail connection */}
