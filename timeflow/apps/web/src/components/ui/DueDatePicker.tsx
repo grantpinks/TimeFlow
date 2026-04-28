@@ -286,10 +286,10 @@ export function DueDatePicker({
         <button
           type="button"
           onClick={() => handleQuickOption('today')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
             selectedOption === 'today'
-              ? 'bg-primary-600 text-white'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/30 scale-105'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-gradient-to-r hover:from-primary-50 hover:to-cyan-50 dark:hover:from-primary-900/20 dark:hover:to-cyan-900/20 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-600'
           }`}
         >
           Today
@@ -297,10 +297,10 @@ export function DueDatePicker({
         <button
           type="button"
           onClick={() => handleQuickOption('tomorrow')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
             selectedOption === 'tomorrow'
-              ? 'bg-primary-600 text-white'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/30 scale-105'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-gradient-to-r hover:from-primary-50 hover:to-cyan-50 dark:hover:from-primary-900/20 dark:hover:to-cyan-900/20 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-600'
           }`}
         >
           Tomorrow
@@ -308,10 +308,10 @@ export function DueDatePicker({
         <button
           type="button"
           onClick={() => handleQuickOption('in-2-days')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
             selectedOption === 'in-2-days'
-              ? 'bg-primary-600 text-white'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/30 scale-105'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-gradient-to-r hover:from-primary-50 hover:to-cyan-50 dark:hover:from-primary-900/20 dark:hover:to-cyan-900/20 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-600'
           }`}
         >
           In 2 Days
@@ -319,10 +319,10 @@ export function DueDatePicker({
         <button
           type="button"
           onClick={() => handleQuickOption('end-of-week')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
             selectedOption === 'end-of-week'
-              ? 'bg-primary-600 text-white'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/30 scale-105'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-gradient-to-r hover:from-primary-50 hover:to-cyan-50 dark:hover:from-primary-900/20 dark:hover:to-cyan-900/20 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-600'
           }`}
         >
           End of Week
@@ -330,10 +330,10 @@ export function DueDatePicker({
         <button
           type="button"
           onClick={() => handleQuickOption('custom')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+          className={`px-4 py-2 text-sm font-medium rounded-xl transition-all duration-200 ${
             selectedOption === 'custom'
-              ? 'bg-primary-600 text-white'
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md shadow-primary-500/30 scale-105'
+              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-gradient-to-r hover:from-primary-50 hover:to-cyan-50 dark:hover:from-primary-900/20 dark:hover:to-cyan-900/20 border border-slate-200 dark:border-slate-700 hover:border-primary-300 dark:hover:border-primary-600'
           }`}
         >
           Custom
@@ -342,7 +342,7 @@ export function DueDatePicker({
           <button
             type="button"
             onClick={handleClear}
-            className="px-3 py-1.5 text-sm rounded-md bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+            className="px-4 py-2 text-sm font-medium rounded-xl bg-white dark:bg-slate-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 hover:border-red-300 dark:hover:border-red-600 transition-all duration-200"
           >
             Clear
           </button>
@@ -351,7 +351,7 @@ export function DueDatePicker({
 
       {/* Time preset options for quick date selections */}
       {selectedOption && selectedOption !== 'custom' && (
-        <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+        <div className="space-y-3 p-4 bg-gradient-to-br from-slate-50 to-primary-50/20 dark:from-slate-900/50 dark:to-primary-900/10 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
           <Label>Time</Label>
           <div className="flex flex-wrap gap-2">
             {useFixedClockPresets ? (
@@ -359,10 +359,10 @@ export function DueDatePicker({
                 <button
                   type="button"
                   onClick={() => handleTimePreset('at-9am')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-9am'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   9:00 AM
@@ -370,10 +370,10 @@ export function DueDatePicker({
                 <button
                   type="button"
                   onClick={() => handleTimePreset('at-12pm')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-12pm'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   12:00 PM
@@ -381,10 +381,10 @@ export function DueDatePicker({
                 <button
                   type="button"
                   onClick={() => handleTimePreset('at-6pm')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-6pm'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   6:00 PM
@@ -392,10 +392,10 @@ export function DueDatePicker({
                 <button
                   type="button"
                   onClick={() => handleTimePreset('at-9pm')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-9pm'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   9:00 PM
@@ -406,10 +406,10 @@ export function DueDatePicker({
                 <button
                   type="button"
                   onClick={() => handleTimePreset('in-1-hour')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'in-1-hour'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   In 1 Hour
@@ -417,10 +417,10 @@ export function DueDatePicker({
                 <button
                   type="button"
                   onClick={() => handleTimePreset('in-4-hours')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'in-4-hours'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   In 4 Hours
@@ -428,10 +428,10 @@ export function DueDatePicker({
                 <button
                   type="button"
                   onClick={() => handleTimePreset('eod')}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                  className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'eod'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                      ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                      : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   End of Day
@@ -441,10 +441,10 @@ export function DueDatePicker({
             <button
               type="button"
               onClick={() => handleTimePreset('custom-time')}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                 timePreset === 'custom-time'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
+                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 border border-slate-200 dark:border-slate-700'
               }`}
             >
               Custom Time
@@ -466,7 +466,7 @@ export function DueDatePicker({
 
       {/* Custom date and time picker */}
       {showCustomPicker && (
-        <div className="space-y-3 p-3 bg-slate-50 rounded-md border border-slate-200">
+        <div className="space-y-3 p-4 bg-gradient-to-br from-slate-50 to-primary-50/20 dark:from-slate-900/50 dark:to-primary-900/10 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
           <div>
             <Label>Date</Label>
             <Input
@@ -491,16 +491,19 @@ export function DueDatePicker({
                 onChange={(e) => handleTimeChange(e.target.value)}
               />
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowCalendarPicker(true)}
-                  className="px-3 py-2 text-sm rounded-md border border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+                  className="flex-shrink-0 p-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-primary-600 dark:text-primary-400 hover:bg-gradient-to-br hover:from-primary-50 hover:to-cyan-50 dark:hover:from-primary-900/20 dark:hover:to-cyan-900/20 hover:border-primary-400 dark:hover:border-primary-500 transition-all duration-200 shadow-sm hover:shadow-md"
+                  title="Pick from calendar"
                 >
-                  Pick from calendar…
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
                 </button>
                 <Input
-                  className="max-w-[140px]"
+                  className="flex-1"
                   type="time"
                   value={selectedTime}
                   onChange={(e) => handleTimeChange(e.target.value)}
