@@ -12,10 +12,11 @@
  */
 
 import { DateTime } from 'luxon';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import type { IdentityEvolutionState, IdentityStage, IdentityTrialState } from '@timeflow/shared';
 import type { IdentityStage as PrismaIdentityStage } from '@prisma/client';
-import { UNLOCK_CATALOG } from '../config/identityUnlockCatalog.js';
+import { UNLOCK_CATALOG, getUnlocksForEvent } from '../config/identityUnlockCatalog.js';
 
 export type { IdentityStage, IdentityTrialState };
 
@@ -100,7 +101,15 @@ export async function grantIdentityXp(params: {
   const { userId, identityId, reason, sourceId, userTimeZone } = params;
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Load identity
+    // 1. Serialize concurrent grants per identity (Postgres row lock)
+    const locked = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM "Identity" WHERE id = ${identityId} AND "userId" = ${userId} FOR UPDATE
+    `;
+    if (locked.length === 0) {
+      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false, newUnlocks: [] };
+    }
+
+    // 2. Load identity (row is locked until transaction commits)
     const identity = await tx.identity.findFirst({
       where: { id: identityId, userId },
       select: {
@@ -129,7 +138,7 @@ export async function grantIdentityXp(params: {
     const dayStart = DateTime.fromISO(todayStr, { zone: userTimeZone }).startOf('day').toUTC().toJSDate();
     const dayEnd   = DateTime.fromISO(todayStr, { zone: userTimeZone }).endOf('day').toUTC().toJSDate();
 
-    // 2. XP cap reset — rolling 24h window from first action of the day
+    // 3. XP cap reset — rolling 24h window from first action of the day
     let xpThisPeriod = identity.xpThisPeriod;
     let xpCapResetAt = identity.xpCapResetAt;
     const capExpired = !xpCapResetAt || nowUtc.toJSDate() > xpCapResetAt;
@@ -142,7 +151,7 @@ export async function grantIdentityXp(params: {
       capChanged = true;
     }
 
-    // 3. Count all XP events for this identity today (for diminishing returns)
+    // 4. Count all XP events for this identity today (for diminishing returns)
     const todayEventCount = await tx.identityXpEvent.count({
       where: {
         identityId,
@@ -150,7 +159,7 @@ export async function grantIdentityXp(params: {
       },
     });
 
-    // 4. Compute per-action XP with diminishing returns
+    // 5. Compute per-action XP with diminishing returns
     // todayEventCount is 0-based index of this (about-to-be-recorded) action
     let baseXp: number;
     if (todayEventCount >= 6) {
@@ -167,7 +176,7 @@ export async function grantIdentityXp(params: {
     const capRemaining = Math.max(0, DAILY_CAP - xpThisPeriod);
     const xpGranted = Math.min(rawXp, capRemaining);
 
-    // 5. Persist cap reset even if no XP will be earned (avoids stale xpCapResetAt in DB)
+    // 6. Persist cap reset even if no XP will be earned (avoids stale xpCapResetAt in DB)
     if (rawXp === 0 && capChanged) {
       await tx.identity.update({
         where: { id: identityId },
@@ -175,7 +184,7 @@ export async function grantIdentityXp(params: {
       });
     }
 
-    // 6. Zero-XP early return — still audit-log the event
+    // 7. Zero-XP early return — still audit-log the event
     if (xpGranted === 0) {
       await tx.identityXpEvent.create({
         data: {
@@ -189,21 +198,21 @@ export async function grantIdentityXp(params: {
       return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false, newUnlocks: [] };
     }
 
-    // 7. Accumulate XP
+    // 8. Accumulate XP
     const newXp = identity.xp + xpGranted;
     const newXpThisPeriod = xpThisPeriod + xpGranted;
 
-    // 8. Recompute level
+    // 9. Recompute level
     const oldLevel = identity.level;
     const newLevel = computeLevel(newXp);
     const leveledUp = newLevel > oldLevel;
 
-    // 9. Detect stage transition
+    // 10. Detect stage transition
     const oldStage = identity.stage as IdentityStage;
     const newStage = computeStage(newLevel);
     const stageChanged = newStage !== oldStage;
 
-    // 10. Auto-start mastery trial when hitting a stage-gate level
+    // 11. Auto-start mastery trial when hitting a stage-gate level
     let trialStarted = false;
     let trialState: IdentityTrialState = identity.trialState as IdentityTrialState;
     let trialWindowDays = identity.trialWindowDays;
@@ -225,7 +234,7 @@ export async function grantIdentityXp(params: {
       trialStarted = true;
     }
 
-    // 11. Update trial active days — only on first XP-granting action today
+    // 12. Update trial active days — only on first XP-granting action today
     if (trialState === 'Active') {
       const todayPositiveEventCount = await tx.identityXpEvent.count({
         where: {
@@ -237,7 +246,7 @@ export async function grantIdentityXp(params: {
       const isFirstQualifyingActionToday = todayPositiveEventCount === 0;
 
       if (isFirstQualifyingActionToday) {
-        // 12. Soft-fail: detect 3+ consecutive missed days before today
+        // 13. Soft-fail: detect 3+ consecutive missed days before today
         const lastPositiveEvent = await tx.identityXpEvent.findFirst({
           where: {
             identityId,
@@ -265,7 +274,7 @@ export async function grantIdentityXp(params: {
         trialActiveDays = Math.min(trialActiveDays + 1, trialWindowDays);
       }
 
-      // 13. Check trial pass/fail
+      // 14. Check trial pass/fail
       if (trialActiveDays >= trialTargetDays) {
         trialState = 'Passed';
       } else if (trialEndsAt && nowUtc.toJSDate() > trialEndsAt) {
@@ -278,7 +287,7 @@ export async function grantIdentityXp(params: {
       }
     }
 
-    // 14. Persist atomically
+    // 15. Persist atomically
     await tx.identity.update({
       where: { id: identityId },
       data: {
@@ -297,7 +306,7 @@ export async function grantIdentityXp(params: {
       },
     });
 
-    // 15. Grant unlocks for this level-up (idempotent upserts)
+    // 16. Grant unlocks for this level-up (idempotent upserts)
     // Stage-based unlocks are only granted when the stage actually changed to avoid
     // re-granting them on every level-up within the same stage.
     const unlocksToGrant = leveledUp
@@ -326,7 +335,7 @@ export async function grantIdentityXp(params: {
     void upsertResults; // results are unused; upserts are fire-and-forget within the tx
     const newUnlocks = unlocksToGrant.map((u) => u.unlockKey);
 
-    // 16. Append XP event record
+    // 17. Append XP event record
     await tx.identityXpEvent.create({
       data: {
         identityId,
@@ -337,7 +346,7 @@ export async function grantIdentityXp(params: {
       },
     });
 
-    // 17. Return summary
+    // 18. Return summary
     return {
       xpGranted,
       leveledUp,
@@ -350,13 +359,43 @@ export async function grantIdentityXp(params: {
   return result;
 }
 
+// ── Starter unlocks (new identities) ─────────────────────────────────────────
+
+/**
+ * Seeds level-1 + Seed-stage catalog unlocks for a newly created identity (idempotent upserts).
+ * Call from within the same Prisma transaction as `identity.create`.
+ */
+export async function seedStarterUnlocksForIdentity(
+  tx: Prisma.TransactionClient,
+  identityId: string,
+  userId: string
+): Promise<void> {
+  const unlocksToGrant = getUnlocksForEvent(1, 'Seed');
+  await Promise.all(
+    unlocksToGrant.map((unlock) =>
+      tx.identityUnlock.upsert({
+        where: { identityId_unlockKey: { identityId, unlockKey: unlock.unlockKey } },
+        create: {
+          identityId,
+          userId,
+          unlockKey: unlock.unlockKey,
+          unlockType: unlock.unlockType,
+          grantedByStage: unlock.grantedByStage as PrismaIdentityStage | null,
+          grantedByLevel: unlock.grantedByLevel ?? null,
+        },
+        update: {},
+      })
+    )
+  );
+}
+
 // ── DTO builder ─────────────────────────────────────────────────────────────
 
 export async function getEvolutionState(
   userId: string,
   identityId: string
 ): Promise<IdentityEvolutionState> {
-  const identity = await prisma.identity.findFirstOrThrow({
+  let identity = await prisma.identity.findFirstOrThrow({
     where: { id: identityId, userId },
     select: {
       xp: true,
@@ -373,6 +412,23 @@ export async function getEvolutionState(
       trialEndsAt: true,
     },
   });
+
+  // Reconcile expired mastery trials on read so Today/Habits are not stuck on Active forever
+  if (identity.trialState === 'Active' && identity.trialEndsAt) {
+    const now = new Date();
+    if (now > identity.trialEndsAt) {
+      const nextTrialState: IdentityTrialState =
+        identity.trialActiveDays >= identity.trialTargetDays ||
+        identity.trialCheckpointDays >= identity.trialTargetDays
+          ? 'Passed'
+          : 'Failed';
+      await prisma.identity.update({
+        where: { id: identityId },
+        data: { trialState: nextTrialState as any },
+      });
+      identity = { ...identity, trialState: nextTrialState as typeof identity.trialState };
+    }
+  }
 
   return {
     identityId,

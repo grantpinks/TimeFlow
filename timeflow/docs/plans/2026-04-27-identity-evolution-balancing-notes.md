@@ -49,6 +49,12 @@ Authoritative implementation lives in `apps/backend/src/services/identityEvoluti
 
 PostHog events (session-throttled where noted in `today` / `habits` pages): `identity.evolution.state_loaded`, `identity.evolution.hero_visible`, `identity.evolution.trial_checkpoint_visible`, `identity.evolution.habits_layout_visible`; reserved: `identity.flow_customization.saved` when customization save UI exists.
 
+## Concurrency and read model (2026-04-28)
+
+- **`grantIdentityXp`:** Opens each interactive transaction with `SELECT … FROM "Identity" … FOR UPDATE` on the identity row so concurrent completions for the same identity serialize; XP counts and `Identity.xp` stay consistent with `IdentityXpEvent` rows.
+- **Starter unlocks:** New identities get catalog entries for **level 1** and **Seed** via `seedStarterUnlocksForIdentity` inside `createIdentity` (same transaction as `identity.create`). **Existing** identities created before this behavior may have empty `IdentityUnlock` rows until a one-time backfill or the next manual grant.
+- **`getEvolutionState`:** If `trialState === Active` and `trialEndsAt` is in the past, the handler persists **Passed** or **Failed** (same rules as the XP path) so the API does not stay stuck on Active with no completions.
+
 ## Next balancing pass
 
 - Compare **median time-to-stage** vs. intended week/month cadence after internal dogfood.

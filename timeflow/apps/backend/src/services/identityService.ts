@@ -5,6 +5,7 @@
  */
 
 import { prisma } from '../config/prisma.js';
+import { seedStarterUnlocksForIdentity } from './identityEvolutionService.js';
 
 const IDENTITY_LIMIT = 5;
 
@@ -68,8 +69,12 @@ export async function createIdentity(input: CreateIdentityInput) {
   });
   const sortOrder = lastIdentity ? lastIdentity.sortOrder + 1 : 0;
 
-  return prisma.identity.create({
-    data: { userId, name: name.trim(), description, color, icon, sortOrder },
+  return prisma.$transaction(async (tx) => {
+    const identity = await tx.identity.create({
+      data: { userId, name: name.trim(), description, color, icon, sortOrder },
+    });
+    await seedStarterUnlocksForIdentity(tx, identity.id, userId);
+    return identity;
   });
 }
 

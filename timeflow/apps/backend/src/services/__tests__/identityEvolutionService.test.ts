@@ -14,6 +14,7 @@ import {
   xpToNextLevel,
   grantIdentityXp,
   getEvolutionState,
+  seedStarterUnlocksForIdentity,
 } from '../identityEvolutionService.js';
 
 // ── Mock Prisma ──────────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ vi.mock('../../config/prisma.js', () => ({
     identityUnlock: {
       upsert: vi.fn(),
     },
+    $queryRaw: vi.fn(),
     $transaction: vi.fn(),
   },
 }));
@@ -84,6 +86,8 @@ beforeEach(() => {
   (prisma.$transaction as any).mockImplementation(
     async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)
   );
+  // Row lock succeeds (identity exists)
+  (prisma.$queryRaw as any).mockResolvedValue([{ id: IDENTITY_ID }]);
   // Default: update, create, and upsert return empty objects
   (prisma.identity.update as any).mockResolvedValue({});
   (prisma.identityXpEvent.create as any).mockResolvedValue({ id: 'evt-1' });
@@ -769,7 +773,7 @@ describe('grantIdentityXp — newUnlocks', () => {
 
 describe('grantIdentityXp — edge cases', () => {
   it('returns zero result when identity not found', async () => {
-    (prisma.identity.findFirst as any).mockResolvedValue(null);
+    (prisma.$queryRaw as any).mockResolvedValueOnce([]);
 
     const result = await grantIdentityXp({
       userId: USER_ID, identityId: IDENTITY_ID,
@@ -780,6 +784,7 @@ describe('grantIdentityXp — edge cases', () => {
       xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false, newUnlocks: [],
     });
     expect(prisma.identity.update).not.toHaveBeenCalled();
+    expect(prisma.identity.findFirst).not.toHaveBeenCalled();
   });
 
   it('rejects when identityXpEvent.create throws', async () => {
@@ -801,8 +806,9 @@ describe('grantIdentityXp — edge cases', () => {
 describe('getEvolutionState', () => {
   it('assembles the full IdentityEvolutionState DTO', async () => {
     const trialStartedAt = new Date('2026-04-01T00:00:00Z');
-    const trialEndsAt    = new Date('2026-04-08T00:00:00Z');
-    const xpCapResetAt   = new Date('2026-04-02T12:00:00Z');
+    // Window must still be open at test run time or read-path reconciliation flips state
+    const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const xpCapResetAt = new Date('2026-04-02T12:00:00Z');
 
     (prisma.identity.findFirstOrThrow as any).mockResolvedValue({
       xp: 55,
@@ -861,5 +867,78 @@ describe('getEvolutionState', () => {
     expect(state.trialEndsAt).toBeNull();
     expect(state.xpCapResetAt).toBeNull();
     expect(state.xpToNextLevel).toBe(50); // 50 - 0 = 50
+    expect(prisma.identity.update).not.toHaveBeenCalled();
+  });
+
+  it('reconciles expired Active trial to Failed when below target', async () => {
+    const trialEndsAt = new Date(Date.now() - 60_000);
+    (prisma.identity.findFirstOrThrow as any).mockResolvedValue({
+      xp: 0,
+      level: 1,
+      stage: 'Seed',
+      xpThisPeriod: 0,
+      xpCapResetAt: null,
+      trialState: 'Active',
+      trialWindowDays: 14,
+      trialTargetDays: 10,
+      trialActiveDays: 3,
+      trialCheckpointDays: 2,
+      trialStartedAt: new Date('2026-04-01T00:00:00Z'),
+      trialEndsAt,
+    });
+
+    const state = await getEvolutionState(USER_ID, IDENTITY_ID);
+
+    expect(prisma.identity.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: IDENTITY_ID },
+        data: { trialState: 'Failed' },
+      })
+    );
+    expect(state.trialState).toBe('Failed');
+  });
+
+  it('reconciles expired Active trial to Passed when checkpoint reached target', async () => {
+    const trialEndsAt = new Date(Date.now() - 60_000);
+    (prisma.identity.findFirstOrThrow as any).mockResolvedValue({
+      xp: 0,
+      level: 1,
+      stage: 'Seed',
+      xpThisPeriod: 0,
+      xpCapResetAt: null,
+      trialState: 'Active',
+      trialWindowDays: 14,
+      trialTargetDays: 10,
+      trialActiveDays: 2,
+      trialCheckpointDays: 10,
+      trialStartedAt: new Date('2026-04-01T00:00:00Z'),
+      trialEndsAt,
+    });
+
+    const state = await getEvolutionState(USER_ID, IDENTITY_ID);
+
+    expect(prisma.identity.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { trialState: 'Passed' },
+      })
+    );
+    expect(state.trialState).toBe('Passed');
+  });
+});
+
+// ── seedStarterUnlocksForIdentity ───────────────────────────────────────────
+
+describe('seedStarterUnlocksForIdentity', () => {
+  it('upserts every level-1 and Seed-stage catalog entry', async () => {
+    const upsert = vi.fn().mockResolvedValue({});
+    const tx = { identityUnlock: { upsert } } as any;
+    await seedStarterUnlocksForIdentity(tx, IDENTITY_ID, USER_ID);
+    expect(upsert.mock.calls.length).toBeGreaterThan(0);
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { identityId_unlockKey: { identityId: IDENTITY_ID, unlockKey: 'flow_palette_default' } },
+        create: expect.objectContaining({ userId: USER_ID, identityId: IDENTITY_ID }),
+      })
+    );
   });
 });
