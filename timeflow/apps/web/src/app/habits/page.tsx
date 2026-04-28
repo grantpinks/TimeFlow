@@ -7,7 +7,14 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  Fragment,
+  type ReactNode,
+} from 'react';
 import { Layout } from '@/components/Layout';
 import { Panel, SectionHeader, LoadingSpinner } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
@@ -33,13 +40,49 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import Link from 'next/link';
-import type { Habit, HabitFrequency, TimeOfDay, Identity } from '@timeflow/shared';
+import type { Habit, HabitFrequency, TimeOfDay, Identity, IdentityEvolutionState } from '@timeflow/shared';
 import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
 import { IdentitySelector } from '@/components/identity/IdentitySelector';
 import * as api from '@/lib/api';
+import { ApiRequestError } from '@/lib/api';
+import { useUser } from '@/hooks/useUser';
+import { IdentityHabitGroup } from '@/components/habits/IdentityHabitGroup';
+import { IdentityProgressionSidebar } from '@/components/habits/IdentityProgressionSidebar';
+
+function resolveGroupIdentity(
+  key: string,
+  bucketHabits: Habit[],
+  identityList: Identity[]
+): { identity: Identity | null; isUnassigned: boolean } {
+  if (key === '__none__') {
+    return { identity: null, isUnassigned: true };
+  }
+  const found = identityList.find((i) => i.id === key);
+  if (found) return { identity: found, isUnassigned: false };
+  const m = bucketHabits.find((h) => h.identityId === key)?.identityModel;
+  if (m) {
+    return {
+      identity: {
+        id: m.id,
+        userId: '',
+        name: m.name,
+        description: null,
+        color: m.color,
+        icon: m.icon,
+        sortOrder: 0,
+        isActive: true,
+        createdAt: '',
+        updatedAt: '',
+      },
+      isUnassigned: false,
+    };
+  }
+  return { identity: null, isUnassigned: false };
+}
 
 export default function HabitsPage() {
   const { habits, loading, createHabit, updateHabit, deleteHabit } = useHabits();
+  const { user } = useUser();
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [localHabits, setLocalHabits] = useState<Habit[]>([]);
@@ -93,10 +136,36 @@ export default function HabitsPage() {
   // Identity filter state
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [identityFilter, setIdentityFilter] = useState<string | null>(null);
+  const [evolutionStates, setEvolutionStates] = useState<
+    IdentityEvolutionState[] | null | undefined
+  >(undefined);
 
   useEffect(() => {
     api.getIdentities().then(setIdentities).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!user?.identityEvolutionEnabled) {
+      setEvolutionStates(undefined);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await api.getEvolutionState();
+        if (!cancelled) setEvolutionStates(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (e instanceof ApiRequestError && e.status === 403) {
+          if (!cancelled) setEvolutionStates(null);
+        } else if (!cancelled) {
+          setEvolutionStates(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.identityEvolutionEnabled]);
 
   const filteredHabits = useMemo(() => {
     if (!identityFilter) return localHabits;
@@ -106,6 +175,73 @@ export default function HabitsPage() {
       (h) => h.identityId === identityFilter || h.identity === identity.name
     );
   }, [localHabits, identityFilter, identities]);
+
+  const evolutionByIdentityId = useMemo(() => {
+    const m = new Map<string, IdentityEvolutionState>();
+    if (Array.isArray(evolutionStates)) {
+      for (const s of evolutionStates) {
+        m.set(s.identityId, s);
+      }
+    }
+    return m;
+  }, [evolutionStates]);
+
+  const showEvolutionHabitsLayout =
+    user?.identityEvolutionEnabled === true &&
+    Array.isArray(evolutionStates) &&
+    evolutionStates.length > 0;
+
+  type HabitGroupRow = {
+    key: string;
+    identity: Identity | null;
+    isUnassigned: boolean;
+    habits: Habit[];
+  };
+
+  const habitGroups = useMemo((): HabitGroupRow[] => {
+    if (!showEvolutionHabitsLayout) {
+      return [];
+    }
+    const order: string[] = [];
+    const buckets = new Map<string, Habit[]>();
+    for (const h of filteredHabits) {
+      const raw = h.identityId;
+      const key = raw ?? '__none__';
+      if (!buckets.has(key)) {
+        buckets.set(key, []);
+        if (raw) order.push(key);
+      }
+      buckets.get(key)!.push(h);
+    }
+    const rows: HabitGroupRow[] = [];
+    for (const key of order) {
+      const bucket = buckets.get(key)!;
+      const { identity, isUnassigned } = resolveGroupIdentity(key, bucket, identities);
+      rows.push({ key, identity, isUnassigned, habits: bucket });
+    }
+    const un = buckets.get('__none__');
+    if (un?.length) {
+      rows.push({
+        key: '__none__',
+        identity: null,
+        isUnassigned: true,
+        habits: un,
+      });
+    }
+    return rows;
+  }, [showEvolutionHabitsLayout, filteredHabits, identities]);
+
+  const refreshEvolution = useCallback(async () => {
+    if (!user?.identityEvolutionEnabled) return;
+    try {
+      const data = await api.getEvolutionState();
+      setEvolutionStates(Array.isArray(data) ? data : []);
+    } catch (e) {
+      if (e instanceof ApiRequestError && e.status === 403) {
+        setEvolutionStates(null);
+      }
+    }
+  }, [user?.identityEvolutionEnabled]);
 
   const handleAdd = async () => {
     if (!newTitle.trim()) {
@@ -251,6 +387,196 @@ export default function HabitsPage() {
     }
   };
 
+  const renderHabitRow = (habit: Habit): ReactNode =>
+    editing === habit.id ? (
+      <Panel className="bg-slate-50">
+        <div className="space-y-3">
+          <input
+            type="text"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            className="w-full px-3 py-2 border border-slate-300 rounded"
+          />
+
+          <textarea
+            value={editDescription}
+            onChange={(e) => setEditDescription(e.target.value)}
+            rows={2}
+            placeholder="Description..."
+            className="w-full px-3 py-2 border border-slate-300 rounded resize-none"
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Frequency</label>
+              <select
+                value={editFrequency}
+                onChange={(e) => setEditFrequency(e.target.value as HabitFrequency)}
+                className="w-full px-3 py-2 border border-slate-300 rounded"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Time of Day</label>
+              <select
+                value={editTimeOfDay}
+                onChange={(e) => setEditTimeOfDay(e.target.value as TimeOfDay | '')}
+                className="w-full px-3 py-2 border border-slate-300 rounded"
+              >
+                <option value="">Any time</option>
+                <option value="morning">Morning</option>
+                <option value="afternoon">Afternoon</option>
+                <option value="evening">Evening</option>
+              </select>
+            </div>
+          </div>
+
+          {editFrequency === 'weekly' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Days of Week</label>
+              <div className="flex gap-2">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() =>
+                      toggleDayOfWeek(day.toLowerCase(), editDaysOfWeek, setEditDaysOfWeek)
+                    }
+                    className={`px-3 py-2 rounded border text-sm font-medium ${
+                      editDaysOfWeek.includes(day.toLowerCase())
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white text-slate-700 border-slate-300'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Duration (minutes)</label>
+              <input
+                type="number"
+                value={editDuration}
+                onChange={(e) => setEditDuration(Number(e.target.value))}
+                min="5"
+                max="240"
+                className="w-full px-3 py-2 border border-slate-300 rounded"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <select
+                value={editIsActive ? 'active' : 'inactive'}
+                onChange={(e) => setEditIsActive(e.target.value === 'active')}
+                className="w-full px-3 py-2 border border-slate-300 rounded"
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/90 via-white to-primary-50/40 p-4 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900 mb-1">Who is this habit for?</p>
+            <p className="text-xs text-slate-600 mb-3">
+              Link an identity for Today progress.{' '}
+              <Link href="/settings/identities" className="font-medium text-primary-600 hover:underline">
+                Manage identities
+              </Link>
+            </p>
+            <IdentitySelector
+              identities={identities}
+              value={editIdentityId || null}
+              onChange={(id) => setEditIdentityId(id ?? '')}
+              placeholder="Pick an identity…"
+              showLinkPrompt={!editIdentityId}
+            />
+          </div>
+
+          <div className="border-t border-slate-200 pt-4 mt-2">
+            <h3 className="font-semibold text-slate-800 text-sm mb-3">Extra motivation (optional)</h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Long-Term Goal <span className="text-xs text-slate-500">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editLongTermGoal}
+                  onChange={(e) => setEditLongTermGoal(e.target.value)}
+                  placeholder="e.g., Run a marathon by 2027"
+                  maxLength={200}
+                  className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Why This Matters <span className="text-xs text-slate-500">(optional)</span>
+                </label>
+                <textarea
+                  value={editWhyStatement}
+                  onChange={(e) => setEditWhyStatement(e.target.value)}
+                  placeholder="Your personal motivation..."
+                  maxLength={500}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded resize-none text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {editError && <p className="text-sm text-red-600">{editError}</p>}
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleSaveEdit}
+              className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => {
+                setEditing(null);
+                setEditError('');
+              }}
+              className="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Panel>
+    ) : (
+      <SortableHabitCard
+        habit={habit}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onQuickSchedule={(habitId, time) => {
+          console.log('Quick schedule:', habitId, time);
+          alert(`Scheduling ${habit.title} for ${time.toLocaleString()}`);
+        }}
+        isDisabled={isReordering}
+        identities={identities}
+        onIdentityLink={handleIdentityLink}
+        evolutionForHabit={
+          showEvolutionHabitsLayout && habit.identityId
+            ? evolutionByIdentityId.get(habit.identityId)
+            : undefined
+        }
+      />
+    );
+
   if (loading) {
     return (
       <Layout>
@@ -263,7 +589,9 @@ export default function HabitsPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div
+        className={`${showEvolutionHabitsLayout ? 'max-w-6xl' : 'max-w-4xl'} mx-auto space-y-6`}
+      >
         <SectionHeader
           title="Habits"
           subtitle="Track your progress and build better routines with Flow, your AI habits coach"
@@ -572,217 +900,60 @@ export default function HabitsPage() {
                 Drag to reorder by priority
               </p>
             </div>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+            <div
+              className={
+                showEvolutionHabitsLayout
+                  ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_min(300px,32vw)] lg:items-start lg:gap-6'
+                  : ''
+              }
             >
-              <SortableContext
-                items={filteredHabits.map((h) => h.id)}
-                strategy={verticalListSortingStrategy}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
               >
-                <div className="grid gap-4 overflow-visible">
-                {filteredHabits.map((habit) =>
-                  editing === habit.id ? (
-                    <Panel key={habit.id} className="bg-slate-50">
-                      <div className="space-y-3">
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded"
-                      />
-
-                      <textarea
-                        value={editDescription}
-                        onChange={(e) => setEditDescription(e.target.value)}
-                        rows={2}
-                        placeholder="Description..."
-                        className="w-full px-3 py-2 border border-slate-300 rounded resize-none"
-                      />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Frequency
-                          </label>
-                          <select
-                            value={editFrequency}
-                            onChange={(e) => setEditFrequency(e.target.value as HabitFrequency)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded"
+                <SortableContext
+                  items={filteredHabits.map((h) => h.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="grid min-w-0 gap-4 overflow-visible">
+                    {showEvolutionHabitsLayout
+                      ? habitGroups.map((group) => (
+                          <IdentityHabitGroup
+                            key={group.key}
+                            identity={group.identity}
+                            isUnassigned={group.isUnassigned}
+                            habits={group.habits}
+                            evolution={
+                              group.isUnassigned
+                                ? null
+                                : evolutionByIdentityId.get(group.key) ?? null
+                            }
                           >
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="custom">Custom</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Time of Day
-                          </label>
-                          <select
-                            value={editTimeOfDay}
-                            onChange={(e) => setEditTimeOfDay(e.target.value as TimeOfDay | '')}
-                            className="w-full px-3 py-2 border border-slate-300 rounded"
-                          >
-                            <option value="">Any time</option>
-                            <option value="morning">Morning</option>
-                            <option value="afternoon">Afternoon</option>
-                            <option value="evening">Evening</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {editFrequency === 'weekly' && (
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-2">
-                            Days of Week
-                          </label>
-                          <div className="flex gap-2">
-                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                              <button
-                                key={day}
-                                type="button"
-                                onClick={() =>
-                                  toggleDayOfWeek(day.toLowerCase(), editDaysOfWeek, setEditDaysOfWeek)
-                                }
-                                className={`px-3 py-2 rounded border text-sm font-medium ${
-                                  editDaysOfWeek.includes(day.toLowerCase())
-                                    ? 'bg-primary-600 text-white border-primary-600'
-                                    : 'bg-white text-slate-700 border-slate-300'
-                                }`}
-                              >
-                                {day}
-                              </button>
+                            {group.habits.map((habit) => (
+                              <Fragment key={habit.id}>{renderHabitRow(habit)}</Fragment>
                             ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Duration (minutes)
-                          </label>
-                          <input
-                            type="number"
-                            value={editDuration}
-                            onChange={(e) => setEditDuration(Number(e.target.value))}
-                            min="5"
-                            max="240"
-                            className="w-full px-3 py-2 border border-slate-300 rounded"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Status
-                          </label>
-                          <select
-                            value={editIsActive ? 'active' : 'inactive'}
-                            onChange={(e) => setEditIsActive(e.target.value === 'active')}
-                            className="w-full px-3 py-2 border border-slate-300 rounded"
-                          >
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-teal-200/80 bg-gradient-to-br from-teal-50/90 via-white to-primary-50/40 p-4 shadow-sm">
-                        <p className="text-sm font-semibold text-slate-900 mb-1">Who is this habit for?</p>
-                        <p className="text-xs text-slate-600 mb-3">
-                          Link an identity for Today progress.{' '}
-                          <Link href="/settings/identities" className="font-medium text-primary-600 hover:underline">
-                            Manage identities
-                          </Link>
-                        </p>
-                        <IdentitySelector
-                          identities={identities}
-                          value={editIdentityId || null}
-                          onChange={(id) => setEditIdentityId(id ?? '')}
-                          placeholder="Pick an identity…"
-                          showLinkPrompt={!editIdentityId}
-                        />
-                      </div>
-
-                      {/* Extra motivation */}
-                      <div className="border-t border-slate-200 pt-4 mt-2">
-                        <h3 className="font-semibold text-slate-800 text-sm mb-3">Extra motivation (optional)</h3>
-
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Long-Term Goal <span className="text-xs text-slate-500">(optional)</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={editLongTermGoal}
-                              onChange={(e) => setEditLongTermGoal(e.target.value)}
-                              placeholder="e.g., Run a marathon by 2027"
-                              maxLength={200}
-                              className="w-full px-3 py-2 border border-slate-300 rounded text-sm"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                              Why This Matters <span className="text-xs text-slate-500">(optional)</span>
-                            </label>
-                            <textarea
-                              value={editWhyStatement}
-                              onChange={(e) => setEditWhyStatement(e.target.value)}
-                              placeholder="Your personal motivation..."
-                              maxLength={500}
-                              rows={3}
-                              className="w-full px-3 py-2 border border-slate-300 rounded resize-none text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {editError && <p className="text-sm text-red-600">{editError}</p>}
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditing(null);
-                            setEditError('');
-                          }}
-                          className="px-4 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                      </div>
-                    </Panel>
-                  ) : (
-                    <SortableHabitCard
-                      key={habit.id}
-                      habit={habit}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      onQuickSchedule={(habitId, time) => {
-                        // TODO: Implement quick schedule API call
-                        console.log('Quick schedule:', habitId, time);
-                        alert(`Scheduling ${habit.title} for ${time.toLocaleString()}`);
-                      }}
-                      isDisabled={isReordering}
+                          </IdentityHabitGroup>
+                        ))
+                      : filteredHabits.map((habit) => (
+                          <Fragment key={habit.id}>{renderHabitRow(habit)}</Fragment>
+                        ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+              {showEvolutionHabitsLayout &&
+                Array.isArray(evolutionStates) &&
+                evolutionStates.length > 0 && (
+                  <div className="min-w-0 pt-4 lg:pt-0">
+                    <IdentityProgressionSidebar
+                      evolutionStates={evolutionStates}
                       identities={identities}
-                      onIdentityLink={handleIdentityLink}
+                      timeZone={user?.timeZone ?? 'UTC'}
+                      onRefresh={refreshEvolution}
                     />
-                  )
+                  </div>
                 )}
-              </div>
-            </SortableContext>
-          </DndContext>
+            </div>
           </>
         ) : (
           <Panel>

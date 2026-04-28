@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import type { Habit, Identity } from '@timeflow/shared';
+import type { Habit, Identity, IdentityEvolutionState } from '@timeflow/shared';
 import { TimeSlotPicker, type TimeSlot } from './TimeSlotPicker';
 import { IdentitySelector } from '@/components/identity/IdentitySelector';
 import { LoadingSpinner } from '@/components/ui';
@@ -21,6 +21,7 @@ interface HabitCardProps {
   /** When set, shows inline identity picker on each card */
   identities?: Identity[];
   onIdentityLink?: (habitId: string, identityId: string | null) => Promise<void>;
+  evolutionForHabit?: IdentityEvolutionState | null;
 }
 
 export function HabitCard({
@@ -30,6 +31,7 @@ export function HabitCard({
   onQuickSchedule,
   identities,
   onIdentityLink,
+  evolutionForHabit,
 }: HabitCardProps) {
   const [identitySaving, setIdentitySaving] = useState(false);
   const [showDateOptions, setShowDateOptions] = useState(false);
@@ -133,6 +135,9 @@ export function HabitCard({
     setShowDateOptions(false);
   };
 
+  const trialStageLabel = (stage: string) =>
+    stage === 'FutureSelf' ? 'Future self' : stage;
+
   const handleIdentityChange = async (identityId: string | null) => {
     if (!onIdentityLink) return;
     setIdentitySaving(true);
@@ -181,6 +186,13 @@ export function HabitCard({
                 </span>
               )}
             </div>
+            {evolutionForHabit?.trialState === 'Active' &&
+              habit.identityId &&
+              habit.identityId === evolutionForHabit.identityId && (
+                <p className="text-xs text-teal-800/90 mt-0.5" data-testid="habit-trial-contribution">
+                  Contributes to your {trialStageLabel(evolutionForHabit.stage)} trial
+                </p>
+              )}
 
             {/* Status badges */}
             <div className="flex items-center gap-2 flex-wrap">
