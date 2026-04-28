@@ -141,7 +141,11 @@ export function DueDatePicker({
     setShowCalendarPicker(false);
   };
 
-  const handleTimePreset = (preset: TimePreset) => {
+  const handleTimePreset = (preset: TimePreset, event?: React.MouseEvent) => {
+    // Prevent any default behavior and stop propagation
+    event?.preventDefault();
+    event?.stopPropagation();
+
     if (!selectedOption || selectedOption === 'custom') return;
 
     setTimePreset(preset);
@@ -358,7 +362,7 @@ export function DueDatePicker({
               <>
                 <button
                   type="button"
-                  onClick={() => handleTimePreset('at-9am')}
+                  onClick={(e) => handleTimePreset('at-9am', e)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-9am'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -369,7 +373,7 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTimePreset('at-12pm')}
+                  onClick={(e) => handleTimePreset('at-12pm', e)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-12pm'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -380,7 +384,7 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTimePreset('at-6pm')}
+                  onClick={(e) => handleTimePreset('at-6pm', e)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-6pm'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -391,7 +395,7 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTimePreset('at-9pm')}
+                  onClick={(e) => handleTimePreset('at-9pm', e)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-9pm'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -405,7 +409,7 @@ export function DueDatePicker({
               <>
                 <button
                   type="button"
-                  onClick={() => handleTimePreset('in-1-hour')}
+                  onClick={(e) => handleTimePreset('in-1-hour', e)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'in-1-hour'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -416,7 +420,7 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTimePreset('in-4-hours')}
+                  onClick={(e) => handleTimePreset('in-4-hours', e)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'in-4-hours'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -427,7 +431,7 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleTimePreset('eod')}
+                  onClick={(e) => handleTimePreset('eod', e)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'eod'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -440,7 +444,7 @@ export function DueDatePicker({
             )}
             <button
               type="button"
-              onClick={() => handleTimePreset('custom-time')}
+              onClick={(e) => handleTimePreset('custom-time', e)}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                 timePreset === 'custom-time'
                   ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
