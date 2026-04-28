@@ -37,12 +37,21 @@ const reorderSchema = z.object({
   identityIds: z.array(z.string().cuid()).min(1),
 });
 
-const flowCustomizationSchema = z.object({
-  selectedStageVariant: z.string().optional(),
-  selectedPalette: z.string().optional(),
-  selectedEmote: z.string().optional(),
-  selectedAnimationPack: z.string().optional(),
-});
+const CUSTOMIZATION_SLUG = z
+  .string()
+  .max(64)
+  .regex(/^[a-z0-9_]+$/, 'Must be a slug (lowercase letters, numbers, underscores)');
+
+const flowCustomizationSchema = z
+  .object({
+    selectedStageVariant: CUSTOMIZATION_SLUG.optional(),
+    selectedPalette: CUSTOMIZATION_SLUG.optional(),
+    selectedEmote: CUSTOMIZATION_SLUG.optional(),
+    selectedAnimationPack: CUSTOMIZATION_SLUG.optional(),
+  })
+  .refine((d) => Object.values(d).some((v) => v !== undefined), {
+    message: 'At least one field is required.',
+  });
 
 // ---------------------------------------------------------------------------
 // Handlers
@@ -209,25 +218,27 @@ export async function getEvolutionState(request: FastifyRequest, reply: FastifyR
 export async function getFlowCustomization(request: FastifyRequest, reply: FastifyReply) {
   const userId = (request.user as any).id;
 
-  const customization = await prisma.userFlowCustomization.findUnique({ where: { userId } });
+  const DEFAULTS = {
+    selectedStageVariant: 'default',
+    selectedPalette: 'default',
+    selectedEmote: 'default',
+    selectedAnimationPack: 'default',
+  };
 
-  if (!customization) {
-    const defaults = {
-      selectedStageVariant: 'default',
-      selectedPalette: 'default',
-      selectedEmote: 'default',
-      selectedAnimationPack: 'default',
-    };
-    return reply.send(defaults);
+  // When evolution is disabled, return safe defaults immediately — no DB access needed.
+  const user = await prisma.user.findFirst({
+    where: { id: userId },
+    select: { identityEvolutionEnabled: true },
+  });
+  if (!user?.identityEvolutionEnabled) {
+    return reply.send(DEFAULTS);
   }
 
-  return reply.send(customization);
+  const customization = await prisma.userFlowCustomization.findUnique({ where: { userId } });
+  return reply.send(customization ?? DEFAULTS);
 }
 
-export async function updateFlowCustomization(
-  request: FastifyRequest<{ Params: { id: string } }>,
-  reply: FastifyReply
-) {
+export async function updateFlowCustomization(request: FastifyRequest, reply: FastifyReply) {
   const userId = (request.user as any).id;
   if (!(await requireEvolutionEnabled(userId, reply))) return;
 

@@ -204,7 +204,29 @@ describe('identityEvolutionController', () => {
   // ---------------------------------------------------------------------------
 
   describe('getFlowCustomization', () => {
-    it('returns defaults when no record exists', async () => {
+    it('returns defaults immediately when identityEvolutionEnabled is false (no DB call to userFlowCustomization)', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: false,
+      } as any);
+
+      const request = makeRequest();
+      const reply = createControllerReply();
+
+      await getFlowCustomization(request, reply);
+
+      expect(prisma.userFlowCustomization.findUnique).not.toHaveBeenCalled();
+      expect(reply.send).toHaveBeenCalledWith({
+        selectedStageVariant: 'default',
+        selectedPalette: 'default',
+        selectedEmote: 'default',
+        selectedAnimationPack: 'default',
+      });
+    });
+
+    it('returns defaults when flag is on but no record exists', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: true,
+      } as any);
       vi.mocked(prisma.userFlowCustomization.findUnique).mockResolvedValue(null);
 
       const request = makeRequest();
@@ -220,7 +242,10 @@ describe('identityEvolutionController', () => {
       });
     });
 
-    it('returns the existing customization record when found', async () => {
+    it('returns the existing customization record when flag is on and record exists', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: true,
+      } as any);
       const existing = {
         id: 'custom-1',
         userId: USER_ID,
