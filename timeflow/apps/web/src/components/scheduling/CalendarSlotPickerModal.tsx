@@ -141,11 +141,20 @@ export function CalendarSlotPickerModal({
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const ev of blockedEvents) {
-      const start = new Date(ev.start);
-      const key = localDayKey(startOfDay(start));
-      const list = map.get(key) ?? [];
-      list.push(ev);
-      map.set(key, list);
+      const eventStart = new Date(ev.start);
+      const eventEnd = new Date(ev.end);
+
+      // Add event to all days it spans (handles overnight events)
+      let currentDay = startOfDay(eventStart);
+      const endDay = startOfDay(eventEnd);
+
+      while (currentDay <= endDay) {
+        const key = localDayKey(currentDay);
+        const list = map.get(key) ?? [];
+        list.push(ev);
+        map.set(key, list);
+        currentDay = addDays(currentDay, 1);
+      }
     }
     for (const list of map.values()) {
       list.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
@@ -305,17 +314,26 @@ export function CalendarSlotPickerModal({
                   const eventStart = new Date(event.start);
                   const eventEnd = new Date(event.end);
 
-                  // Calculate position
-                  const startHour = eventStart.getHours();
-                  const startMinute = eventStart.getMinutes();
-                  const endHour = eventEnd.getHours();
-                  const endMinute = eventEnd.getMinutes();
+                  // Clamp event to this specific day's visible hours
+                  const dayStart = new Date(day);
+                  dayStart.setHours(START_HOUR, 0, 0, 0);
+                  const dayEnd = new Date(day);
+                  dayEnd.setHours(END_HOUR, 0, 0, 0);
 
-                  // Skip if outside visible hours
-                  if (startHour < START_HOUR || endHour > END_HOUR) return null;
+                  // Determine visible portion of event on this day
+                  const visibleStart = new Date(Math.max(eventStart.getTime(), dayStart.getTime()));
+                  const visibleEnd = new Date(Math.min(eventEnd.getTime(), dayEnd.getTime()));
+
+                  // Skip if event doesn't overlap visible hours on this day
+                  if (visibleStart >= visibleEnd) return null;
+
+                  const startHour = visibleStart.getHours();
+                  const startMinute = visibleStart.getMinutes();
+                  const endHour = visibleEnd.getHours();
+                  const endMinute = visibleEnd.getMinutes();
 
                   const startSlotIndex = (startHour - START_HOUR) * 2 + (startMinute >= 30 ? 1 : 0);
-                  const totalMinutes = (eventEnd.getTime() - eventStart.getTime()) / 60000;
+                  const totalMinutes = (visibleEnd.getTime() - visibleStart.getTime()) / 60000;
                   const heightSlots = totalMinutes / SLOT_MINUTES;
 
                   const top = startSlotIndex * ROW_HEIGHT;
@@ -323,9 +341,13 @@ export function CalendarSlotPickerModal({
                   const colWidth = `calc((100% - 0px) / ${visibleDays.length})`;
                   const left = `calc(${colWidth} * ${dayIdx})`;
 
+                  // Show truncation indicators if event extends beyond visible hours
+                  const truncatedStart = eventStart < dayStart;
+                  const truncatedEnd = eventEnd > dayEnd;
+
                   return (
                     <div
-                      key={`${event.id ?? event.start}-overlay`}
+                      key={`${event.id ?? event.start}-${day.toISOString()}-overlay`}
                       className="absolute px-1 py-0.5 pointer-events-auto"
                       style={{
                         top: `${top}px`,
@@ -335,13 +357,21 @@ export function CalendarSlotPickerModal({
                         zIndex: 10,
                       }}
                     >
-                      <div className="h-full w-full rounded-md bg-gradient-to-br from-primary-500/90 to-cyan-600/90 border border-primary-600/50 shadow-sm px-1.5 py-1 overflow-hidden">
+                      <div className="h-full w-full rounded-md bg-gradient-to-br from-primary-500/90 to-cyan-600/90 border border-primary-600/50 shadow-sm px-1.5 py-1 overflow-hidden relative">
+                        {truncatedStart && (
+                          <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/60" />
+                        )}
                         <p className="text-[10px] font-semibold text-white leading-tight truncate">
+                          {truncatedStart && '⋯ '}
                           {event.summary || 'Untitled Event'}
+                          {truncatedEnd && ' ⋯'}
                         </p>
                         <p className="text-[9px] text-white/80 truncate">
                           {formatTime(eventStart)} - {formatTime(eventEnd)}
                         </p>
+                        {truncatedEnd && (
+                          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/60" />
+                        )}
                       </div>
                     </div>
                   );
