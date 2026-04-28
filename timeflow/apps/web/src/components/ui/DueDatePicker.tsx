@@ -141,13 +141,10 @@ export function DueDatePicker({
     setShowCalendarPicker(false);
   };
 
-  const handleTimePreset = (preset: TimePreset, event?: React.MouseEvent) => {
-    // Prevent any default behavior and stop propagation
-    event?.preventDefault();
-    event?.stopPropagation();
-
+  const handleTimePreset = (preset: TimePreset) => {
     if (!selectedOption || selectedOption === 'custom') return;
 
+    // Set the preset state immediately
     setTimePreset(preset);
 
     if (preset === 'custom-time') {
@@ -362,7 +359,11 @@ export function DueDatePicker({
               <>
                 <button
                   type="button"
-                  onClick={(e) => handleTimePreset('at-9am', e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTimePreset('at-9am');
+                  }}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-9am'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -373,7 +374,11 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => handleTimePreset('at-12pm', e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTimePreset('at-12pm');
+                  }}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-12pm'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -384,7 +389,11 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => handleTimePreset('at-6pm', e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTimePreset('at-6pm');
+                  }}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-6pm'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -395,7 +404,11 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => handleTimePreset('at-9pm', e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTimePreset('at-9pm');
+                  }}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'at-9pm'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -409,7 +422,11 @@ export function DueDatePicker({
               <>
                 <button
                   type="button"
-                  onClick={(e) => handleTimePreset('in-1-hour', e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTimePreset('in-1-hour');
+                  }}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'in-1-hour'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -420,7 +437,11 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => handleTimePreset('in-4-hours', e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTimePreset('in-4-hours');
+                  }}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'in-4-hours'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -431,7 +452,11 @@ export function DueDatePicker({
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => handleTimePreset('eod', e)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTimePreset('eod');
+                  }}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                     timePreset === 'eod'
                       ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
@@ -444,7 +469,11 @@ export function DueDatePicker({
             )}
             <button
               type="button"
-              onClick={(e) => handleTimePreset('custom-time', e)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleTimePreset('custom-time');
+              }}
               className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
                 timePreset === 'custom-time'
                   ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-md shadow-cyan-500/30'
