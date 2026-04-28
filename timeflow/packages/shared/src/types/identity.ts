@@ -138,6 +138,19 @@ export interface IdentityUnlockItem {
   grantedByLevel: number | null;
 }
 
+/**
+ * Frontend-consumable DTO mirroring a CatalogEntry from identityUnlockCatalog.
+ * Used to expose the full unlock catalog to the client without importing backend config.
+ */
+export interface UnlockCatalogEntry {
+  unlockKey: string;
+  unlockType: 'flow_palette' | 'flow_emote' | 'flow_accessory' | 'flow_animation_pack' | 'flow_stage_form' | 'mechanic';
+  grantedByStage: IdentityStage | null;
+  grantedByLevel: number | null;
+  displayName: string;
+  description: string;
+}
+
 export interface FlowCustomizationState {
   userId: string;
   selectedStageVariant: string;

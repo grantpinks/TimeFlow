@@ -30,6 +30,9 @@ vi.mock('../../config/prisma.js', () => ({
       findFirst: vi.fn(),
       create: vi.fn(),
     },
+    identityUnlock: {
+      upsert: vi.fn(),
+    },
     $transaction: vi.fn(),
   },
 }));
@@ -81,9 +84,10 @@ beforeEach(() => {
   (prisma.$transaction as any).mockImplementation(
     async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)
   );
-  // Default: update and create return empty objects
+  // Default: update, create, and upsert return empty objects
   (prisma.identity.update as any).mockResolvedValue({});
   (prisma.identityXpEvent.create as any).mockResolvedValue({ id: 'evt-1' });
+  (prisma.identityUnlock.upsert as any).mockResolvedValue({});
   // Default: no events today, no prior events
   (prisma.identityXpEvent.count as any).mockResolvedValue(0);
   (prisma.identityXpEvent.findFirst as any).mockResolvedValue(null);
@@ -694,7 +698,7 @@ describe('grantIdentityXp — edge cases', () => {
     });
 
     expect(result).toEqual({
-      xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false,
+      xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false, newUnlocks: [],
     });
     expect(prisma.identity.update).not.toHaveBeenCalled();
   });

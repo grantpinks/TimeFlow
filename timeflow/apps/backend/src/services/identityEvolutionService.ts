@@ -14,6 +14,7 @@
 import { DateTime } from 'luxon';
 import { prisma } from '../config/prisma.js';
 import type { IdentityEvolutionState, IdentityStage, IdentityTrialState } from '@timeflow/shared';
+import { getUnlocksForEvent } from '../config/identityUnlockCatalog.js';
 
 export type { IdentityStage, IdentityTrialState };
 
@@ -85,6 +86,7 @@ export interface GrantXpResult {
   leveledUp: boolean;
   newStage: IdentityStage | null;
   trialStarted: boolean;
+  newUnlocks: string[];
 }
 
 export async function grantIdentityXp(params: {
@@ -118,7 +120,7 @@ export async function grantIdentityXp(params: {
     });
 
     if (!identity) {
-      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false };
+      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false, newUnlocks: [] };
     }
 
     const nowUtc = DateTime.utc();
@@ -183,7 +185,7 @@ export async function grantIdentityXp(params: {
           metadata: { sourceId },
         },
       });
-      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false };
+      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false, newUnlocks: [] };
     }
 
     // 7. Accumulate XP
@@ -294,7 +296,28 @@ export async function grantIdentityXp(params: {
       },
     });
 
-    // 15. Append XP event record
+    // 15. Grant unlocks for this level-up (idempotent upserts)
+    const newUnlocks: string[] = [];
+    if (leveledUp) {
+      const unlocksToGrant = getUnlocksForEvent(newLevel, newStage);
+      for (const unlock of unlocksToGrant) {
+        await tx.identityUnlock.upsert({
+          where: { identityId_unlockKey: { identityId, unlockKey: unlock.unlockKey } },
+          create: {
+            identityId,
+            userId,
+            unlockKey: unlock.unlockKey,
+            unlockType: unlock.unlockType,
+            grantedByStage: (unlock.grantedByStage ?? null) as any,
+            grantedByLevel: unlock.grantedByLevel ?? null,
+          },
+          update: {},
+        });
+        newUnlocks.push(unlock.unlockKey);
+      }
+    }
+
+    // 16. Append XP event record
     await tx.identityXpEvent.create({
       data: {
         identityId,
@@ -305,12 +328,13 @@ export async function grantIdentityXp(params: {
       },
     });
 
-    // 16. Return summary
+    // 17. Return summary
     return {
       xpGranted,
       leveledUp,
       newStage: stageChanged ? newStage : null,
       trialStarted,
+      newUnlocks,
     };
   });
 
