@@ -9,4 +9,7 @@ coverage
 !.env.local.example
 pnpm-lock.yaml
 
+# TypeScript incremental build cache (per app)
+apps/web/tsconfig.tsbuildinfo
+
 

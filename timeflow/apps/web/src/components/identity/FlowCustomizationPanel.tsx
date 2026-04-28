@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import * as api from '@/lib/api';
+import { track } from '@/lib/analytics';
 import type { IdentityEvolutionState, IdentityUnlockItem } from '@timeflow/shared';
 import { FlowMascot } from '@/components/FlowMascot';
 import {
@@ -90,6 +91,7 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         const updated = await api.updateFlowCustomization(body);
         const next = mergeFlowCustomization(updated);
         setValues(next);
+        track('identity.flow_customization.saved', { fields: [key] });
         await refreshContext();
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Save failed.');
