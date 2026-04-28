@@ -5,6 +5,7 @@
 
 import { DateTime } from 'luxon';
 import { prisma } from '../config/prisma.js';
+import { grantIdentityXp } from './identityEvolutionService.js';
 
 export type MilestoneTier = 0 | 25 | 50 | 100;
 
@@ -113,7 +114,8 @@ export interface RecordCompletionResult {
  */
 export async function recordIdentityCompletion(
   userId: string,
-  identityId: string
+  identityId: string,
+  opts?: { reason?: string; sourceId?: string }
 ): Promise<RecordCompletionResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -123,7 +125,7 @@ export async function recordIdentityCompletion(
 
   const before = await prisma.identity.findFirst({
     where: { id: identityId, userId },
-    select: { milestoneTier: true, completionCountTotal: true },
+    select: { milestoneTier: true, completionCountTotal: true, isActive: true },
   });
   if (!before) {
     return { milestoneUnlocked: null, currentStreak: 0, completionCountTotal: 0 };
@@ -146,6 +148,17 @@ export async function recordIdentityCompletion(
 
   const milestoneUnlocked: MilestoneTier | null =
     newTierLevel > tierBefore ? (newTierLevel as MilestoneTier) : null;
+
+  // Fire-and-forget XP grant — only for active identities
+  if (before.isActive) {
+    grantIdentityXp({
+      userId,
+      identityId,
+      reason: opts?.reason ?? 'habit_completed',
+      sourceId: opts?.sourceId ?? 'unknown',
+      userTimeZone: tz,
+    }).catch((err) => console.error('XP grant failed', err));
+  }
 
   return {
     milestoneUnlocked,
