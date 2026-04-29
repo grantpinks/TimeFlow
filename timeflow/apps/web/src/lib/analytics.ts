@@ -117,6 +117,7 @@ export type AnalyticsEvent =
   // Identity evolution (PostHog; session-throttled in callers where noted)
   | { name: 'identity.evolution.state_loaded'; properties: { count: number } }
   | { name: 'identity.evolution.hero_visible'; properties: { source?: 'today' } }
+  | { name: 'identity.evolution.preview_visible'; properties: { source?: 'today' | 'habits' } }
   | { name: 'identity.evolution.trial_checkpoint_visible'; properties: {} }
   | { name: 'identity.evolution.habits_layout_visible'; properties: {} }
   | { name: 'identity.flow_customization.saved'; properties: { fields: string[] } };

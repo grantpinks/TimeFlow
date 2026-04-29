@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { DndContext, DragOverlay, PointerSensor, KeyboardSensor, useDraggable, useSensor, useSensors, DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Layout } from '@/components/Layout';
@@ -29,7 +29,6 @@ import { HabitsDueSoonWidget } from '@/components/today/HabitsDueSoonWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
-import { ApiRequestError } from '@/lib/api';
 import { buildRescueBlockForAtRisk } from '@/lib/habitRescue';
 import type { EmailCategoryConfig } from '@/lib/api';
 import { getCachedEmails, cacheEmails, clearEmailCache } from '@/lib/emailCache';
@@ -42,9 +41,9 @@ import type {
   EmailCategory,
   StreakAtRiskNotification,
   IdentityDayProgress,
-  IdentityEvolutionState,
   Habit,
 } from '@timeflow/shared';
+import { useEvolutionSurface } from '@/hooks/useEvolutionSurface';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { track } from '@/lib/analytics';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
@@ -105,55 +104,22 @@ export default function TodayPage() {
   /** Mobile: habit suggestions collapsible (default collapsed). Desktop (lg+): always expanded. */
   const [mobileHabitsOpen, setMobileHabitsOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const [evolutionStates, setEvolutionStates] = useState<
-    IdentityEvolutionState[] | null | undefined
-  >(undefined);
+  const {
+    mode: evolutionMode,
+    states: evolutionStates,
+    loading: evolutionLoading,
+    refresh: refreshEvolution,
+  } = useEvolutionSurface(isAuthenticated);
   const [nextUnlockLabel, setNextUnlockLabel] = useState<string | null>(null);
 
   const leadingEvolutionState = useMemo(() => {
-    if (!Array.isArray(evolutionStates) || evolutionStates.length === 0) return null;
+    if (evolutionStates.length === 0) return null;
     return [...evolutionStates].sort((a, b) => b.level - a.level || b.xp - a.xp)[0]!;
   }, [evolutionStates]);
 
-  const refreshEvolution = useCallback(async () => {
-    if (!user?.identityEvolutionEnabled) return;
-    try {
-      const data = await api.getEvolutionState();
-      setEvolutionStates(Array.isArray(data) ? data : []);
-    } catch (e) {
-      if (e instanceof ApiRequestError && e.status === 403) {
-        setEvolutionStates(null);
-      }
-    }
-  }, [user?.identityEvolutionEnabled]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !user?.identityEvolutionEnabled) {
-      setEvolutionStates(undefined);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await api.getEvolutionState();
-        if (!cancelled) setEvolutionStates(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (e instanceof ApiRequestError && e.status === 403) {
-          if (!cancelled) setEvolutionStates(null);
-        } else if (!cancelled) {
-          setEvolutionStates(null);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, user?.identityEvolutionEnabled]);
-
   /** Evolution analytics: at most once per browser tab session (sessionStorage). */
   useEffect(() => {
-    if (!user?.identityEvolutionEnabled) return;
-    if (!Array.isArray(evolutionStates)) return;
+    if (!isAuthenticated || evolutionStates.length === 0) return;
     try {
       const k = 'tf_analytics_evolution_state_loaded';
       if (sessionStorage.getItem(k) === '1') return;
@@ -162,11 +128,10 @@ export default function TodayPage() {
     } catch {
       /* private mode / quota */
     }
-  }, [user?.identityEvolutionEnabled, evolutionStates]);
+  }, [isAuthenticated, evolutionStates]);
 
   useEffect(() => {
-    if (!user?.identityEvolutionEnabled) return;
-    if (!Array.isArray(evolutionStates) || evolutionStates.length === 0) return;
+    if (!isAuthenticated || evolutionMode !== 'active') return;
     try {
       const k = 'tf_analytics_evolution_hero_today';
       if (sessionStorage.getItem(k) === '1') return;
@@ -175,10 +140,22 @@ export default function TodayPage() {
     } catch {
       /* private mode */
     }
-  }, [user?.identityEvolutionEnabled, evolutionStates]);
+  }, [isAuthenticated, evolutionMode]);
 
   useEffect(() => {
-    if (!user?.identityEvolutionEnabled || !leadingEvolutionState) return;
+    if (!isAuthenticated || evolutionMode !== 'preview' || evolutionLoading) return;
+    try {
+      const k = 'tf_analytics_evolution_preview_visible_today';
+      if (sessionStorage.getItem(k) === '1') return;
+      sessionStorage.setItem(k, '1');
+      track('identity.evolution.preview_visible', { source: 'today' });
+    } catch {
+      /* private mode */
+    }
+  }, [isAuthenticated, evolutionMode, evolutionLoading]);
+
+  useEffect(() => {
+    if (evolutionMode !== 'active' || !leadingEvolutionState) return;
     const showCheckpointUi =
       leadingEvolutionState.trialCheckpointDays > 0 ||
       leadingEvolutionState.trialState === 'CheckpointFailed';
@@ -191,10 +168,10 @@ export default function TodayPage() {
     } catch {
       /* private mode */
     }
-  }, [user?.identityEvolutionEnabled, leadingEvolutionState]);
+  }, [evolutionMode, leadingEvolutionState]);
 
   useEffect(() => {
-    if (!user?.identityEvolutionEnabled || !leadingEvolutionState) {
+    if (evolutionMode !== 'active' || !leadingEvolutionState) {
       setNextUnlockLabel(null);
       return;
     }
@@ -213,7 +190,7 @@ export default function TodayPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.identityEvolutionEnabled, leadingEvolutionState?.identityId]);
+  }, [evolutionMode, leadingEvolutionState?.identityId]);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -826,10 +803,13 @@ Please generate a schedule preview for today.`;
                 });
               }}
               now={now}
-              evolutionEnabled={user.identityEvolutionEnabled === true}
+              showEvolutionStrip={isAuthenticated}
+              evolutionMode={evolutionMode}
               evolutionStates={evolutionStates}
+              evolutionLoading={evolutionLoading}
+              onEvolutionRetry={() => void refreshEvolution()}
               nextUnlockLabel={nextUnlockLabel}
-              timeZone={user.timeZone}
+              timeZone={user?.timeZone}
             />
           </div>
           {/* What's Now — current and upcoming */}

@@ -176,10 +176,11 @@ export async function migrateHabitIdentities(userId: string): Promise<void> {
 
   if (uniqueNames.length === 0) return;
 
-  // Create Identity records
-  const created = await prisma.$transaction(
-    uniqueNames.map((name, index) =>
-      prisma.identity.create({
+  // Create Identity records and seed starter unlock inventory for migrated users
+  const created = await prisma.$transaction(async (tx) => {
+    const rows = [];
+    for (const [index, name] of uniqueNames.entries()) {
+      const identity = await tx.identity.create({
         data: {
           userId,
           name,
@@ -188,9 +189,12 @@ export async function migrateHabitIdentities(userId: string): Promise<void> {
           icon: getDefaultIconForName(name),
           sortOrder: index,
         },
-      })
-    )
-  );
+      });
+      await seedStarterUnlocksForIdentity(tx, identity.id, userId);
+      rows.push(identity);
+    }
+    return rows;
+  });
 
   // Link existing habits to their new Identity records
   for (const identity of created) {

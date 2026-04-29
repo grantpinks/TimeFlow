@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useReducedMotion } from 'framer-motion';
 import * as api from '@/lib/api';
 import { track } from '@/lib/analytics';
-import type { IdentityEvolutionState, IdentityUnlockItem } from '@timeflow/shared';
+import type { IdentityUnlockItem } from '@timeflow/shared';
 import { FlowMascot } from '@/components/FlowMascot';
 import {
   allowedSlugsWithDefaults,
@@ -24,12 +24,6 @@ type Props = {
   evolutionEnabled: boolean;
 };
 
-function leadingIdentityIdFromStates(states: IdentityEvolutionState[]): string | null {
-  if (!Array.isArray(states) || states.length === 0) return null;
-  const sorted = [...states].sort((a, b) => b.level - a.level || b.xp - a.xp);
-  return sorted[0]?.identityId ?? null;
-}
-
 export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
   const { refresh: refreshContext } = useFlowCustomization();
   const prefersReducedMotion = useReducedMotion() ?? false;
@@ -45,16 +39,22 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const [custom, evolution] = await Promise.all([
-        api.getFlowCustomization(),
-        api.getEvolutionState(),
-      ]);
-      const states = Array.isArray(evolution) ? evolution : [];
-      const leadingId = leadingIdentityIdFromStates(states);
+      const [custom, identities] = await Promise.all([api.getFlowCustomization(), api.getIdentities()]);
+      const identityIds = [...new Set(identities.map((i) => i.id).filter(Boolean))];
       let unlockList: IdentityUnlockItem[] = [];
-      if (leadingId) {
-        const res = await api.getIdentityUnlocks(leadingId);
-        unlockList = res.unlocks ?? [];
+      if (identityIds.length > 0) {
+        const unlockResponses = await Promise.all(
+          identityIds.map((id) => api.getIdentityUnlocks(id))
+        );
+        const dedup = new Map<string, IdentityUnlockItem>();
+        for (const response of unlockResponses) {
+          for (const unlock of response.unlocks ?? []) {
+            if (!dedup.has(unlock.unlockKey)) {
+              dedup.set(unlock.unlockKey, unlock);
+            }
+          }
+        }
+        unlockList = [...dedup.values()];
       }
       setUnlocks(unlockList);
       setValues(mergeFlowCustomization(custom));

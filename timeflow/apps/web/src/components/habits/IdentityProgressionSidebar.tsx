@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { Identity, IdentityEvolutionState } from '@timeflow/shared';
+import type { EvolutionSurfaceMode } from '@/hooks/useEvolutionSurface';
 import * as api from '@/lib/api';
 import { ApiRequestError } from '@/lib/api';
+
+const PREVIEW_STAGES = ['Seed', 'Builder', 'Disciplined', 'Embodied', 'Future self'] as const;
 
 function formatUnlockKeyLabel(key: string): string {
   const tail = key.replace(/^flow_[^_]+_/, '').replace(/^mechanic_/, '');
@@ -22,27 +25,36 @@ function stageLabel(stage: string): string {
 }
 
 export interface IdentityProgressionSidebarProps {
+  surfaceMode: EvolutionSurfaceMode;
   evolutionStates: IdentityEvolutionState[];
   identities: Identity[];
   timeZone: string;
   onRefresh?: () => void;
+  onRetry?: () => void;
 }
 
 export function IdentityProgressionSidebar({
+  surfaceMode,
   evolutionStates,
   identities,
   timeZone,
   onRefresh,
+  onRetry,
 }: IdentityProgressionSidebarProps) {
   const leading = useMemo(
     () => (evolutionStates.length ? pickLeadingEvolution(evolutionStates) : null),
     [evolutionStates]
   );
 
+  const previewLeadingName = useMemo(() => {
+    if (identities.length === 0) return 'Your identity';
+    return [...identities].sort((a, b) => a.sortOrder - b.sortOrder)[0]!.name;
+  }, [identities]);
+
   const leadingName = useMemo(() => {
-    if (!leading) return '';
+    if (!leading) return previewLeadingName;
     return identities.find((i) => i.id === leading.identityId)?.name ?? 'Leading identity';
-  }, [leading, identities]);
+  }, [leading, identities, previewLeadingName]);
 
   const [nextUnlockLabel, setNextUnlockLabel] = useState<string | null>(null);
 
@@ -79,7 +91,85 @@ export function IdentityProgressionSidebar({
     [evolutionStates]
   );
 
-  if (!leading) return null;
+  if (surfaceMode === 'degraded') {
+    return (
+      <aside
+        className="h-fit space-y-4 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] lg:sticky lg:top-4"
+        data-testid="identity-progression-sidebar"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800/90">
+          Progression
+        </p>
+        <p className="mt-1 text-sm text-slate-800">
+          Couldn&apos;t load progression. Check your connection and try again.
+        </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={() => void onRetry()}
+            className="w-full rounded-xl border border-amber-300 bg-white py-2 text-sm font-semibold text-amber-900 shadow-sm hover:bg-amber-50"
+          >
+            Retry
+          </button>
+        )}
+      </aside>
+    );
+  }
+
+  if (surfaceMode === 'preview' || !leading) {
+    return (
+      <aside
+        className="h-fit space-y-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] lg:sticky lg:top-4"
+        data-testid="identity-progression-sidebar"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-teal-700/90">
+              Progression
+            </p>
+            <p className="mt-1 text-sm font-bold text-slate-900">{previewLeadingName}</p>
+            <p className="text-xs text-slate-600">
+              Preview — stages unlock as you earn XP on Today.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full border border-dashed border-slate-300 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+            Preview
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-slate-200/80 bg-white/60 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Stage path
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {PREVIEW_STAGES.map((label, i) => (
+              <span
+                key={label}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  i === 0
+                    ? 'border border-teal-200 bg-teal-50 text-teal-900'
+                    : 'border border-slate-200 bg-slate-50 text-slate-500'
+                }`}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-teal-200/60 bg-teal-50/50 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-teal-800/90">
+            How it works
+          </p>
+          <p className="mt-1 text-sm text-slate-800">
+            Link habits to <span className="font-semibold">{previewLeadingName}</span> and complete them
+            from Today to build XP, pass trials, and unlock Flow customizations.
+          </p>
+          <p className="mt-2 text-[10px] text-slate-400">Times use your zone: {timeZone}</p>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside

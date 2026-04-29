@@ -5,11 +5,11 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { FlowCustomizationState, IdentityEvolutionState, IdentityUnlockItem } from '@timeflow/shared';
+import type { FlowCustomizationState, IdentityUnlockItem } from '@timeflow/shared';
 
 const apiMocks = vi.hoisted(() => ({
   getFlowCustomization: vi.fn(),
-  getEvolutionState: vi.fn(),
+  getIdentities: vi.fn(),
   getIdentityUnlocks: vi.fn(),
   updateFlowCustomization: vi.fn(),
 }));
@@ -19,7 +19,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
   return {
     ...actual,
     getFlowCustomization: apiMocks.getFlowCustomization,
-    getEvolutionState: apiMocks.getEvolutionState,
+    getIdentities: apiMocks.getIdentities,
     getIdentityUnlocks: apiMocks.getIdentityUnlocks,
     updateFlowCustomization: apiMocks.updateFlowCustomization,
   };
@@ -44,23 +44,6 @@ vi.mock('@/hooks/useUser', () => ({
 import { FlowCustomizationPanel } from '../FlowCustomizationPanel';
 import { FlowCustomizationProvider } from '../FlowCustomizationProvider';
 
-const evolutionRow: IdentityEvolutionState = {
-  identityId: 'id-lead',
-  level: 2,
-  stage: 'Seed',
-  xp: 10,
-  xpToNextLevel: 20,
-  trialState: 'NotStarted',
-  trialActiveDays: 0,
-  trialTargetDays: 0,
-  trialWindowDays: 0,
-  trialCheckpointDays: 0,
-  trialStartedAt: null,
-  trialEndsAt: null,
-  xpThisPeriod: 0,
-  xpCapResetAt: null,
-};
-
 function baseCustomization(): FlowCustomizationState {
   return {
     userId: 'u1',
@@ -78,7 +61,7 @@ function mockApis(overrides?: {
 }) {
   const customization = { ...baseCustomization(), ...overrides?.customization };
   apiMocks.getFlowCustomization.mockResolvedValue(customization);
-  apiMocks.getEvolutionState.mockResolvedValue([evolutionRow]);
+  apiMocks.getIdentities.mockResolvedValue([{ id: 'id-lead' } as any]);
   apiMocks.getIdentityUnlocks.mockResolvedValue({
     unlocks: overrides?.unlocks ?? [],
   });
@@ -100,7 +83,7 @@ function renderPanel() {
 describe('FlowCustomizationPanel', () => {
   beforeEach(() => {
     apiMocks.getFlowCustomization.mockReset();
-    apiMocks.getEvolutionState.mockReset();
+    apiMocks.getIdentities.mockReset();
     apiMocks.getIdentityUnlocks.mockReset();
     apiMocks.updateFlowCustomization.mockReset();
   });
@@ -168,6 +151,64 @@ describe('FlowCustomizationPanel', () => {
     await waitFor(() => {
       expect(apiMocks.updateFlowCustomization).toHaveBeenCalledWith(
         expect.objectContaining({ selectedPalette: 'ocean' })
+      );
+    });
+  });
+
+  it('merges unlocked cosmetics from all identities (global customization)', async () => {
+    const user = userEvent.setup();
+    apiMocks.getFlowCustomization.mockResolvedValue(baseCustomization());
+    apiMocks.getIdentities.mockResolvedValue([
+      { id: 'id-lead' } as any,
+      { id: 'id-second' } as any,
+    ]);
+    apiMocks.getIdentityUnlocks
+      .mockResolvedValueOnce({
+        unlocks: [
+          {
+            id: 'u1',
+            identityId: 'id-lead',
+            userId: 'user-1',
+            unlockKey: 'flow_palette_ocean',
+            unlockType: 'flow_palette',
+            grantedAt: new Date().toISOString(),
+            grantedByStage: null,
+            grantedByLevel: 3,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        unlocks: [
+          {
+            id: 'u2',
+            identityId: 'id-second',
+            userId: 'user-1',
+            unlockKey: 'flow_palette_aurora',
+            unlockType: 'flow_palette',
+            grantedAt: new Date().toISOString(),
+            grantedByStage: 'FutureSelf',
+            grantedByLevel: null,
+          },
+        ],
+      });
+    apiMocks.updateFlowCustomization.mockImplementation(async (body: Partial<FlowCustomizationState>) => ({
+      ...baseCustomization(),
+      ...body,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(apiMocks.getIdentityUnlocks).toHaveBeenCalledTimes(2);
+    });
+
+    const paletteSelect = document.getElementById('flow-custom-palette') as HTMLSelectElement;
+    await user.selectOptions(paletteSelect, 'aurora');
+
+    await waitFor(() => {
+      expect(apiMocks.updateFlowCustomization).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedPalette: 'aurora' })
       );
     });
   });

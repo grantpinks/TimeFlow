@@ -12,6 +12,7 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import type { IdentityDayProgress, IdentityEvolutionState } from '@timeflow/shared';
+import type { EvolutionSurfaceMode } from '@/hooks/useEvolutionSurface';
 import { hexWithOpacity } from '@/lib/identityConstants';
 import { FlowMascot } from '@/components/FlowMascot';
 import { FlowEvolutionHero } from '@/components/identity/FlowEvolutionHero';
@@ -139,10 +140,13 @@ interface IdentityDashboardBannerProps {
   focusMode?: boolean;
   onFocusModeToggle?: () => void;
   now?: Date;
-  /** When set with non-empty `evolutionStates`, shows Flow Evolution hero above the banner */
+  /** Authenticated: show Flow Evolution strip (active / preview / degraded) above the banner */
+  showEvolutionStrip?: boolean;
+  evolutionMode?: EvolutionSurfaceMode;
   evolutionStates?: IdentityEvolutionState[] | null;
-  evolutionEnabled?: boolean;
-  /** From parent: latest unlock label (e.g. from getIdentityUnlocks) */
+  evolutionLoading?: boolean;
+  onEvolutionRetry?: () => void;
+  /** From parent: latest unlock label (e.g. from getIdentityUnlocks); active progression only */
   nextUnlockLabel?: string | null;
   timeZone?: string;
 }
@@ -155,8 +159,11 @@ export function IdentityDashboardBanner({
   focusMode = false,
   onFocusModeToggle,
   now = new Date(),
+  showEvolutionStrip = false,
+  evolutionMode = 'preview',
   evolutionStates,
-  evolutionEnabled = false,
+  evolutionLoading = false,
+  onEvolutionRetry,
   nextUnlockLabel = null,
   timeZone,
 }: IdentityDashboardBannerProps) {
@@ -183,21 +190,20 @@ export function IdentityDashboardBanner({
 
   const greetingText = greeting(now, totalCompletions);
 
-  const showEvolutionHero =
-    evolutionEnabled === true &&
-    Array.isArray(evolutionStates) &&
-    evolutionStates.length > 0;
-
   const leadingEvolution = useMemo(() => {
-    if (!showEvolutionHero || !Array.isArray(evolutionStates) || !evolutionStates.length) {
+    if (evolutionMode !== 'active' || !Array.isArray(evolutionStates) || evolutionStates.length === 0) {
       return null;
     }
     return pickLeadingEvolution(evolutionStates);
-  }, [showEvolutionHero, evolutionStates]);
+  }, [evolutionMode, evolutionStates]);
 
-  const leadingIdentityName = useMemo(() => {
-    if (!leadingEvolution) return '';
-    return identities.find((i) => i.identityId === leadingEvolution.identityId)?.name ?? 'Identity';
+  const heroIdentityName = useMemo(() => {
+    if (leadingEvolution) {
+      return (
+        identities.find((i) => i.identityId === leadingEvolution.identityId)?.name ?? 'Identity'
+      );
+    }
+    return identities[0]?.name ?? 'Your first identity';
   }, [leadingEvolution, identities]);
 
   const resolvedTimeZone =
@@ -211,12 +217,15 @@ export function IdentityDashboardBanner({
 
   return (
     <div className="w-full space-y-3">
-      {showEvolutionHero && leadingEvolution && (
+      {showEvolutionStrip && (
         <FlowEvolutionHero
+          mode={evolutionMode}
           evolution={leadingEvolution}
-          identityName={leadingIdentityName}
-          nextUnlockLabel={nextUnlockLabel}
+          identityName={heroIdentityName}
+          nextUnlockLabel={evolutionMode === 'active' ? nextUnlockLabel : null}
           timeZone={resolvedTimeZone}
+          loading={evolutionLoading}
+          onRetry={onEvolutionRetry}
         />
       )}
     <motion.div

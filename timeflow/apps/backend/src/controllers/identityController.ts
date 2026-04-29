@@ -53,6 +53,13 @@ const flowCustomizationSchema = z
     message: 'At least one field is required.',
   });
 
+const COSMETIC_PREFIX_BY_FIELD = {
+  selectedStageVariant: 'flow_form_',
+  selectedPalette: 'flow_palette_',
+  selectedEmote: 'flow_emote_',
+  selectedAnimationPack: 'flow_anim_',
+} as const;
+
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
@@ -200,6 +207,59 @@ async function requireEvolutionEnabled(userId: string, reply: FastifyReply): Pro
   return true;
 }
 
+async function getUserUnlockedCosmeticKeys(userId: string): Promise<Set<string>> {
+  const rows = await prisma.identityUnlock.findMany({
+    where: {
+      userId,
+      unlockType: {
+        in: ['flow_palette', 'flow_emote', 'flow_animation_pack', 'flow_stage_form'],
+      },
+    },
+    select: { unlockKey: true },
+  });
+  return new Set(rows.map((r) => r.unlockKey));
+}
+
+function assertCustomizationValueUnlocked(
+  field: keyof typeof COSMETIC_PREFIX_BY_FIELD,
+  slug: string,
+  unlockedKeys: Set<string>
+): boolean {
+  if (slug === 'default') return true;
+  const requiredKey = `${COSMETIC_PREFIX_BY_FIELD[field]}${slug}`;
+  return unlockedKeys.has(requiredKey);
+}
+
+function sanitizeStoredCustomizationFields(
+  row: {
+    selectedPalette: string;
+    selectedEmote: string;
+    selectedAnimationPack: string;
+    selectedStageVariant: string;
+  },
+  unlockedKeys: Set<string>
+): {
+  selectedPalette: string;
+  selectedEmote: string;
+  selectedAnimationPack: string;
+  selectedStageVariant: string;
+} {
+  const fields = Object.keys(COSMETIC_PREFIX_BY_FIELD) as Array<keyof typeof COSMETIC_PREFIX_BY_FIELD>;
+  const out = {
+    selectedPalette: row.selectedPalette,
+    selectedEmote: row.selectedEmote,
+    selectedAnimationPack: row.selectedAnimationPack,
+    selectedStageVariant: row.selectedStageVariant,
+  };
+  for (const field of fields) {
+    const slug = out[field];
+    if (!assertCustomizationValueUnlocked(field, slug, unlockedKeys)) {
+      out[field] = 'default';
+    }
+  }
+  return out;
+}
+
 export async function getEvolutionState(request: FastifyRequest, reply: FastifyReply) {
   const userId = (request.user as any).id;
   if (!(await requireEvolutionEnabled(userId, reply))) return;
@@ -235,7 +295,25 @@ export async function getFlowCustomization(request: FastifyRequest, reply: Fasti
   }
 
   const customization = await prisma.userFlowCustomization.findUnique({ where: { userId } });
-  return reply.send(customization ?? DEFAULTS);
+  if (!customization) {
+    return reply.send(DEFAULTS);
+  }
+
+  const unlockedKeys = await getUserUnlockedCosmeticKeys(userId);
+  const sanitized = sanitizeStoredCustomizationFields(
+    {
+      selectedPalette: customization.selectedPalette,
+      selectedEmote: customization.selectedEmote,
+      selectedAnimationPack: customization.selectedAnimationPack,
+      selectedStageVariant: customization.selectedStageVariant,
+    },
+    unlockedKeys
+  );
+
+  return reply.send({
+    ...customization,
+    ...sanitized,
+  });
 }
 
 export async function updateFlowCustomization(request: FastifyRequest, reply: FastifyReply) {
@@ -245,6 +323,18 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
   const parsed = flowCustomizationSchema.safeParse(request.body);
   if (!parsed.success) {
     return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const unlockedKeys = await getUserUnlockedCosmeticKeys(userId);
+  for (const [field, slug] of Object.entries(parsed.data) as Array<
+    [keyof typeof COSMETIC_PREFIX_BY_FIELD, string | undefined]
+  >) {
+    if (!slug) continue;
+    if (!assertCustomizationValueUnlocked(field, slug, unlockedKeys)) {
+      return reply.status(403).send({
+        error: `Customization option "${slug}" is not unlocked yet.`,
+      });
+    }
   }
 
   const updated = await prisma.userFlowCustomization.upsert({

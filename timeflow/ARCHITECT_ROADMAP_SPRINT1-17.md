@@ -1470,6 +1470,7 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 
 #### Execution Plan
 - **[Concrete Implementation Plan](./docs/plans/2026-04-27-identity-evolution-flow-companion-implementation-plan.md)**
+- **[Always-Visible Overhaul Addendum](./docs/plans/2026-04-28-always-visible-identity-overhaul-plan.md)**
 
 #### Tasks (track completion during implementation)
 
@@ -1485,6 +1486,7 @@ These sprints capture high-value follow-ups inspired by `docs/COMPETITOR_ANALYSI
 | 25.7 | Build global Flow customization panel and stage-based animation variants | Codex | 8-12h | P1 | ⬜ |
 | 25.8 | Add analytics + balancing dashboards; tune thresholds post-internal rollout | Codex | 6-8h | P1 | ⬜ |
 | 25.9 | Roadmap update + rollout readiness check (5% → 25% → 100%) | Codex | 2-4h | P1 | ⬜ |
+| 25.10 | Always-visible Today/Habits overhaul (preview/active/degraded modes, locked reward visibility without capability) | Codex | 8-12h | P0 | ⬜ |
 
 #### Decision Gate / Acceptance Criteria
 - [ ] Feature flag OFF preserves current identity UX and behavior.

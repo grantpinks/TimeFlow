@@ -50,13 +50,24 @@ export function IdentityHabitGroup({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-sm font-bold text-slate-900">{title}</h3>
-            {evolution && (
+            {evolution ? (
               <span
                 className="inline-flex shrink-0 items-center rounded-full border border-teal-200/90 bg-white/80 px-2 py-0.5 text-[11px] font-semibold text-teal-900 shadow-sm"
                 data-testid="identity-habit-group-stage-badge"
               >
                 {stageLabel(evolution.stage)}
               </span>
+            ) : (
+              !isUnassigned &&
+              identity && (
+                <span
+                  className="inline-flex shrink-0 items-center rounded-full border border-dashed border-slate-300 bg-slate-50/90 px-2 py-0.5 text-[10px] font-semibold text-slate-600"
+                  title="Earn XP by completing linked habits from Today when progression is active"
+                  data-testid="identity-habit-group-stage-badge-preview"
+                >
+                  Stage on Today
+                </span>
+              )
             )}
           </div>
           {showTrialLine && (

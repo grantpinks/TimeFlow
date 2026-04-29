@@ -11,13 +11,13 @@ import {
   useState,
   useEffect,
   useMemo,
-  useCallback,
   Fragment,
   type ReactNode,
 } from 'react';
 import { Layout } from '@/components/Layout';
 import { Panel, SectionHeader, LoadingSpinner } from '@/components/ui';
 import { useHabits } from '@/hooks/useHabits';
+import { useEvolutionSurface } from '@/hooks/useEvolutionSurface';
 import { HabitsInsights } from '@/components/habits/HabitsInsights';
 import { HabitNotificationPrefs } from '@/components/habits/HabitNotificationPrefs';
 import { SortableHabitCard } from '@/components/habits/SortableHabitCard';
@@ -44,7 +44,6 @@ import type { Habit, HabitFrequency, TimeOfDay, Identity, IdentityEvolutionState
 import { IdentityProgressWidget } from '@/components/identity/IdentityProgressWidget';
 import { IdentitySelector } from '@/components/identity/IdentitySelector';
 import * as api from '@/lib/api';
-import { ApiRequestError } from '@/lib/api';
 import { useUser } from '@/hooks/useUser';
 import { IdentityHabitGroup } from '@/components/habits/IdentityHabitGroup';
 import { IdentityProgressionSidebar } from '@/components/habits/IdentityProgressionSidebar';
@@ -82,7 +81,12 @@ function resolveGroupIdentity(
 
 export default function HabitsPage() {
   const { habits, loading, createHabit, updateHabit, deleteHabit } = useHabits();
-  const { user } = useUser();
+  const { user, isAuthenticated } = useUser();
+  const {
+    mode: evolutionMode,
+    states: evolutionStates,
+    refresh: refreshEvolution,
+  } = useEvolutionSurface(isAuthenticated);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [localHabits, setLocalHabits] = useState<Habit[]>([]);
@@ -136,36 +140,10 @@ export default function HabitsPage() {
   // Identity filter state
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [identityFilter, setIdentityFilter] = useState<string | null>(null);
-  const [evolutionStates, setEvolutionStates] = useState<
-    IdentityEvolutionState[] | null | undefined
-  >(undefined);
 
   useEffect(() => {
     api.getIdentities().then(setIdentities).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!user?.identityEvolutionEnabled) {
-      setEvolutionStates(undefined);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await api.getEvolutionState();
-        if (!cancelled) setEvolutionStates(Array.isArray(data) ? data : []);
-      } catch (e) {
-        if (e instanceof ApiRequestError && e.status === 403) {
-          if (!cancelled) setEvolutionStates(null);
-        } else if (!cancelled) {
-          setEvolutionStates(null);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.identityEvolutionEnabled]);
 
   const filteredHabits = useMemo(() => {
     if (!identityFilter) return localHabits;
@@ -178,21 +156,16 @@ export default function HabitsPage() {
 
   const evolutionByIdentityId = useMemo(() => {
     const m = new Map<string, IdentityEvolutionState>();
-    if (Array.isArray(evolutionStates)) {
-      for (const s of evolutionStates) {
-        m.set(s.identityId, s);
-      }
+    for (const s of evolutionStates) {
+      m.set(s.identityId, s);
     }
     return m;
   }, [evolutionStates]);
 
-  const showEvolutionHabitsLayout =
-    user?.identityEvolutionEnabled === true &&
-    Array.isArray(evolutionStates) &&
-    evolutionStates.length > 0;
+  const showGroupedIdentityLayout = habits.length > 0;
 
   useEffect(() => {
-    if (!showEvolutionHabitsLayout) return;
+    if (!showGroupedIdentityLayout) return;
     try {
       const k = 'tf_analytics_evolution_habits_layout';
       if (sessionStorage.getItem(k) === '1') return;
@@ -201,7 +174,19 @@ export default function HabitsPage() {
     } catch {
       /* private mode */
     }
-  }, [showEvolutionHabitsLayout]);
+  }, [showGroupedIdentityLayout]);
+
+  useEffect(() => {
+    if (!showGroupedIdentityLayout || evolutionMode !== 'preview') return;
+    try {
+      const k = 'tf_analytics_evolution_preview_visible_habits';
+      if (sessionStorage.getItem(k) === '1') return;
+      sessionStorage.setItem(k, '1');
+      track('identity.evolution.preview_visible', { source: 'habits' });
+    } catch {
+      /* private mode */
+    }
+  }, [showGroupedIdentityLayout, evolutionMode]);
 
   type HabitGroupRow = {
     key: string;
@@ -211,7 +196,7 @@ export default function HabitsPage() {
   };
 
   const habitGroups = useMemo((): HabitGroupRow[] => {
-    if (!showEvolutionHabitsLayout) {
+    if (!showGroupedIdentityLayout) {
       return [];
     }
     const order: string[] = [];
@@ -241,19 +226,7 @@ export default function HabitsPage() {
       });
     }
     return rows;
-  }, [showEvolutionHabitsLayout, filteredHabits, identities]);
-
-  const refreshEvolution = useCallback(async () => {
-    if (!user?.identityEvolutionEnabled) return;
-    try {
-      const data = await api.getEvolutionState();
-      setEvolutionStates(Array.isArray(data) ? data : []);
-    } catch (e) {
-      if (e instanceof ApiRequestError && e.status === 403) {
-        setEvolutionStates(null);
-      }
-    }
-  }, [user?.identityEvolutionEnabled]);
+  }, [showGroupedIdentityLayout, filteredHabits, identities]);
 
   const handleAdd = async () => {
     if (!newTitle.trim()) {
@@ -582,7 +555,7 @@ export default function HabitsPage() {
         identities={identities}
         onIdentityLink={handleIdentityLink}
         evolutionForHabit={
-          showEvolutionHabitsLayout && habit.identityId
+          showGroupedIdentityLayout && habit.identityId
             ? evolutionByIdentityId.get(habit.identityId)
             : undefined
         }
@@ -602,7 +575,7 @@ export default function HabitsPage() {
   return (
     <Layout>
       <div
-        className={`${showEvolutionHabitsLayout ? 'max-w-6xl' : 'max-w-4xl'} mx-auto space-y-6`}
+        className={`${showGroupedIdentityLayout ? 'max-w-6xl' : 'max-w-4xl'} mx-auto space-y-6`}
       >
         <SectionHeader
           title="Habits"
@@ -914,7 +887,7 @@ export default function HabitsPage() {
             </div>
             <div
               className={
-                showEvolutionHabitsLayout
+                showGroupedIdentityLayout
                   ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_min(300px,32vw)] lg:items-start lg:gap-6'
                   : ''
               }
@@ -929,7 +902,7 @@ export default function HabitsPage() {
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="grid min-w-0 gap-4 overflow-visible">
-                    {showEvolutionHabitsLayout
+                    {showGroupedIdentityLayout
                       ? habitGroups.map((group) => (
                           <IdentityHabitGroup
                             key={group.key}
@@ -953,18 +926,18 @@ export default function HabitsPage() {
                   </div>
                 </SortableContext>
               </DndContext>
-              {showEvolutionHabitsLayout &&
-                Array.isArray(evolutionStates) &&
-                evolutionStates.length > 0 && (
-                  <div className="min-w-0 pt-4 lg:pt-0">
-                    <IdentityProgressionSidebar
-                      evolutionStates={evolutionStates}
-                      identities={identities}
-                      timeZone={user?.timeZone ?? 'UTC'}
-                      onRefresh={refreshEvolution}
-                    />
-                  </div>
-                )}
+              {showGroupedIdentityLayout && (
+                <div className="min-w-0 pt-4 lg:pt-0">
+                  <IdentityProgressionSidebar
+                    surfaceMode={evolutionMode}
+                    evolutionStates={evolutionStates}
+                    identities={identities}
+                    timeZone={user?.timeZone ?? 'UTC'}
+                    onRefresh={refreshEvolution}
+                    onRetry={() => void refreshEvolution()}
+                  />
+                </div>
+              )}
             </div>
           </>
         ) : (

@@ -59,9 +59,25 @@ describe('FlowEvolutionHero', () => {
     useReducedMotionMock.mockReturnValue(false);
   });
 
+  it('renders preview roadmap when mode is preview', () => {
+    render(
+      <FlowEvolutionHero
+        mode="preview"
+        evolution={null}
+        identityName="Morning Athlete"
+        timeZone="America/Chicago"
+      />
+    );
+    expect(screen.getByTestId('flow-evolution-hero')).toBeTruthy();
+    expect(screen.getByText('Flow progression')).toBeTruthy();
+    expect(screen.getByText('Preview')).toBeTruthy();
+    expect(screen.getByText('Stages')).toBeTruthy();
+  });
+
   it('renders stage, level, and XP progress bar for mock evolution state', () => {
     render(
       <FlowEvolutionHero
+        mode="active"
         evolution={BASE}
         identityName="Morning Athlete"
         nextUnlockLabel={null}
@@ -81,6 +97,7 @@ describe('FlowEvolutionHero', () => {
     const ev = { ...BASE, trialCheckpointDays: 2, trialState: 'Active' as const };
     render(
       <FlowEvolutionHero
+        mode="active"
         evolution={ev}
         identityName="Test"
         timeZone="UTC"
@@ -95,6 +112,7 @@ describe('FlowEvolutionHero', () => {
     const ev = { ...BASE, trialState: 'CheckpointFailed' as const, trialCheckpointDays: 0 };
     render(
       <FlowEvolutionHero
+        mode="active"
         evolution={ev}
         identityName="Test"
         timeZone="UTC"
@@ -108,7 +126,7 @@ describe('FlowEvolutionHero', () => {
   it('respects reduced motion (renders when useReducedMotion is true)', () => {
     useReducedMotionMock.mockReturnValue(true);
     const { container } = render(
-      <FlowEvolutionHero evolution={BASE} identityName="Test" timeZone="UTC" />
+      <FlowEvolutionHero mode="active" evolution={BASE} identityName="Test" timeZone="UTC" />
     );
     expect(container.querySelector('[data-testid="flow-evolution-hero"]')).toBeTruthy();
   });

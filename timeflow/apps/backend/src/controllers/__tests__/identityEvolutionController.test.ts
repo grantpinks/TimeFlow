@@ -59,6 +59,28 @@ function makeRequest(overrides: Record<string, any> = {}) {
 describe('identityEvolutionController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(prisma.identityUnlock.findMany).mockResolvedValue([
+      {
+        unlockKey: 'flow_palette_default',
+        unlockType: 'flow_palette',
+      },
+      {
+        unlockKey: 'flow_palette_ocean',
+        unlockType: 'flow_palette',
+      },
+      {
+        unlockKey: 'flow_emote_wave',
+        unlockType: 'flow_emote',
+      },
+      {
+        unlockKey: 'flow_anim_basic',
+        unlockType: 'flow_animation_pack',
+      },
+      {
+        unlockKey: 'flow_form_seed',
+        unlockType: 'flow_stage_form',
+      },
+    ] as any);
   });
 
   // ---------------------------------------------------------------------------
@@ -197,6 +219,23 @@ describe('identityEvolutionController', () => {
 
       expect(reply.statusCode).toBe(400);
     });
+
+    it('returns 403 when attempting to select a locked cosmetic slug', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: true,
+      } as any);
+
+      const request = makeRequest({ body: { selectedPalette: 'aurora' } });
+      const reply = createControllerReply();
+
+      await updateFlowCustomization(request as any, reply);
+
+      expect(reply.statusCode).toBe(403);
+      expect(reply.send).toHaveBeenCalledWith({
+        error: 'Customization option "aurora" is not unlocked yet.',
+      });
+      expect(prisma.userFlowCustomization.upsert).not.toHaveBeenCalled();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -256,6 +295,12 @@ describe('identityEvolutionController', () => {
         updatedAt: new Date().toISOString(),
       };
       vi.mocked(prisma.userFlowCustomization.findUnique).mockResolvedValue(existing as any);
+      vi.mocked(prisma.identityUnlock.findMany).mockResolvedValue([
+        { unlockKey: 'flow_palette_ocean', unlockType: 'flow_palette' },
+        { unlockKey: 'flow_emote_celebrate', unlockType: 'flow_emote' },
+        { unlockKey: 'flow_anim_energetic', unlockType: 'flow_animation_pack' },
+        { unlockKey: 'flow_form_builder', unlockType: 'flow_stage_form' },
+      ] as any);
 
       const request = makeRequest();
       const reply = createControllerReply();
@@ -263,6 +308,37 @@ describe('identityEvolutionController', () => {
       await getFlowCustomization(request, reply);
 
       expect(reply.send).toHaveBeenCalledWith(existing);
+    });
+
+    it('coerces stored cosmetic slugs to default when not unlocked', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: true,
+      } as any);
+      const stored = {
+        id: 'custom-1',
+        userId: USER_ID,
+        selectedStageVariant: 'default',
+        selectedPalette: 'aurora',
+        selectedEmote: 'default',
+        selectedAnimationPack: 'default',
+        updatedAt: new Date().toISOString(),
+      };
+      vi.mocked(prisma.userFlowCustomization.findUnique).mockResolvedValue(stored as any);
+      vi.mocked(prisma.identityUnlock.findMany).mockResolvedValue([
+        { unlockKey: 'flow_palette_default', unlockType: 'flow_palette' },
+      ] as any);
+
+      const request = makeRequest();
+      const reply = createControllerReply();
+
+      await getFlowCustomization(request, reply);
+
+      expect(reply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...stored,
+          selectedPalette: 'default',
+        })
+      );
     });
   });
 
