@@ -269,9 +269,17 @@ export async function getEvolutionState(request: FastifyRequest, reply: FastifyR
     select: { id: true },
   });
 
-  const states = await Promise.all(
-    identities.map((identity) => getEvolutionStateService(userId, identity.id))
-  );
+  const states = [];
+  for (const identity of identities) {
+    try {
+      states.push(await getEvolutionStateService(userId, identity.id));
+    } catch (err) {
+      request.log.error(
+        { err, identityId: identity.id, userId },
+        'Failed to load evolution state for identity'
+      );
+    }
+  }
   return reply.send(states);
 }
 
@@ -299,21 +307,26 @@ export async function getFlowCustomization(request: FastifyRequest, reply: Fasti
     return reply.send(DEFAULTS);
   }
 
-  const unlockedKeys = await getUserUnlockedCosmeticKeys(userId);
-  const sanitized = sanitizeStoredCustomizationFields(
-    {
-      selectedPalette: customization.selectedPalette,
-      selectedEmote: customization.selectedEmote,
-      selectedAnimationPack: customization.selectedAnimationPack,
-      selectedStageVariant: customization.selectedStageVariant,
-    },
-    unlockedKeys
-  );
+  try {
+    const unlockedKeys = await getUserUnlockedCosmeticKeys(userId);
+    const sanitized = sanitizeStoredCustomizationFields(
+      {
+        selectedPalette: customization.selectedPalette,
+        selectedEmote: customization.selectedEmote,
+        selectedAnimationPack: customization.selectedAnimationPack,
+        selectedStageVariant: customization.selectedStageVariant,
+      },
+      unlockedKeys
+    );
 
-  return reply.send({
-    ...customization,
-    ...sanitized,
-  });
+    return reply.send({
+      ...customization,
+      ...sanitized,
+    });
+  } catch (err) {
+    request.log.error({ err, userId }, 'Failed to load cosmetic unlocks; returning stored customization');
+    return reply.send(customization);
+  }
 }
 
 export async function updateFlowCustomization(request: FastifyRequest, reply: FastifyReply) {

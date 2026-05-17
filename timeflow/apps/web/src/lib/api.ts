@@ -169,6 +169,14 @@ export function setRefreshToken(token: string): void {
   window.localStorage.setItem('timeflow_refresh_token', token);
 }
 
+/** In-flight refresh so parallel 401s share one token rotation (avoids clearing session). */
+let refreshInFlight: Promise<string | null> | null = null;
+
+/** True when the browser has a stored access token (session may still be invalid). */
+export function hasStoredAuthSession(): boolean {
+  return !!getAuthToken();
+}
+
 /**
  * Clear auth token.
  */
@@ -260,34 +268,47 @@ async function request<T>(
 
 /**
  * Try to refresh the access token using the stored refresh token.
+ * Concurrent callers await the same in-flight refresh.
  */
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+  if (refreshInFlight) {
+    return refreshInFlight;
+  }
 
-  try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
+  refreshInFlight = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return null;
 
-    if (!res.ok) {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) {
+        clearAuthToken();
+        return null;
+      }
+
+      const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
+      if (data.accessToken) {
+        setAuthToken(data.accessToken);
+      }
+      if (data.refreshToken) {
+        setRefreshToken(data.refreshToken);
+      }
+      return data.accessToken ?? null;
+    } catch (_err) {
       clearAuthToken();
       return null;
     }
+  })();
 
-    const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
-    if (data.accessToken) {
-      setAuthToken(data.accessToken);
-    }
-    if (data.refreshToken) {
-      setRefreshToken(data.refreshToken);
-    }
-    return data.accessToken ?? null;
-  } catch (_err) {
-    clearAuthToken();
-    return null;
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
   }
 }
 

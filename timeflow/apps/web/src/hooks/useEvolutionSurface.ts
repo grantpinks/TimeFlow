@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IdentityEvolutionState } from '@timeflow/shared';
 import * as api from '@/lib/api';
-import { ApiRequestError } from '@/lib/api';
+import { ApiRequestError, hasStoredAuthSession } from '@/lib/api';
 
 export type EvolutionSurfaceMode = 'active' | 'preview' | 'degraded';
 
@@ -24,7 +24,7 @@ export function useEvolutionSurface(isAuthenticated: boolean): UseEvolutionSurfa
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
 
   const fetchStates = useCallback(async () => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !hasStoredAuthSession()) {
       setStates([]);
       setLoadStatus('idle');
       return;
@@ -35,7 +35,8 @@ export function useEvolutionSurface(isAuthenticated: boolean): UseEvolutionSurfa
       setStates(Array.isArray(data) ? data : []);
       setLoadStatus('ok');
     } catch (e) {
-      if (e instanceof ApiRequestError && (e.status === 403 || e.status === 401)) {
+      // 403 = evolution feature off for account → preview UI (not a login failure).
+      if (e instanceof ApiRequestError && e.status === 403) {
         setStates([]);
         setLoadStatus('ok');
       } else {
