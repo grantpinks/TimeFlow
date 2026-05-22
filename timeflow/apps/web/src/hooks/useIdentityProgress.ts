@@ -5,7 +5,11 @@ import * as api from '@/lib/api';
 import { hasStoredAuthSession } from '@/lib/api';
 import type { IdentityProgressResponse } from '@timeflow/shared';
 
-export function useIdentityProgress(date?: string) {
+export function useIdentityProgress(
+  date?: string,
+  /** Wait until useUser has validated the session (avoids racing getMe on stale tokens). */
+  sessionReady = false
+) {
   const [progress, setProgress] = useState<IdentityProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,7 +17,7 @@ export function useIdentityProgress(date?: string) {
   const targetDate = date ?? new Date().toISOString().split('T')[0];
 
   const fetchProgress = useCallback(async () => {
-    if (!hasStoredAuthSession()) {
+    if (!sessionReady || !hasStoredAuthSession()) {
       setProgress(null);
       setError(null);
       setLoading(false);
@@ -31,7 +35,7 @@ export function useIdentityProgress(date?: string) {
     } finally {
       setLoading(false);
     }
-  }, [targetDate]);
+  }, [targetDate, sessionReady]);
 
   useEffect(() => {
     fetchProgress();

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import * as api from '@/lib/api';
+import { ApiRequestError } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import type { IdentityUnlockItem } from '@timeflow/shared';
 import { FlowMascot } from '@/components/FlowMascot';
@@ -43,12 +44,19 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
       const identityIds = [...new Set(identities.map((i) => i.id).filter(Boolean))];
       let unlockList: IdentityUnlockItem[] = [];
       if (identityIds.length > 0) {
-        const unlockResponses = await Promise.all(
+        const unlockResponses = await Promise.allSettled(
           identityIds.map((id) => api.getIdentityUnlocks(id))
         );
         const dedup = new Map<string, IdentityUnlockItem>();
-        for (const response of unlockResponses) {
-          for (const unlock of response.unlocks ?? []) {
+        for (const result of unlockResponses) {
+          if (result.status !== 'fulfilled') {
+            const reason = result.reason;
+            if (reason instanceof ApiRequestError && reason.status === 403) {
+              continue;
+            }
+            throw reason;
+          }
+          for (const unlock of result.value.unlocks ?? []) {
             if (!dedup.has(unlock.unlockKey)) {
               dedup.set(unlock.unlockKey, unlock);
             }

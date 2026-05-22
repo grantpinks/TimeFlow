@@ -8,9 +8,9 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except static files and images.
-     * Needed so Supabase Auth cookies can be refreshed on navigation.
+     * Match all request paths except static files, images, and OAuth callback routes.
+     * Auth callback must receive ?token=… untouched by session middleware.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|auth/callback|auth/error|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

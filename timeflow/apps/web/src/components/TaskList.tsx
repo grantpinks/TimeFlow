@@ -6,6 +6,7 @@ import { useDroppable } from '@dnd-kit/core';
 import type { Task, CreateTaskRequest, UpdateTaskRequest, Identity, IdentityDayProgress } from '@timeflow/shared';
 import { useCategories } from '@/hooks/useCategories';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
+import { useUser } from '@/hooks/useUser';
 import { TaskCard } from '@/components/ui/TaskCard';
 import { Button, Input, Select, Textarea, Label, TemplateModal, DueDatePicker, BrandedEmptyState } from '@/components/ui';
 import { saveTaskTemplate } from '@/utils/taskTemplates';
@@ -56,7 +57,8 @@ export function TaskList({
   emptyState,
 }: TaskListProps) {
   const { categories, createCategory } = useCategories();
-  const { refresh: refreshProgress } = useIdentityProgress();
+  const { isAuthenticated } = useUser();
+  const { refresh: refreshProgress } = useIdentityProgress(undefined, isAuthenticated);
   const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
   const prefersReducedMotion = useReducedMotion();
   const { setNodeRef, isOver } = useDroppable({

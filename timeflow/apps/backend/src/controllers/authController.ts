@@ -18,6 +18,18 @@ const callbackQuerySchema = z.object({
   state: z.string().optional(), // OAuth2 state parameter (returnTo URL)
 });
 
+function frontendBaseUrl(): string {
+  const base = env.APP_BASE_URL?.replace(/\/$/, '') ?? '';
+  if (!base) {
+    throw new Error('APP_BASE_URL is not configured');
+  }
+  return base;
+}
+
+function authErrorRedirect(errorCode: string): string {
+  return `${frontendBaseUrl()}/auth/error?error=${encodeURIComponent(errorCode)}`;
+}
+
 /**
  * GET /api/auth/google/start
  * Redirects user to Google OAuth2 consent screen.
@@ -49,7 +61,11 @@ export async function handleGoogleCallback(
 
   if (error) {
     request.log.error({ error }, 'Google OAuth error');
-    return reply.redirect(`${env.APP_BASE_URL}/auth/error?error=${error}`);
+    try {
+      return reply.redirect(authErrorRedirect(error));
+    } catch {
+      return reply.status(500).send({ error: 'APP_BASE_URL is not configured' });
+    }
   }
 
   if (!code) {
@@ -59,8 +75,12 @@ export async function handleGoogleCallback(
   try {
     const user = await authService.handleGoogleCallback(code);
 
-    // Ensure user has default categories (created on first login)
-    await categoryService.ensureDefaultCategories(user.id);
+    // Non-fatal: default categories should not block sign-in
+    try {
+      await categoryService.ensureDefaultCategories(user.id);
+    } catch (catErr) {
+      request.log.error({ err: catErr, userId: user.id }, 'ensureDefaultCategories failed after OAuth');
+    }
 
     const accessToken = await reply.jwtSign(
       { sub: user.id, type: 'access' },
@@ -71,8 +91,7 @@ export async function handleGoogleCallback(
       { expiresIn: '7d' }
     );
 
-    // Redirect to frontend with tokens (MVP: query params; future: HttpOnly cookies)
-    const baseUrl = env.APP_BASE_URL || '';
+    const baseUrl = frontendBaseUrl();
     const stateParam = state ? `&state=${encodeURIComponent(state)}` : '';
     return reply.redirect(
       `${baseUrl}/auth/callback?token=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(
@@ -81,7 +100,11 @@ export async function handleGoogleCallback(
     );
   } catch (err) {
     request.log.error(err, 'Failed to handle Google callback');
-    return reply.redirect(`${env.APP_BASE_URL}/auth/error?error=callback_failed`);
+    try {
+      return reply.redirect(authErrorRedirect('callback_failed'));
+    } catch {
+      return reply.status(500).send({ error: 'OAuth callback failed and APP_BASE_URL is not configured' });
+    }
   }
 }
 

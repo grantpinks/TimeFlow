@@ -52,7 +52,7 @@ const calendarCollisionDetection = pointerWithin;
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
   const { tasks, loading: tasksLoading, refresh: refreshTasks } = useTasks();
-  const { user } = useUser();
+  const { user, isAuthenticated } = useUser();
   const { toasts, showToast, removeToast } = useToast();
   const showUndoActionError = useCallback(
     (err: unknown) => {
@@ -70,7 +70,7 @@ export default function CalendarPage() {
     prevStart: Date;
     prevEnd: Date;
   } | null>(null);
-  const { refresh: refreshIdentityProgress } = useIdentityProgress();
+  const { refresh: refreshIdentityProgress } = useIdentityProgress(undefined, isAuthenticated);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitRelatedFollowUp, setHabitRelatedFollowUp] = useState<PostHabitFollowUp | null>(null);
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);

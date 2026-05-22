@@ -19,14 +19,18 @@ export interface UseEvolutionSurfaceResult {
   refresh: () => Promise<void>;
 }
 
-export function useEvolutionSurface(isAuthenticated: boolean): UseEvolutionSurfaceResult {
+export function useEvolutionSurface(
+  isAuthenticated: boolean,
+  /** When false, skip evolution API (preview UI only). */
+  evolutionEnabled = true
+): UseEvolutionSurfaceResult {
   const [states, setStates] = useState<IdentityEvolutionState[]>([]);
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
 
   const fetchStates = useCallback(async () => {
-    if (!isAuthenticated || !hasStoredAuthSession()) {
+    if (!isAuthenticated || !hasStoredAuthSession() || !evolutionEnabled) {
       setStates([]);
-      setLoadStatus('idle');
+      setLoadStatus(evolutionEnabled ? 'idle' : 'ok');
       return;
     }
     setLoadStatus('loading');
@@ -44,14 +48,14 @@ export function useEvolutionSurface(isAuthenticated: boolean): UseEvolutionSurfa
         setLoadStatus('error');
       }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, evolutionEnabled]);
 
   useEffect(() => {
     void fetchStates();
   }, [fetchStates]);
 
   const mode = useMemo((): EvolutionSurfaceMode => {
-    if (!isAuthenticated) return 'preview';
+    if (!isAuthenticated || !evolutionEnabled) return 'preview';
     if (loadStatus === 'error') return 'degraded';
     if (loadStatus === 'loading' || loadStatus === 'idle') return 'preview';
     return states.length > 0 ? 'active' : 'preview';

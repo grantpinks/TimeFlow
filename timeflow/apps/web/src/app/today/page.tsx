@@ -95,7 +95,10 @@ export default function TodayPage() {
   const [identityFilter, setIdentityFilter] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [habits, setHabits] = useState<Habit[]>([]);
-  const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress();
+  const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress(
+    undefined,
+    isAuthenticated
+  );
   const [celebration, setCelebration] = useState<IdentityDayProgress | null>(null);
   const [showEodIdentityReport, setShowEodIdentityReport] = useState(false);
   const [showEodSummary, setShowEodSummary] = useState(false);
@@ -109,7 +112,7 @@ export default function TodayPage() {
     states: evolutionStates,
     loading: evolutionLoading,
     refresh: refreshEvolution,
-  } = useEvolutionSurface(isAuthenticated);
+  } = useEvolutionSurface(isAuthenticated, user?.identityEvolutionEnabled === true);
   const [nextUnlockLabel, setNextUnlockLabel] = useState<string | null>(null);
 
   const leadingEvolutionState = useMemo(() => {

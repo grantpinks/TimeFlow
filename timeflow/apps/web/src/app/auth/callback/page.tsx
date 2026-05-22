@@ -1,22 +1,48 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { setAuthToken, setRefreshToken } from '../../../lib/api';
 import { LoadingSpinner } from '@/components/ui';
 
+/** Read OAuth params from the live URL (reliable on external redirect; useSearchParams can be empty briefly). */
+function readOAuthCallbackParams(): {
+  token: string | null;
+  refreshToken: string | null;
+  error: string | null;
+  state: string | null;
+} {
+  if (typeof window === 'undefined') {
+    return { token: null, refreshToken: null, error: null, state: null };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    token: params.get('token') || params.get('accessToken'),
+    refreshToken: params.get('refreshToken'),
+    error: params.get('error'),
+    state: params.get('state'),
+  };
+}
+
+/** Only allow same-origin relative return paths from OAuth state. */
+function safeReturnPath(state: string | null): string {
+  if (!state) return '/tasks';
+  if (state.startsWith('/') && !state.startsWith('//')) return state;
+  return '/tasks';
+}
+
 function AuthCallbackContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const handledRef = useRef(false);
 
   useEffect(() => {
-    const token = searchParams.get('token') || searchParams.get('accessToken');
-    const refreshToken = searchParams.get('refreshToken');
-    const error = searchParams.get('error');
-    const state = searchParams.get('state'); // OAuth state parameter (returnTo URL)
+    if (handledRef.current) return;
+    handledRef.current = true;
+
+    const { token, refreshToken, error, state } = readOAuthCallbackParams();
 
     if (error) {
-      router.push(`/auth/error?error=${error}`);
+      router.replace(`/auth/error?error=${encodeURIComponent(error)}`);
       return;
     }
 
@@ -26,14 +52,13 @@ function AuthCallbackContent() {
         setRefreshToken(refreshToken);
       }
 
-      // If state parameter exists, redirect there (e.g., back to pricing with checkout param)
-      // Otherwise, go to default /tasks page
-      const redirectTo = state || '/tasks';
-      router.push(redirectTo);
-    } else {
-      router.push('/auth/error?error=no_token');
+      const redirectTo = safeReturnPath(state);
+      router.replace(redirectTo);
+      return;
     }
-  }, [router, searchParams]);
+
+    router.replace('/auth/error?error=no_token');
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center">

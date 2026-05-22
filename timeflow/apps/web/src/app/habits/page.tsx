@@ -86,7 +86,7 @@ export default function HabitsPage() {
     mode: evolutionMode,
     states: evolutionStates,
     refresh: refreshEvolution,
-  } = useEvolutionSurface(isAuthenticated);
+  } = useEvolutionSurface(isAuthenticated, user?.identityEvolutionEnabled === true);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [localHabits, setLocalHabits] = useState<Habit[]>([]);
