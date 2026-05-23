@@ -18,7 +18,8 @@
     "rewrite-timeflow-events": "tsx scripts/rename-timeflow-events.ts",
     "ai:regression": "AI_REGRESSION_PROMPTS=./scripts/prompts/sprint13-regression.txt node scripts/test-ai-prompts.js",
     "prisma:generate": "pnpm exec prisma generate",
-    "prisma:migrate": "pnpm exec prisma migrate dev"
+    "prisma:migrate": "pnpm exec prisma migrate dev",
+    "verify:schema": "node scripts/verify-db-schema.js"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",

@@ -9,6 +9,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import fastifyJwt from '@fastify/jwt';
 import { env } from './config/env.js';
+import { prisma } from './config/prisma.js';
 
 // Route registrations
 import { registerAuthRoutes } from './routes/authRoutes.js';
@@ -74,8 +75,27 @@ export async function buildServer(): Promise<FastifyInstance> {
       false,
   });
 
-  // Health check
-  server.get('/health', async () => ({ status: 'ok' }));
+  // Health check — includes DB + latest migration for deploy drift detection
+  server.get('/health', async (request, reply) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      const latest = await prisma.$queryRaw<Array<{ migration_name: string }>>`
+        SELECT migration_name
+        FROM "_prisma_migrations"
+        WHERE rolled_back_at IS NULL AND finished_at IS NOT NULL
+        ORDER BY finished_at DESC
+        LIMIT 1
+      `;
+      return {
+        status: 'ok',
+        db: 'connected',
+        latestMigration: latest[0]?.migration_name ?? null,
+      };
+    } catch (error) {
+      request.log.error(error, 'Health check failed');
+      return reply.status(503).send({ status: 'degraded', db: 'unavailable' });
+    }
+  });
 
   await registerInternalCronRoutes(server);
 

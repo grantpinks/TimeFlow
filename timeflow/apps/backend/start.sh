@@ -19,9 +19,18 @@ echo ""
 echo "🔧 Node version:"
 node --version
 echo ""
+echo "📦 Migration folders on disk (latest 5):"
+ls -1 prisma/migrations 2>/dev/null | tail -5 || echo "  (none found)"
+echo ""
 echo "📦 Running database migrations..."
 # Invoke the Prisma 5.x CLI via Node (no reliance on pnpm/npx in PATH at container start).
 node ./node_modules/prisma/build/index.js migrate deploy
+echo ""
+echo "📦 Migration status:"
+node ./node_modules/prisma/build/index.js migrate status
+echo ""
+echo "🔍 Verifying database schema matches deployed code..."
+node scripts/verify-db-schema.js
 echo "✅ Migrations complete!"
 echo ""
 echo "▶️  Starting node dist/index.js..."
