@@ -49,16 +49,23 @@ async function main() {
       process.exit(1);
     }
 
+    const missingColumns = [];
     for (const { table, column } of REQUIRED_COLUMNS) {
       try {
-        await prisma.$queryRawUnsafe(
-          `SELECT "${column}" FROM "${table}" WHERE false`
-        );
-      } catch (err) {
-        console.error(`❌ Missing column "${table}"."${column}" — auth and other flows will fail.`);
-        console.error(`   ${err instanceof Error ? err.message : String(err)}`);
-        process.exit(1);
+        await prisma.$queryRawUnsafe(`SELECT "${column}" FROM "${table}" WHERE false`);
+      } catch {
+        missingColumns.push(`${table}.${column}`);
       }
+    }
+
+    if (missingColumns.length > 0) {
+      console.error(
+        `❌ Migration "${latestApplied}" is recorded but required columns are missing: ${missingColumns.join(', ')}`
+      );
+      console.error(
+        '   Pending repair migrations should fix this on next deploy. If none remain, check DIRECT_URL / Supabase connection.'
+      );
+      process.exit(1);
     }
 
     console.log('✅ Database schema verification passed');
