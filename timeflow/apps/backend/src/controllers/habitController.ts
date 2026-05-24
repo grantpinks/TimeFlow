@@ -851,6 +851,82 @@ export async function getHabitNotifications(
 }
 
 /**
+ * GET /api/habits/consistency?identityId=X&days=7
+ * Returns a rolling N-day completion grid per habit for a given identity.
+ */
+export async function getHabitConsistency(
+  request: FastifyRequest<{ Querystring: { identityId?: string; days?: string } }>,
+  reply: FastifyReply
+) {
+  const userId = (request.user as any).id;
+  const { identityId, days: daysStr } = request.query;
+
+  if (!identityId) {
+    return reply.status(400).send({ error: 'identityId is required' });
+  }
+
+  const windowDays = Math.min(Math.max(parseInt(daysStr ?? '7', 10) || 7, 1), 30);
+
+  // Build date window: [windowDays days ago ... today], each as YYYY-MM-DD
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const dates: string[] = [];
+  for (let i = windowDays - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+
+  const windowStart = new Date(today);
+  windowStart.setDate(today.getDate() - (windowDays - 1));
+
+  const habits = await prisma.habit.findMany({
+    where: { userId, identityId },
+    select: { id: true, title: true },
+    orderBy: { sortOrder: 'asc' },
+  });
+
+  if (habits.length === 0) {
+    return reply.send({ identityId, windowDays, habits: [] });
+  }
+
+  const habitIds = habits.map((h) => h.id);
+
+  const completions = await prisma.habitCompletion.findMany({
+    where: {
+      habitId: { in: habitIds },
+      completedAt: { gte: windowStart },
+    },
+    select: { habitId: true, completedAt: true },
+  });
+
+  // Build a Set of "habitId|YYYY-MM-DD" for O(1) lookup
+  const completedSet = new Set<string>();
+  for (const c of completions) {
+    const dateStr = new Date(c.completedAt).toISOString().split('T')[0];
+    completedSet.add(`${c.habitId}|${dateStr}`);
+  }
+
+  const todayStr = today.toISOString().split('T')[0];
+  const result = habits.map((h) => {
+    const completionArr = dates.map((d) => completedSet.has(`${h.id}|${d}`));
+    const completionCount = completionArr.filter(Boolean).length;
+    const elapsedDays = dates.filter((d) => d <= todayStr).length;
+
+    return {
+      habitId: h.id,
+      habitName: h.title,
+      dates,
+      completions: completionArr,
+      completionCount,
+      elapsedDays,
+    };
+  });
+
+  return reply.send({ identityId, windowDays, habits: result });
+}
+
+/**
  * POST /api/habits/:habitId/available-slots
  * Find available time slots for a specific habit based on calendar analysis
  */

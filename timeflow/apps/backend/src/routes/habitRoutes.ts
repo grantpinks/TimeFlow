@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as habitController from '../controllers/habitController.js';
-import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler, reorderHabits, rescheduleHabitInstanceHandler, getAvailableSlotsHandler } from '../controllers/habitController.js';
+import { getSchedulingContextHandler, generateBulkScheduleHandler, commitScheduleHandler, reorderHabits, rescheduleHabitInstanceHandler, getAvailableSlotsHandler, getHabitConsistency } from '../controllers/habitController.js';
 import { requireAuth } from '../middlewares/auth.js';
 
 export async function registerHabitRoutes(server: FastifyInstance) {
@@ -36,6 +36,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     '/habits/suggestions/reject',
     { preHandler: requireAuth },
     habitController.rejectHabitSuggestion
+  );
+
+  // GET /api/habits/consistency?identityId=X&days=7
+  server.get(
+    '/habits/consistency',
+    { preHandler: requireAuth },
+    getHabitConsistency
   );
 
   // GET /api/habits - List all habits for user
