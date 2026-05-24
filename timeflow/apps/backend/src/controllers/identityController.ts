@@ -8,7 +8,10 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import * as identityService from '../services/identityService.js';
-import { getEvolutionState as getEvolutionStateService } from '../services/identityEvolutionService.js';
+import {
+  getEvolutionState as getEvolutionStateService,
+  xpToNextLevel,
+} from '../services/identityEvolutionService.js';
 import { prisma } from '../config/prisma.js';
 import { UNLOCK_CATALOG } from '../config/identityUnlockCatalog.js';
 
@@ -406,4 +409,48 @@ export async function getIdentityUnlocks(
   });
 
   return reply.send({ unlocks });
+}
+
+export async function getUpcomingUnlocks(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const userId = (request.user as any).id;
+  if (!(await requireEvolutionEnabled(userId, reply))) return;
+
+  const identityId = request.params.id;
+
+  const identity = await prisma.identity.findFirst({
+    where: { id: identityId, userId },
+    select: { xp: true },
+  });
+  if (!identity) {
+    return reply.status(404).send({ error: 'Identity not found' });
+  }
+
+  const earned = await prisma.identityUnlock.findMany({
+    where: { identityId, userId },
+    select: { unlockKey: true },
+  });
+  const earnedKeys = new Set(earned.map((e) => e.unlockKey));
+
+  const remaining = UNLOCK_CATALOG.filter((e) => !earnedKeys.has(e.unlockKey));
+  const sorted = remaining.sort((a, b) => {
+    const aVal = a.grantedByLevel ?? 999;
+    const bVal = b.grantedByLevel ?? 999;
+    return aVal - bVal;
+  });
+  const upcoming = sorted.slice(0, 3).map((e) => ({
+    unlockKey: e.unlockKey,
+    unlockType: e.unlockType,
+    displayName: e.displayName,
+    description: e.description,
+    grantedByLevel: e.grantedByLevel,
+    grantedByStage: e.grantedByStage ?? null,
+  }));
+
+  const xpRemaining = xpToNextLevel(identity.xp);
+  const sessionsNeeded = Math.ceil(xpRemaining / 10);
+
+  return reply.send({ identityId, upcoming, xpToNextLevel: xpRemaining, sessionsNeeded });
 }

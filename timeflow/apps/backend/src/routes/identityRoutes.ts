@@ -46,6 +46,11 @@ export async function registerIdentityRoutes(server: FastifyInstance) {
     { preHandler: requireAuth },
     identityController.getIdentityUnlocks
   );
+  server.get(
+    '/identities/:id/upcoming-unlocks',
+    { preHandler: requireAuth },
+    identityController.getUpcomingUnlocks
+  );
 
   // CRUD
   server.get(
