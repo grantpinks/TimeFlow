@@ -72,6 +72,8 @@ import type {
   ProductivityTrendsResponse,
   StreakResponse,
   CategoryBreakdownResponse,
+  HabitConsistencyResponse,
+  UpcomingUnlocksResponse,
 } from '@timeflow/shared';
 import { getAiDebugEnabled } from './aiDebug';
 import { track } from './analytics';
@@ -1861,6 +1863,21 @@ export function updateFlowCustomization(body: Partial<FlowCustomizationState>): 
 
 export function getIdentityUnlocks(identityId: string): Promise<{ unlocks: IdentityUnlockItem[] }> {
   return request<{ unlocks: IdentityUnlockItem[] }>(`/identities/${identityId}/unlocks`);
+}
+
+export function getHabitConsistency(
+  identityId: string,
+  days = 7
+): Promise<HabitConsistencyResponse> {
+  return request<HabitConsistencyResponse>(
+    `/habits/consistency?identityId=${encodeURIComponent(identityId)}&days=${days}`
+  );
+}
+
+export function getUpcomingUnlocks(identityId: string): Promise<UpcomingUnlocksResponse> {
+  return request<UpcomingUnlocksResponse>(
+    `/identities/${encodeURIComponent(identityId)}/upcoming-unlocks`
+  );
 }
 
 // ===== Analytics API Functions =====
