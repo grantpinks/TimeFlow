@@ -51,8 +51,6 @@ export function HabitPlannerPreview() {
   const positionedEvents = useMemo(() => positionBlocks(baseEvents), []);
   const positionedHabits = useMemo(() => positionBlocks(habits), []);
 
-  const totalItems = positionedEvents.length + positionedHabits.length;
-
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 space-y-5 w-full max-w-[1100px]">
       <div className="flex items-center justify-between">
