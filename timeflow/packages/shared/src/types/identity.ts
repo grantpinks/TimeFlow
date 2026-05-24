@@ -185,13 +185,13 @@ export interface HabitConsistencyResponse {
 /** A single not-yet-earned unlock the user is working toward. */
 export interface UpcomingUnlockEntry {
   unlockKey: string;
-  unlockType: string;
+  unlockType: UnlockType;
   displayName: string;
   description: string;
   /** Level required (null if stage-gated). */
   grantedByLevel: number | null;
   /** Stage required (null if level-gated). */
-  grantedByStage: string | null;
+  grantedByStage: IdentityStage | null;
 }
 
 export interface UpcomingUnlocksResponse {
