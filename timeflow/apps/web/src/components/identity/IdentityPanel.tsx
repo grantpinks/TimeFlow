@@ -64,6 +64,7 @@ export function IdentityPanel({
     sessionReady
   );
   const { data: upcomingData, loading: upcomingLoading } = useUpcomingUnlocks(
+    // Only fetch upcoming unlocks when evolution is fully active
     evolutionMode === 'active' ? validId : null,
     sessionReady
   );
@@ -81,7 +82,7 @@ export function IdentityPanel({
         <p className="text-sm font-semibold text-slate-800">{greeting(totalDone)}</p>
       </div>
 
-      {/* Identity pill selector */}
+      {/* Identity pill selector — only shown when there are multiple identities */}
       {identities.length > 1 && (
         <div className="flex gap-2 overflow-x-auto border-b border-slate-100 px-4 py-2.5 scrollbar-none">
           {identities.map((id) => (
@@ -98,7 +99,13 @@ export function IdentityPanel({
               <span>{id.icon}</span>
               <span>{id.name}</span>
               {id.completedCount > 0 && (
-                <span className={`rounded-full px-1 text-[10px] font-bold ${validId === id.identityId ? 'bg-teal-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                <span
+                  className={`rounded-full px-1 text-[10px] font-bold ${
+                    validId === id.identityId
+                      ? 'bg-teal-500 text-white'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
                   {id.completedCount}✓
                 </span>
               )}
@@ -133,6 +140,7 @@ export function IdentityPanel({
             loading={consistencyLoading}
             todayDone={selectedIdentity?.completedCount ?? 0}
             todayMinutes={selectedIdentity?.totalMinutes ?? 0}
+            // IdentityDayProgress uses currentStreak, not streakDays
             streakDays={selectedIdentity?.currentStreak}
           />
         ) : (
