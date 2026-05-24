@@ -161,3 +161,44 @@ export interface FlowCustomizationState {
   selectedAnimationPack: string;
   updatedAt: string;
 }
+
+/** One habit's 7-day completion grid for the consistency ribbon. */
+export interface HabitConsistencyEntry {
+  habitId: string;
+  habitName: string;
+  /** ISO date strings for the window, oldest first. Always 7 entries. */
+  dates: string[];
+  /** Parallel to dates: true = completed, false = not completed (including future dates). */
+  completions: boolean[];
+  /** Number of completions in the window. */
+  completionCount: number;
+  /** Total days in window that have passed (for rate denominator). */
+  elapsedDays: number;
+}
+
+export interface HabitConsistencyResponse {
+  identityId: string;
+  windowDays: number;
+  habits: HabitConsistencyEntry[];
+}
+
+/** A single not-yet-earned unlock the user is working toward. */
+export interface UpcomingUnlockEntry {
+  unlockKey: string;
+  unlockType: string;
+  displayName: string;
+  description: string;
+  /** Level required (null if stage-gated). */
+  grantedByLevel: number | null;
+  /** Stage required (null if level-gated). */
+  grantedByStage: string | null;
+}
+
+export interface UpcomingUnlocksResponse {
+  identityId: string;
+  upcoming: UpcomingUnlockEntry[];
+  /** XP still needed to reach the next level. Echoed for convenience. */
+  xpToNextLevel: number;
+  /** Estimated habit sessions needed (xpToNextLevel / 10, rounded up). */
+  sessionsNeeded: number;
+}
