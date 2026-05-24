@@ -134,7 +134,7 @@ export function HabitPlannerPreview() {
                 ))}
               </div>
 
-              <div className="relative h-[640px] md:h-[680px] bg-white border-t border-gray-200 overflow-hidden">
+              <div className="relative h-[720px] md:h-[840px] bg-white border-t border-gray-200 overflow-hidden">
                 {hours.map((_, idx) => (
                   <div
                     key={idx}
@@ -155,7 +155,7 @@ export function HabitPlannerPreview() {
                     style={{ gridTemplateColumns: `repeat(${dayLabels.length}, minmax(0, 1fr))` }}
                   >
                     {dayLabels.map((day, dayIndex) => (
-                      <div key={day} className="relative border-l border-gray-100 first:border-l-0 px-3">
+                      <div key={day} className="relative border-l border-gray-100 first:border-l-0 px-4">
                         {/* Existing events */}
                         <AnimatePresence>
                         {positionedEvents
@@ -176,8 +176,8 @@ export function HabitPlannerPreview() {
                                   backgroundColor: `${evt.color}f2`,
                                 }}
                               >
-                                <div className="px-2.5 py-2 text-white h-full flex items-center">
-                                  <div className="font-medium text-sm md:text-base truncate w-full">{evt.title}</div>
+                                <div className="px-3 py-3 text-white h-full flex items-center">
+                                  <div className="font-medium text-sm md:text-base line-clamp-2 w-full">{evt.title}</div>
                                 </div>
                               </motion.div>
                             ))}
@@ -203,8 +203,8 @@ export function HabitPlannerPreview() {
                                 backgroundColor: evt.color,
                               }}
                             >
-                                <div className="px-2.5 py-2 text-white h-full flex items-center">
-                                  <div className="font-medium text-sm md:text-base truncate w-full">{evt.title}</div>
+                                <div className="px-3 py-3 text-white h-full flex items-center">
+                                  <div className="font-medium text-sm md:text-base line-clamp-2 w-full">{evt.title}</div>
                                 </div>
                               </motion.div>
                             ))}

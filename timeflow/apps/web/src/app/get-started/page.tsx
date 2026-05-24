@@ -27,9 +27,9 @@ export default function GetStartedPage() {
               1
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-1">Connect Google Calendar</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">Connect Google Calendar & Gmail</h3>
               <p className="text-sm text-gray-600">
-                We'll request read and write access to analyze your schedule and create optimized time blocks.
+                We'll request access to your calendar and email to analyze your schedule, extract tasks from emails, and create optimized time blocks.
               </p>
             </div>
           </div>

@@ -67,7 +67,7 @@ const organizedSchedule: DaySchedule[] = [
       { id: 1, title: 'Morning Workout', start: '09:00', end: '09:45', color: '#0BAF9A' },
       { id: 2, title: 'Project Check-in', start: '10:00', end: '10:35', color: '#14B8A6' }, // Fixed overlap
       { id: 3, title: 'Client Call', start: '10:45', end: '11:45', color: '#0EA5E9' }, // Shifted to avoid conflict
-      { id: 14, title: '☕ Free Time', start: '11:45', end: '12:00', color: '#10B981' }, // RECLAIMED
+      { id: 14, title: 'Free Time', start: '11:45', end: '12:00', color: '#10B981' }, // RECLAIMED
       { id: 4, title: 'Lunch Break', start: '12:00', end: '13:00', color: '#10B981' },
     ],
   },
@@ -77,7 +77,7 @@ const organizedSchedule: DaySchedule[] = [
     events: [
       { id: 5, title: '1:1 Prep', start: '09:45', end: '10:30', color: '#0BAF9A' },
       { id: 6, title: 'Lecture: Data Structures', start: '10:30', end: '11:30', color: '#6366F1' },
-      { id: 15, title: '🎯 Focus Block', start: '12:00', end: '13:00', color: '#0BAF9A' }, // RECLAIMED
+      { id: 15, title: 'Focus Block', start: '12:00', end: '13:00', color: '#0BAF9A' }, // RECLAIMED
       { id: 7, title: 'Study: Algorithms', start: '13:00', end: '14:00', color: '#14B8A6' }, // Fixed overlap
       { id: 8, title: 'Inbox Tidy Up', start: '14:00', end: '15:00', color: '#0BAF9A' },
       { id: 9, title: 'Plan Tomorrow', start: '15:00', end: '15:45', color: '#F97316' },
@@ -89,7 +89,7 @@ const organizedSchedule: DaySchedule[] = [
     events: [
       { id: 10, title: 'Design Sync', start: '10:30', end: '11:30', color: '#14B8A6' },
       { id: 11, title: 'Inbox Triage', start: '11:30', end: '12:00', color: '#0BAF9A' }, // Fixed overlap
-      { id: 16, title: '✨ Time for You', start: '12:00', end: '13:00', color: '#10B981' }, // RECLAIMED
+      { id: 16, title: 'Time for You', start: '12:00', end: '13:00', color: '#10B981' }, // RECLAIMED
       { id: 12, title: 'Group Project', start: '13:00', end: '14:00', color: '#EF4444' },
       { id: 13, title: 'Evening Class', start: '14:00', end: '15:30', color: '#6366F1' },
     ],
