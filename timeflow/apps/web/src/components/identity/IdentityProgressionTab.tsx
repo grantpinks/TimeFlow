@@ -57,7 +57,7 @@ export function IdentityProgressionTab({
   }
 
   const currentStageIdx = STAGE_ORDER.indexOf(evolution.stage as (typeof STAGE_ORDER)[number]);
-  const sessionsNeeded = upcoming?.sessionsNeeded ?? Math.ceil((evolution.xpToNextLevel ?? 0) / 10);
+  const sessionsNeeded = upcoming?.sessionsNeeded ?? Math.ceil(evolution.xpToNextLevel / 10);
   const nextUnlock = upcoming?.upcoming[0] ?? null;
 
   return (
@@ -146,7 +146,7 @@ export function IdentityProgressionTab({
         <div>
           <p className="mb-2 text-[11px] font-bold uppercase tracking-widest text-slate-500">Coming up</p>
           <ul className="space-y-1.5">
-            {upcoming.upcoming.map((u) => (
+            {upcoming.upcoming.slice(0, 3).map((u) => (
               <li key={u.unlockKey} className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-50">
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-sm">
                   {u.unlockType === 'flow_palette' ? '🎨' : u.unlockType === 'flow_emote' ? '✨' : '🏗️'}
