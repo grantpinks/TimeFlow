@@ -195,13 +195,13 @@ export default function HomePage() {
             />
           </Link>
           <nav className="hidden md:flex items-center gap-6 lg:gap-8">
-            <a
-              href="#features"
+            <Link
+              href="/features"
               onClick={() => track('homepage_navigation_clicked', { destination: 'features' })}
               className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Features
-            </a>
+            </Link>
             <a
               href="#how-it-works"
               onClick={() => track('homepage_navigation_clicked', { destination: 'how-it-works' })}
@@ -209,42 +209,42 @@ export default function HomePage() {
             >
               How It Works
             </a>
-            <a
-              href="#pricing"
+            <Link
+              href="/pricing"
               onClick={() => track('homepage_navigation_clicked', { destination: 'pricing' })}
               className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Pricing
-            </a>
-            <a
-              href="#why-timeflow"
+            </Link>
+            <Link
+              href="/why-timeflow"
               onClick={() => track('homepage_navigation_clicked', { destination: 'why-timeflow' })}
               className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Why TimeFlow
-            </a>
+            </Link>
             <Link
-              href="/today"
+              href="/login"
               onClick={() => track('homepage_navigation_clicked', { destination: 'sign-in' })}
               className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm lg:text-base"
             >
               Sign In
             </Link>
-            <a
-              href={getGoogleAuthUrl()}
+            <Link
+              href="/get-started"
               onClick={() => track('homepage_cta_clicked', { cta_text: 'Get Started Free', location: 'header' })}
               className="bg-teal-600 text-white px-5 lg:px-6 py-2.5 lg:py-3 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium text-sm lg:text-base transition-all inline-flex items-center justify-center"
             >
               Get Started Free
-            </a>
+            </Link>
           </nav>
           {/* Mobile menu button */}
-          <a
-            href={getGoogleAuthUrl()}
+          <Link
+            href="/get-started"
             className="md:hidden bg-teal-600 text-white px-4 py-2.5 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium text-sm transition-all inline-flex items-center justify-center"
           >
             Get Started
-          </a>
+          </Link>
         </div>
       </header>
 

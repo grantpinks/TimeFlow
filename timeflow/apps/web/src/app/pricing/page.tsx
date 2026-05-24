@@ -231,13 +231,13 @@ function PricingPageContent() {
 
                 {/* CTA Button */}
                 {isFree ? (
-                  <a
-                    href={getGoogleAuthUrl()}
+                  <Link
+                    href="/get-started"
                     onClick={() => track('homepage_cta_clicked', { cta_text: plan.cta, location: 'pricing-card' })}
                     className="block w-full text-center px-6 py-3.5 min-h-[52px] rounded-lg font-semibold text-base bg-teal-600 text-white hover:bg-teal-700 active:bg-teal-800 transition-colors inline-flex items-center justify-center"
                   >
                     {plan.cta}
-                  </a>
+                  </Link>
                 ) : (
                   <button
                     onClick={() => handleCheckout(plan)}
@@ -311,23 +311,27 @@ function PricingPageContent() {
                 />
               </Link>
 
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Link
-                  href="/"
-                  onClick={() => track('homepage_navigation_clicked', { destination: 'home' })}
-                  className="text-gray-600 hover:text-teal-600 active:text-teal-700 font-medium transition-colors text-sm sm:text-base min-h-[44px] inline-flex items-center px-2 sm:px-3"
-                >
+              <nav className="flex items-center gap-2 sm:gap-4 md:gap-6">
+                <Link href="/" className="text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm min-h-[44px] inline-flex items-center">
                   Home
                 </Link>
-                <a
-                  href={getGoogleAuthUrl()}
-                  onClick={() => track('homepage_cta_clicked', { cta_text: 'Join Beta', location: 'header' })}
-                  className="bg-teal-600 text-white px-4 sm:px-5 py-2.5 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium transition-colors text-sm sm:text-base inline-flex items-center justify-center"
+                <Link href="/features" className="hidden sm:inline-flex text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm min-h-[44px] items-center">
+                  Features
+                </Link>
+                <Link href="/why-timeflow" className="hidden sm:inline-flex text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm min-h-[44px] items-center">
+                  Why TimeFlow
+                </Link>
+                <Link href="/login" className="hidden md:inline-flex text-gray-600 hover:text-teal-600 font-medium transition-colors text-sm min-h-[44px] items-center">
+                  Sign In
+                </Link>
+                <Link
+                  href="/get-started"
+                  onClick={() => track('homepage_cta_clicked', { cta_text: 'Get Started', location: 'pricing-header' })}
+                  className="bg-teal-600 text-white px-4 sm:px-5 py-2.5 min-h-[44px] rounded-lg hover:bg-teal-700 active:bg-teal-800 font-medium transition-colors text-sm inline-flex items-center justify-center"
                 >
-                  <span className="hidden sm:inline">Join the Beta</span>
-                  <span className="sm:hidden">Join</span>
-                </a>
-              </div>
+                  Get Started
+                </Link>
+              </nav>
             </div>
           </header>
 

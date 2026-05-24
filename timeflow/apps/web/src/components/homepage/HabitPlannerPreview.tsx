@@ -134,7 +134,7 @@ export function HabitPlannerPreview() {
                 ))}
               </div>
 
-              <div className="relative h-[512px] bg-white border-t border-gray-200 overflow-hidden">
+              <div className="relative h-[640px] md:h-[680px] bg-white border-t border-gray-200 overflow-hidden">
                 {hours.map((_, idx) => (
                   <div
                     key={idx}
@@ -176,41 +176,35 @@ export function HabitPlannerPreview() {
                                   backgroundColor: `${evt.color}f2`,
                                 }}
                               >
-                                <div className="px-2 py-1.5 text-white h-full flex items-center">
-                                  <div className="font-medium text-sm truncate w-full">{evt.title}</div>
+                                <div className="px-2.5 py-2 text-white h-full flex items-center">
+                                  <div className="font-medium text-sm md:text-base truncate w-full">{evt.title}</div>
                                 </div>
                               </motion.div>
                             ))}
                       </AnimatePresence>
 
-                      {/* Habits */}
+                      {/* Habits - only render when scheduled */}
                       <AnimatePresence>
-                        {positionedHabits
+                        {scheduled && positionedHabits
                           .filter((evt) => evt.day === dayIndex)
                           .map((evt, index) => (
                             <motion.div
                               key={`${evt.id}-${scheduled}`}
-                              initial={{ opacity: 0, x: scheduled ? 8 : -8, scale: 0.96 }}
-                              animate={{
-                                opacity: scheduled ? 1 : 0.35,
-                                x: 0,
-                                scale: scheduled ? 1 : 0.98,
-                              }}
-                              exit={{ opacity: 0, x: scheduled ? -8 : 8 }}
-                              transition={{ duration: 0.25, delay: scheduled ? index * 0.05 : 0 }}
+                              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                              transition={{ duration: 0.3, delay: index * 0.08 }}
                               className="absolute rounded-md shadow-md border border-white/50 overflow-hidden"
                               style={{
                                 top: `${evt.top}%`,
                                 height: `${evt.height}%`,
                                 left: '1%',
                                 width: '98%',
-                                  backgroundColor: evt.color,
-                                  opacity: scheduled ? 1 : 0.7,
-                                  filter: scheduled ? 'none' : 'grayscale(0.2)',
-                                }}
-                              >
-                                <div className="px-2 py-1.5 text-white h-full flex items-center">
-                                  <div className="font-medium text-sm truncate w-full">{evt.title}</div>
+                                backgroundColor: evt.color,
+                              }}
+                            >
+                                <div className="px-2.5 py-2 text-white h-full flex items-center">
+                                  <div className="font-medium text-sm md:text-base truncate w-full">{evt.title}</div>
                                 </div>
                               </motion.div>
                             ))}

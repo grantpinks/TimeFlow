@@ -23,7 +23,7 @@ type DaySchedule = {
   events: CalendarEvent[];
 };
 
-// Messy calendar events (overlapping, poorly scheduled) across multiple days
+// Chaotic calendar - same events, random colors, overlapping
 const messySchedule: DaySchedule[] = [
   {
     label: 'Mon',
@@ -58,15 +58,16 @@ const messySchedule: DaySchedule[] = [
   },
 ];
 
-// Organized calendar events (properly spaced) across multiple days
+// Organized calendar - SAME events, TimeFlow colors, no overlaps + reclaimed time blocks
 const organizedSchedule: DaySchedule[] = [
   {
     label: 'Mon',
     date: 'Dec 11',
     events: [
       { id: 1, title: 'Morning Workout', start: '09:00', end: '09:45', color: '#0BAF9A' },
-      { id: 2, title: 'Marketing Brief', start: '10:00', end: '11:00', color: '#14B8A6' },
-      { id: 3, title: 'Deep Work Block', start: '11:00', end: '12:00', color: '#0BAF9A' },
+      { id: 2, title: 'Project Check-in', start: '10:00', end: '10:35', color: '#14B8A6' }, // Fixed overlap
+      { id: 3, title: 'Client Call', start: '10:45', end: '11:45', color: '#0EA5E9' }, // Shifted to avoid conflict
+      { id: 14, title: '☕ Free Time', start: '11:45', end: '12:00', color: '#10B981' }, // RECLAIMED
       { id: 4, title: 'Lunch Break', start: '12:00', end: '13:00', color: '#10B981' },
     ],
   },
@@ -74,10 +75,11 @@ const organizedSchedule: DaySchedule[] = [
     label: 'Tue',
     date: 'Dec 12',
     events: [
-      { id: 5, title: '1:1 Prep', start: '09:45', end: '10:30', color: '#0EA5E9' },
+      { id: 5, title: '1:1 Prep', start: '09:45', end: '10:30', color: '#0BAF9A' },
       { id: 6, title: 'Lecture: Data Structures', start: '10:30', end: '11:30', color: '#6366F1' },
-      { id: 7, title: 'Study Session', start: '13:00', end: '14:00', color: '#14B8A6' },
-      { id: 8, title: 'Inbox Zero Sprint', start: '14:00', end: '15:00', color: '#0BAF9A' },
+      { id: 15, title: '🎯 Focus Block', start: '12:00', end: '13:00', color: '#0BAF9A' }, // RECLAIMED
+      { id: 7, title: 'Study: Algorithms', start: '13:00', end: '14:00', color: '#14B8A6' }, // Fixed overlap
+      { id: 8, title: 'Inbox Tidy Up', start: '14:00', end: '15:00', color: '#0BAF9A' },
       { id: 9, title: 'Plan Tomorrow', start: '15:00', end: '15:45', color: '#F97316' },
     ],
   },
@@ -86,7 +88,8 @@ const organizedSchedule: DaySchedule[] = [
     date: 'Dec 13',
     events: [
       { id: 10, title: 'Design Sync', start: '10:30', end: '11:30', color: '#14B8A6' },
-      { id: 11, title: 'Inbox Triage', start: '11:30', end: '12:00', color: '#0BAF9A' },
+      { id: 11, title: 'Inbox Triage', start: '11:30', end: '12:00', color: '#0BAF9A' }, // Fixed overlap
+      { id: 16, title: '✨ Time for You', start: '12:00', end: '13:00', color: '#10B981' }, // RECLAIMED
       { id: 12, title: 'Group Project', start: '13:00', end: '14:00', color: '#EF4444' },
       { id: 13, title: 'Evening Class', start: '14:00', end: '15:30', color: '#6366F1' },
     ],
@@ -162,11 +165,11 @@ export function ProblemStatement() {
           className="text-center mb-12 sm:mb-16"
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
-            Your Calendar Shouldn&apos;t Control You
+            Reclaim Hours Every Week, Not Just Organize
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto">
             <span className="text-2xl sm:text-3xl font-bold text-teal-600">{count}%</span> of
-            workers feel overwhelmed by task management and scheduling conflicts
+            workers waste hours on scheduling conflicts and poor time management
           </p>
         </motion.div>
 
@@ -194,16 +197,16 @@ export function ProblemStatement() {
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="hidden sm:inline">Organized with TimeFlow</span>
-                    <span className="sm:hidden">Organized</span>
+                    <span className="hidden sm:inline">3 Hours Reclaimed ✨</span>
+                    <span className="sm:hidden">Reclaimed ✨</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    <span className="hidden sm:inline">Click to Organize Your Calendar</span>
-                    <span className="sm:hidden">Tap to Fix This</span>
+                    <span className="hidden sm:inline">See How Much Time You'll Get Back</span>
+                    <span className="sm:hidden">Get Time Back</span>
                   </>
                 )}
               </span>
@@ -216,7 +219,7 @@ export function ProblemStatement() {
               )}
             </button>
             <p className="text-xs sm:text-sm text-gray-500 mt-3 px-4">
-              {isOrganized ? 'AI-optimized schedule with no conflicts' : 'Chaotic calendar with overlapping events'}
+              {isOrganized ? '✨ Same schedule, 3 hours reclaimed for what you love' : 'Wasted time from conflicts and poor planning'}
             </p>
           </div>
 
@@ -355,14 +358,14 @@ export function ProblemStatement() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-center p-3 sm:p-4 bg-gray-50 rounded-lg"
+              className="text-center p-3 sm:p-4 bg-gradient-to-br from-teal-50 to-green-50 rounded-lg border-2 border-teal-200"
             >
               <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
-                isOrganized ? 'text-teal-600' : 'text-red-500'
+                isOrganized ? 'text-teal-600' : 'text-gray-400'
               }`}>
-                {isOrganized ? '8h' : '2h'}
+                {isOrganized ? '3h ✨' : '0h'}
               </div>
-              <div className="text-xs sm:text-sm text-gray-600">Focus Time</div>
+              <div className="text-xs sm:text-sm font-semibold text-teal-700">Time Reclaimed</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -373,9 +376,9 @@ export function ProblemStatement() {
               <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
-                {isOrganized ? '100%' : '45%'}
+                {isOrganized ? '8h' : '2h'}
               </div>
-              <div className="text-xs sm:text-sm text-gray-600">Efficiency</div>
+              <div className="text-xs sm:text-sm text-gray-600">Focus Time</div>
             </motion.div>
           </div>
         </motion.div>

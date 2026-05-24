@@ -154,13 +154,13 @@ function FeaturesPageBody() {
               and habit tracking into a single daily command center.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <a
-                href={getGoogleAuthUrl()}
-                onClick={() => track('homepage_cta_clicked', { cta_text: 'Start Free Beta', location: 'features-hero' })}
+              <Link
+                href="/get-started"
+                onClick={() => track('homepage_cta_clicked', { cta_text: 'Start Free Trial', location: 'features-hero' })}
                 className="inline-flex items-center px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors"
               >
-                Start Free Beta
-              </a>
+                Start Free Trial
+              </Link>
               <Link
                 href="/pricing"
                 className="inline-flex items-center px-6 py-3 border border-gray-200 text-gray-900 font-semibold rounded-lg hover:border-teal-300"
@@ -319,15 +319,15 @@ function FeaturesPageBody() {
             Ready to Try TimeFlow?
           </h2>
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-            Join our beta and get full access to all features—completely free during the beta period.
+            Start your free 14-day trial and experience the difference. No credit card required.
           </p>
-          <a
-            href={getGoogleAuthUrl()}
-            onClick={() => track('homepage_cta_clicked', { cta_text: 'Start Free Beta', location: 'features-cta' })}
+          <Link
+            href="/get-started"
+            onClick={() => track('homepage_cta_clicked', { cta_text: 'Start Free Trial', location: 'features-cta' })}
             className="inline-block px-8 py-4 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors"
           >
-            Start Free Beta
-          </a>
+            Start Free Trial
+          </Link>
         </section>
     </div>
   );
@@ -347,19 +347,25 @@ export default function FeaturesPage() {
                 <Link href="/" className="text-gray-600 hover:text-teal-600">
                   Home
                 </Link>
-                <Link href="/about" className="text-gray-600 hover:text-teal-600">
-                  About
+                <Link href="/features" className="text-gray-600 hover:text-teal-600">
+                  Features
                 </Link>
                 <Link href="/pricing" className="text-gray-600 hover:text-teal-600">
                   Pricing
                 </Link>
-                <a
-                  href={getGoogleAuthUrl()}
+                <Link href="/why-timeflow" className="text-gray-600 hover:text-teal-600">
+                  Why TimeFlow
+                </Link>
+                <Link href="/login" className="text-gray-600 hover:text-teal-600">
+                  Sign In
+                </Link>
+                <Link
+                  href="/get-started"
                   onClick={() => track('homepage_cta_clicked', { cta_text: 'Get Started', location: 'features-header' })}
                   className="px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium"
                 >
                   Get Started
-                </a>
+                </Link>
               </nav>
             </div>
           </header>
