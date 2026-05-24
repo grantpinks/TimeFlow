@@ -850,6 +850,14 @@ export async function getHabitNotifications(
   }
 }
 
+/** Formats a Date as YYYY-MM-DD using local calendar time (not UTC). */
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /**
  * GET /api/habits/consistency?identityId=X&days=7
  * Returns a rolling N-day completion grid per habit for a given identity.
@@ -874,7 +882,7 @@ export async function getHabitConsistency(
   for (let i = windowDays - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    dates.push(d.toISOString().split('T')[0]);
+    dates.push(localDateStr(d));
   }
 
   const windowStart = new Date(today);
@@ -883,7 +891,7 @@ export async function getHabitConsistency(
   const habits = await prisma.habit.findMany({
     where: { userId, identityId },
     select: { id: true, title: true },
-    orderBy: { sortOrder: 'asc' },
+    orderBy: { priorityRank: 'asc' },
   });
 
   if (habits.length === 0) {
@@ -896,6 +904,7 @@ export async function getHabitConsistency(
     where: {
       habitId: { in: habitIds },
       completedAt: { gte: windowStart },
+      status: 'completed',
     },
     select: { habitId: true, completedAt: true },
   });
@@ -903,14 +912,14 @@ export async function getHabitConsistency(
   // Build a Set of "habitId|YYYY-MM-DD" for O(1) lookup
   const completedSet = new Set<string>();
   for (const c of completions) {
-    const dateStr = new Date(c.completedAt).toISOString().split('T')[0];
-    completedSet.add(`${c.habitId}|${dateStr}`);
+    completedSet.add(`${c.habitId}|${localDateStr(new Date(c.completedAt))}`);
   }
 
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = localDateStr(today);
   const result = habits.map((h) => {
     const completionArr = dates.map((d) => completedSet.has(`${h.id}|${d}`));
     const completionCount = completionArr.filter(Boolean).length;
+    // elapsedDays counts only days up to and including today; always equals windowDays unless window extends into future
     const elapsedDays = dates.filter((d) => d <= todayStr).length;
 
     return {
