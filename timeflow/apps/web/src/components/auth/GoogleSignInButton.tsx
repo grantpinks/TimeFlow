@@ -15,7 +15,7 @@ export function GoogleSignInButton({
   location = 'unknown',
 }: GoogleSignInButtonProps) {
   const handleClick = () => {
-    track('google_signin_clicked', { location });
+    track('homepage_cta_clicked', { cta_text: text, location });
   };
 
   const baseStyles = 'group relative px-8 py-4 min-h-[56px] rounded-xl font-bold text-base sm:text-lg transition-all duration-300 inline-flex items-center justify-center gap-3 shadow-lg hover:shadow-xl active:scale-[0.98]';

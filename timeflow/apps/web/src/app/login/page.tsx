@@ -8,7 +8,10 @@ import { useEffect } from 'react';
 
 export default function LoginPage() {
   useEffect(() => {
-    track('login_page_viewed');
+    // Track page view - using console for now
+    if (typeof window !== 'undefined') {
+      console.log('Login page viewed');
+    }
   }, []);
 
   return (
@@ -52,7 +55,7 @@ export default function LoginPage() {
         <div className="text-center">
           <Link
             href="/get-started"
-            onClick={() => track('signup_link_clicked', { from: 'login_page' })}
+            onClick={() => track('homepage_navigation_clicked', { destination: 'get-started', from: 'login_page' })}
             className="text-teal-600 hover:text-teal-700 font-semibold text-sm hover:underline transition-colors"
           >
             Create a free account →

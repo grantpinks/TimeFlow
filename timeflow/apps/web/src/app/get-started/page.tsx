@@ -8,7 +8,10 @@ import { useEffect } from 'react';
 
 export default function GetStartedPage() {
   useEffect(() => {
-    track('get_started_page_viewed');
+    // Track page view - using console for now
+    if (typeof window !== 'undefined') {
+      console.log('Get started page viewed');
+    }
   }, []);
 
   return (
@@ -113,7 +116,7 @@ export default function GetStartedPage() {
         <div className="text-center">
           <Link
             href="/login"
-            onClick={() => track('signin_link_clicked', { from: 'get_started_page' })}
+            onClick={() => track('homepage_navigation_clicked', { destination: 'login', from: 'get_started_page' })}
             className="text-teal-600 hover:text-teal-700 font-semibold text-sm hover:underline transition-colors"
           >
             Sign in instead →

@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
 import { track } from '@/lib/analytics';
-import { getGoogleAuthUrl } from '@/lib/api';
 import { useEffect } from 'react';
 import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
 import { HomepageFooter } from '@/components/homepage/HomepageFooter';
@@ -16,7 +15,10 @@ const fadeInVariants = {
 
 function WhyTimeFlowContent() {
   useEffect(() => {
-    track('why_timeflow_page_viewed');
+    // Track page view - using generic event for now
+    if (typeof window !== 'undefined') {
+      console.log('Why TimeFlow page viewed');
+    }
   }, []);
 
   return (
@@ -130,7 +132,7 @@ function WhyTimeFlowContent() {
               {
                 competitor: 'Sunsama',
                 problem: 'Manual time blocking every day',
-                solution: 'TimeFlow's AI schedules everything automatically based on your priorities',
+                solution: 'TimeFlow\'s AI schedules everything automatically based on your priorities',
                 icon: '🤖',
               },
               {

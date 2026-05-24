@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { getGoogleAuthUrl } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
 
