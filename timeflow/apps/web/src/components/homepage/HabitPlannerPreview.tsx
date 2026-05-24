@@ -13,30 +13,26 @@ type Block = {
   type: 'habit' | 'event';
 };
 
-const dayLabels = ['Mon', 'Tue'];
-const hours = ['6 AM', '8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM'];
+const dayLabels = ['Monday'];
+const hours = ['7 AM', '9 AM', '11 AM', '1 PM', '3 PM', '5 PM', '7 PM'];
 
 const toMinutes = (time: string) => {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
 };
 
-const dayStart = toMinutes('06:00');
-const dayEnd = toMinutes('20:00');
+const dayStart = toMinutes('07:00');
+const dayEnd = toMinutes('19:00');
 const totalMinutes = dayEnd - dayStart;
 
 const baseEvents: Block[] = [
-  { id: 'class', title: 'Class: Data Structures', day: 0, start: '10:00', end: '11:30', color: '#3B82F6', type: 'event' },
-  { id: 'work-block', title: 'Work Block', day: 0, start: '13:00', end: '15:00', color: '#475569', type: 'event' },
-  { id: 'study', title: 'Study Group', day: 1, start: '14:00', end: '15:00', color: '#6366F1', type: 'event' },
-  { id: 'evening-class', title: 'Evening Class', day: 1, start: '18:00', end: '19:30', color: '#8B5CF6', type: 'event' },
+  { id: 'meeting', title: 'Team Meeting', day: 0, start: '10:00', end: '11:00', color: '#3B82F6', type: 'event' },
+  { id: 'work-block', title: 'Deep Work', day: 0, start: '14:00', end: '16:00', color: '#6366F1', type: 'event' },
 ];
 
 const habits: Block[] = [
-  { id: 'meditation', title: 'Morning Meditation', day: 0, start: '07:00', end: '07:20', color: '#0BAF9A', type: 'habit' },
-  { id: 'workout', title: 'Morning Workout', day: 0, start: '08:00', end: '08:45', color: '#F59E0B', type: 'habit' },
-  { id: 'reading', title: 'Deep Reading', day: 1, start: '09:30', end: '10:00', color: '#10B981', type: 'habit' },
-  { id: 'meal-prep', title: 'Meal Prep', day: 1, start: '12:30', end: '13:00', color: '#EC4899', type: 'habit' },
+  { id: 'workout', title: 'Morning Workout', day: 0, start: '07:30', end: '08:30', color: '#0BAF9A', type: 'habit' },
+  { id: 'reading', title: 'Reading Time', day: 0, start: '12:00', end: '13:00', color: '#10B981', type: 'habit' },
 ];
 
 function positionBlocks(blocks: Block[]) {
@@ -87,21 +83,21 @@ export function HabitPlannerPreview() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {habits.map((habit) => (
                 <div
                   key={habit.id}
-                  className="p-3 rounded-lg border border-gray-100 bg-white flex items-center justify-between shadow-sm"
+                  className="p-4 rounded-lg border border-gray-100 bg-white flex items-center justify-between shadow-sm"
                 >
                   <div className="min-w-0">
-                    <p className="text-gray-900 font-semibold text-sm truncate">{habit.title}</p>
-                    <p className="text-gray-600 text-xs">{habit.start} – {habit.end}</p>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      <span className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100">flexible window</span>
-                      <span className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100">recurring</span>
+                    <p className="text-gray-900 font-semibold text-base">{habit.title}</p>
+                    <p className="text-gray-600 text-sm mt-1">{habit.start} – {habit.end}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      <span className="text-xs text-gray-500 px-2 py-1 rounded-full bg-gray-100">flexible timing</span>
+                      <span className="text-xs text-gray-500 px-2 py-1 rounded-full bg-gray-100">daily</span>
                     </div>
                   </div>
-                  <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: habit.color }}></span>
+                  <span className="w-5 h-5 rounded-full flex-shrink-0 ml-3" style={{ backgroundColor: habit.color }}></span>
                 </div>
               ))}
             </div>
@@ -114,13 +110,13 @@ export function HabitPlannerPreview() {
         {/* Step 2: schedule */}
         <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
           <div className="flex items-center justify-between px-4 py-3 bg-[#1a73e8] text-white text-sm font-semibold">
-            <span>Step 2 · Smart schedule (2 days)</span>
-            <span>Habits + events · no conflicts</span>
+            <span>Step 2 · AI places habits automatically</span>
+            <span className="hidden sm:inline">No conflicts</span>
           </div>
           <div className="flex">
-            <div className="w-20 bg-white border-r border-gray-200">
+            <div className="w-24 bg-white border-r border-gray-200">
               {hours.map((time) => (
-                <div key={time} className="h-16 px-2 text-xs text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-1">
+                <div key={time} className="h-28 px-3 text-sm text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-2">
                   {time}
                 </div>
               ))}
@@ -128,13 +124,13 @@ export function HabitPlannerPreview() {
             <div className="flex-1 overflow-hidden">
               <div className="grid" style={{ gridTemplateColumns: `repeat(${dayLabels.length}, minmax(0, 1fr))` }}>
                 {dayLabels.map((day) => (
-                  <div key={day} className="px-3 py-2 text-xs font-semibold text-gray-600 border-b border-gray-200 text-center">
-                    <span className="text-gray-800">{day}</span>
+                  <div key={day} className="px-4 py-3 text-base font-semibold text-gray-800 border-b border-gray-200 text-center">
+                    {day}
                   </div>
                 ))}
               </div>
 
-              <div className="relative h-[720px] md:h-[840px] bg-white border-t border-gray-200 overflow-hidden">
+              <div className="relative h-[900px] bg-white border-t border-gray-200 overflow-hidden">
                 {hours.map((_, idx) => (
                   <div
                     key={idx}
@@ -155,7 +151,7 @@ export function HabitPlannerPreview() {
                     style={{ gridTemplateColumns: `repeat(${dayLabels.length}, minmax(0, 1fr))` }}
                   >
                     {dayLabels.map((day, dayIndex) => (
-                      <div key={day} className="relative border-l border-gray-100 first:border-l-0 px-4">
+                      <div key={day} className="relative border-l border-gray-100 first:border-l-0 px-6">
                         {/* Existing events */}
                         <AnimatePresence>
                         {positionedEvents
@@ -167,17 +163,18 @@ export function HabitPlannerPreview() {
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, x: -6 }}
                               transition={{ duration: 0.2 }}
-                              className="absolute rounded-md shadow-sm border border-white/30 overflow-hidden"
+                              className="absolute rounded-lg shadow-sm border border-white/30 overflow-hidden"
                               style={{
                                 top: `${evt.top}%`,
                                 height: `${evt.height}%`,
-                                left: '1%',
-                                width: '98%',
+                                left: '2%',
+                                width: '96%',
                                   backgroundColor: `${evt.color}f2`,
                                 }}
                               >
-                                <div className="px-3 py-3 text-white h-full flex items-center">
-                                  <div className="font-medium text-sm md:text-base line-clamp-2 w-full">{evt.title}</div>
+                                <div className="px-4 py-4 text-white h-full flex flex-col justify-center">
+                                  <div className="font-semibold text-base md:text-lg">{evt.title}</div>
+                                  <div className="text-white/90 text-sm mt-1">{evt.start} – {evt.end}</div>
                                 </div>
                               </motion.div>
                             ))}
@@ -193,18 +190,19 @@ export function HabitPlannerPreview() {
                               initial={{ opacity: 0, y: -10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                              transition={{ duration: 0.3, delay: index * 0.08 }}
-                              className="absolute rounded-md shadow-md border border-white/50 overflow-hidden"
+                              transition={{ duration: 0.3, delay: index * 0.15 }}
+                              className="absolute rounded-lg shadow-md border-2 border-white/60 overflow-hidden"
                               style={{
                                 top: `${evt.top}%`,
                                 height: `${evt.height}%`,
-                                left: '1%',
-                                width: '98%',
+                                left: '2%',
+                                width: '96%',
                                 backgroundColor: evt.color,
                               }}
                             >
-                                <div className="px-3 py-3 text-white h-full flex items-center">
-                                  <div className="font-medium text-sm md:text-base line-clamp-2 w-full">{evt.title}</div>
+                                <div className="px-4 py-4 text-white h-full flex flex-col justify-center">
+                                  <div className="font-semibold text-base md:text-lg">{evt.title}</div>
+                                  <div className="text-white/90 text-sm mt-1">{evt.start} – {evt.end}</div>
                                 </div>
                               </motion.div>
                             ))}
@@ -218,8 +216,8 @@ export function HabitPlannerPreview() {
           </div>
         </div>
 
-        <div className="text-xs text-gray-500">
-          {totalItems} total items shown across events and habits. Calendar spacing expanded so everything stays legible.
+        <div className="text-sm text-gray-600 text-center">
+          Spacious, easy-to-read calendar with {positionedEvents.length} events + {positionedHabits.length} habits automatically placed with zero conflicts
         </div>
       </div>
     </div>

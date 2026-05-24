@@ -23,37 +23,25 @@ type DaySchedule = {
   events: CalendarEvent[];
 };
 
-// Chaotic calendar - same events, random colors, overlapping
+// Chaotic calendar - same events, random colors, slightly overlapping to show chaos
 const messySchedule: DaySchedule[] = [
   {
     label: 'Mon',
     date: 'Dec 11',
     events: [
-      { id: 1, title: 'Morning Workout', start: '09:00', end: '09:45', color: '#EF4444' },
-      { id: 2, title: 'Project Check-in', start: '09:45', end: '10:20', color: '#F59E0B' },
-      { id: 3, title: 'Client Call', start: '10:00', end: '11:00', color: '#3B82F6' },
-      { id: 4, title: 'Lunch Break', start: '12:00', end: '13:00', color: '#10B981' },
+      { id: 1, title: 'Workout', start: '09:00', end: '09:45', color: '#EF4444' },
+      { id: 2, title: 'Team Meeting', start: '10:00', end: '11:00', color: '#F59E0B' },
+      { id: 3, title: 'Client Call', start: '10:30', end: '11:30', color: '#3B82F6' }, // Overlaps
+      { id: 4, title: 'Lunch', start: '12:00', end: '13:00', color: '#6366F1' },
     ],
   },
   {
     label: 'Tue',
     date: 'Dec 12',
     events: [
-      { id: 5, title: '1:1 Prep', start: '09:45', end: '10:30', color: '#0EA5E9' },
-      { id: 6, title: 'Lecture: Data Structures', start: '10:30', end: '11:30', color: '#6366F1' },
-      { id: 7, title: 'Study: Algorithms', start: '13:30', end: '14:30', color: '#8B5CF6' },
-      { id: 8, title: 'Inbox Tidy Up', start: '14:00', end: '15:00', color: '#EC4899' },
-      { id: 9, title: 'Plan Tomorrow', start: '15:00', end: '15:45', color: '#F97316' },
-    ],
-  },
-  {
-    label: 'Wed',
-    date: 'Dec 13',
-    events: [
-      { id: 10, title: 'Design Sync', start: '10:30', end: '11:30', color: '#F97316' },
-      { id: 11, title: 'Inbox Triage', start: '11:00', end: '12:00', color: '#EC4899' },
-      { id: 12, title: 'Group Project', start: '13:00', end: '14:00', color: '#EF4444' },
-      { id: 13, title: 'Evening Class', start: '14:00', end: '15:30', color: '#6366F1' },
+      { id: 5, title: 'Planning', start: '09:45', end: '10:30', color: '#EC4899' },
+      { id: 6, title: 'Deep Work', start: '10:00', end: '12:00', color: '#8B5CF6' }, // Overlaps
+      { id: 7, title: 'Study Time', start: '13:00', end: '14:30', color: '#0EA5E9' },
     ],
   },
 ];
@@ -64,34 +52,20 @@ const organizedSchedule: DaySchedule[] = [
     label: 'Mon',
     date: 'Dec 11',
     events: [
-      { id: 1, title: 'Morning Workout', start: '09:00', end: '09:45', color: '#0BAF9A' },
-      { id: 2, title: 'Project Check-in', start: '10:00', end: '10:35', color: '#14B8A6' }, // Fixed overlap
-      { id: 3, title: 'Client Call', start: '10:45', end: '11:45', color: '#0EA5E9' }, // Shifted to avoid conflict
-      { id: 14, title: 'Free Time', start: '11:45', end: '12:00', color: '#10B981' }, // RECLAIMED
-      { id: 4, title: 'Lunch Break', start: '12:00', end: '13:00', color: '#10B981' },
+      { id: 1, title: 'Workout', start: '09:00', end: '09:45', color: '#0BAF9A' },
+      { id: 2, title: 'Team Meeting', start: '10:00', end: '11:00', color: '#14B8A6' },
+      { id: 3, title: 'Client Call', start: '11:15', end: '12:00', color: '#0EA5E9' }, // Fixed overlap
+      { id: 14, title: 'Free Time', start: '12:00', end: '13:00', color: '#10B981' }, // RECLAIMED
     ],
   },
   {
     label: 'Tue',
     date: 'Dec 12',
     events: [
-      { id: 5, title: '1:1 Prep', start: '09:45', end: '10:30', color: '#0BAF9A' },
-      { id: 6, title: 'Lecture: Data Structures', start: '10:30', end: '11:30', color: '#6366F1' },
-      { id: 15, title: 'Focus Block', start: '12:00', end: '13:00', color: '#0BAF9A' }, // RECLAIMED
-      { id: 7, title: 'Study: Algorithms', start: '13:00', end: '14:00', color: '#14B8A6' }, // Fixed overlap
-      { id: 8, title: 'Inbox Tidy Up', start: '14:00', end: '15:00', color: '#0BAF9A' },
-      { id: 9, title: 'Plan Tomorrow', start: '15:00', end: '15:45', color: '#F97316' },
-    ],
-  },
-  {
-    label: 'Wed',
-    date: 'Dec 13',
-    events: [
-      { id: 10, title: 'Design Sync', start: '10:30', end: '11:30', color: '#14B8A6' },
-      { id: 11, title: 'Inbox Triage', start: '11:30', end: '12:00', color: '#0BAF9A' }, // Fixed overlap
-      { id: 16, title: 'Time for You', start: '12:00', end: '13:00', color: '#10B981' }, // RECLAIMED
-      { id: 12, title: 'Group Project', start: '13:00', end: '14:00', color: '#EF4444' },
-      { id: 13, title: 'Evening Class', start: '14:00', end: '15:30', color: '#6366F1' },
+      { id: 5, title: 'Planning', start: '09:45', end: '10:30', color: '#0BAF9A' },
+      { id: 6, title: 'Deep Work', start: '10:45', end: '12:45', color: '#6366F1' }, // Fixed overlap
+      { id: 15, title: 'Focus Block', start: '13:00', end: '14:00', color: '#0BAF9A' }, // RECLAIMED
+      { id: 7, title: 'Study Time', start: '14:15', end: '15:45', color: '#14B8A6' },
     ],
   },
 ];
@@ -240,9 +214,9 @@ export function ProblemStatement() {
 
             <div className="flex">
               {/* Time labels */}
-              <div className="w-14 sm:w-20 md:w-24 bg-white border-r border-gray-200 flex-shrink-0">
+              <div className="w-20 sm:w-24 md:w-28 bg-white border-r border-gray-200 flex-shrink-0">
                 {HOURS.map((time, i) => (
-                  <div key={i} className="h-14 sm:h-16 px-1 sm:px-2 text-[9px] sm:text-[11px] text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-1">
+                  <div key={i} className="h-24 sm:h-28 md:h-32 px-2 sm:px-3 text-xs sm:text-sm text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-2">
                     {time}
                   </div>
                 ))}
@@ -253,14 +227,14 @@ export function ProblemStatement() {
                 {/* Day labels */}
                 <div className="grid" style={{ gridTemplateColumns: `repeat(${positionedSchedule.length}, minmax(0, 1fr))` }}>
                   {positionedSchedule.map((day) => (
-                    <div key={day.label} className="px-1 sm:px-2 py-2 text-[10px] sm:text-xs font-semibold text-gray-600 border-b border-gray-200 text-center">
-                      <span className="text-gray-800">{day.label}</span> <span className="text-gray-500 hidden sm:inline">{day.date}</span>
+                    <div key={day.label} className="px-3 sm:px-4 py-3 text-sm sm:text-base font-semibold text-gray-800 border-b border-gray-200 text-center">
+                      <span>{day.label}</span> <span className="text-gray-500 hidden sm:inline">{day.date}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Grid */}
-                <div className="relative h-[400px] sm:h-[500px] md:h-[560px] bg-white border-t border-gray-200 overflow-hidden">
+                <div className="relative h-[600px] sm:h-[750px] md:h-[900px] bg-white border-t border-gray-200 overflow-hidden">
                   {/* Hour grid lines across all days */}
                   {HOURS.map((_, idx) => (
                     <div
@@ -286,31 +260,31 @@ export function ProblemStatement() {
                     {positionedSchedule.map((day) => (
                       <div
                         key={day.label}
-                        className="relative border-l border-gray-100 first:border-l-0 px-0.5 sm:px-1"
+                        className="relative border-l border-gray-100 first:border-l-0 px-2 sm:px-3"
                       >
                         <AnimatePresence mode="sync">
                           {day.events.map((event, index) => {
-                            const overlapOffset = isOrganized ? 0 : (index % 2 === 0 ? 0 : 6);
-                            const width = isOrganized ? 92 : 82;
+                            const overlapOffset = isOrganized ? 0 : (index % 2 === 0 ? 0 : 8);
+                            const width = isOrganized ? 94 : 84;
                             return (
                               <motion.div
                                 key={`${event.id}-${isOrganized}`}
                                 initial={{ opacity: 0, x: isOrganized ? 6 : -6 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: isOrganized ? -6 : 6 }}
-                                transition={{ duration: 0.25, delay: index * 0.02 }}
-                                className="absolute rounded-md shadow-md border border-white/40 overflow-hidden"
+                                transition={{ duration: 0.25, delay: index * 0.03 }}
+                                className="absolute rounded-lg shadow-md border-2 border-white/50 overflow-hidden"
                                 style={{
                                   top: `${event.top}%`,
                                   height: `${event.height}%`,
-                                  left: `${4 + overlapOffset}%`,
+                                  left: `${3 + overlapOffset}%`,
                                   width: `${width - overlapOffset}%`,
                                   backgroundColor: event.color,
                                 }}
                               >
-                                <div className="px-1.5 sm:px-2 md:px-3 py-1.5 sm:py-2 text-[9px] sm:text-xs text-white">
-                                  <div className="font-semibold text-[10px] sm:text-sm truncate">{event.title}</div>
-                                  <div className="text-white/80 text-[8px] sm:text-[11px]">
+                                <div className="px-3 sm:px-4 py-3 sm:py-4 text-white h-full flex flex-col justify-center">
+                                  <div className="font-semibold text-sm sm:text-base md:text-lg">{event.title}</div>
+                                  <div className="text-white/90 text-xs sm:text-sm mt-1">
                                     {event.start} – {event.end}
                                   </div>
                                 </div>
@@ -345,40 +319,40 @@ export function ProblemStatement() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-center p-3 sm:p-4 bg-gray-50 rounded-lg"
+              className="text-center p-4 sm:p-5 bg-gray-50 rounded-lg"
             >
-              <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
+              <div className={`text-3xl sm:text-4xl font-bold mb-2 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
-                {isOrganized ? '0' : '3'}
+                {isOrganized ? '0' : '2'}
               </div>
-              <div className="text-xs sm:text-sm text-gray-600">Conflicts</div>
+              <div className="text-sm sm:text-base text-gray-600 font-medium">Conflicts</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="text-center p-3 sm:p-4 bg-gradient-to-br from-teal-50 to-green-50 rounded-lg border-2 border-teal-200"
+              className="text-center p-4 sm:p-5 bg-gradient-to-br from-teal-50 to-green-50 rounded-lg border-2 border-teal-200"
             >
-              <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
+              <div className={`text-3xl sm:text-4xl font-bold mb-2 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-gray-400'
               }`}>
                 {isOrganized ? '3h ✨' : '0h'}
               </div>
-              <div className="text-xs sm:text-sm font-semibold text-teal-700">Time Reclaimed</div>
+              <div className="text-sm sm:text-base font-semibold text-teal-700">Time Reclaimed</div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="text-center p-3 sm:p-4 bg-gray-50 rounded-lg"
+              className="text-center p-4 sm:p-5 bg-gray-50 rounded-lg"
             >
-              <div className={`text-2xl sm:text-3xl font-bold mb-1 transition-colors duration-500 ${
+              <div className={`text-3xl sm:text-4xl font-bold mb-2 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
-                {isOrganized ? '8h' : '2h'}
+                {isOrganized ? '7h' : '3h'}
               </div>
-              <div className="text-xs sm:text-sm text-gray-600">Focus Time</div>
+              <div className="text-sm sm:text-base text-gray-600 font-medium">Focus Time</div>
             </motion.div>
           </div>
         </motion.div>
