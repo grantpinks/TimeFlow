@@ -21,7 +21,7 @@ import { Panel, SectionHeader, LoadingSpinner } from '@/components/ui';
 import { FlowMascot } from '@/components/FlowMascot';
 import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today/PlanningRitualPanel';
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
-import { IdentityDashboardBanner } from '@/components/identity/IdentityDashboardBanner';
+import { IdentityPanel } from '@/components/identity/IdentityPanel';
 import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
 import { WhatsNowContextPanel } from '@/components/today/WhatsNowContextPanel';
 import { ActionableEmailsWidget } from '@/components/today/ActionableEmailsWidget';
@@ -54,12 +54,6 @@ import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitR
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 import { ChevronDown, Sparkles, ClipboardList } from 'lucide-react';
 
-function formatUnlockKeyLabel(key: string): string {
-  const tail = key.replace(/^flow_[^_]+_/, '').replace(/^mechanic_/, '');
-  const words = tail.split('_').filter(Boolean);
-  if (words.length === 0) return key;
-  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-}
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
@@ -92,7 +86,7 @@ export default function TodayPage() {
   const [selectedCategory, setSelectedCategory] = useState<EmailCategory | 'all'>('all');
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [showPlanningRitual, setShowPlanningRitual] = useState(false);
-  const [identityFilter, setIdentityFilter] = useState<string | null>(null);
+  const [identityFilter] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [habits, setHabits] = useState<Habit[]>([]);
   const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress(
@@ -113,8 +107,6 @@ export default function TodayPage() {
     loading: evolutionLoading,
     refresh: refreshEvolution,
   } = useEvolutionSurface(isAuthenticated, user?.identityEvolutionEnabled === true);
-  const [nextUnlockLabel, setNextUnlockLabel] = useState<string | null>(null);
-
   const leadingEvolutionState = useMemo(() => {
     if (evolutionStates.length === 0) return null;
     return [...evolutionStates].sort((a, b) => b.level - a.level || b.xp - a.xp)[0]!;
@@ -172,28 +164,6 @@ export default function TodayPage() {
       /* private mode */
     }
   }, [evolutionMode, leadingEvolutionState]);
-
-  useEffect(() => {
-    if (evolutionMode !== 'active' || !leadingEvolutionState) {
-      setNextUnlockLabel(null);
-      return;
-    }
-    let cancelled = false;
-    api
-      .getIdentityUnlocks(leadingEvolutionState.identityId)
-      .then((res) => {
-        if (cancelled) return;
-        const sorted = [...res.unlocks].sort((a, b) => a.grantedAt.localeCompare(b.grantedAt));
-        const last = sorted[sorted.length - 1];
-        setNextUnlockLabel(last ? formatUnlockKeyLabel(last.unlockKey) : null);
-      })
-      .catch(() => {
-        if (!cancelled) setNextUnlockLabel(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [evolutionMode, leadingEvolutionState?.identityId]);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -788,31 +758,15 @@ Please generate a schedule preview for today.`;
           <p className="text-sm text-slate-600">
             {unscheduledTasks.length} tasks to schedule • {scheduledTasks.length} on timeline
           </p>
-          {/* Identity Dashboard Banner */}
+          {/* Identity Panel */}
           <div className="mt-4">
-            <IdentityDashboardBanner
+            <IdentityPanel
               identities={identityProgressFull?.identities ?? []}
-              loading={identityProgressFull === null}
-              onFilterChange={setIdentityFilter}
-              activeFilter={identityFilter}
-              focusMode={focusMode}
-              onFocusModeToggle={() => {
-                setFocusMode((f) => {
-                  const next = !f;
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('timeflow_today_focus_mode', next ? '1' : '0');
-                  }
-                  return next;
-                });
-              }}
-              now={now}
-              showEvolutionStrip={isAuthenticated}
-              evolutionMode={evolutionMode}
               evolutionStates={evolutionStates}
-              evolutionLoading={evolutionLoading}
-              onEvolutionRetry={() => void refreshEvolution()}
-              nextUnlockLabel={nextUnlockLabel}
-              timeZone={user?.timeZone}
+              evolutionMode={evolutionMode}
+              sessionReady={isAuthenticated}
+              timeZone={user?.timeZone ?? 'America/Chicago'}
+              loading={identityProgressFull === null}
             />
           </div>
           {/* What's Now — current and upcoming */}
