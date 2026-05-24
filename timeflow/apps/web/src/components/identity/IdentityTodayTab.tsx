@@ -34,7 +34,9 @@ export function IdentityTodayTab({
   todayMinutes,
   streakDays = 0,
 }: IdentityTodayTabProps) {
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Use local calendar date, not UTC — toISOString() returns UTC which can be
+  // off by one day for users in UTC−N timezones late in the evening.
+  const todayStr = new Date().toLocaleDateString('en-CA');
 
   const notDoneToday = useMemo(
     () =>
