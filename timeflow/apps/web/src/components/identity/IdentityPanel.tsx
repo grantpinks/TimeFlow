@@ -5,6 +5,7 @@ import type { IdentityDayProgress, IdentityEvolutionState } from '@timeflow/shar
 import type { EvolutionSurfaceMode } from '@/hooks/useEvolutionSurface';
 import { useIdentityConsistency } from '@/hooks/useIdentityConsistency';
 import { useUpcomingUnlocks } from '@/hooks/useUpcomingUnlocks';
+import { useTodayHabitSchedule } from '@/hooks/useTodayHabitSchedule';
 import { IdentityTodayTab } from './IdentityTodayTab';
 import { IdentityProgressionTab } from './IdentityProgressionTab';
 import { FlowMascot } from '@/components/FlowMascot';
@@ -67,6 +68,7 @@ export function IdentityPanel({
     evolutionMode === 'active' ? validId : null,
     sessionReady
   );
+  const { instances: scheduledInstances, scheduleHabit } = useTodayHabitSchedule(sessionReady);
 
   if (loading) {
     return <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />;
@@ -134,6 +136,8 @@ export function IdentityPanel({
             todayDone={selectedIdentity?.completedCount ?? 0}
             todayMinutes={selectedIdentity?.totalMinutes ?? 0}
             streakDays={selectedIdentity?.currentStreak}
+            scheduledInstances={scheduledInstances}
+            onScheduleHabit={scheduleHabit}
           />
         ) : (
           <IdentityProgressionTab
