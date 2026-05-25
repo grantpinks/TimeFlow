@@ -75,10 +75,10 @@ export function IdentityPanel({
   }
 
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+    <div className="w-full rounded-2xl border border-slate-200/80 bg-white shadow-sm">
 
       {/* Greeting strip */}
-      <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-teal-50/80 via-white to-primary-50/40 px-4 py-3">
+      <div className="flex items-center gap-3 rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-teal-50/80 via-white to-primary-50/40 px-4 py-3">
         <FlowMascot size="sm" expression="happy" />
         <p className="text-sm font-semibold text-slate-800">{greeting(totalDone)}</p>
       </div>
@@ -128,7 +128,7 @@ export function IdentityPanel({
       </div>
 
       {/* Tab content */}
-      <div className="px-4 py-4">
+      <div className="rounded-b-2xl px-4 py-4">
         {activeTab === 'today' ? (
           <IdentityTodayTab
             habits={consistencyData?.habits ?? []}
