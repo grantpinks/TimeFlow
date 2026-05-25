@@ -13,7 +13,7 @@ type Block = {
   type: 'habit' | 'event';
 };
 
-const dayLabels = ['Monday'];
+const dayLabels = ['Monday', 'Tuesday'];
 const hours = ['7 AM', '9 AM', '11 AM', '1 PM', '3 PM', '5 PM', '7 PM'];
 
 const toMinutes = (time: string) => {
@@ -28,11 +28,15 @@ const totalMinutes = dayEnd - dayStart;
 const baseEvents: Block[] = [
   { id: 'meeting', title: 'Team Meeting', day: 0, start: '10:00', end: '11:00', color: '#3B82F6', type: 'event' },
   { id: 'work-block', title: 'Deep Work', day: 0, start: '14:00', end: '16:00', color: '#6366F1', type: 'event' },
+  { id: 'lecture', title: 'Class', day: 1, start: '11:00', end: '12:30', color: '#8B5CF6', type: 'event' },
+  { id: 'project', title: 'Project Work', day: 1, start: '14:00', end: '15:30', color: '#3B82F6', type: 'event' },
 ];
 
 const habits: Block[] = [
   { id: 'workout', title: 'Morning Workout', day: 0, start: '07:30', end: '08:30', color: '#0BAF9A', type: 'habit' },
   { id: 'reading', title: 'Reading Time', day: 0, start: '12:00', end: '13:00', color: '#10B981', type: 'habit' },
+  { id: 'meditation', title: 'Meditation', day: 1, start: '08:00', end: '08:30', color: '#0BAF9A', type: 'habit' },
+  { id: 'walk', title: 'Evening Walk', day: 1, start: '17:00', end: '17:45', color: '#10B981', type: 'habit' },
 ];
 
 function positionBlocks(blocks: Block[]) {
@@ -109,7 +113,6 @@ export function HabitPlannerPreview() {
         <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm bg-white">
           <div className="flex items-center justify-between px-4 py-3 bg-[#1a73e8] text-white text-sm font-semibold">
             <span>Step 2 · AI places habits automatically</span>
-            <span className="hidden sm:inline">No conflicts</span>
           </div>
           <div className="flex">
             <div className="w-24 bg-white border-r border-gray-200">

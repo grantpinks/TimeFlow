@@ -44,6 +44,15 @@ const messySchedule: DaySchedule[] = [
       { id: 7, title: 'Study Time', start: '13:00', end: '14:30', color: '#0EA5E9' },
     ],
   },
+  {
+    label: 'Wed',
+    date: 'Dec 13',
+    events: [
+      { id: 8, title: 'Design Review', start: '10:00', end: '11:00', color: '#F59E0B' },
+      { id: 9, title: 'Project Work', start: '10:30', end: '12:00', color: '#EF4444' }, // Overlaps
+      { id: 10, title: 'Class', start: '14:00', end: '15:30', color: '#6366F1' },
+    ],
+  },
 ];
 
 // Organized calendar - SAME events, TimeFlow colors, no overlaps + reclaimed time blocks
@@ -66,6 +75,16 @@ const organizedSchedule: DaySchedule[] = [
       { id: 6, title: 'Deep Work', start: '10:45', end: '12:45', color: '#6366F1' }, // Fixed overlap
       { id: 15, title: 'Focus Block', start: '13:00', end: '14:00', color: '#0BAF9A' }, // RECLAIMED
       { id: 7, title: 'Study Time', start: '14:15', end: '15:45', color: '#14B8A6' },
+    ],
+  },
+  {
+    label: 'Wed',
+    date: 'Dec 13',
+    events: [
+      { id: 8, title: 'Design Review', start: '10:00', end: '11:00', color: '#14B8A6' },
+      { id: 9, title: 'Project Work', start: '11:15', end: '12:30', color: '#0BAF9A' }, // Fixed overlap
+      { id: 16, title: 'Time for You', start: '12:30', end: '13:30', color: '#10B981' }, // RECLAIMED
+      { id: 10, title: 'Class', start: '14:00', end: '15:30', color: '#6366F1' },
     ],
   },
 ];
@@ -324,7 +343,7 @@ export function ProblemStatement() {
               <div className={`text-3xl sm:text-4xl font-bold mb-2 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
-                {isOrganized ? '0' : '2'}
+                {isOrganized ? '0' : '3'}
               </div>
               <div className="text-sm sm:text-base text-gray-600 font-medium">Conflicts</div>
             </motion.div>
@@ -350,7 +369,7 @@ export function ProblemStatement() {
               <div className={`text-3xl sm:text-4xl font-bold mb-2 transition-colors duration-500 ${
                 isOrganized ? 'text-teal-600' : 'text-red-500'
               }`}>
-                {isOrganized ? '7h' : '3h'}
+                {isOrganized ? '10h' : '5h'}
               </div>
               <div className="text-sm sm:text-base text-gray-600 font-medium">Focus Time</div>
             </motion.div>
