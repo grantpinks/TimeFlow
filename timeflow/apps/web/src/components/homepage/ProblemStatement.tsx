@@ -39,7 +39,7 @@ const messyUnscheduledTasks: UnscheduledTask[] = [
 
 const organizedUnscheduledTasks: UnscheduledTask[] = []; // All tasks now scheduled!
 
-// Chaotic calendar - overlapping events, NO tasks scheduled yet
+// Chaotic calendar - overlapping events spread throughout the day
 const messySchedule: DaySchedule[] = [
   {
     label: 'Mon',
@@ -53,21 +53,21 @@ const messySchedule: DaySchedule[] = [
     label: 'Tue',
     date: 'Dec 12',
     events: [
-      { id: 3, title: 'Planning', start: '09:45', end: '10:30', color: '#EC4899' },
-      { id: 4, title: 'Deep Work', start: '10:00', end: '12:00', color: '#8B5CF6' }, // Overlaps
+      { id: 3, title: 'Planning', start: '13:00', end: '14:00', color: '#EC4899' },
+      { id: 4, title: 'Deep Work', start: '13:30', end: '15:00', color: '#8B5CF6' }, // Overlaps
     ],
   },
   {
     label: 'Wed',
     date: 'Dec 13',
     events: [
-      { id: 5, title: 'Design Review', start: '10:00', end: '11:00', color: '#F59E0B' },
-      { id: 6, title: 'Class', start: '10:30', end: '12:00', color: '#EF4444' }, // Overlaps
+      { id: 5, title: 'Design Review', start: '09:00', end: '10:00', color: '#F59E0B' },
+      { id: 6, title: 'Class', start: '09:30', end: '11:00', color: '#EF4444' }, // Overlaps
     ],
   },
 ];
 
-// Organized calendar - conflicts fixed + unscheduled tasks now appear as events!
+// Organized calendar - conflicts fixed + unscheduled tasks placed strategically throughout day
 const organizedSchedule: DaySchedule[] = [
   {
     label: 'Mon',
@@ -83,9 +83,9 @@ const organizedSchedule: DaySchedule[] = [
     label: 'Tue',
     date: 'Dec 12',
     events: [
-      { id: 3, title: 'Planning', start: '09:45', end: '10:30', color: '#0BAF9A' },
-      { id: 4, title: 'Deep Work', start: '10:45', end: '12:45', color: '#6366F1' }, // Fixed overlap
-      { id: 102, title: 'Finish Report', start: '13:00', end: '14:30', color: '#0BAF9A' }, // WAS UNSCHEDULED!
+      { id: 102, title: 'Finish Report', start: '09:30', end: '11:00', color: '#0BAF9A' }, // WAS UNSCHEDULED!
+      { id: 3, title: 'Planning', start: '11:15', end: '12:00', color: '#14B8A6' }, // Fixed overlap
+      { id: 4, title: 'Deep Work', start: '13:00', end: '14:30', color: '#6366F1' }, // Fixed overlap
       { id: 15, title: 'Focus Block', start: '14:30', end: '15:30', color: '#10B981' }, // RECLAIMED
     ],
   },
@@ -93,8 +93,8 @@ const organizedSchedule: DaySchedule[] = [
     label: 'Wed',
     date: 'Dec 13',
     events: [
-      { id: 5, title: 'Design Review', start: '10:00', end: '11:00', color: '#14B8A6' },
-      { id: 6, title: 'Class', start: '11:15', end: '12:45', color: '#6366F1' }, // Fixed overlap
+      { id: 5, title: 'Design Review', start: '09:00', end: '10:00', color: '#14B8A6' },
+      { id: 6, title: 'Class', start: '10:15', end: '11:45', color: '#6366F1' }, // Fixed overlap
       { id: 103, title: 'Update Slides', start: '13:00', end: '13:45', color: '#0BAF9A' }, // WAS UNSCHEDULED!
       { id: 16, title: 'Time for You', start: '13:45', end: '14:45', color: '#10B981' }, // RECLAIMED
     ],
@@ -242,7 +242,7 @@ export function ProblemStatement() {
                 </span>
               </div>
 
-              <div className="space-y-3 min-h-[200px]">
+              <div className="space-y-3 min-h-[150px]">
                 <AnimatePresence mode="popLayout">
                   {unscheduledTasks.map((task, index) => (
                     <motion.div
@@ -309,9 +309,9 @@ export function ProblemStatement() {
 
             <div className="flex">
               {/* Time labels */}
-              <div className="w-20 sm:w-24 md:w-28 bg-white border-r border-gray-200 flex-shrink-0">
+              <div className="w-16 sm:w-20 md:w-24 bg-white border-r border-gray-200 flex-shrink-0">
                 {HOURS.map((time, i) => (
-                  <div key={i} className="h-24 sm:h-28 md:h-32 px-2 sm:px-3 text-xs sm:text-sm text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-2">
+                  <div key={i} className="h-14 sm:h-16 md:h-20 px-2 sm:px-3 text-xs sm:text-sm text-gray-500 font-medium border-b border-gray-100 flex items-start justify-end pt-1">
                     {time}
                   </div>
                 ))}
@@ -329,7 +329,7 @@ export function ProblemStatement() {
                 </div>
 
                 {/* Grid */}
-                <div className="relative h-[600px] sm:h-[750px] md:h-[900px] bg-white border-t border-gray-200 overflow-hidden">
+                <div className="relative h-[450px] sm:h-[500px] md:h-[550px] bg-white border-t border-gray-200 overflow-hidden">
                   {/* Hour grid lines across all days */}
                   {HOURS.map((_, idx) => (
                     <div
