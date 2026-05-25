@@ -227,13 +227,13 @@ export function HabitSchedulePopover({
                   end.getHours() >= TIMELINE_START_HOUR
                 );
               })
-              .map((ev, i) => {
+              .map((ev) => {
                 const left = pctOfTimeline(ev.start);
                 const right = 100 - pctOfTimeline(ev.end);
                 const isHabit = ev.sourceType === 'habit';
                 return (
                   <div
-                    key={i}
+                    key={ev.id ?? `${ev.start}-${ev.summary}`}
                     title={ev.summary}
                     className={`absolute inset-y-0 ${
                       isHabit ? 'bg-teal-400/70' : 'bg-slate-400/40'
@@ -244,7 +244,7 @@ export function HabitSchedulePopover({
               })
           )}
           {/* "Now" tick */}
-          {nowPct >= 0 && nowPct <= 100 && (
+          {now.getHours() >= TIMELINE_START_HOUR && now.getHours() < TIMELINE_END_HOUR && (
             <div
               className="absolute inset-y-0 w-0.5 bg-orange-400"
               style={{ left: `${nowPct}%` }}
