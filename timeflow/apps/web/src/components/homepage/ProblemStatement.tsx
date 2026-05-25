@@ -17,74 +17,86 @@ type CalendarEvent = {
   color: string;
 };
 
+type UnscheduledTask = {
+  id: number;
+  title: string;
+  duration: string;
+  priority: 'high' | 'medium' | 'low';
+};
+
 type DaySchedule = {
   label: string;
   date: string;
   events: CalendarEvent[];
 };
 
-// Chaotic calendar - same events, random colors, slightly overlapping to show chaos
+// Unscheduled tasks - shown in messy state, disappear when organized
+const messyUnscheduledTasks: UnscheduledTask[] = [
+  { id: 101, title: 'Review Proposal', duration: '1h', priority: 'high' },
+  { id: 102, title: 'Finish Report', duration: '1.5h', priority: 'high' },
+  { id: 103, title: 'Update Slides', duration: '45min', priority: 'medium' },
+];
+
+const organizedUnscheduledTasks: UnscheduledTask[] = []; // All tasks now scheduled!
+
+// Chaotic calendar - overlapping events, NO tasks scheduled yet
 const messySchedule: DaySchedule[] = [
   {
     label: 'Mon',
     date: 'Dec 11',
     events: [
-      { id: 1, title: 'Workout', start: '09:00', end: '09:45', color: '#EF4444' },
-      { id: 2, title: 'Team Meeting', start: '10:00', end: '11:00', color: '#F59E0B' },
-      { id: 3, title: 'Client Call', start: '10:30', end: '11:30', color: '#3B82F6' }, // Overlaps
-      { id: 4, title: 'Lunch', start: '12:00', end: '13:00', color: '#6366F1' },
+      { id: 1, title: 'Team Meeting', start: '10:00', end: '11:00', color: '#F59E0B' },
+      { id: 2, title: 'Client Call', start: '10:30', end: '11:30', color: '#3B82F6' }, // Overlaps
     ],
   },
   {
     label: 'Tue',
     date: 'Dec 12',
     events: [
-      { id: 5, title: 'Planning', start: '09:45', end: '10:30', color: '#EC4899' },
-      { id: 6, title: 'Deep Work', start: '10:00', end: '12:00', color: '#8B5CF6' }, // Overlaps
-      { id: 7, title: 'Study Time', start: '13:00', end: '14:30', color: '#0EA5E9' },
+      { id: 3, title: 'Planning', start: '09:45', end: '10:30', color: '#EC4899' },
+      { id: 4, title: 'Deep Work', start: '10:00', end: '12:00', color: '#8B5CF6' }, // Overlaps
     ],
   },
   {
     label: 'Wed',
     date: 'Dec 13',
     events: [
-      { id: 8, title: 'Design Review', start: '10:00', end: '11:00', color: '#F59E0B' },
-      { id: 9, title: 'Project Work', start: '10:30', end: '12:00', color: '#EF4444' }, // Overlaps
-      { id: 10, title: 'Class', start: '14:00', end: '15:30', color: '#6366F1' },
+      { id: 5, title: 'Design Review', start: '10:00', end: '11:00', color: '#F59E0B' },
+      { id: 6, title: 'Class', start: '10:30', end: '12:00', color: '#EF4444' }, // Overlaps
     ],
   },
 ];
 
-// Organized calendar - SAME events, TimeFlow colors, no overlaps + reclaimed time blocks
+// Organized calendar - conflicts fixed + unscheduled tasks now appear as events!
 const organizedSchedule: DaySchedule[] = [
   {
     label: 'Mon',
     date: 'Dec 11',
     events: [
-      { id: 1, title: 'Workout', start: '09:00', end: '09:45', color: '#0BAF9A' },
-      { id: 2, title: 'Team Meeting', start: '10:00', end: '11:00', color: '#14B8A6' },
-      { id: 3, title: 'Client Call', start: '11:15', end: '12:00', color: '#0EA5E9' }, // Fixed overlap
-      { id: 14, title: 'Free Time', start: '12:00', end: '13:00', color: '#10B981' }, // RECLAIMED
+      { id: 1, title: 'Team Meeting', start: '10:00', end: '11:00', color: '#14B8A6' },
+      { id: 2, title: 'Client Call', start: '11:15', end: '12:00', color: '#0EA5E9' }, // Fixed overlap
+      { id: 101, title: 'Review Proposal', start: '13:00', end: '14:00', color: '#0BAF9A' }, // WAS UNSCHEDULED!
+      { id: 14, title: 'Free Time', start: '14:00', end: '15:00', color: '#10B981' }, // RECLAIMED
     ],
   },
   {
     label: 'Tue',
     date: 'Dec 12',
     events: [
-      { id: 5, title: 'Planning', start: '09:45', end: '10:30', color: '#0BAF9A' },
-      { id: 6, title: 'Deep Work', start: '10:45', end: '12:45', color: '#6366F1' }, // Fixed overlap
-      { id: 15, title: 'Focus Block', start: '13:00', end: '14:00', color: '#0BAF9A' }, // RECLAIMED
-      { id: 7, title: 'Study Time', start: '14:15', end: '15:45', color: '#14B8A6' },
+      { id: 3, title: 'Planning', start: '09:45', end: '10:30', color: '#0BAF9A' },
+      { id: 4, title: 'Deep Work', start: '10:45', end: '12:45', color: '#6366F1' }, // Fixed overlap
+      { id: 102, title: 'Finish Report', start: '13:00', end: '14:30', color: '#0BAF9A' }, // WAS UNSCHEDULED!
+      { id: 15, title: 'Focus Block', start: '14:30', end: '15:30', color: '#10B981' }, // RECLAIMED
     ],
   },
   {
     label: 'Wed',
     date: 'Dec 13',
     events: [
-      { id: 8, title: 'Design Review', start: '10:00', end: '11:00', color: '#14B8A6' },
-      { id: 9, title: 'Project Work', start: '11:15', end: '12:30', color: '#0BAF9A' }, // Fixed overlap
-      { id: 16, title: 'Time for You', start: '12:30', end: '13:30', color: '#10B981' }, // RECLAIMED
-      { id: 10, title: 'Class', start: '14:00', end: '15:30', color: '#6366F1' },
+      { id: 5, title: 'Design Review', start: '10:00', end: '11:00', color: '#14B8A6' },
+      { id: 6, title: 'Class', start: '11:15', end: '12:45', color: '#6366F1' }, // Fixed overlap
+      { id: 103, title: 'Update Slides', start: '13:00', end: '13:45', color: '#0BAF9A' }, // WAS UNSCHEDULED!
+      { id: 16, title: 'Time for You', start: '13:45', end: '14:45', color: '#10B981' }, // RECLAIMED
     ],
   },
 ];
@@ -132,6 +144,7 @@ export function ProblemStatement() {
   };
 
   const schedule = isOrganized ? organizedSchedule : messySchedule;
+  const unscheduledTasks = isOrganized ? organizedUnscheduledTasks : messyUnscheduledTasks;
 
   const positionedSchedule = useMemo(() => {
     return schedule.map((day) => ({
@@ -190,16 +203,16 @@ export function ProblemStatement() {
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="hidden sm:inline">3 Hours Reclaimed ✨</span>
-                    <span className="sm:hidden">Reclaimed ✨</span>
+                    <span className="hidden sm:inline">All Tasks Scheduled ✨</span>
+                    <span className="sm:hidden">Scheduled ✨</span>
                   </>
                 ) : (
                   <>
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
-                    <span className="hidden sm:inline">See How Much Time You'll Get Back</span>
-                    <span className="sm:hidden">Get Time Back</span>
+                    <span className="hidden sm:inline">See AI Auto-Schedule Tasks</span>
+                    <span className="sm:hidden">Auto-Schedule</span>
                   </>
                 )}
               </span>
@@ -212,12 +225,75 @@ export function ProblemStatement() {
               )}
             </button>
             <p className="text-xs sm:text-sm text-gray-500 mt-3 px-4">
-              {isOrganized ? '✨ Same schedule, 3 hours reclaimed for what you love' : 'Wasted time from conflicts and poor planning'}
+              {isOrganized ? '✨ Tasks auto-scheduled, conflicts fixed, 3 hours reclaimed' : 'Unscheduled tasks + overlapping meetings = wasted time'}
             </p>
           </div>
 
-          {/* Calendar View */}
-          <div className="relative rounded-xl sm:rounded-2xl border border-gray-200 overflow-hidden shadow-2xl bg-white">
+          {/* Main Container: Tasks + Calendar */}
+          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 lg:gap-6">
+            {/* Unscheduled Tasks Column */}
+            <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 sm:p-5 shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900">Unscheduled Tasks</h3>
+                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                  isOrganized ? 'bg-teal-100 text-teal-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {unscheduledTasks.length}
+                </span>
+              </div>
+
+              <div className="space-y-3 min-h-[200px]">
+                <AnimatePresence mode="popLayout">
+                  {unscheduledTasks.map((task, index) => (
+                    <motion.div
+                      key={task.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      className="bg-white rounded-lg p-3 sm:p-4 border border-gray-200 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-sm sm:text-base text-gray-900 mb-1">
+                            {task.title}
+                          </h4>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                              {task.duration}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                              task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                              task.priority === 'medium' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-600'
+                            }`}>
+                              {task.priority}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {isOrganized && unscheduledTasks.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center justify-center py-8 text-center"
+                  >
+                    <svg className="w-12 h-12 text-teal-600 mb-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-teal-700 font-semibold text-sm sm:text-base">All tasks scheduled!</p>
+                    <p className="text-gray-600 text-xs sm:text-sm mt-1">Check your calendar →</p>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+
+            {/* Calendar View */}
+            <div className="relative rounded-xl sm:rounded-2xl border border-gray-200 overflow-hidden shadow-2xl bg-white">
             {/* Calendar Header */}
             <div className="px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between bg-[#1a73e8] text-white">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -330,6 +406,7 @@ export function ProblemStatement() {
                 {positionedSchedule.reduce((acc, day) => acc + day.events.length, 0)} events over {positionedSchedule.length} days
               </span>
             </div>
+          </div>
           </div>
 
           {/* Stats Below */}
