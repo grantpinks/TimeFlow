@@ -35,7 +35,7 @@ type DaySchedule = {
 const messyUnscheduledTasks: UnscheduledTask[] = [
   { id: 101, title: 'Review Proposal', duration: '1h', priority: 'high', dueDate: 'Tue Dec 12' },
   { id: 102, title: 'Finish Report', duration: '1.5h', priority: 'high', dueDate: 'Wed Dec 13' },
-  { id: 103, title: 'Update Slides', duration: '45min', priority: 'medium', dueDate: 'Thu Dec 14' },
+  { id: 103, title: 'Update Slides', duration: '1h', priority: 'medium', dueDate: 'Thu Dec 14' },
 ];
 
 const organizedUnscheduledTasks: UnscheduledTask[] = []; // All tasks now scheduled!
@@ -96,8 +96,8 @@ const organizedSchedule: DaySchedule[] = [
     events: [
       { id: 5, title: 'Design Review', start: '09:00', end: '10:00', color: '#14B8A6' },
       { id: 6, title: 'Class', start: '10:15', end: '11:45', color: '#6366F1' }, // Fixed overlap
-      { id: 103, title: 'Update Slides', start: '13:00', end: '13:45', color: '#0BAF9A' }, // WAS UNSCHEDULED!
-      { id: 16, title: 'Time for You', start: '13:45', end: '14:45', color: '#10B981' }, // RECLAIMED
+      { id: 103, title: 'Update Slides', start: '13:00', end: '14:00', color: '#0BAF9A' }, // WAS UNSCHEDULED!
+      { id: 16, title: 'Time for You', start: '14:00', end: '15:00', color: '#10B981' }, // RECLAIMED
     ],
   },
 ];
