@@ -336,7 +336,7 @@ export function ProblemStatement() {
                 </div>
 
                 {/* Grid */}
-                <div className="relative h-[450px] sm:h-[500px] md:h-[550px] bg-white border-t border-gray-200 overflow-hidden">
+                <div className="relative h-[480px] sm:h-[520px] md:h-[580px] bg-white border-t border-gray-200 overflow-hidden">
                   {/* Hour grid lines across all days */}
                   {HOURS.map((_, idx) => (
                     <div
