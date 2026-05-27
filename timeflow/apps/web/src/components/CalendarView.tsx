@@ -231,7 +231,7 @@ export function CalendarView({
         attendees: event.attendees,
         categoryColor: isHabitEvent
           ? habitColor
-          : (categoryFromId?.color ?? categorization?.categoryColor),
+          : (categoryFromId?.color ?? categorization?.categoryColor ?? event.calendarColor),
         sourceType: event.sourceType,
         sourceId: event.sourceId,
         isCompleted: event.isCompleted,
@@ -247,22 +247,21 @@ export function CalendarView({
 
     if (event.isTask || event.sourceType === 'task') {
       // Brand Primary Teal for default tasks, or use category color
-      let backgroundColor = event.categoryColor || '#0BAF9A'; // Brand Primary Teal
-      let border = 'none';
+      const accentColor = event.categoryColor || '#0BAF9A'; // Brand Primary Teal
+      const backgroundColor = `${accentColor}20`; // Light translucent background
 
-      // Overflowed tasks get Coral border
-      if (event.overflowed) {
-        border = '2px solid #F97316'; // Coral border
-      }
+      // Overflowed tasks get Coral accent
+      const leftBorderColor = event.overflowed ? '#F97316' : accentColor;
 
       return {
         className: event.overflowed ? 'task-event overflowed' : 'task-event',
         style: {
           backgroundColor,
-          borderRadius: '4px',
-          border,
-          color: 'white',
-          fontWeight: '500',
+          borderRadius: '2px',
+          borderLeft: `5px solid ${leftBorderColor}`,
+          border: `1px solid ${accentColor}30`,
+          color: '#1e293b', // Dark slate text
+          fontWeight: '400',
           opacity: baseOpacity,
           textDecoration: event.isCompleted ? 'line-through' : 'none',
         },
@@ -270,15 +269,18 @@ export function CalendarView({
     }
 
     if (event.isHabit || event.sourceType === 'habit') {
-      const habitColor = event.categoryColor || '#6366F1'; // Indigo-500 fallback
+      const accentColor = event.categoryColor || '#6366F1'; // Indigo-500 fallback
+      const backgroundColor = `${accentColor}20`; // Light translucent background
+
       return {
         className: 'habit-event',
         style: {
-          backgroundColor: habitColor,
-          borderRadius: '4px',
-          border: 'none',
-          color: 'white',
-          fontWeight: '500',
+          backgroundColor,
+          borderRadius: '2px',
+          borderLeft: `5px solid ${accentColor}`,
+          border: `1px solid ${accentColor}30`,
+          color: '#1e293b', // Dark slate text
+          fontWeight: '400',
           opacity: baseOpacity,
           textDecoration: event.isCompleted ? 'line-through' : 'none',
         },
@@ -286,17 +288,19 @@ export function CalendarView({
     }
 
     // External events: Use category color if available, otherwise gray
-    const backgroundColor = event.categoryColor || '#64748B'; // Use category color or fallback to gray
+    const accentColor = event.categoryColor || '#64748B';
+    const backgroundColor = `${accentColor}20`; // Light translucent background
     const eventOpacity = event.categoryColor ? 0.95 : 0.75;
 
     return {
       className: 'external-event',
       style: {
         backgroundColor,
-        borderRadius: '4px',
-        border: `1px solid ${event.categoryColor ? event.categoryColor : '#475569'}`,
-        color: 'white',
-        fontWeight: '500',
+        borderRadius: '2px',
+        borderLeft: `5px solid ${accentColor}`,
+        border: `1px solid ${accentColor}30`,
+        color: '#1e293b', // Dark slate text
+        fontWeight: '400',
         opacity: baseOpacity * eventOpacity, // Combine completion and categorization opacity
       },
     };
@@ -439,6 +443,8 @@ export function CalendarView({
                 event={props.event as CalendarEventItem}
                 prefersReducedMotion={prefersReducedMotion}
                 onResize={onResizeEvent}
+                onCompleteTask={onCompleteTask}
+                onCompleteHabit={onCompleteHabit}
               />
             ),
             timeSlotWrapper: TimeSlotWrapper,
@@ -527,12 +533,16 @@ function DraggableEvent({
   onResize,
   onHover,
   onHoverEnd,
+  onCompleteTask,
+  onCompleteHabit,
 }: {
   event: CalendarEventItem;
   prefersReducedMotion: boolean;
   onResize?: (taskId: string, start: Date, end: Date) => Promise<void>;
   onHover?: (event: CalendarEventItem, anchor: HTMLElement | null) => void;
   onHoverEnd?: () => void;
+  onCompleteTask?: (taskId: string) => Promise<void>;
+  onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => Promise<void>;
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -677,6 +687,29 @@ function DraggableEvent({
   const titleClampClass = isVeryShortEvent ? 'line-clamp-1' : isShortEvent ? 'line-clamp-2' : 'line-clamp-3';
   const titleSizeClass = isVeryShortEvent ? 'text-[11px]' : 'text-xs';
 
+  const handleCheckboxClick = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent opening popover
+    e.preventDefault();
+
+    if (event.isCompleted) {
+      // Already completed, do nothing for now (could add undo functionality)
+      return;
+    }
+
+    try {
+      if (event.sourceType === 'task' && event.taskId && onCompleteTask) {
+        await onCompleteTask(event.taskId);
+      } else if (event.sourceType === 'habit' && event.scheduledHabitId && onCompleteHabit) {
+        const actualDurationMinutes = Math.round((event.end.getTime() - event.start.getTime()) / 60000);
+        await onCompleteHabit(event.scheduledHabitId, actualDurationMinutes);
+      }
+    } catch (error) {
+      console.error('Failed to complete event:', error);
+    }
+  }, [event, onCompleteTask, onCompleteHabit]);
+
+  const showCheckbox = (event.sourceType === 'task' || event.sourceType === 'habit') && (isHovered || event.isCompleted);
+
   return (
     <motion.div
       ref={setRefs}
@@ -693,13 +726,13 @@ function DraggableEvent({
         onHoverEnd?.();
       }}
       className={`overflow-hidden h-full flex flex-col justify-start py-1.5 gap-0.5 ${
-        canDrag ? 'pl-1 pr-2' : 'px-2'
+        canDrag ? 'pl-1 pr-8' : 'px-2 pr-8'
       } ${isResizing ? 'ring-2 ring-white/80' : ''}`}
     >
       {canDrag && (
         <button
           type="button"
-          className="absolute left-0 top-0 z-20 flex h-full w-7 cursor-grab items-start justify-center border-0 bg-transparent pt-1 text-white/90 hover:text-white active:cursor-grabbing"
+          className="absolute left-0 top-0 z-20 flex h-full w-7 cursor-grab items-start justify-center border-0 bg-transparent pt-1 text-slate-600 hover:text-slate-800 active:cursor-grabbing"
           aria-label="Drag to reschedule"
           {...listeners}
           {...attributes}
@@ -711,10 +744,10 @@ function DraggableEvent({
         </button>
       )}
       <div className={canDrag ? 'min-w-0 pl-6' : 'min-w-0'}>
-        <div className={`${isVeryShortEvent ? 'text-[9px]' : 'text-[10px]'} opacity-90 leading-tight`}>
+        <div className={`${isVeryShortEvent ? 'text-[9px]' : 'text-[10px]'} text-slate-600 opacity-90 leading-tight`}>
           {startTime} - {endTime}
         </div>
-        <div className={`font-semibold leading-snug ${titleClampClass} ${titleSizeClass}`}>
+        <div className={`font-medium leading-snug text-slate-900 ${titleClampClass} ${titleSizeClass}`}>
           {event.title}
         </div>
       </div>
@@ -731,6 +764,26 @@ function DraggableEvent({
         <div className="pointer-events-none absolute bottom-3 right-1 rounded bg-white/95 px-1.5 py-0.5 text-[10px] font-semibold text-slate-800 shadow-sm">
           Ends {endTime}
         </div>
+      )}
+      {showCheckbox && (
+        <button
+          type="button"
+          onClick={handleCheckboxClick}
+          className="absolute right-1 top-1 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded border-0 bg-white/90 hover:bg-white shadow-sm transition-all"
+          aria-label={event.isCompleted ? 'Completed' : 'Mark as complete'}
+        >
+          {event.isCompleted ? (
+            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ) : (
+            <div className="w-3 h-3 rounded-sm border-2 border-slate-400 hover:border-slate-600 transition-colors"></div>
+          )}
+        </button>
       )}
     </motion.div>
   );
