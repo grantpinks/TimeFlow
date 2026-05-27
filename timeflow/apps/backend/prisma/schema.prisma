@@ -88,6 +88,7 @@ model User {
   schedulingLinks          SchedulingLink[]
   meetings                 Meeting[]
   appleCalendarAccount     AppleCalendarAccount?
+  connectedAccounts        ConnectedAccount[]
   writingVoiceProfile      WritingVoiceProfile?
   subscriptions            Subscription[]
   usageLogs                UsageLog[]
@@ -597,6 +598,59 @@ model AppleCalendarAccount {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
+}
+
+/// Unified provider connections (Google OAuth, iCloud CalDAV, etc.)
+enum ConnectedAccountProvider {
+  google
+  apple_caldav
+}
+
+model ConnectedAccount {
+  id                       String                   @id @default(cuid())
+  userId                   String
+  provider                 ConnectedAccountProvider
+  providerAccountId        String
+  email                    String
+  displayName              String?
+  isPrimary                Boolean                  @default(false)
+  googleAccessToken        String?
+  googleAccessTokenExpiry  DateTime?
+  googleRefreshToken       String?
+  caldavBaseUrl            String?
+  caldavPrincipalUrl       String?
+  caldavCalendarHomeUrl    String?
+  caldavAppPasswordEncrypted String?
+  lastSuccessAt            DateTime?
+  lastErrorAt              DateTime?
+  lastErrorCode            String?
+  lastErrorMessage         String?
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendars ConnectedCalendar[]
+
+  @@unique([userId, provider, providerAccountId])
+  @@index([userId])
+}
+
+model ConnectedCalendar {
+  id                 String   @id @default(cuid())
+  connectedAccountId String
+  externalCalendarId String
+  name               String
+  color              String?
+  visible            Boolean  @default(true)
+  useForAvailability Boolean  @default(true)
+  isPrimary          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  account ConnectedAccount @relation(fields: [connectedAccountId], references: [id], onDelete: Cascade)
+
+  @@unique([connectedAccountId, externalCalendarId])
+  @@index([connectedAccountId])
 }
 
 model EmailCategoryOverride {

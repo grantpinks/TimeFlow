@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { prisma } from '../config/prisma.js';
 import crypto from 'crypto';
 import { DateTime } from 'luxon';
+import { ConnectedAccountProvider } from '@prisma/client';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-me-in-production-32b';
 const ALGORITHM = 'aes-256-cbc';
@@ -134,16 +135,18 @@ function formatIcsDate(iso: string): string {
   return DateTime.fromISO(iso, { zone: 'utc' }).toFormat("yyyyLLdd'T'HHmmss'Z'");
 }
 
-/**
- * Discover CalDAV account and store credentials
- */
-export async function discoverAccount(
-  userId: string,
-  email: string,
-  appPassword: string
-): Promise<{ principalUrl: string | null; calendarHomeUrl: string | null }> {
-  const baseUrl = DEFAULT_BASE_URL;
+type AppleAccountContext = {
+  email: string;
+  appPasswordEncrypted: string;
+  baseUrl: string;
+  calendarHomeUrl: string | null;
+};
 
+async function discoverAccountMetadata(email: string, appPassword: string): Promise<{
+  principalUrl: string | null;
+  calendarHomeUrl: string | null;
+}> {
+  const baseUrl = DEFAULT_BASE_URL;
   const authHeader = buildAuthHeader(email, appPassword);
   const propfindBody = `<?xml version="1.0" encoding="utf-8" ?>
   <d:propfind xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
@@ -182,6 +185,74 @@ export async function discoverAccount(
     principalUrl = null;
   }
 
+  return { principalUrl, calendarHomeUrl };
+}
+
+async function resolveAppleContext(
+  userId: string,
+  calendarUrl?: string,
+  connectedAccountId?: string
+): Promise<AppleAccountContext | null> {
+  if (connectedAccountId) {
+    const account = await prisma.connectedAccount.findFirst({
+      where: {
+        id: connectedAccountId,
+        userId,
+        provider: ConnectedAccountProvider.apple_caldav,
+      },
+    });
+    if (account?.caldavAppPasswordEncrypted) {
+      return {
+        email: account.email,
+        appPasswordEncrypted: account.caldavAppPasswordEncrypted,
+        baseUrl: account.caldavBaseUrl || DEFAULT_BASE_URL,
+        calendarHomeUrl: account.caldavCalendarHomeUrl ?? null,
+      };
+    }
+  }
+
+  if (calendarUrl) {
+    const linkedCalendar = await prisma.connectedCalendar.findFirst({
+      where: {
+        externalCalendarId: calendarUrl,
+        account: {
+          userId,
+          provider: ConnectedAccountProvider.apple_caldav,
+        },
+      },
+      include: { account: true },
+    });
+
+    if (linkedCalendar?.account?.caldavAppPasswordEncrypted) {
+      return {
+        email: linkedCalendar.account.email,
+        appPasswordEncrypted: linkedCalendar.account.caldavAppPasswordEncrypted,
+        baseUrl: linkedCalendar.account.caldavBaseUrl || DEFAULT_BASE_URL,
+        calendarHomeUrl: linkedCalendar.account.caldavCalendarHomeUrl ?? null,
+      };
+    }
+  }
+
+  const legacy = await prisma.appleCalendarAccount.findUnique({ where: { userId } });
+  if (!legacy) return null;
+  return {
+    email: legacy.email,
+    appPasswordEncrypted: legacy.appPasswordEncrypted,
+    baseUrl: legacy.baseUrl || DEFAULT_BASE_URL,
+    calendarHomeUrl: legacy.calendarHomeUrl ?? null,
+  };
+}
+
+/**
+ * Discover CalDAV account and store credentials
+ */
+export async function discoverAccount(
+  userId: string,
+  email: string,
+  appPassword: string
+): Promise<{ principalUrl: string | null; calendarHomeUrl: string | null }> {
+  const { principalUrl, calendarHomeUrl } = await discoverAccountMetadata(email, appPassword);
+
   const encrypted = encryptPassword(appPassword);
 
   await prisma.appleCalendarAccount.upsert({
@@ -206,6 +277,49 @@ export async function discoverAccount(
     principalUrl,
     calendarHomeUrl,
   };
+}
+
+export async function discoverConnectedAccount(
+  userId: string,
+  email: string,
+  appPassword: string
+): Promise<{ principalUrl: string | null; calendarHomeUrl: string | null; encryptedPassword: string }> {
+  const { principalUrl, calendarHomeUrl } = await discoverAccountMetadata(email, appPassword);
+  const encryptedPassword = encryptPassword(appPassword);
+
+  await prisma.connectedAccount.upsert({
+    where: {
+      userId_provider_providerAccountId: {
+        userId,
+        provider: ConnectedAccountProvider.apple_caldav,
+        providerAccountId: email.toLowerCase(),
+      },
+    },
+    update: {
+      email,
+      caldavBaseUrl: DEFAULT_BASE_URL,
+      caldavPrincipalUrl: principalUrl,
+      caldavCalendarHomeUrl: calendarHomeUrl,
+      caldavAppPasswordEncrypted: encryptedPassword,
+      lastSuccessAt: new Date(),
+      lastErrorAt: null,
+      lastErrorCode: null,
+      lastErrorMessage: null,
+    },
+    create: {
+      userId,
+      provider: ConnectedAccountProvider.apple_caldav,
+      providerAccountId: email.toLowerCase(),
+      email,
+      caldavBaseUrl: DEFAULT_BASE_URL,
+      caldavPrincipalUrl: principalUrl,
+      caldavCalendarHomeUrl: calendarHomeUrl,
+      caldavAppPasswordEncrypted: encryptedPassword,
+      lastSuccessAt: new Date(),
+    },
+  });
+
+  return { principalUrl, calendarHomeUrl, encryptedPassword };
 }
 
 /**
@@ -314,8 +428,11 @@ export function parseIcsEvents(icsData: string): Array<{
 /**
  * List calendars for user
  */
-export async function listCalendars(userId: string): Promise<Array<{ displayName: string; url: string }>> {
-  const account = await getAccount(userId);
+export async function listCalendars(
+  userId: string,
+  connectedAccountId?: string
+): Promise<Array<{ displayName: string; url: string }>> {
+  const account = await resolveAppleContext(userId, undefined, connectedAccountId);
   if (!account || !account.calendarHomeUrl) {
     return [];
   }
@@ -357,7 +474,7 @@ export async function getEvents(
   summary?: string;
   transparency?: 'opaque' | 'transparent';
 }>> {
-  const account = await getAccount(userId);
+  const account = await resolveAppleContext(userId, calendarUrl);
   if (!account) return [];
   const authHeader = buildAuthHeader(account.email, decryptPassword(account.appPasswordEncrypted));
 
@@ -405,7 +522,7 @@ export async function createEvent(
     transparency?: 'opaque' | 'transparent';
   }
 ): Promise<string> {
-  const account = await getAccount(userId);
+  const account = await resolveAppleContext(userId, calendarUrl);
   if (!account) throw new Error('Apple Calendar account not found');
 
   const authHeader = buildAuthHeader(account.email, decryptPassword(account.appPasswordEncrypted));
@@ -452,7 +569,7 @@ export async function updateEvent(
     transparency?: 'opaque' | 'transparent';
   }
 ): Promise<void> {
-  const account = await getAccount(userId);
+  const account = await resolveAppleContext(userId, calendarUrl);
   if (!account) throw new Error('Apple Calendar account not found');
   const authHeader = buildAuthHeader(account.email, decryptPassword(account.appPasswordEncrypted));
 
@@ -487,7 +604,7 @@ export async function cancelEvent(
   calendarUrl: string,
   eventUrl: string
 ): Promise<void> {
-  const account = await getAccount(userId);
+  const account = await resolveAppleContext(userId, calendarUrl);
   if (!account) throw new Error('Apple Calendar account not found');
   const authHeader = buildAuthHeader(account.email, decryptPassword(account.appPasswordEncrypted));
 

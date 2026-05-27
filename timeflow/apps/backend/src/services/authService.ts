@@ -5,6 +5,7 @@
  */
 
 import { google } from 'googleapis';
+import { ConnectedAccountProvider } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { getOAuth2Client, GOOGLE_SCOPES } from '../config/google.js';
 import { encrypt } from '../utils/crypto.js';
@@ -43,25 +44,54 @@ export async function handleGoogleCallback(code: string) {
     throw new Error('Failed to retrieve user info from Google');
   }
 
+  const encryptedRefreshToken = encrypt(tokens.refresh_token) ?? undefined;
+  const accessTokenExpiry = tokens.expiry_date
+    ? new Date(tokens.expiry_date)
+    : undefined;
+
   // Create or update user in database
   const user = await prisma.user.upsert({
     where: { googleId: userInfo.id },
     update: {
       email: userInfo.email,
       googleAccessToken: tokens.access_token,
-      googleRefreshToken: encrypt(tokens.refresh_token) ?? undefined,
-      googleAccessTokenExpiry: tokens.expiry_date
-        ? new Date(tokens.expiry_date)
-        : undefined,
+      googleRefreshToken: encryptedRefreshToken,
+      googleAccessTokenExpiry: accessTokenExpiry,
     },
     create: {
       email: userInfo.email,
       googleId: userInfo.id,
       googleAccessToken: tokens.access_token,
-      googleRefreshToken: encrypt(tokens.refresh_token) ?? undefined,
-      googleAccessTokenExpiry: tokens.expiry_date
-        ? new Date(tokens.expiry_date)
-        : undefined,
+      googleRefreshToken: encryptedRefreshToken,
+      googleAccessTokenExpiry: accessTokenExpiry,
+    },
+  });
+
+  // Keep new account hub populated in parallel with legacy fields.
+  await prisma.connectedAccount.upsert({
+    where: {
+      userId_provider_providerAccountId: {
+        userId: user.id,
+        provider: ConnectedAccountProvider.google,
+        providerAccountId: userInfo.id,
+      },
+    },
+    update: {
+      email: userInfo.email,
+      isPrimary: true,
+      googleAccessToken: tokens.access_token,
+      googleRefreshToken: encryptedRefreshToken,
+      googleAccessTokenExpiry: accessTokenExpiry,
+    },
+    create: {
+      userId: user.id,
+      provider: ConnectedAccountProvider.google,
+      providerAccountId: userInfo.id,
+      email: userInfo.email,
+      isPrimary: true,
+      googleAccessToken: tokens.access_token,
+      googleRefreshToken: encryptedRefreshToken,
+      googleAccessTokenExpiry: accessTokenExpiry,
     },
   });
 

@@ -6,6 +6,11 @@ const patchMock = vi.fn();
 
 vi.mock('../../config/prisma.js', () => ({
   prisma: {
+    connectedAccount: {
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      upsert: vi.fn(),
+    },
     user: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -42,6 +47,7 @@ vi.mock('googleapis', () => ({
 describe('googleCalendarService cancelEvent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (prisma.connectedAccount.findFirst as any).mockResolvedValue(null);
     (prisma.user.findUnique as any).mockResolvedValue({
       id: 'user1',
       googleAccessToken: 'token',

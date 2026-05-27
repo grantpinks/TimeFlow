@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import * as api from '@/lib/api';
 import type { SchedulingLink } from '@timeflow/shared';
+import {
+  useSchedulingLinkCalendars,
+  pickDefaultCalendarId,
+} from '@/hooks/useSchedulingLinkCalendars';
 
 export function SchedulingLinksPanel() {
   const [links, setLinks] = useState<SchedulingLink[]>([]);
@@ -195,17 +200,33 @@ interface SchedulingLinkModalProps {
 function SchedulingLinkModal({ link, onClose, onSuccess }: SchedulingLinkModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { loading: calendarsLoading, googleOptions, appleOptions } =
+    useSchedulingLinkCalendars(true);
 
   // Form state
   const [name, setName] = useState(link?.name || '');
   const [durationsMinutes, setDurationsMinutes] = useState<number[]>(link?.durationsMinutes || [30]);
-  const [bufferBeforeMinutes, setBufferBeforeMinutes] = useState(link?.bufferBeforeMinutes || 10);
-  const [bufferAfterMinutes, setBufferAfterMinutes] = useState(link?.bufferAfterMinutes || 10);
-  const [maxBookingHorizonDays, setMaxBookingHorizonDays] = useState(link?.maxBookingHorizonDays || 60);
-  const [dailyCap, setDailyCap] = useState(link?.dailyCap || 6);
-  const [calendarProvider, setCalendarProvider] = useState<'google' | 'apple'>(link?.calendarProvider || 'google');
-  const [calendarId] = useState(link?.calendarId || 'primary');
+  const [bufferBeforeMinutes, setBufferBeforeMinutes] = useState(link?.bufferBeforeMinutes ?? 10);
+  const [bufferAfterMinutes, setBufferAfterMinutes] = useState(link?.bufferAfterMinutes ?? 10);
+  const [maxBookingHorizonDays, setMaxBookingHorizonDays] = useState(link?.maxBookingHorizonDays ?? 60);
+  const [dailyCap, setDailyCap] = useState(link?.dailyCap ?? 6);
+  const [calendarProvider, setCalendarProvider] = useState<'google' | 'apple'>(
+    link?.calendarProvider === 'apple' ? 'apple' : 'google'
+  );
+  const [calendarId, setCalendarId] = useState(link?.calendarId || '');
   const [googleMeetEnabled, setGoogleMeetEnabled] = useState(link?.googleMeetEnabled ?? true);
+
+  const calendarOptions = calendarProvider === 'google' ? googleOptions : appleOptions;
+
+  useEffect(() => {
+    if (calendarsLoading) return;
+    setCalendarId((current) => {
+      if (current && calendarOptions.some((o) => o.id === current)) {
+        return current;
+      }
+      return pickDefaultCalendarId(calendarProvider, calendarOptions, link?.calendarId);
+    });
+  }, [calendarProvider, calendarsLoading, googleOptions, appleOptions, link?.calendarId]);
 
   // Duration checkboxes
   const durationOptions = [15, 30, 45, 60, 90, 120];
@@ -231,6 +252,16 @@ function SchedulingLinkModal({ link, onClose, onSuccess }: SchedulingLinkModalPr
 
     if (durationsMinutes.length === 0) {
       setError('Select at least one duration');
+      setSaving(false);
+      return;
+    }
+
+    if (!calendarId) {
+      setError(
+        calendarProvider === 'apple'
+          ? 'Connect iCloud in Settings and select an Apple calendar.'
+          : 'Connect Google Calendar in Settings and select a calendar.'
+      );
       setSaving(false);
       return;
     }
@@ -378,11 +409,53 @@ function SchedulingLinkModal({ link, onClose, onSuccess }: SchedulingLinkModalPr
             <select
               value={calendarProvider}
               onChange={(e) => setCalendarProvider(e.target.value as 'google' | 'apple')}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              disabled={calendarsLoading}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
             >
               <option value="google">Google Calendar</option>
-              <option value="apple">Apple Calendar</option>
+              <option value="apple">Apple Calendar (iCloud)</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Booking calendar
+            </label>
+            {calendarsLoading ? (
+              <p className="text-sm text-slate-500">Loading calendars…</p>
+            ) : calendarOptions.length === 0 ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                {calendarProvider === 'apple' ? (
+                  <>
+                    No Apple calendars found.{' '}
+                    <Link href="/settings" className="font-medium underline">
+                      Connect iCloud in Settings
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  <>
+                    No Google calendars found.{' '}
+                    <Link href="/settings" className="font-medium underline">
+                      Connect Google in Settings
+                    </Link>
+                    .
+                  </>
+                )}
+              </div>
+            ) : (
+              <select
+                value={calendarId}
+                onChange={(e) => setCalendarId(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                {calendarOptions.map((cal) => (
+                  <option key={cal.id} value={cal.id}>
+                    {cal.name} ({cal.accountEmail})
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {calendarProvider === 'google' && (
@@ -411,7 +484,7 @@ function SchedulingLinkModal({ link, onClose, onSuccess }: SchedulingLinkModalPr
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || calendarsLoading || !calendarId}
               className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium"
             >
               {saving ? 'Saving...' : link ? 'Update Link' : 'Create Link'}

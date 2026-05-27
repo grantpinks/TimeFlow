@@ -9,6 +9,7 @@ import { google, calendar_v3 } from 'googleapis';
 import { prisma } from '../config/prisma.js';
 import { getUserOAuth2Client } from '../config/google.js';
 import { decrypt, encrypt } from '../utils/crypto.js';
+import { getGoogleTokenContext } from './accountTokenService.js';
 
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
@@ -135,32 +136,47 @@ function hasTimeConflict(
  * Refreshes tokens if needed.
  */
 async function getCalendarClient(userId: string): Promise<calendar_v3.Calendar> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user || !user.googleAccessToken) {
-    throw new Error('User not authenticated with Google');
-  }
+  const tokenContext = await getGoogleTokenContext(userId);
 
   const oauth2Client = getUserOAuth2Client(
-    user.googleAccessToken,
-    decrypt(user.googleRefreshToken),
-    user.googleAccessTokenExpiry?.getTime()
+    tokenContext.accessToken,
+    decrypt(tokenContext.refreshTokenEncrypted),
+    tokenContext.accessTokenExpiry?.getTime()
   );
 
   // Handle token refresh
   oauth2Client.on('tokens', async (tokens) => {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        googleAccessToken: tokens.access_token ?? user.googleAccessToken,
-        googleRefreshToken: encrypt(tokens.refresh_token) ?? user.googleRefreshToken,
-        googleAccessTokenExpiry: tokens.expiry_date
-          ? new Date(tokens.expiry_date)
-          : user.googleAccessTokenExpiry,
-      },
-    });
+    const nextAccessToken = tokens.access_token ?? tokenContext.accessToken;
+    const nextRefreshToken = encrypt(tokens.refresh_token) ?? tokenContext.refreshTokenEncrypted;
+    const nextExpiry = tokens.expiry_date
+      ? new Date(tokens.expiry_date)
+      : tokenContext.accessTokenExpiry;
+
+    const writes: Array<Promise<unknown>> = [
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          googleAccessToken: nextAccessToken,
+          googleRefreshToken: nextRefreshToken,
+          googleAccessTokenExpiry: nextExpiry,
+        },
+      }),
+    ];
+
+    if (tokenContext.connectedAccountId) {
+      writes.push(
+        prisma.connectedAccount.update({
+          where: { id: tokenContext.connectedAccountId },
+          data: {
+            googleAccessToken: nextAccessToken,
+            googleRefreshToken: nextRefreshToken,
+            googleAccessTokenExpiry: nextExpiry,
+          },
+        })
+      );
+    }
+
+    await Promise.all(writes);
   });
 
   return google.calendar({ version: 'v3', auth: oauth2Client });

@@ -24,6 +24,11 @@ export default function SettingsPage() {
   const [calendarsLoading, setCalendarsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [connectedAccounts, setConnectedAccounts] = useState<api.ConnectedAccount[]>([]);
+  const [connectedAccountsLoading, setConnectedAccountsLoading] = useState(true);
+  const [icloudEmail, setIcloudEmail] = useState('');
+  const [icloudAppPassword, setIcloudAppPassword] = useState('');
+  const [connectingIcloud, setConnectingIcloud] = useState(false);
 
   // Form state
   const [wakeTime, setWakeTime] = useState('08:00');
@@ -60,6 +65,7 @@ export default function SettingsPage() {
   const [billing, setBilling] = useState<BillingSubscriptionStatus | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
   const [billingAction, setBillingAction] = useState<string | null>(null); // 'cancel' | 'manage' | null
+  const writableGoogleCalendars = calendars.filter((cal) => (cal.provider ?? 'google') === 'google');
 
   // Initialize form from user data
   useEffect(() => {
@@ -139,6 +145,22 @@ export default function SettingsPage() {
     fetchCalendars();
   }, []);
 
+  useEffect(() => {
+    async function fetchConnectedAccounts() {
+      try {
+        const accounts = await api.getConnectedAccounts();
+        setConnectedAccounts(accounts);
+      } catch (err) {
+        console.error('Failed to load connected accounts:', err);
+        setConnectedAccounts([]);
+      } finally {
+        setConnectedAccountsLoading(false);
+      }
+    }
+
+    fetchConnectedAccounts();
+  }, []);
+
   // Fetch billing status
   useEffect(() => {
     async function fetchBilling() {
@@ -182,6 +204,58 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to open billing portal.' });
     } finally {
       setBillingAction(null);
+    }
+  };
+
+  const refreshConnectedAccounts = async () => {
+    try {
+      const accounts = await api.getConnectedAccounts();
+      setConnectedAccounts(accounts);
+    } catch (err) {
+      console.error('Failed to refresh connected accounts:', err);
+    }
+  };
+
+  const handleConnectIcloud = async () => {
+    if (!icloudEmail || !icloudAppPassword) {
+      setMessage({ type: 'error', text: 'Enter both iCloud email and app-specific password.' });
+      return;
+    }
+
+    setConnectingIcloud(true);
+    setMessage(null);
+    try {
+      await api.connectIcloudAccount({
+        email: icloudEmail.trim(),
+        appPassword: icloudAppPassword.trim(),
+      });
+      setIcloudAppPassword('');
+      setMessage({ type: 'success', text: 'iCloud calendar connected.' });
+      await refreshConnectedAccounts();
+      const cals = await api.listCalendars();
+      setCalendars(cals);
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to connect iCloud calendar.',
+      });
+    } finally {
+      setConnectingIcloud(false);
+    }
+  };
+
+  const handleDisconnectAccount = async (connectedAccountId: string) => {
+    try {
+      await api.disconnectConnectedAccount(connectedAccountId);
+      setMessage({ type: 'success', text: 'Account disconnected.' });
+      await refreshConnectedAccounts();
+      const cals = await api.listCalendars();
+      setCalendars(cals);
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to disconnect account.',
+      });
     }
   };
 
@@ -347,6 +421,89 @@ export default function SettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </a>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Connected calendar accounts</h2>
+                <p className="text-slate-600 text-sm">
+                  Connect multiple calendars and choose what to show in Calendar view.
+                </p>
+              </div>
+            </div>
+
+            {connectedAccountsLoading ? (
+              <p className="text-sm text-slate-500 mb-4">Loading connected accounts...</p>
+            ) : connectedAccounts.length === 0 ? (
+              <p className="text-sm text-slate-500 mb-4">No connected accounts yet.</p>
+            ) : (
+              <div className="space-y-3 mb-5">
+                {connectedAccounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="rounded-lg border border-slate-200 p-3 flex items-start justify-between gap-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">
+                        {account.provider === 'apple_caldav' ? 'iCloud' : 'Google'} • {account.email}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {account.calendars.length} calendar{account.calendars.length === 1 ? '' : 's'} connected
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDisconnectAccount(account.id)}
+                      className="text-xs font-medium text-red-600 hover:text-red-700"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-3 border-t border-slate-100 pt-4">
+              <p className="text-sm font-medium text-slate-800">Connect iCloud calendar</p>
+              <p className="text-xs text-slate-500">
+                Use your iCloud email and an Apple app-specific password.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  type="email"
+                  value={icloudEmail}
+                  onChange={(e) => setIcloudEmail(e.target.value)}
+                  placeholder="name@icloud.com"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                />
+                <input
+                  type="password"
+                  value={icloudAppPassword}
+                  onChange={(e) => setIcloudAppPassword(e.target.value)}
+                  placeholder="App-specific password"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <a
+                  href="https://support.apple.com/en-us/102654"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                >
+                  How to create app-specific password
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void handleConnectIcloud()}
+                  disabled={connectingIcloud}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
+                >
+                  {connectingIcloud ? 'Connecting...' : 'Connect iCloud'}
+                </button>
+              </div>
+            </div>
           </div>
 
           {showAiDebugToggle && (
@@ -776,7 +933,7 @@ export default function SettingsPage() {
 
             {calendarsLoading ? (
               <div className="text-slate-500">Loading calendars...</div>
-            ) : calendars.length === 0 ? (
+            ) : writableGoogleCalendars.length === 0 ? (
               <div className="text-slate-500">
                 No calendars found. Make sure you have connected Google Calendar.
               </div>
@@ -787,7 +944,7 @@ export default function SettingsPage() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="">Primary Calendar</option>
-                {calendars.map((cal) => (
+                {writableGoogleCalendars.map((cal) => (
                   <option key={cal.id} value={cal.id}>
                     {cal.summary} {cal.primary && '(Primary)'}
                   </option>

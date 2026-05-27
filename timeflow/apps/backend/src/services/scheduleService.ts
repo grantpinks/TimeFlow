@@ -16,6 +16,7 @@ import {
 import type { ApplyScheduleBlock, ApplyScheduleResponse, SchedulePreview, DailyScheduleConfig } from '@timeflow/shared';
 import { prisma } from '../config/prisma.js';
 import * as calendarService from './googleCalendarService.js';
+import * as mergedCalendarService from './mergedCalendarService.js';
 import { separateFixedAndMovable } from '../utils/eventClassifier.js';
 import {
   hasTimeOverlap,
@@ -67,11 +68,11 @@ export async function scheduleTasksForUser(
   }
 
   // 3. Fetch existing calendar events
-  const existingEvents = await calendarService.getEvents(
+  const existingEvents = await mergedCalendarService.getMergedExternalEvents(
     userId,
-    calendarId,
     dateRangeStart,
-    dateRangeEnd
+    dateRangeEnd,
+    'availability'
   );
 
   // 4. Prepare inputs for scheduling engine
@@ -381,11 +382,11 @@ export async function applyScheduleBlocks(
   const rangeStart = new Date(Math.min(...parsedDates.map((date) => date.start.getTime())));
   const rangeEnd = new Date(Math.max(...parsedDates.map((date) => date.end.getTime())));
 
-  const calendarEvents = await calendarService.getEvents(
+  const calendarEvents = await mergedCalendarService.getMergedExternalEvents(
     userId,
-    calendarId,
     rangeStart.toISOString(),
-    rangeEnd.toISOString()
+    rangeEnd.toISOString(),
+    'availability'
   );
 
   const existingEventKeys = new Set(

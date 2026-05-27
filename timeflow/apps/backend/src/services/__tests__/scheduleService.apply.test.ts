@@ -16,6 +16,10 @@ vi.mock('../googleCalendarService.js', () => ({
   getEvents: vi.fn(),
 }));
 
+vi.mock('../mergedCalendarService.js', () => ({
+  getMergedExternalEvents: vi.fn(),
+}));
+
 vi.mock('../scheduleValidator.js', () => ({
   validateSchedulePreview: vi.fn(),
   applyValidationToPreview: vi.fn(),
@@ -28,6 +32,7 @@ describe('applyScheduleBlocks', () => {
     const { prisma } = await import('../../config/prisma.js');
     const calendarService = await import('../googleCalendarService.js');
     const scheduleValidator = await import('../scheduleValidator.js');
+    const mergedCalendarService = await import('../mergedCalendarService.js');
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-1',
@@ -54,6 +59,7 @@ describe('applyScheduleBlocks', () => {
     vi.mocked(calendarService.createEvent).mockResolvedValue({ eventId: 'event-1' });
     vi.mocked(calendarService.updateEvent).mockResolvedValue(undefined);
     vi.mocked(calendarService.getEvents).mockResolvedValue([]);
+    vi.mocked(mergedCalendarService.getMergedExternalEvents).mockResolvedValue([]);
     vi.mocked(prisma.scheduledTask.upsert).mockResolvedValue({} as any);
     vi.mocked(prisma.appliedSchedule.findUnique).mockResolvedValue(null);
     vi.mocked(prisma.appliedSchedule.create).mockResolvedValue({} as any);

@@ -22,6 +22,7 @@ import { MeetingManagementPanel } from '@/components/MeetingManagementPanel';
 import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
 import { SchedulePreviewOverlay } from '@/components/calendar/SchedulePreviewOverlay';
+import { ConnectedCalendarsPanel } from '@/components/calendar/ConnectedCalendarsPanel';
 import { Button, Input, Select, Textarea, Label, LoadingSpinner } from '@/components/ui';
 import { FlowMascot } from '@/components/FlowMascot';
 import Link from 'next/link';
@@ -77,6 +78,8 @@ export default function CalendarPage() {
   const [scheduledHabitInstances, setScheduledHabitInstances] = useState<ScheduledHabitInstance[]>([]);
   const [habitInsights, setHabitInsights] = useState<HabitInsightsSummary | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [connectedAccounts, setConnectedAccounts] = useState<api.ConnectedAccount[]>([]);
+  const [connectedAccountsLoading, setConnectedAccountsLoading] = useState(true);
   const [eventCategorizations, setEventCategorizations] = useState<Record<string, api.EventCategorization>>({});
   const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
   const [scheduling, setScheduling] = useState(false);
@@ -123,7 +126,7 @@ export default function CalendarPage() {
 
   // Fetch calendar events for the current month (now includes tasks, habits, and external events from merged backend)
   // The backend getEvents endpoint returns merged events with source tracking
-  const fetchExternalEvents = async () => {
+  const fetchExternalEvents = useCallback(async () => {
     try {
       setEventsLoading(true);
       const now = new Date();
@@ -156,7 +159,20 @@ export default function CalendarPage() {
     } finally {
       setEventsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  const fetchConnectedAccounts = useCallback(async () => {
+    try {
+      setConnectedAccountsLoading(true);
+      const accounts = await api.getConnectedAccounts();
+      setConnectedAccounts(accounts);
+    } catch (err) {
+      console.error('Failed to fetch connected accounts:', err);
+      setConnectedAccounts([]);
+    } finally {
+      setConnectedAccountsLoading(false);
+    }
+  }, []);
 
   // Fetch habit insights for streak context
   const fetchHabitInsights = async () => {
@@ -203,7 +219,8 @@ export default function CalendarPage() {
     fetchCategories();
     fetchExternalEvents();
     fetchHabitInsights();
-  }, [user?.id]);
+    fetchConnectedAccounts();
+  }, [user?.id, fetchConnectedAccounts, fetchExternalEvents]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -488,6 +505,32 @@ export default function CalendarPage() {
       setCategorizingEvents(false);
     }
   };
+
+  const handleToggleConnectedCalendar = useCallback(
+    async (connectedCalendarId: string, visible: boolean) => {
+      setConnectedAccounts((prev) =>
+        prev.map((account) => ({
+          ...account,
+          calendars: account.calendars.map((calendar) =>
+            calendar.id === connectedCalendarId ? { ...calendar, visible } : calendar
+          ),
+        }))
+      );
+
+      try {
+        await api.patchConnectedCalendar(connectedCalendarId, { visible });
+        await fetchExternalEvents();
+      } catch (err) {
+        // Avoid reverting to a stale snapshot if multiple toggles happened quickly.
+        await fetchConnectedAccounts();
+        setMessage({
+          type: 'error',
+          text: err instanceof Error ? err.message : 'Failed to update calendar visibility',
+        });
+      }
+    },
+    [fetchConnectedAccounts, fetchExternalEvents]
+  );
 
   const handleCategoryChange = async (
     eventId: string,
@@ -1481,6 +1524,14 @@ export default function CalendarPage() {
                     tasks={tasks}
                     selectedDate={calendarDate}
                     onDateClick={setCalendarDate}
+                  />
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <ConnectedCalendarsPanel
+                    accounts={connectedAccounts}
+                    loading={connectedAccountsLoading}
+                    onToggleCalendar={handleToggleConnectedCalendar}
                   />
                 </div>
 

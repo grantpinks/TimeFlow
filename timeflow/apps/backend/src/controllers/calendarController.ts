@@ -6,6 +6,7 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as calendarService from '../services/googleCalendarService.js';
+import * as mergedCalendarService from '../services/mergedCalendarService.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
@@ -37,10 +38,8 @@ export async function getEvents(
   const { from, to } = parsed.data;
 
   try {
-    const calendarId = user.defaultCalendarId || 'primary';
-
-    // Fetch Google Calendar events (external events)
-    const googleEvents = await calendarService.getEvents(user.id, calendarId, from, to);
+    // Fetch merged external events across connected calendars.
+    const externalEvents = await mergedCalendarService.getMergedExternalEvents(user.id, from, to);
 
     // Fetch scheduled tasks with completion status
     const {prisma} = await import('../config/prisma.js');
@@ -119,12 +118,6 @@ export async function getEvents(
       };
     });
 
-    // Mark Google Calendar events as external
-    const externalEvents = googleEvents.map((event) => ({
-      ...event,
-      sourceType: 'external' as const,
-    }));
-
     // Merge and return all events
     return [...externalEvents, ...taskEvents, ...habitEvents];
   } catch (error) {
@@ -144,6 +137,9 @@ export async function listCalendars(request: FastifyRequest, reply: FastifyReply
   }
 
   try {
+    // IMPORTANT: This endpoint remains the legacy "Google calendar list" for the
+    // primary Google connection (used as the task/habit write target). Connected
+    // calendar visibility is managed via `/connected-accounts` and calendar toggles.
     const calendars = await calendarService.listCalendars(user.id);
     return calendars;
   } catch (error) {

@@ -35,6 +35,7 @@ import { registerBillingRoutes, registerStripeWebhookRoute } from './routes/bill
 import { registerIdentityRoutes } from './routes/identityRoutes.js';
 import { registerInternalCronRoutes } from './routes/internalCronRoutes.js';
 import { registerAnalyticsRoutes } from './routes/analyticsRoutes.js';
+import { registerConnectedAccountRoutes } from './routes/connectedAccountRoutes.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -122,6 +123,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await registerBillingRoutes(api);
       await registerIdentityRoutes(api);
       await registerAnalyticsRoutes(api);
+      await registerConnectedAccountRoutes(api);
       await registerDiagnosticsRoutes(api);
     },
     { prefix: '/api' }

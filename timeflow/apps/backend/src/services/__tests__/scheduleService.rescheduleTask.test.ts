@@ -14,6 +14,8 @@ vi.mock('../../config/prisma.js', () => ({
 vi.mock('../googleCalendarService.js', () => ({
   createEvent: vi.fn(),
   updateEvent: vi.fn(),
+  getEvents: vi.fn().mockResolvedValue([]),
+  deleteEvent: vi.fn(),
 }));
 
 beforeEach(() => {

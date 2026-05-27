@@ -707,6 +707,29 @@ export async function dismissCoachSuggestion(req: DismissCoachSuggestionRequest)
 
 // ===== Calendar =====
 
+export interface ConnectedCalendar {
+  id: string;
+  connectedAccountId: string;
+  externalCalendarId: string;
+  name: string;
+  color: string | null;
+  visible: boolean;
+  useForAvailability: boolean;
+  isPrimary: boolean;
+}
+
+export interface ConnectedAccount {
+  id: string;
+  provider: 'google' | 'apple_caldav';
+  email: string;
+  displayName: string | null;
+  isPrimary: boolean;
+  lastSuccessAt: string | null;
+  lastErrorAt: string | null;
+  lastErrorMessage: string | null;
+  calendars: ConnectedCalendar[];
+}
+
 /**
  * Get calendar events in a date range.
  */
@@ -724,6 +747,40 @@ export async function getCalendarEvents(
  */
 export async function listCalendars(): Promise<Calendar[]> {
   return request<Calendar[]>('/calendar/list');
+}
+
+export async function getConnectedAccounts(): Promise<ConnectedAccount[]> {
+  return request<ConnectedAccount[]>('/connected-accounts');
+}
+
+export async function connectIcloudAccount(body: {
+  email: string;
+  appPassword: string;
+}): Promise<ConnectedAccount> {
+  return request<ConnectedAccount>('/connected-accounts/icloud', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function patchConnectedCalendar(
+  connectedCalendarId: string,
+  body: {
+    visible?: boolean;
+    color?: string | null;
+    useForAvailability?: boolean;
+  }
+): Promise<ConnectedCalendar> {
+  return request<ConnectedCalendar>(`/connected-calendars/${connectedCalendarId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function disconnectConnectedAccount(connectedAccountId: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/connected-accounts/${connectedAccountId}`, {
+    method: 'DELETE',
+  });
 }
 
 /**
