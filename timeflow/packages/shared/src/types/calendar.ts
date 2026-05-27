@@ -18,6 +18,10 @@ export interface CalendarEvent {
   description?: string;
   start: string; // ISO datetime
   end: string;   // ISO datetime
+  provider?: 'google' | 'apple';
+  connectedAccountId?: string;
+  connectedCalendarId?: string;
+  calendarColor?: string;
   attendees?: { email: string }[]; // For meeting detection (Sprint 13.7)
   isFixed?: boolean; // Optional metadata for fixed/movable classification (Sprint 13.7)
   transparency?: 'opaque' | 'transparent'; // For availability blocking (Sprint 15)
@@ -36,6 +40,12 @@ export interface Calendar {
   id: string;
   summary: string;
   primary: boolean;
+  provider?: 'google' | 'apple';
+  connectedAccountId?: string;
+  connectedCalendarId?: string;
+  color?: string | null;
+  visible?: boolean;
+  useForAvailability?: boolean;
 }
 
 /**
