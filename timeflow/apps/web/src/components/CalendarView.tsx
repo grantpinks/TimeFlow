@@ -242,13 +242,11 @@ export function CalendarView({
   }, [tasks, externalEvents, eventCategorizations, categories]);
 
   const eventStyleGetter = useCallback((event: CalendarEventItem) => {
-    // Base opacity: reduce for completed events
-    const baseOpacity = event.isCompleted ? 0.5 : 1;
-
     if (event.isTask || event.sourceType === 'task') {
       // Brand Primary Teal for default tasks, or use category color
       const accentColor = event.categoryColor || '#0BAF9A'; // Brand Primary Teal
-      const backgroundColor = `${accentColor}20`; // Light translucent background
+      // Completed: translucent (20%), Incomplete: solid (95%)
+      const backgroundColor = event.isCompleted ? `${accentColor}20` : `${accentColor}F2`;
 
       // Overflowed tasks get Coral accent
       const leftBorderColor = event.overflowed ? '#F97316' : accentColor;
@@ -260,9 +258,8 @@ export function CalendarView({
           borderRadius: '2px',
           borderLeft: `5px solid ${leftBorderColor}`,
           border: `1px solid ${accentColor}30`,
-          color: '#1e293b', // Dark slate text
+          color: event.isCompleted ? '#64748b' : '#1e293b', // Lighter text for completed
           fontWeight: '400',
-          opacity: baseOpacity,
           textDecoration: event.isCompleted ? 'line-through' : 'none',
         },
       };
@@ -270,7 +267,8 @@ export function CalendarView({
 
     if (event.isHabit || event.sourceType === 'habit') {
       const accentColor = event.categoryColor || '#6366F1'; // Indigo-500 fallback
-      const backgroundColor = `${accentColor}20`; // Light translucent background
+      // Completed: translucent (20%), Incomplete: solid (95%)
+      const backgroundColor = event.isCompleted ? `${accentColor}20` : `${accentColor}F2`;
 
       return {
         className: 'habit-event',
@@ -279,9 +277,8 @@ export function CalendarView({
           borderRadius: '2px',
           borderLeft: `5px solid ${accentColor}`,
           border: `1px solid ${accentColor}30`,
-          color: '#1e293b', // Dark slate text
+          color: event.isCompleted ? '#64748b' : '#1e293b', // Lighter text for completed
           fontWeight: '400',
-          opacity: baseOpacity,
           textDecoration: event.isCompleted ? 'line-through' : 'none',
         },
       };
@@ -289,8 +286,8 @@ export function CalendarView({
 
     // External events: Use category color if available, otherwise gray
     const accentColor = event.categoryColor || '#64748B';
-    const backgroundColor = `${accentColor}20`; // Light translucent background
-    const eventOpacity = event.categoryColor ? 0.95 : 0.75;
+    // Completed: translucent (20%), Incomplete: solid (95%)
+    const backgroundColor = event.isCompleted ? `${accentColor}20` : `${accentColor}F2`;
 
     return {
       className: 'external-event',
@@ -299,9 +296,9 @@ export function CalendarView({
         borderRadius: '2px',
         borderLeft: `5px solid ${accentColor}`,
         border: `1px solid ${accentColor}30`,
-        color: '#1e293b', // Dark slate text
+        color: event.isCompleted ? '#64748b' : '#1e293b', // Lighter text for completed
         fontWeight: '400',
-        opacity: baseOpacity * eventOpacity, // Combine completion and categorization opacity
+        textDecoration: event.isCompleted ? 'line-through' : 'none',
       },
     };
   }, []);
@@ -702,13 +699,27 @@ function DraggableEvent({
       } else if (event.sourceType === 'habit' && event.scheduledHabitId && onCompleteHabit) {
         const actualDurationMinutes = Math.round((event.end.getTime() - event.start.getTime()) / 60000);
         await onCompleteHabit(event.scheduledHabitId, actualDurationMinutes);
+      } else {
+        // External event - log for analytics tracking
+        console.log('External event completed for analytics:', {
+          eventId: event.eventId,
+          title: event.title,
+          start: event.start,
+          end: event.end,
+          sourceType: event.sourceType,
+        });
+        // TODO: Add proper external event completion tracking API call
       }
     } catch (error) {
       console.error('Failed to complete event:', error);
     }
   }, [event, onCompleteTask, onCompleteHabit]);
 
-  const showCheckbox = (event.sourceType === 'task' || event.sourceType === 'habit') && (isHovered || event.isCompleted);
+  const showCheckbox = isHovered || event.isCompleted; // Show on all events
+
+  // Text color: white for solid backgrounds (incomplete), dark for translucent (completed)
+  const textColorClass = event.isCompleted ? 'text-slate-600' : 'text-white';
+  const dragHandleColorClass = event.isCompleted ? 'text-slate-600 hover:text-slate-800' : 'text-white/90 hover:text-white';
 
   return (
     <motion.div
@@ -732,7 +743,7 @@ function DraggableEvent({
       {canDrag && (
         <button
           type="button"
-          className="absolute left-0 top-0 z-20 flex h-full w-7 cursor-grab items-start justify-center border-0 bg-transparent pt-1 text-slate-600 hover:text-slate-800 active:cursor-grabbing"
+          className={`absolute left-0 top-0 z-20 flex h-full w-7 cursor-grab items-start justify-center border-0 bg-transparent pt-1 ${dragHandleColorClass} active:cursor-grabbing`}
           aria-label="Drag to reschedule"
           {...listeners}
           {...attributes}
@@ -744,10 +755,7 @@ function DraggableEvent({
         </button>
       )}
       <div className={canDrag ? 'min-w-0 pl-6' : 'min-w-0'}>
-        <div className={`${isVeryShortEvent ? 'text-[9px]' : 'text-[10px]'} text-slate-600 opacity-90 leading-tight`}>
-          {startTime} - {endTime}
-        </div>
-        <div className={`font-medium leading-snug text-slate-900 ${titleClampClass} ${titleSizeClass}`}>
+        <div className={`font-medium leading-snug ${textColorClass} ${titleClampClass} ${titleSizeClass}`}>
           {event.title}
         </div>
       </div>
