@@ -87,7 +87,7 @@ function ContactPageBody() {
               },
               {
                 q: 'Can I use TimeFlow with Apple Calendar?',
-                a: 'Not yet. We currently support Google Calendar, with Apple Calendar coming in a future sprint.',
+                a: 'Yes. Sign in with Google, then connect iCloud in Settings using an Apple app-specific password. Your iCloud calendars can appear alongside Google on the Calendar page, and you can choose which calendars to show. Sign in with Apple as a login option is coming in a future update.',
               },
             ].map((faq) => (
               <div key={faq.q} className="bg-gray-50 rounded-xl p-5 sm:p-6 border border-gray-100 shadow-sm">

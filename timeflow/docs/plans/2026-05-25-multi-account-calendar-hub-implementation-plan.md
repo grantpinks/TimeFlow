@@ -1,5 +1,7 @@
 # Multi-Account Calendar Hub — Sprint 1 Implementation Plan
 
+> **Sprint 1 status:** **COMPLETE** (2026-05-26). Closeout checklist: `docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md`. **Next:** Sprint 2 (Sign in with Apple).
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Let Google-login users connect iCloud (and keep Google), toggle calendars like Google Calendar, merge events on the calendar page, and use all visible calendars for smart-schedule busy time—without breaking existing Google-only flows.

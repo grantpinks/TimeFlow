@@ -432,3 +432,37 @@ For comprehensive details on features per tier, Flow Credit costs, monthly allot
 -   Requires legal review for terms of service related to billing, overuse, and subscriptions.
 -   The `timeflow/apps/web/src/app/pricing/page.tsx` will need to be entirely re-designed and implemented based on the `docs/PRICING_MODEL.md` specifications.
 
+---
+
+## ADR-013: Connected Account Calendar Hub (Sprint 1)
+
+**Date**: 2026-05-26  
+**Status**: Accepted  
+**Supersedes**: Implicit “tokens on User only” model for calendar providers
+
+### Context
+
+Users need multiple calendar sources (Google + iCloud) under one TimeFlow identity. The legacy model stored Google OAuth on `User` and a single `AppleCalendarAccount` row per user, with no per-calendar visibility or merged reads.
+
+### Decision
+
+1. Introduce **`ConnectedAccount`** (provider: `google` | `apple_caldav`) and **`ConnectedCalendar`** (external id, name, color, `visible`, `listedInSidebar`, `useForAvailability`).
+2. **Sprint 1 login remains Google OAuth only.** iCloud is connected in Settings via CalDAV + app-specific password (not Apple Sign In).
+3. **Token resolution** goes through `accountTokenService` with lazy backfill from legacy `User.google*` and `AppleCalendarAccount` until a future deploy removes those columns.
+4. **Reads:** `mergedCalendarService` fetches visible calendars for the calendar UI; scheduling uses `useForAvailability`.
+5. **Writes:** Task/habit events still target `User.defaultCalendarId` on primary Google (`googleCalendarService`) — not multi-write to all calendars in Sprint 1.
+6. **Migrations** ship via production deploy only (`start.sh` → `prisma migrate deploy`). `ENCRYPTION_KEY` must remain stable for iCloud passwords.
+
+### Sprint 2 (separate ADR amendment expected)
+
+**Sign in with Apple** as a primary login path is required in Sprint 2; it does not replace CalDAV for calendar data in v1.
+
+### Consequences
+
+- New API routes: `/api/connected-accounts`, `/api/connected-accounts/icloud`, `PATCH /api/connected-calendars/:id`.
+- Dual-read complexity until legacy columns are dropped (Deploy gate 2).
+- iCloud CalDAV is less reliable than Google; per-calendar fetch failures must not break the whole calendar (`Promise.allSettled`).
+- Second Google account and Outlook are out of scope for Sprint 1.
+
+**References:** `docs/plans/2026-05-25-multi-account-calendar-hub-design.md`, `docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md`
+
