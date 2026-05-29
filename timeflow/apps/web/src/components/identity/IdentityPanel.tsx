@@ -17,6 +17,9 @@ interface IdentityPanelProps {
   identities: IdentityDayProgress[];
   evolutionStates: IdentityEvolutionState[];
   evolutionMode: EvolutionSurfaceMode;
+  evolutionFeatureEnabled: boolean;
+  evolutionLoading?: boolean;
+  onRefreshEvolution?: () => void;
   sessionReady: boolean;
   timeZone: string;
   loading?: boolean;
@@ -39,6 +42,9 @@ export function IdentityPanel({
   identities,
   evolutionStates,
   evolutionMode,
+  evolutionFeatureEnabled,
+  evolutionLoading = false,
+  onRefreshEvolution,
   sessionReady,
   timeZone,
   loading = false,
@@ -160,7 +166,12 @@ export function IdentityPanel({
           <IdentityProgressionTab
             evolution={selectedEvolution}
             upcoming={upcomingData}
+            evolutionMode={evolutionMode}
+            evolutionFeatureEnabled={evolutionFeatureEnabled}
+            dayProgress={selectedIdentity}
             loading={upcomingLoading}
+            evolutionLoading={evolutionLoading}
+            onRetry={onRefreshEvolution}
             timeZone={timeZone}
           />
         )}

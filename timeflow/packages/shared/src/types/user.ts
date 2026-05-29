@@ -111,6 +111,9 @@ export interface UserPreferencesUpdate {
   notifyStreakAtRisk?: boolean;
   notifyMissedHighPriority?: boolean;
   notifyWeeklyIdentityRecap?: boolean;
+
+  /** Opt-in: Flow XP, stages, trials, and progression tab (beta) */
+  identityEvolutionEnabled?: boolean;
 }
 
 export type EmailAccountProvider = 'google';

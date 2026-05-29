@@ -148,6 +148,12 @@ export default function TodayPage() {
   }, [isAuthenticated, evolutionMode]);
 
   useEffect(() => {
+    if (user?.identityEvolutionEnabled === true) {
+      void refreshEvolution();
+    }
+  }, [user?.identityEvolutionEnabled, refreshEvolution]);
+
+  useEffect(() => {
     if (!isAuthenticated || evolutionMode !== 'preview' || evolutionLoading) return;
     try {
       const k = 'tf_analytics_evolution_preview_visible_today';
@@ -810,6 +816,9 @@ Please generate a schedule preview for today.`;
               identities={identityProgressFull?.identities ?? []}
               evolutionStates={evolutionStates}
               evolutionMode={evolutionMode}
+              evolutionFeatureEnabled={user?.identityEvolutionEnabled === true}
+              evolutionLoading={evolutionLoading}
+              onRefreshEvolution={refreshEvolution}
               sessionReady={isAuthenticated}
               timeZone={user?.timeZone ?? 'America/Chicago'}
               loading={identityProgressFull === null}

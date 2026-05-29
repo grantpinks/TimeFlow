@@ -57,6 +57,9 @@ export default function SettingsPage() {
   const [notifyMissedHighPriority, setNotifyMissedHighPriority] = useState(false);
   const [notifyWeeklyIdentityRecap, setNotifyWeeklyIdentityRecap] = useState(false);
 
+  const [identityEvolutionEnabled, setIdentityEvolutionEnabled] = useState(false);
+  const [evolutionToggling, setEvolutionToggling] = useState(false);
+
   const [restDaysInfo, setRestDaysInfo] = useState<UserRestDaysResponse | null>(null);
   const [restDateInput, setRestDateInput] = useState('');
   const [restReason, setRestReason] = useState<'sick' | 'travel' | 'rest' | 'other'>('rest');
@@ -108,8 +111,31 @@ export default function SettingsPage() {
       setNotifyStreakAtRisk(user.notifyStreakAtRisk ?? false);
       setNotifyMissedHighPriority(user.notifyMissedHighPriority ?? false);
       setNotifyWeeklyIdentityRecap(user.notifyWeeklyIdentityRecap ?? false);
+      setIdentityEvolutionEnabled(user.identityEvolutionEnabled ?? false);
     }
   }, [user]);
+
+  const handleIdentityEvolutionToggle = async (enabled: boolean) => {
+    setEvolutionToggling(true);
+    setMessage(null);
+    try {
+      await updatePreferences({ identityEvolutionEnabled: enabled });
+      setIdentityEvolutionEnabled(enabled);
+      setMessage({
+        type: 'success',
+        text: enabled
+          ? 'Identity evolution enabled. Open Today → Progression to see XP and stages.'
+          : 'Identity evolution turned off.',
+      });
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update identity evolution',
+      });
+    } finally {
+      setEvolutionToggling(false);
+    }
+  };
 
   useEffect(() => {
     async function loadRestDays() {
@@ -421,11 +447,57 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {user?.identityEvolutionEnabled ? (
-          <div className="mb-8">
-            <FlowCustomizationPanel evolutionEnabled />
+        <div
+          id="identity-evolution"
+          className="mb-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6"
+        >
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Identity evolution (beta)</h2>
+              <p className="text-slate-600 text-sm mt-1">
+                XP, levels, mastery trials, and unlocks on the Today and Habits progression tabs.
+                Off by default while we balance the system.
+              </p>
+            </div>
+            <span
+              className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                identityEvolutionEnabled
+                  ? 'bg-teal-50 text-teal-800 border-teal-200'
+                  : 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              {identityEvolutionEnabled ? 'On' : 'Off'}
+            </span>
           </div>
-        ) : null}
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={identityEvolutionEnabled}
+              disabled={evolutionToggling}
+              onChange={(e) => void handleIdentityEvolutionToggle(e.target.checked)}
+              className="mt-0.5 w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500 disabled:opacity-50"
+            />
+            <div className="flex-1">
+              <span className="text-sm font-medium text-slate-700 block">
+                Enable identity evolution for my account
+              </span>
+              <p className="text-xs text-slate-500 mt-1">
+                Saves immediately. Starter unlocks are applied when you turn this on. Then open{' '}
+                <Link href="/today" className="font-semibold text-teal-700 hover:text-teal-800">
+                  Today
+                </Link>{' '}
+                and use the <strong>Progression</strong> tab on an identity.
+              </p>
+            </div>
+          </label>
+
+          {identityEvolutionEnabled ? (
+            <div className="mt-6 pt-6 border-t border-slate-100">
+              <FlowCustomizationPanel evolutionEnabled />
+            </div>
+          ) : null}
+        </div>
 
         <form onSubmit={handleSave} className="space-y-8">
           {/* Google / Gmail connection */}

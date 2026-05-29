@@ -6,6 +6,7 @@
  */
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { IdentityEvolutionState, IdentityTrialState } from '@timeflow/shared';
 import type { EvolutionSurfaceMode } from '@/hooks/useEvolutionSurface';
@@ -154,9 +155,12 @@ export function FlowEvolutionHero({
             </div>
 
             <p className="text-[11px] leading-relaxed text-slate-600">
-              Link habits to identities and complete them on <strong>Today</strong> to earn XP, advance
-              stages, and unlock Flow customizations. Live stats appear when progression is active for
-              your account.
+              Enable <strong>Identity evolution</strong> in{' '}
+              <Link href="/settings#identity-evolution" className="font-semibold text-teal-700 hover:text-teal-800">
+                Settings
+              </Link>
+              , then complete habits on <strong>Today</strong> to earn XP, advance stages, and unlock Flow
+              customizations.
             </p>
           </div>
         </div>

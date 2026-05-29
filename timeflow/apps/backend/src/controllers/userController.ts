@@ -7,6 +7,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../config/prisma.js';
 import { bulkSyncActionStatesToGmail } from '../services/actionStateLabelSyncService.js';
+import { seedStarterUnlocksForIdentity } from '../services/identityEvolutionService.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import type { DailyMeetingConfig, EmailAccount } from '@timeflow/shared';
@@ -72,6 +73,9 @@ const preferencesSchema = z.object({
 
     // Action-state label sync
     actionStateLabelSyncEnabled: z.boolean().optional(),
+
+    // Identity evolution (beta)
+    identityEvolutionEnabled: z.boolean().optional(),
 });
 
 /**
@@ -209,6 +213,7 @@ interface UpdatePreferencesBody {
   notifyMissedHighPriority?: boolean;
   notifyWeeklyIdentityRecap?: boolean;
   actionStateLabelSyncEnabled?: boolean;
+  identityEvolutionEnabled?: boolean;
 }
 
 /**
@@ -228,6 +233,14 @@ export async function updatePreferences(
   const parsed = preferencesSchema.safeParse(request.body);
   if (!parsed.success) {
     return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { identityEvolutionEnabled: true, actionStateLabelSyncEnabled: true },
+  });
+  if (!existingUser) {
+    return reply.status(404).send({ error: 'User not found' });
   }
 
   const {
@@ -250,6 +263,7 @@ export async function updatePreferences(
     notifyMissedHighPriority,
     notifyWeeklyIdentityRecap,
     actionStateLabelSyncEnabled,
+    identityEvolutionEnabled,
   } =
     parsed.data;
 
@@ -286,11 +300,28 @@ export async function updatePreferences(
 
       // Action-state label sync
       ...(actionStateLabelSyncEnabled !== undefined && { actionStateLabelSyncEnabled }),
+
+      // Identity evolution
+      ...(identityEvolutionEnabled !== undefined && { identityEvolutionEnabled }),
     },
   });
 
+  if (identityEvolutionEnabled === true && !existingUser.identityEvolutionEnabled) {
+    const identities = await prisma.identity.findMany({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (identities.length > 0) {
+      await prisma.$transaction(async (tx) => {
+        for (const identity of identities) {
+          await seedStarterUnlocksForIdentity(tx, identity.id, user.id);
+        }
+      });
+    }
+  }
+
   // If enabling sync for the first time, trigger bulk sync
-  if (actionStateLabelSyncEnabled === true && !user.actionStateLabelSyncEnabled) {
+  if (actionStateLabelSyncEnabled === true && !existingUser.actionStateLabelSyncEnabled) {
     try {
       await bulkSyncActionStatesToGmail(user.id, 100);
       console.log('[ActionStateSync] Initial bulk sync triggered for user:', user.id);
@@ -323,5 +354,6 @@ export async function updatePreferences(
     notifyMissedHighPriority: updated.notifyMissedHighPriority,
     notifyWeeklyIdentityRecap: updated.notifyWeeklyIdentityRecap,
     actionStateLabelSyncEnabled: updated.actionStateLabelSyncEnabled,
+    identityEvolutionEnabled: updated.identityEvolutionEnabled,
   };
 }
