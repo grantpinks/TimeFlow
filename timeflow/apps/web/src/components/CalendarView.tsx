@@ -14,6 +14,7 @@ import {
   type CalendarDropPreview,
 } from '@/app/calendar/calendarDragUtils';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { resolveEventDisplayColor } from '@/lib/eventDisplayColor';
 
 // Setup luxon localizer
 const localizer = luxonLocalizer(DateTime);
@@ -236,9 +237,15 @@ export function CalendarView({
         calendarColor: event.calendarColor,
         categoryColor: isHabitEvent
           ? habitColor
-          : (event.calendarColor ??
-            categoryFromId?.color ??
-            categorization?.categoryColor),
+          : resolveEventDisplayColor(
+              event,
+              categorization
+                ? {
+                    ...categorization,
+                    categoryColor: categoryFromId?.color ?? categorization.categoryColor,
+                  }
+                : null
+            ),
         sourceType: event.sourceType,
         sourceId: event.sourceId,
         isCompleted: event.isCompleted,
@@ -291,8 +298,8 @@ export function CalendarView({
       };
     }
 
-    // External events: calendar color wins over AI category tint
-    const accentColor = event.calendarColor ?? event.categoryColor ?? '#64748B';
+    // categoryColor already reflects calendar vs manual category priority
+    const accentColor = event.categoryColor ?? event.calendarColor ?? '#64748B';
     // Completed: translucent (20%), Incomplete: solid (95%)
     const backgroundColor = event.isCompleted ? `${accentColor}20` : `${accentColor}F2`;
 

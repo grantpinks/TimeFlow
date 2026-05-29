@@ -531,6 +531,10 @@ export function EventDetailPopover({
                 <label className="block text-xs font-medium text-slate-700 mb-1.5">
                   Category
                 </label>
+                <p className="mb-1.5 text-[11px] text-slate-500">
+                  Calendar color is used by default. Picking a category here uses that category color
+                  instead (set to Uncategorized to use the calendar swatch again).
+                </p>
                 <select
                   value={selectedCategoryId}
                   onChange={(e) => setSelectedCategoryId(e.target.value)}

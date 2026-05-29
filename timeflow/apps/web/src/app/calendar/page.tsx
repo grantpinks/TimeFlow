@@ -35,7 +35,11 @@ import Link from 'next/link';
 import { useTasks } from '@/hooks/useTasks';
 import { useUser } from '@/hooks/useUser';
 import * as api from '@/lib/api';
-import { filterExternalEvents } from './calendarEventFilters';
+import {
+  buildTimeflowEventIds,
+  filterEventsForDisplay,
+} from './calendarEventFilters';
+import { enrichEventsWithCalendarColors } from '@/lib/eventDisplayColor';
 import { buildDropWindow, formatDropPreviewTime, type CalendarDropPreview } from './calendarDragUtils';
 import type {
   CalendarEvent,
@@ -266,45 +270,24 @@ export default function CalendarPage() {
     });
     return map;
   }, [habitInsights]);
-  const timeflowEventIds = useMemo(() => {
-    const ids = new Set<string>();
-
-    // Add task event IDs
-    tasks.forEach((task) => {
-      if (task.scheduledTask?.eventId) {
-        ids.add(task.scheduledTask.eventId);
-      }
-    });
-
-    // Add habit event IDs from the scheduled habit API to ensure deduping even if backend data lags
-    scheduledHabitInstances.forEach((instance) => {
-      if (instance.eventId) {
-        ids.add(instance.eventId);
-      }
-    });
-
-    // Add habit event IDs from merged backend response
-    // This prevents duplicates since habits exist both in our DB and in Google Calendar
-    externalEvents.forEach((event) => {
-      if (event.sourceType === 'habit' && event.id) {
-        ids.add(event.id);
-      }
-    });
-
-    return ids;
-  }, [tasks, externalEvents, scheduledHabitInstances]);
+  const timeflowEventIds = useMemo(
+    () => buildTimeflowEventIds(tasks, externalEvents, scheduledHabitInstances),
+    [tasks, externalEvents, scheduledHabitInstances]
+  );
   const displayExternalEvents = useMemo(() => {
-    return filterExternalEvents(externalEvents, timeflowEventIds, {
+    const filtered = filterEventsForDisplay(externalEvents, timeflowEventIds, {
       prefixEnabled: user?.eventPrefixEnabled ?? true,
       prefix: user?.eventPrefix ?? null,
       scheduledHabitInstances,
     });
+    return enrichEventsWithCalendarColors(filtered, connectedAccounts);
   }, [
     externalEvents,
     timeflowEventIds,
     user?.eventPrefixEnabled,
     user?.eventPrefix,
     scheduledHabitInstances,
+    connectedAccounts,
   ]);
 
   // Filtered events based on category selection and show events toggle
@@ -321,25 +304,10 @@ export default function CalendarPage() {
     });
   }, [displayExternalEvents, showEvents, selectedCategories, eventCategorizations, categories.length]);
 
-  const externalEventsForView = useMemo(() => {
-    const colorByConnectedCalendarId = new Map<string, string>();
-    for (const account of connectedAccounts) {
-      for (const cal of account.calendars) {
-        if (cal.color) {
-          colorByConnectedCalendarId.set(cal.id, cal.color);
-        }
-      }
-    }
-
-    return filteredExternalEvents.map((event) => ({
-      ...event,
-      calendarColor:
-        event.calendarColor ??
-        (event.connectedCalendarId
-          ? colorByConnectedCalendarId.get(event.connectedCalendarId)
-          : undefined),
-    }));
-  }, [filteredExternalEvents, connectedAccounts]);
+  const externalEventsForView = useMemo(
+    () => enrichEventsWithCalendarColors(filteredExternalEvents, connectedAccounts),
+    [filteredExternalEvents, connectedAccounts]
+  );
 
   // Fetch event categorizations with caching and background auto-categorization
   useEffect(() => {

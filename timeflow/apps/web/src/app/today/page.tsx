@@ -42,6 +42,7 @@ import type {
   StreakAtRiskNotification,
   IdentityDayProgress,
   Habit,
+  ScheduledHabitInstance,
 } from '@timeflow/shared';
 import { useEvolutionSurface } from '@/hooks/useEvolutionSurface';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
@@ -53,13 +54,22 @@ import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelated
 import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitRelatedTasks';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 import { ChevronDown, Sparkles, ClipboardList } from 'lucide-react';
-
+import {
+  buildTimeflowEventIds,
+  filterEventsForDisplay,
+} from '@/app/calendar/calendarEventFilters';
+import { enrichEventsWithCalendarColors } from '@/lib/eventDisplayColor';
 
 export default function TodayPage() {
   const { user, isAuthenticated } = useUser();
   const { tasks, loading: tasksLoading, refresh: refreshTasks, completeTask } = useTasks();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [scheduledHabitInstances, setScheduledHabitInstances] = useState<ScheduledHabitInstance[]>([]);
+  const [connectedAccounts, setConnectedAccounts] = useState<api.ConnectedAccount[]>([]);
+  const [eventCategorizations, setEventCategorizations] = useState<
+    Record<string, api.EventCategorization>
+  >({});
   const [showBanner, setShowBanner] = useState(true);
   const [habitSuggestions, setHabitSuggestions] = useState<EnrichedHabitSuggestion[]>([]);
   const [habitSuggestionsLoading, setHabitSuggestionsLoading] = useState(true);
@@ -215,12 +225,31 @@ export default function TodayPage() {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const startIso = startOfDay.toISOString();
+      const endIso = endOfDay.toISOString();
 
-      const calendarEvents = await api.getCalendarEvents(
-        startOfDay.toISOString(),
-        endOfDay.toISOString()
-      );
+      const [calendarEvents, habitInstances, accounts] = await Promise.all([
+        api.getCalendarEvents(startIso, endIso),
+        api.getScheduledHabitInstances(startIso, endIso).catch(() => [] as ScheduledHabitInstance[]),
+        api.getConnectedAccounts().catch(() => [] as api.ConnectedAccount[]),
+      ]);
+
+      setScheduledHabitInstances(habitInstances);
+      setConnectedAccounts(accounts);
       setEvents(calendarEvents);
+
+      const eventIds = calendarEvents.map((e) => e.id).filter((id): id is string => Boolean(id));
+      if (eventIds.length > 0) {
+        const summaries = Object.fromEntries(
+          calendarEvents
+            .filter((e) => Boolean(e.id))
+            .map((e) => [e.id as string, e.summary])
+        );
+        const cats = await api.getEventCategorizations(eventIds, 'google', summaries);
+        setEventCategorizations(cats);
+      } else {
+        setEventCategorizations({});
+      }
     } catch (err) {
       console.error('Failed to fetch calendar events:', err);
     } finally {
@@ -482,9 +511,26 @@ export default function TodayPage() {
     return m;
   }, [habits]);
 
+  const displayEvents = useMemo(() => {
+    const timeflowEventIds = buildTimeflowEventIds(tasks, events, scheduledHabitInstances);
+    const filtered = filterEventsForDisplay(events, timeflowEventIds, {
+      prefixEnabled: user?.eventPrefixEnabled ?? true,
+      prefix: user?.eventPrefix ?? null,
+      scheduledHabitInstances,
+    });
+    return enrichEventsWithCalendarColors(filtered, connectedAccounts);
+  }, [
+    events,
+    tasks,
+    scheduledHabitInstances,
+    connectedAccounts,
+    user?.eventPrefixEnabled,
+    user?.eventPrefix,
+  ]);
+
   const eventsForTimeline = useMemo(() => {
-    if (!identityFilter) return events;
-    return events.filter((ev) => {
+    if (!identityFilter) return displayEvents;
+    return displayEvents.filter((ev) => {
       if (ev.sourceType === 'external') return true;
       if (ev.sourceType === 'task' && ev.sourceId) {
         const t = tasks.find((x) => x.id === ev.sourceId);
@@ -496,7 +542,7 @@ export default function TodayPage() {
       }
       return true;
     });
-  }, [events, identityFilter, tasks, habitsById]);
+  }, [displayEvents, identityFilter, tasks, habitsById]);
 
   const habitSuggestionsFiltered = useMemo(() => {
     if (!identityFilter) return habitSuggestions;
@@ -1026,6 +1072,7 @@ Please generate a schedule preview for today.`;
                   <HourlyTimeline
                     tasks={tasksView}
                     events={eventsForTimeline}
+                    eventCategorizations={eventCategorizations}
                     wakeTime={user.wakeTime || '08:00'}
                     sleepTime={user.sleepTime || '23:00'}
                     onCompleteTask={handleCompleteTask}

@@ -4,7 +4,11 @@
 
 import { describe, expect, it } from 'vitest';
 import type { CalendarEvent } from '@timeflow/shared';
-import { filterExternalEvents } from '../calendarEventFilters';
+import {
+  filterEventsForDisplay,
+  filterExternalEvents,
+  isHabitCalendarMirror,
+} from '../calendarEventFilters';
 
 const baseEvent: CalendarEvent = {
   id: 'evt-1',
@@ -81,5 +85,37 @@ describe('filterExternalEvents', () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0].summary).toBe('[TimeFlow Habit] Deep Work');
+  });
+});
+
+describe('filterEventsForDisplay', () => {
+  it('drops calendar mirror when a TimeFlow habit row exists for the same slot', () => {
+    const events: CalendarEvent[] = [
+      {
+        ...baseEvent,
+        id: 'habit-row',
+        summary: 'TF| Habit: Check Email',
+        sourceType: 'habit',
+        start: '2026-01-05T15:30:00.000Z',
+        end: '2026-01-05T15:45:00.000Z',
+      },
+      {
+        ...baseEvent,
+        id: 'gcal-row',
+        summary: 'Check Email',
+        sourceType: 'external',
+        start: '2026-01-05T15:30:00.000Z',
+        end: '2026-01-05T15:45:00.000Z',
+      },
+    ];
+
+    const result = filterEventsForDisplay(events, new Set(), {
+      prefixEnabled: true,
+      prefix: 'TF|',
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].sourceType).toBe('habit');
+    expect(isHabitCalendarMirror(events[1], events[0], { prefix: 'TF|' })).toBe(true);
   });
 });

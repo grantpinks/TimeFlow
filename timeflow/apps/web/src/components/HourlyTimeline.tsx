@@ -13,6 +13,8 @@ import { useDroppable } from '@dnd-kit/core';
 import { motion, useReducedMotion } from 'framer-motion';
 import { CheckSquare, Flame, Calendar, Mail, X } from 'lucide-react';
 import type { Task, CalendarEvent } from '@timeflow/shared';
+import type { EventCategorization } from '@/lib/api';
+import { resolveEventDisplayColor } from '@/lib/eventDisplayColor';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
 
 const BRAND_TEAL = '#0BAF9A';
@@ -33,6 +35,7 @@ interface TimelineItem {
   status?: string;
   isOverdue?: boolean;
   categoryColor?: string;
+  calendarColor?: string;
   sourceType?: 'task' | 'habit' | 'external';
   sourceId?: string;
   isCompleted?: boolean;
@@ -58,6 +61,7 @@ interface TimeSlot {
 interface HourlyTimelineProps {
   tasks: Task[];
   events: CalendarEvent[];
+  eventCategorizations?: Record<string, EventCategorization>;
   wakeTime?: string;
   sleepTime?: string;
   onCompleteTask?: (taskId: string) => void;
@@ -134,6 +138,7 @@ function findFirstGap(
 export function HourlyTimeline({
   tasks,
   events,
+  eventCategorizations,
   wakeTime = '08:00',
   sleepTime = '23:00',
   onCompleteTask,
@@ -198,6 +203,9 @@ export function HourlyTimeline({
       if (eventStart >= startOfDay && eventStart < endOfDay) {
         const type: TimelineItem['type'] =
           event.sourceType === 'habit' ? 'habit' : event.sourceType === 'task' ? 'task' : 'event';
+        const categorization = event.id ? eventCategorizations?.[event.id] : undefined;
+        const displayColor =
+          type === 'event' ? resolveEventDisplayColor(event, categorization) : undefined;
         items.push({
           id: event.id ?? `event-${eventStart.getTime()}-${eventEnd.getTime()}`,
           type,
@@ -208,6 +216,8 @@ export function HourlyTimeline({
           sourceType: event.sourceType,
           sourceId: event.sourceId,
           isCompleted: event.isCompleted,
+          categoryColor: displayColor,
+          calendarColor: event.calendarColor,
         });
       }
     });
@@ -248,6 +258,7 @@ export function HourlyTimeline({
   }, [
     tasks,
     events,
+    eventCategorizations,
     actionableEmailCount,
     emailBlockDismissed,
     hideSuggestedEmailBlock,
@@ -417,7 +428,7 @@ const TimelineCard = memo(function TimelineCard({
   const stripeColor = (() => {
     if (item.type === 'email') return BLUE_EMAIL;
     if (item.type === 'habit') return BRAND_TEAL;
-    if (item.type === 'event') return SLATE_EVENT;
+    if (item.type === 'event') return item.categoryColor ?? item.calendarColor ?? SLATE_EVENT;
     if (item.type === 'task') {
       if (item.identityColor) return item.identityColor;
       if (item.categoryColor) return item.categoryColor;
