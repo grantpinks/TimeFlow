@@ -378,14 +378,48 @@ export async function updateConnectedCalendar(
     throw new Error('Connected calendar not found');
   }
 
-  const next = await prisma.connectedCalendar.update({
+  if (updates.color !== undefined) {
+    const accountCalendars = await prisma.connectedCalendar.findMany({
+      where: { connectedAccountId: calendar.connectedAccountId },
+    });
+    const siblingIds =
+      calendar.account.provider === ConnectedAccountProvider.apple_caldav
+        ? accountCalendars
+            .filter(
+              (row) =>
+                canonicalCalDavCalendarKey(row.externalCalendarId) ===
+                canonicalCalDavCalendarKey(calendar.externalCalendarId)
+            )
+            .map((row) => row.id)
+        : accountCalendars
+            .filter((row) => row.externalCalendarId === calendar.externalCalendarId)
+            .map((row) => row.id);
+
+    if (siblingIds.length > 0) {
+      await prisma.connectedCalendar.updateMany({
+        where: { id: { in: siblingIds } },
+        data: { color: updates.color },
+      });
+    }
+  }
+
+  if (
+    updates.visible !== undefined ||
+    updates.listedInSidebar !== undefined ||
+    updates.useForAvailability !== undefined
+  ) {
+    await prisma.connectedCalendar.update({
+      where: { id: connectedCalendarId },
+      data: {
+        visible: updates.visible,
+        listedInSidebar: updates.listedInSidebar,
+        useForAvailability: updates.useForAvailability,
+      },
+    });
+  }
+
+  const next = await prisma.connectedCalendar.findUniqueOrThrow({
     where: { id: connectedCalendarId },
-    data: {
-      visible: updates.visible,
-      listedInSidebar: updates.listedInSidebar,
-      color: updates.color,
-      useForAvailability: updates.useForAvailability,
-    },
   });
 
   return next;

@@ -3,7 +3,10 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 
-export function ThemeToggle() {
+const defaultToggleClassName =
+  'inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white min-h-[44px] min-w-[44px] text-slate-600 hover:text-primary-600 hover:border-primary-200 active:bg-slate-50 transition-colors';
+
+export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -16,7 +19,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white min-h-[44px] min-w-[44px] text-slate-600 hover:text-primary-600 hover:border-primary-200 active:bg-slate-50 transition-colors"
+      className={className ?? defaultToggleClassName}
       aria-label="Toggle color theme"
     >
       {mounted && currentTheme === 'dark' ? <Sun /> : <Moon />}
