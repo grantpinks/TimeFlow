@@ -37,14 +37,12 @@ function dayLabel(dateStr: string): string {
   return ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.getDay()];
 }
 
-/** Format ISO datetime to "h:mmam/pm" in local time */
+/** Format ISO datetime to "9:00 AM" in local time */
 function fmtScheduledTime(iso: string): string {
-  const d = new Date(iso);
-  let h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
-  const ampm = h >= 12 ? 'pm' : 'am';
-  h = h % 12 || 12;
-  return m === '00' ? `${h}${ampm}` : `${h}:${m}${ampm}`;
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 export function IdentityTodayTab({
@@ -200,7 +198,7 @@ export function IdentityTodayTab({
 
                 {/* Right: plan column */}
                 {showPlanColumn && (
-                  <div className="relative w-28 shrink-0 flex justify-end">
+                  <div className="relative w-32 shrink-0 flex justify-end">
                     {doneToday ? (
                       <span className="flex items-center gap-1 text-xs font-semibold text-teal-600">
                         <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -209,9 +207,16 @@ export function IdentityTodayTab({
                         Done
                       </span>
                     ) : scheduled ? (
-                      <span className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                        🕐 {fmtScheduledTime(scheduled.startDateTime)}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenPopoverHabitId(isPopoverOpen ? null : h.habitId)
+                        }
+                        className="max-w-full truncate rounded-full border border-teal-200 bg-teal-50 px-2.5 py-0.5 text-[11px] font-semibold text-teal-800 transition-colors hover:border-teal-300 hover:bg-teal-100"
+                        title={`Scheduled ${fmtScheduledTime(scheduled.startDateTime)} — click to change`}
+                      >
+                        {fmtScheduledTime(scheduled.startDateTime)}
+                      </button>
                     ) : (
                       <button
                         type="button"
@@ -254,12 +259,22 @@ export function IdentityTodayTab({
             Still to do today
           </p>
           <ul className="space-y-1">
-            {notDoneToday.map((h) => (
-              <li key={h.habitId} className="flex items-center gap-2 text-xs text-slate-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-hidden />
-                {h.habitName}
-              </li>
-            ))}
+            {notDoneToday.map((h) => {
+              const planned = scheduledByHabitId.get(h.habitId);
+              return (
+                <li key={h.habitId} className="flex items-center justify-between gap-2 text-xs text-slate-700">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" aria-hidden />
+                    <span className="truncate">{h.habitName}</span>
+                  </span>
+                  {planned ? (
+                    <span className="shrink-0 font-medium text-teal-700">
+                      {fmtScheduledTime(planned.startDateTime)}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -6,6 +6,7 @@ import type { EvolutionSurfaceMode } from '@/hooks/useEvolutionSurface';
 import { useIdentityConsistency } from '@/hooks/useIdentityConsistency';
 import { useUpcomingUnlocks } from '@/hooks/useUpcomingUnlocks';
 import { useTodayHabitSchedule } from '@/hooks/useTodayHabitSchedule';
+import { useUser } from '@/hooks/useUser';
 import { IdentityTodayTab } from './IdentityTodayTab';
 import { IdentityProgressionTab } from './IdentityProgressionTab';
 import { FlowMascot } from '@/components/FlowMascot';
@@ -68,7 +69,23 @@ export function IdentityPanel({
     evolutionMode === 'active' ? validId : null,
     sessionReady
   );
-  const { instances: scheduledInstances, scheduleHabit } = useTodayHabitSchedule(sessionReady);
+  const { user } = useUser();
+
+  const habitPlanMeta = useMemo(
+    () =>
+      (consistencyData?.habits ?? []).map((h) => ({
+        habitId: h.habitId,
+        habitName: h.habitName,
+      })),
+    [consistencyData?.habits]
+  );
+
+  const { instances: scheduledInstances, scheduleHabit } = useTodayHabitSchedule(sessionReady, {
+    habits: habitPlanMeta,
+    habitsLoading: consistencyLoading,
+    prefixEnabled: user?.eventPrefixEnabled ?? true,
+    prefix: user?.eventPrefix ?? null,
+  });
 
   if (loading) {
     return <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />;
