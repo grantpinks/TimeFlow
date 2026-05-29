@@ -714,6 +714,7 @@ export interface ConnectedCalendar {
   name: string;
   color: string | null;
   visible: boolean;
+  listedInSidebar: boolean;
   useForAvailability: boolean;
   isPrimary: boolean;
 }
@@ -767,6 +768,7 @@ export async function patchConnectedCalendar(
   connectedCalendarId: string,
   body: {
     visible?: boolean;
+    listedInSidebar?: boolean;
     color?: string | null;
     useForAvailability?: boolean;
   }

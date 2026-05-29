@@ -532,6 +532,44 @@ export default function CalendarPage() {
     [fetchConnectedAccounts, fetchExternalEvents]
   );
 
+  const handleSetListedInSidebar = useCallback(
+    async (connectedCalendarId: string, listedInSidebar: boolean) => {
+      const visible = listedInSidebar ? undefined : false;
+
+      setConnectedAccounts((prev) =>
+        prev.map((account) => ({
+          ...account,
+          calendars: account.calendars.map((calendar) =>
+            calendar.id === connectedCalendarId
+              ? {
+                  ...calendar,
+                  listedInSidebar,
+                  ...(visible === false ? { visible: false } : {}),
+                }
+              : calendar
+          ),
+        }))
+      );
+
+      try {
+        await api.patchConnectedCalendar(connectedCalendarId, {
+          listedInSidebar,
+          ...(visible === false ? { visible: false } : {}),
+        });
+        if (visible === false) {
+          await fetchExternalEvents();
+        }
+      } catch (err) {
+        await fetchConnectedAccounts();
+        setMessage({
+          type: 'error',
+          text: err instanceof Error ? err.message : 'Failed to update calendar list',
+        });
+      }
+    },
+    [fetchConnectedAccounts, fetchExternalEvents]
+  );
+
   const handleCategoryChange = async (
     eventId: string,
     categoryId: string,
@@ -1532,6 +1570,7 @@ export default function CalendarPage() {
                     accounts={connectedAccounts}
                     loading={connectedAccountsLoading}
                     onToggleCalendar={handleToggleConnectedCalendar}
+                    onSetListedInSidebar={handleSetListedInSidebar}
                   />
                 </div>
 

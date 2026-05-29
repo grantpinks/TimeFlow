@@ -11,6 +11,7 @@ type ConnectedCalendarDto = {
   name: string;
   color: string | null;
   visible: boolean;
+  listedInSidebar: boolean;
   useForAvailability: boolean;
   isPrimary: boolean;
 };
@@ -43,6 +44,7 @@ function toConnectedAccountDto(account: {
     name: string;
     color: string | null;
     visible: boolean;
+    listedInSidebar: boolean;
     useForAvailability: boolean;
     isPrimary: boolean;
   }>;
@@ -114,7 +116,6 @@ async function syncAppleCalendarsForAccount(userId: string, accountId: string): 
         data: {
           externalCalendarId: cal.url,
           name: cal.displayName,
-          visible: true,
           useForAvailability: true,
         },
       });
@@ -128,6 +129,7 @@ async function syncAppleCalendarsForAccount(userId: string, accountId: string): 
         externalCalendarId: cal.url,
         name: cal.displayName,
         visible: true,
+        listedInSidebar: true,
         useForAvailability: true,
       },
     });
@@ -166,6 +168,9 @@ async function syncGoogleCalendarsForAccount(userId: string, accountId: string):
           externalCalendarId: cal.id,
           name: cal.summary,
           isPrimary: cal.primary,
+          visible: true,
+          listedInSidebar: true,
+          useForAvailability: true,
         },
       })
     )
@@ -330,7 +335,12 @@ export async function connectIcloudAccount(userId: string, email: string, appPas
 export async function updateConnectedCalendar(
   userId: string,
   connectedCalendarId: string,
-  updates: { visible?: boolean; color?: string | null; useForAvailability?: boolean }
+  updates: {
+    visible?: boolean;
+    listedInSidebar?: boolean;
+    color?: string | null;
+    useForAvailability?: boolean;
+  }
 ): Promise<ConnectedCalendarDto> {
   const calendar = await prisma.connectedCalendar.findUnique({
     where: { id: connectedCalendarId },
@@ -344,6 +354,7 @@ export async function updateConnectedCalendar(
     where: { id: connectedCalendarId },
     data: {
       visible: updates.visible,
+      listedInSidebar: updates.listedInSidebar,
       color: updates.color,
       useForAvailability: updates.useForAvailability,
     },

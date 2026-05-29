@@ -642,6 +642,7 @@ model ConnectedCalendar {
   name               String
   color              String?
   visible            Boolean  @default(true)
+  listedInSidebar    Boolean  @default(true)
   useForAvailability Boolean  @default(true)
   isPrimary          Boolean  @default(false)
   createdAt          DateTime @default(now())

@@ -30,7 +30,7 @@ export function useSchedulingLinkCalendars(enabled: boolean) {
         for (const account of accounts) {
           if (account.provider === 'google') {
             for (const cal of account.calendars) {
-              if (!cal.visible) continue;
+              if (!cal.visible || cal.listedInSidebar === false) continue;
               google.push({
                 id: cal.externalCalendarId,
                 name: cal.name,
@@ -40,7 +40,7 @@ export function useSchedulingLinkCalendars(enabled: boolean) {
           }
           if (account.provider === 'apple_caldav') {
             for (const cal of account.calendars) {
-              if (!cal.visible) continue;
+              if (!cal.visible || cal.listedInSidebar === false) continue;
               apple.push({
                 id: cal.externalCalendarId,
                 name: cal.name,

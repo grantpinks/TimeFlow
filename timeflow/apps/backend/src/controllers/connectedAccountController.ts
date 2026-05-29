@@ -18,12 +18,18 @@ const connectIcloudSchema = z.object({
 const patchConnectedCalendarSchema = z
   .object({
     visible: z.boolean().optional(),
+    listedInSidebar: z.boolean().optional(),
     color: z.string().nullable().optional(),
     useForAvailability: z.boolean().optional(),
   })
-  .refine((value) => value.visible !== undefined || value.color !== undefined || value.useForAvailability !== undefined, {
-    message: 'At least one field must be provided',
-  });
+  .refine(
+    (value) =>
+      value.visible !== undefined ||
+      value.listedInSidebar !== undefined ||
+      value.color !== undefined ||
+      value.useForAvailability !== undefined,
+    { message: 'At least one field must be provided' }
+  );
 
 export async function listConnectedAccounts(request: FastifyRequest, reply: FastifyReply) {
   const user = request.user;
@@ -64,7 +70,12 @@ export async function connectIcloudAccount(
 export async function patchConnectedCalendar(
   request: FastifyRequest<{
     Params: { connectedCalendarId: string };
-    Body: { visible?: boolean; color?: string | null; useForAvailability?: boolean };
+    Body: {
+      visible?: boolean;
+      listedInSidebar?: boolean;
+      color?: string | null;
+      useForAvailability?: boolean;
+    };
   }>,
   reply: FastifyReply
 ) {

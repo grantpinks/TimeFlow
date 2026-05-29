@@ -244,6 +244,38 @@ export default function SettingsPage() {
     }
   };
 
+  const handleConnectedCalendarPreference = async (
+    connectedCalendarId: string,
+    updates: { visible?: boolean; listedInSidebar?: boolean }
+  ) => {
+    const patch = { ...updates };
+    if (patch.listedInSidebar === false) {
+      patch.visible = false;
+    }
+    if (patch.visible === true) {
+      patch.listedInSidebar = true;
+    }
+
+    setConnectedAccounts((prev) =>
+      prev.map((account) => ({
+        ...account,
+        calendars: account.calendars.map((calendar) =>
+          calendar.id === connectedCalendarId ? { ...calendar, ...patch } : calendar
+        ),
+      }))
+    );
+
+    try {
+      await api.patchConnectedCalendar(connectedCalendarId, patch);
+    } catch (err) {
+      await refreshConnectedAccounts();
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to update calendar preferences.',
+      });
+    }
+  };
+
   const handleDisconnectAccount = async (connectedAccountId: string) => {
     try {
       await api.disconnectConnectedAccount(connectedAccountId);
@@ -428,7 +460,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-lg font-semibold text-slate-900">Connected calendar accounts</h2>
                 <p className="text-slate-600 text-sm">
-                  Connect multiple calendars and choose what to show in Calendar view.
+                  Connect accounts, then choose which calendars appear in the sidebar and on your schedule.
                 </p>
               </div>
             </div>
@@ -442,23 +474,72 @@ export default function SettingsPage() {
                 {connectedAccounts.map((account) => (
                   <div
                     key={account.id}
-                    className="rounded-lg border border-slate-200 p-3 flex items-start justify-between gap-3"
+                    className="rounded-lg border border-slate-200 p-3"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        {account.provider === 'apple_caldav' ? 'iCloud' : 'Google'} • {account.email}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {account.calendars.length} calendar{account.calendars.length === 1 ? '' : 's'} connected
-                      </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">
+                          {account.provider === 'apple_caldav' ? 'iCloud' : 'Google'} • {account.email}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {account.calendars.length} calendar{account.calendars.length === 1 ? '' : 's'} synced
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDisconnectAccount(account.id)}
+                        className="text-xs font-medium text-red-600 hover:text-red-700 shrink-0"
+                      >
+                        Disconnect
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDisconnectAccount(account.id)}
-                      className="text-xs font-medium text-red-600 hover:text-red-700"
-                    >
-                      Disconnect
-                    </button>
+
+                    {account.calendars.length > 0 && (
+                      <div className="mt-3 border-t border-slate-100 pt-3">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-500 mb-2">
+                          Calendars
+                        </p>
+                        <ul className="space-y-2">
+                          {account.calendars.map((calendar) => (
+                            <li
+                              key={calendar.id}
+                              className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              <span className="text-sm text-slate-800 truncate">{calendar.name}</span>
+                              <div className="flex items-center gap-4 text-xs text-slate-600 shrink-0">
+                                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-primary-600"
+                                    checked={calendar.listedInSidebar !== false}
+                                    onChange={(e) =>
+                                      void handleConnectedCalendarPreference(calendar.id, {
+                                        listedInSidebar: e.target.checked,
+                                      })
+                                    }
+                                  />
+                                  Sidebar list
+                                </label>
+                                <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5 rounded border-slate-300 text-primary-600"
+                                    checked={calendar.visible}
+                                    disabled={calendar.listedInSidebar === false}
+                                    onChange={(e) =>
+                                      void handleConnectedCalendarPreference(calendar.id, {
+                                        visible: e.target.checked,
+                                      })
+                                    }
+                                  />
+                                  Show events
+                                </label>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
