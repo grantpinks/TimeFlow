@@ -1,9 +1,11 @@
-# TimeFlow Sprint Roadmap (Sprints 1-24)
+# TimeFlow Sprint Roadmap (Sprints 1-27+)
 
 **Project**: TimeFlow
-**Duration**: 32 weeks (2 weeks per sprint)
+**Duration**: 32+ weeks (2 weeks per sprint; extended sprints documented below)
 **Goal**: Production-ready consumer app with advanced scheduling features.  
 **Issue Tracking**: See `KNOWN_ISSUES.md` for active bugs, UX gaps, and their mapped sprints/tasks.
+
+**Calendar hub:** Sprint **26** shipped (2026-05). Sprint **27** (Sign in with Apple) **deferred** — see [`docs/plans/BACKLOG.md`](./docs/plans/BACKLOG.md). Optional polish without Apple Developer Program: **Sprint 27-Lite** below.
 
 ---
 
@@ -1764,6 +1766,96 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 - [ ] User-visible text passes sanitization checks in tests.
 - [ ] **`GET /api/assistant/history`** returns messages for authenticated user (web + mobile).
 - [ ] Expo flows match web must-pass behavior (same API contracts).
+
+---
+
+### Sprint 26: Multi-Account Calendar Hub ✅ COMPLETE
+**Duration**: 2026-05 (calendar integration epic)  
+**Status**: ✅ **Shipped** on `main`  
+**Focus**: Google login + connect iCloud (CalDAV), merged calendar view, per-calendar visibility, smart-schedule busy time from connected calendars.
+
+**Does not require** Apple Developer Program — iCloud uses app-specific passwords in Settings.
+
+**Docs:**
+- Design: [`docs/plans/2026-05-25-multi-account-calendar-hub-design.md`](./docs/plans/2026-05-25-multi-account-calendar-hub-design.md)
+- Implementation: [`docs/plans/2026-05-25-multi-account-calendar-hub-implementation-plan.md`](./docs/plans/2026-05-25-multi-account-calendar-hub-implementation-plan.md)
+- Closeout: [`docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md`](./docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md)
+- Production QA: [`docs/qa/calendar-hub-production-qa.md`](./docs/qa/calendar-hub-production-qa.md)
+- ADR: `ARCHITECTURE_DECISIONS.md` — ADR-013
+
+#### Shipped (summary)
+- [x] `ConnectedAccount` + `ConnectedCalendar`; migrate on deploy
+- [x] iCloud CalDAV connect, two-step discovery, TZID-aware events
+- [x] Merged events API; schedule uses `useForAvailability`
+- [x] Calendar sidebar toggles + hide from list (`listedInSidebar`)
+- [x] Scheduling links: Google + Apple calendar pickers
+- [x] CalDAV calendar dedupe; partial fetch on errors
+
+#### Decision gate
+- [x] Google-only users unchanged
+- [ ] Production QA signed off (`docs/qa/calendar-hub-production-qa.md`) — optional when convenient
+
+---
+
+### Sprint 27: Sign in with Apple 🔒 DEFERRED
+**Duration**: TBD (~1–2 weeks when scheduled)  
+**Status**: 🔒 **Deferred** — blocked on [Apple Developer Program](https://developer.apple.com/programs/) (~$99/year)  
+**Focus**: “Continue with Apple” login (equal to Google), `User.appleId`, account linking policy, Apple-first onboarding.
+
+**Not required for** iCloud calendar sync (Sprint 26). Users today: **Google login** + **Settings → Connect iCloud**.
+
+**Resume when:**
+- [ ] Willing to enroll in Apple Developer Program
+- [ ] Sprint 26 production QA done (or accepted risk)
+- [ ] Linking policy decided (same email on Google + Apple)
+- [ ] Full plan written from outline
+
+**Docs:** [`docs/plans/2026-05-26-sprint-2-sign-in-with-apple-outline.md`](./docs/plans/2026-05-26-sprint-2-sign-in-with-apple-outline.md) · [`docs/plans/BACKLOG.md`](./docs/plans/BACKLOG.md)
+
+#### Tasks (not started)
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 27.1 | Apple Developer: Services ID, key, domain verification | Human + Codex | 4-8h | P0 | 🔒 |
+| 27.2 | `POST /api/auth/apple` start + callback; JWT same shape as Google | Codex | 8-12h | P0 | 🔒 |
+| 27.3 | `User.appleId` + linking policy ADR | Codex | 4-6h | P0 | 🔒 |
+| 27.4 | Login page: Google + Apple buttons | Codex | 4-6h | P0 | 🔒 |
+| 27.5 | Post-Apple onboarding → iCloud connect CTA | Codex | 4-6h | P1 | 🔒 |
+| 27.6 | Mobile Expo Sign in with Apple (if in scope) | Codex | 8-12h | P1 | 🔒 |
+| 27.7 | Auth matrix QA | Gemini | 4-6h | P1 | 🔒 |
+
+---
+
+### Sprint 27-Lite: Calendar Hub Polish (no Apple Developer Program)
+**Duration**: ~3–5 days (optional, anytime)  
+**Status**: ⬜ **Backlog** — pick items à la carte  
+**Focus**: UX and reliability improvements **inspired by** deferred Sprint 27, **without** Sign in with Apple or paid Apple membership.
+
+#### Goals (optional)
+- [ ] Clearer onboarding after Google signup: “Connect iCloud” checklist
+- [ ] Settings: **Resync calendars** for Google/iCloud accounts
+- [ ] Surface `lastErrorAt` / sync health per connected account
+- [ ] UI: separate **Show on calendar** vs **Use for scheduling** (`useForAvailability`)
+- [ ] Sidebar: collapse/expand per account group
+- [ ] Login/help copy: iCloud via Settings (not “Sign in with Apple”)
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 27L.1 | Post-login checklist component (Google calendar OK? iCloud connected?) | Codex | 4-6h | P1 | ⬜ |
+| 27L.2 | Settings: **Resync calendars** button per account | Codex | 3-4h | P1 | ⬜ |
+| 27L.3 | Show account sync status in Settings + sidebar tooltip | Codex | 3-4h | P1 | ⬜ |
+| 27L.4 | Settings toggles: `visible` vs `useForAvailability` | Codex | 4-6h | P2 | ⬜ |
+| 27L.5 | Sidebar account collapse/expand (localStorage) | Codex | 2-3h | P2 | ⬜ |
+| 27L.6 | iCloud connect wizard (app-password help) | Gemini + Codex | 3-4h | P2 | ⬜ |
+| 27L.7 | Mobile: connected-accounts + merged calendar parity audit | Codex | 4-8h | P2 | ⬜ |
+
+#### Still requires Sprint 27 (paid Apple Dev)
+- Sign in with Apple on login screen
+- Apple-issued identity / `User.appleId`
+- Apple OAuth callbacks
+- Native Sign in with Apple on iOS
 
 ---
 

@@ -1,7 +1,10 @@
 # Sprint 2 — Sign in with Apple (Outline)
 
 **Status:** **Deferred** — not scheduled. Revisit when willing to enroll in the [Apple Developer Program](https://developer.apple.com/programs/) (~$99/year).  
+**Roadmap:** `ARCHITECT_ROADMAP_SPRINT1-17.md` — **Sprint 27**  
 **Blocked by:** Paid Apple Developer membership (required for Sign in with Apple; **not** required for iCloud CalDAV connect in Settings).
+
+**Without paying Apple:** see **Sprint 27-Lite** in the roadmap (onboarding checklist, resync, sync health UI, availability toggle, etc.).
 
 **Prerequisite when resumed:** `docs/qa/calendar-hub-production-qa.md` (Sprint 1 QA signed off on production)
 
