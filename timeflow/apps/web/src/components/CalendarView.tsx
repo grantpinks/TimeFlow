@@ -97,6 +97,8 @@ export interface CalendarEventItem {
   description?: string;
   overflowed?: boolean;
   categoryColor?: string;
+  /** Per-connected-calendar color (takes precedence over AI category tint for external events). */
+  calendarColor?: string;
   isHabit?: boolean;
   scheduledHabitId?: string;
   eventId?: string;
@@ -231,9 +233,12 @@ export function CalendarView({
         eventId: event.id ?? undefined,
         description: event.description,
         attendees: event.attendees,
+        calendarColor: event.calendarColor,
         categoryColor: isHabitEvent
           ? habitColor
-          : (categoryFromId?.color ?? categorization?.categoryColor ?? event.calendarColor),
+          : (event.calendarColor ??
+            categoryFromId?.color ??
+            categorization?.categoryColor),
         sourceType: event.sourceType,
         sourceId: event.sourceId,
         isCompleted: event.isCompleted,
@@ -286,8 +291,8 @@ export function CalendarView({
       };
     }
 
-    // External events: Use category color if available, otherwise gray
-    const accentColor = event.categoryColor || '#64748B';
+    // External events: calendar color wins over AI category tint
+    const accentColor = event.calendarColor ?? event.categoryColor ?? '#64748B';
     // Completed: translucent (20%), Incomplete: solid (95%)
     const backgroundColor = event.isCompleted ? `${accentColor}20` : `${accentColor}F2`;
 
@@ -801,7 +806,7 @@ function DraggableEvent({
           {event.title}
         </div>
       </div>
-      {event.isTask && onResize && (isHovered || isResizing) && (
+      {event.isTask && onResize && !isDragging && (isHovered || isResizing) && (
         <div
           className="absolute bottom-0 left-0 right-0 h-3 bg-white/25 hover:bg-white/45 cursor-ns-resize flex items-center justify-center"
           onMouseDown={handleResizeStart}

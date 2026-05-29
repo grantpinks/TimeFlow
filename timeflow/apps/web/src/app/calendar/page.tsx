@@ -321,6 +321,26 @@ export default function CalendarPage() {
     });
   }, [displayExternalEvents, showEvents, selectedCategories, eventCategorizations, categories.length]);
 
+  const externalEventsForView = useMemo(() => {
+    const colorByConnectedCalendarId = new Map<string, string>();
+    for (const account of connectedAccounts) {
+      for (const cal of account.calendars) {
+        if (cal.color) {
+          colorByConnectedCalendarId.set(cal.id, cal.color);
+        }
+      }
+    }
+
+    return filteredExternalEvents.map((event) => ({
+      ...event,
+      calendarColor:
+        event.calendarColor ??
+        (event.connectedCalendarId
+          ? colorByConnectedCalendarId.get(event.connectedCalendarId)
+          : undefined),
+    }));
+  }, [filteredExternalEvents, connectedAccounts]);
+
   // Fetch event categorizations with caching and background auto-categorization
   useEffect(() => {
     async function fetchCategorizations() {
@@ -1161,6 +1181,10 @@ export default function CalendarPage() {
   // Track where user grabbed the event (cursor offset from event top)
   const dragCursorOffsetRef = useRef<number>(0);
 
+  // Throttle drop preview updates for better performance
+  const lastDropPreviewUpdate = useRef<number>(0);
+  const DROP_PREVIEW_THROTTLE_MS = 16; // ~60fps
+
   const getDropWindowFromDrag = (active: any, over: any) => {
     const slotStart = over?.data?.current?.slotStart as Date | undefined;
     if (!slotStart) return null;
@@ -1254,6 +1278,13 @@ export default function CalendarPage() {
   };
 
   const handleDragOver = (event: any) => {
+    // Throttle drop preview updates to avoid excessive re-renders
+    const now = Date.now();
+    if (now - lastDropPreviewUpdate.current < DROP_PREVIEW_THROTTLE_MS) {
+      return;
+    }
+    lastDropPreviewUpdate.current = now;
+
     const drop = getDropWindowFromDrag(event.active, event.over);
 
     if (!drop) {
@@ -1646,7 +1677,7 @@ export default function CalendarPage() {
             <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex h-full flex-col overflow-y-auto border-r border-slate-100 bg-white">
               <div className="p-3">
                 <MiniCalendar
-                  events={filteredExternalEvents}
+                  events={externalEventsForView}
                   tasks={tasks}
                   selectedDate={calendarDate}
                   onDateClick={setCalendarDate}
@@ -1688,7 +1719,7 @@ export default function CalendarPage() {
                 </section>
 
                 <section className="px-3 py-2">
-                  <UpcomingEventsPanel events={filteredExternalEvents} />
+                  <UpcomingEventsPanel events={externalEventsForView} />
                 </section>
 
                 <section className="px-3 py-2">
@@ -1719,7 +1750,7 @@ export default function CalendarPage() {
               ) : (
                 <CalendarView
                   tasks={tasks}
-                  externalEvents={filteredExternalEvents}
+                  externalEvents={externalEventsForView}
                   eventCategorizations={eventCategorizations}
                   categories={categories}
                   habitStreakMap={habitStreakMap}
