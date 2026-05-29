@@ -502,7 +502,7 @@ function DroppableSlot({
   dropPreview?: CalendarDropPreview | null;
   children: React.ReactNode;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: `slot-${start.toISOString()}`,
     data: { slotStart: start },
   });
