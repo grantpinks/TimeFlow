@@ -1,37 +1,26 @@
 # Backend Log Testing
 
-## Sprint 1 — Calendar Hub (closeout)
+Paste or capture **failed deployment / runtime logs** here (Render backend, Vercel web build, etc.).
 
-**Status:** Code complete. Run production QA before Sprint 2.
+**Fetch Render logs:** `bash timeflow/scripts/fetch-render-logs.sh` (overwrites this file).
 
-Checklist: [`docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md`](docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md)
-
-| # | Test | Pass | Notes |
-|---|------|------|-------|
-| 1 | Google-only regression | ☐ | |
-| 2 | Connect iCloud | ☐ | |
-| 3 | Event correct local time | ☐ | |
-| 4 | Sidebar visibility toggle | ☐ | |
-| 5 | Hide from sidebar list | ☐ | |
-| 6 | Smart schedule + iCloud busy | ☐ | |
-| 7 | Disconnect iCloud persists | ☐ | |
-| 8 | Apple scheduling link book | ☐ | |
-| 9 | Gmail inbox | ☐ | |
-
-Sprint 2 outline: [`docs/plans/2026-05-26-sprint-2-sign-in-with-apple-outline.md`](docs/plans/2026-05-26-sprint-2-sign-in-with-apple-outline.md)
+**Production QA** (calendar hub, Sprint 1): `timeflow/docs/qa/calendar-hub-production-qa.md`
 
 ---
 
-## Deploy log (archive)
+## Latest capture
 
-<details>
-<summary>Vercel build — 2026-05 (CalendarView startTime — fixed on main)</summary>
+### Vercel web build — 2026-05 (resolved on main)
 
 ```
 21:57:41.314 Running build in Washington, D.C., USA (East) – iad1
+21:57:41.315 Build machine configuration: 2 cores, 8 GB
+21:57:41.444 Cloning github.com/grantpinks/TimeFlow (Branch: main, Commit: da014bc)
 ...
+21:58:41.852 Failed to compile.
+21:58:41.855 ./src/components/CalendarView.tsx:660:9
 21:58:41.855 Type error: 'startTime' is declared but its value is never read.
-21:58:41.856 ./src/components/CalendarView.tsx:660:9
+21:58:41.997 Error: Command "npm run build:web" exited with 1
 ```
 
-</details>
+**Resolution:** Unused variable removed; `npm run build` passes on current `main`.

@@ -1,7 +1,7 @@
 # Sprint 2 — Sign in with Apple (Outline)
 
 **Status:** Not started — begin after Sprint 1 production QA is signed off.  
-**Prerequisite:** `docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md` (all QA rows checked)
+**Prerequisite:** `docs/qa/calendar-hub-production-qa.md` (all rows checked on production)
 
 ---
 

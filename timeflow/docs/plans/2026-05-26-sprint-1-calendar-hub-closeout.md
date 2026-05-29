@@ -25,23 +25,9 @@
 
 ---
 
-## Production QA checklist
+## Production QA
 
-Run on **production** after deploy. Mark each when verified.
-
-| # | Test | Pass |
-|---|------|------|
-| 1 | **Google-only regression:** Log in with Google → calendar loads, tasks schedule to default Google calendar | ☐ |
-| 2 | **Connect iCloud:** Settings → app-specific password → account shows synced calendars (not 0) | ☐ |
-| 3 | **Event time:** iCloud test event appears at correct local time (not crushed at top of grid) | ☐ |
-| 4 | **Sidebar visibility:** Uncheck calendar → events disappear; recheck → events return | ☐ |
-| 5 | **Hide from list:** Remove duplicate/extra calendar from sidebar (× or Settings) → list stays tidy | ☐ |
-| 6 | **Smart schedule:** With iCloud visible, busy blocks on iCloud events are respected | ☐ |
-| 7 | **Disconnect iCloud:** Disconnect → stays disconnected after refresh; no ghost calendars | ☐ |
-| 8 | **Scheduling link (Apple):** Create link with iCloud calendar → book test slot → event on iCloud | ☐ |
-| 9 | **Gmail:** Inbox still loads (Google token path unchanged) | ☐ |
-
-**Env:** Confirm `ENCRYPTION_KEY` has not changed since iCloud connect (or users must reconnect iCloud).
+Use **`docs/qa/calendar-hub-production-qa.md`** (not `Backend Log Testing.md`). Run on production after deploy; check all rows before Sprint 2.
 
 ---
 

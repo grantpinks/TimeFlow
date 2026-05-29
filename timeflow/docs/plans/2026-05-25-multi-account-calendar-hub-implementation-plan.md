@@ -1,6 +1,6 @@
 # Multi-Account Calendar Hub — Sprint 1 Implementation Plan
 
-> **Sprint 1 status:** **COMPLETE** (2026-05-26). Closeout checklist: `docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md`. **Next:** Sprint 2 (Sign in with Apple).
+> **Sprint 1 status:** **COMPLETE** (2026-05-26). Closeout: `docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md`. Production QA: `docs/qa/calendar-hub-production-qa.md`. **Next:** Sprint 2 (Sign in with Apple).
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
