@@ -435,7 +435,7 @@ export function CalendarView({
           onView={handleViewChange}
           views={['week', 'day', 'month']}
           dayLayoutAlgorithm="no-overlap"
-          selectable={!isDraggingActive}
+          selectable={false}
           onSelectSlot={onSelectSlot}
           onSelectEvent={handleEventClick}
           eventPropGetter={eventStyleGetter}
@@ -592,17 +592,18 @@ function DraggableEvent({
 
   const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing;
 
-  // Debug ALL events to diagnose drag issues
-  console.log('[CalendarView] Event drag status:', {
-    title: event.title,
-    isDragDisabled,
-    isTask: event.isTask,
-    isHabit: event.isHabit,
-    sourceType: event.sourceType,
-    scheduledHabitId: event.scheduledHabitId,
-    taskId: event.taskId,
-    isResizing,
-  });
+  // Debug non-draggable events
+  if (isDragDisabled && (event.isTask || event.isHabit || event.scheduledHabitId || event.taskId)) {
+    console.log('[CalendarView] Event marked as non-draggable despite having task/habit flags:', {
+      title: event.title,
+      isDragDisabled,
+      isTask: event.isTask,
+      isHabit: event.isHabit,
+      sourceType: event.sourceType,
+      scheduledHabitId: event.scheduledHabitId,
+      taskId: event.taskId,
+    });
+  }
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
