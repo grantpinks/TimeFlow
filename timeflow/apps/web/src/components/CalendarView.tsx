@@ -656,12 +656,7 @@ function DraggableEvent({
           whileTap: { scale: 0.98 },
         };
 
-  // Format time for display
-  const startTime = new Date(event.start).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  // Format end time for resize preview
   const visibleEnd = resizePreviewEnd ?? event.end;
   const endTime = new Date(visibleEnd).toLocaleTimeString('en-US', {
     hour: 'numeric',
