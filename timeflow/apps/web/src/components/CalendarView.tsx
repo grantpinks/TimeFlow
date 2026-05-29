@@ -592,17 +592,17 @@ function DraggableEvent({
 
   const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing;
 
-  // Debug non-draggable events
-  if (!event.isTask && !event.isHabit && event.sourceType) {
-    console.log('[CalendarView] Non-draggable event:', {
-      title: event.title,
-      sourceType: event.sourceType,
-      isTask: event.isTask,
-      isHabit: event.isHabit,
-      scheduledHabitId: event.scheduledHabitId,
-      taskId: event.taskId,
-    });
-  }
+  // Debug ALL events to diagnose drag issues
+  console.log('[CalendarView] Event drag status:', {
+    title: event.title,
+    isDragDisabled,
+    isTask: event.isTask,
+    isHabit: event.isHabit,
+    sourceType: event.sourceType,
+    scheduledHabitId: event.scheduledHabitId,
+    taskId: event.taskId,
+    isResizing,
+  });
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
@@ -693,7 +693,7 @@ function DraggableEvent({
   const canDrag = event.isTask || event.isHabit;
 
   const style: React.CSSProperties = {
-    opacity: isDragging ? 0.35 : 1,
+    opacity: isDragging ? 0 : 1, // Completely hide original event during drag - only show DragOverlay
     boxShadow: isResizing ? '0 12px 28px -14px rgba(15, 23, 42, 0.45)' : undefined,
     position: 'relative',
     height: resizePreviewEnd ? `${(previewDuration / originalDuration) * 100}%` : '100%',
