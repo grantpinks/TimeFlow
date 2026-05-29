@@ -1,7 +1,7 @@
 # Sprint 1 Closeout — Multi-Account Calendar Hub
 
 **Date:** 2026-05-26  
-**Status:** Complete (ready for Sprint 2)  
+**Status:** Complete — calendar hub shipped for Google login + iCloud CalDAV  
 **Design:** `docs/plans/2026-05-25-multi-account-calendar-hub-design.md`  
 **Implementation:** `docs/plans/2026-05-25-multi-account-calendar-hub-implementation-plan.md`  
 **ADR:** `timeflow/ARCHITECTURE_DECISIONS.md` — ADR-013
@@ -35,7 +35,7 @@ Use **`docs/qa/calendar-hub-production-qa.md`** (not `Backend Log Testing.md`). 
 
 | Item | Target |
 |------|--------|
-| Sign in with Apple (login) | **Sprint 2** |
+| Sign in with Apple (login) | **Deferred** — see `docs/plans/2026-05-26-sprint-2-sign-in-with-apple-outline.md` |
 | Second Google account / dual-Gmail | Sprint 1b or later |
 | `useForAvailability` ≠ `visible` in UI | Optional polish |
 | Drop legacy `User.google*` / `AppleCalendarAccount` | Deploy gate 2 (after stability) |
@@ -43,15 +43,13 @@ Use **`docs/qa/calendar-hub-production-qa.md`** (not `Backend Log Testing.md`). 
 
 ---
 
-## Sprint 2 entry criteria
+## What’s next (your call)
 
-- [ ] All QA rows above checked on production
-- [ ] No P0/P1 open bugs tagged `calendar-hub`
-- [ ] Apple Developer Program access confirmed
-- [ ] Decision: account linking when Google email = Apple email (merge vs explicit link)
-- [ ] Redirect URLs for `APP_BASE_URL` documented for Apple Services ID
+Sprint 1 is **done in code**. Optional: finish `docs/qa/calendar-hub-production-qa.md` on production when convenient.
 
-**Next plan:** Sprint 2 implementation plan (Sign in with Apple) — to be written before coding.
+**Sign in with Apple** is **deferred** (needs paid Apple Developer Program). iCloud calendars already work via Settings + app-specific password — no Developer account.
+
+When you want to resume Apple login work, see **`docs/plans/BACKLOG.md`** and the Sprint 2 outline.
 
 ---
 

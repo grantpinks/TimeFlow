@@ -453,9 +453,9 @@ Users need multiple calendar sources (Google + iCloud) under one TimeFlow identi
 5. **Writes:** Task/habit events still target `User.defaultCalendarId` on primary Google (`googleCalendarService`) — not multi-write to all calendars in Sprint 1.
 6. **Migrations** ship via production deploy only (`start.sh` → `prisma migrate deploy`). `ENCRYPTION_KEY` must remain stable for iCloud passwords.
 
-### Sprint 2 (separate ADR amendment expected)
+### Sign in with Apple (deferred)
 
-**Sign in with Apple** as a primary login path is required in Sprint 2; it does not replace CalDAV for calendar data in v1.
+**Sign in with Apple** as a primary login path was planned as a follow-up sprint but is **deferred** until the team enrolls in the Apple Developer Program (~$99/year). It is **not** required for iCloud CalDAV calendar connect (app-specific password in Settings). See `docs/plans/BACKLOG.md`.
 
 ### Consequences
 

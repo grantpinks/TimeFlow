@@ -32,9 +32,8 @@ Run on **production**. Mark **Pass** when verified.
 
 ---
 
-## Sprint 2 gate
+## After QA (optional)
 
-- [ ] All rows above passed
-- [ ] No open P0/P1 calendar-hub bugs
-- [ ] Apple **linking policy** decided (see closeout doc)
-- [ ] Apple Developer Program only if proceeding with **Sign in with Apple** (not required for current iCloud CalDAV connect)
+Sprint 1 calendar hub is **complete** without further work.
+
+**Sign in with Apple** is **deferred** until you enroll in the Apple Developer Program (~$99/year). That is **not** required for iCloud connect in Settings. See `docs/plans/BACKLOG.md`.

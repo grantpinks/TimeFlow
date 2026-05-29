@@ -1,7 +1,9 @@
 # Sprint 2 — Sign in with Apple (Outline)
 
-**Status:** Not started — begin after Sprint 1 production QA is signed off.  
-**Prerequisite:** `docs/qa/calendar-hub-production-qa.md` (all rows checked on production)
+**Status:** **Deferred** — not scheduled. Revisit when willing to enroll in the [Apple Developer Program](https://developer.apple.com/programs/) (~$99/year).  
+**Blocked by:** Paid Apple Developer membership (required for Sign in with Apple; **not** required for iCloud CalDAV connect in Settings).
+
+**Prerequisite when resumed:** `docs/qa/calendar-hub-production-qa.md` (Sprint 1 QA signed off on production)
 
 ---
 

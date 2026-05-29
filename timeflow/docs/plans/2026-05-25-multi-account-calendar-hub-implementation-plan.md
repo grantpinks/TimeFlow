@@ -1,6 +1,6 @@
 # Multi-Account Calendar Hub — Sprint 1 Implementation Plan
 
-> **Sprint 1 status:** **COMPLETE** (2026-05-26). Closeout: `docs/plans/2026-05-26-sprint-1-calendar-hub-closeout.md`. Production QA: `docs/qa/calendar-hub-production-qa.md`. **Next:** Sprint 2 (Sign in with Apple).
+> **Sprint 1 status:** **COMPLETE** (2026-05-26). Production QA: `docs/qa/calendar-hub-production-qa.md`. **Sign in with Apple:** deferred (`docs/plans/BACKLOG.md`) — no Apple Developer Program required for iCloud CalDAV.
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 

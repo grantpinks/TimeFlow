@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-25  
 **Status:** Approved direction (brainstorm)  
-**Decision:** **Option 1 now** (Google login + multi-calendar hub). **Option 2 required** in the following sprint (Sign in with Apple as equal primary login).
+**Decision:** **Option 1 now** (Google login + multi-calendar hub). **Option 2** (Sign in with Apple as equal primary login) is **deferred** until Apple Developer Program enrollment — see `docs/plans/BACKLOG.md`. iCloud CalDAV connect does not require it.
 
 **Related:** `docs/plans/2026-01-05-sprint-22-integrations-expansion.md` (foundation + CalDAV sequencing)
 
