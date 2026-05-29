@@ -551,11 +551,30 @@ function DraggableEvent({
   const [isResizing, setIsResizing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [resizePreviewEnd, setResizePreviewEnd] = useState<Date | null>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
   const resizeStartY = useRef<number>(0);
   const initialEnd = useRef<Date>(event.end);
   const initialDurationMinutes = useRef<number>(15);
   const pixelsPerMinute = useRef<number>(2);
   const eventRef = useRef<HTMLDivElement | null>(null);
+
+  // Detect narrow events (overlapping/stacked) and apply compact mode
+  useEffect(() => {
+    if (!eventRef.current) return;
+
+    const checkWidth = () => {
+      if (eventRef.current) {
+        const width = eventRef.current.getBoundingClientRect().width;
+        setIsNarrow(width < 150); // Narrow if less than 150px
+      }
+    };
+
+    checkWidth();
+
+    // Recheck on window resize
+    window.addEventListener('resize', checkWidth);
+    return () => window.removeEventListener('resize', checkWidth);
+  }, []);
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
@@ -652,7 +671,9 @@ function DraggableEvent({
     height: resizePreviewEnd ? `${(previewDuration / originalDuration) * 100}%` : '100%',
     minHeight: 24,
     zIndex: isDragging || isResizing ? 20 : undefined,
-    cursor: !canDrag ? 'default' : isResizing ? 'ns-resize' : isDragging ? 'grabbing' : 'grab',
+    cursor: !canDrag ? 'default' : isResizing ? 'ns-resize' : isDragging ? 'grabbing' : isNarrow && canDrag ? 'grab' : 'grab',
+    // Thinner left border for narrow events to save space
+    borderLeftWidth: isNarrow ? '3px' : undefined,
   };
 
   const motionProps =
@@ -680,12 +701,17 @@ function DraggableEvent({
     (node: HTMLDivElement | null) => {
       eventRef.current = node;
       setNodeRef(node);
+      // Check width immediately when ref is set
+      if (node) {
+        const width = node.getBoundingClientRect().width;
+        setIsNarrow(width < 150);
+      }
     },
     [setNodeRef]
   );
 
   const titleClampClass = isVeryShortEvent ? 'line-clamp-1' : isShortEvent ? 'line-clamp-2' : 'line-clamp-3';
-  const titleSizeClass = isVeryShortEvent ? 'text-[11px]' : 'text-xs';
+  const titleSizeClass = isVeryShortEvent ? 'text-[11px]' : isNarrow ? 'text-[10px]' : 'text-xs';
 
   const handleCheckboxClick = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent opening popover
@@ -718,11 +744,19 @@ function DraggableEvent({
     }
   }, [event, onCompleteTask, onCompleteHabit]);
 
-  const showCheckbox = isHovered || event.isCompleted; // Show on all events
+  const showCheckbox = !isNarrow && (isHovered || event.isCompleted); // Hide checkbox when narrow to save space
 
   // Text color: white for solid backgrounds (incomplete), dark for translucent (completed)
   const textColorClass = event.isCompleted ? 'text-slate-600' : 'text-white';
   const dragHandleColorClass = event.isCompleted ? 'text-slate-600 hover:text-slate-800' : 'text-white/90 hover:text-white';
+
+  // Compact mode for narrow/overlapping events
+  const showDragHandle = canDrag && !isNarrow; // Hide drag handle when narrow
+  const paddingClass = isNarrow
+    ? 'px-1 py-1' // Minimal padding for narrow events
+    : canDrag
+      ? 'pl-1 pr-8 py-1.5' // Normal padding with space for drag handle and checkbox
+      : 'px-2 pr-8 py-1.5'; // Normal padding for non-draggable events
 
   return (
     <motion.div
@@ -739,11 +773,11 @@ function DraggableEvent({
         setIsHovered(false);
         onHoverEnd?.();
       }}
-      className={`overflow-hidden h-full flex flex-col justify-start py-1.5 gap-0.5 ${
-        canDrag ? 'pl-1 pr-8' : 'px-2 pr-8'
-      } ${isResizing ? 'ring-2 ring-white/80' : ''}`}
+      // When narrow, make entire event draggable
+      {...(isNarrow && canDrag ? { ...listeners, ...attributes } : {})}
+      className={`overflow-hidden h-full flex flex-col justify-start gap-0.5 ${paddingClass} ${isResizing ? 'ring-2 ring-white/80' : ''} ${isNarrow && canDrag ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
-      {canDrag && (
+      {showDragHandle && (
         <button
           type="button"
           className={`absolute left-0 top-0 z-20 flex h-full w-7 cursor-grab items-start justify-center border-0 bg-transparent pt-1 ${dragHandleColorClass} active:cursor-grabbing`}
@@ -757,7 +791,7 @@ function DraggableEvent({
           </span>
         </button>
       )}
-      <div className={canDrag ? 'min-w-0 pl-6' : 'min-w-0'}>
+      <div className={showDragHandle ? 'min-w-0 pl-6' : 'min-w-0'}>
         <div
           className={`font-medium leading-snug ${textColorClass} ${titleClampClass} ${titleSizeClass}`}
           title={event.title} // Show full title on hover for truncated text
