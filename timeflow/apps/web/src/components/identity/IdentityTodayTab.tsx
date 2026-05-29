@@ -22,6 +22,8 @@ interface IdentityTodayTabProps {
     startISO: string,
     durationMinutes: number
   ) => Promise<void>;
+  /** Embedded in All-identities overview — hides summary and still-to-do blocks */
+  compact?: boolean;
 }
 
 function fmtMinutes(m: number): string {
@@ -53,6 +55,7 @@ export function IdentityTodayTab({
   streakDays = 0,
   scheduledInstances = [],
   onScheduleHabit,
+  compact = false,
 }: IdentityTodayTabProps) {
   // Use local calendar date, not UTC — toISOString() returns UTC which can be
   // off by one day for users in UTC−N timezones late in the evening.
@@ -99,8 +102,9 @@ export function IdentityTodayTab({
   const showPlanColumn = !!onScheduleHabit;
 
   return (
-    <div className="space-y-4">
+    <div className={compact ? 'space-y-2' : 'space-y-4'}>
       {/* Summary row */}
+      {!compact && (
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="flex items-center gap-1 rounded-md bg-teal-50 px-2 py-0.5 font-semibold text-teal-800">
           <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -119,9 +123,11 @@ export function IdentityTodayTab({
           </span>
         )}
       </div>
+      )}
 
       {/* Consistency ribbon + Today's plan — two columns */}
       <div>
+        {!compact && (
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
             Habit consistency · last 7 days
@@ -132,6 +138,14 @@ export function IdentityTodayTab({
             </p>
           )}
         </div>
+        )}
+        {compact && showPlanColumn && (
+          <div className="mb-1.5 flex justify-end">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Plan
+            </p>
+          </div>
+        )}
 
         <ul className="space-y-2">
           {habits.map((h) => {
@@ -253,7 +267,7 @@ export function IdentityTodayTab({
       </div>
 
       {/* Not yet done today */}
-      {notDoneToday.length > 0 && (
+      {!compact && notDoneToday.length > 0 && (
         <div className="rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3">
           <p className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-amber-700">
             Still to do today
