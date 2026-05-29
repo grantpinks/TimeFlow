@@ -433,6 +433,13 @@ export function CalendarView({
           style={{ height: '100%' }}
           formats={{
             timeGutterFormat: 'h a',
+            eventTimeRangeFormat: ({ start, end }: { start: Date; end: Date }) => {
+              // Add 1 minute to end time for display (backend uses :59 to avoid overlaps)
+              const displayEnd = new Date(end.getTime() + 60000);
+              const startTime = DateTime.fromJSDate(start).toFormat('h:mm a');
+              const endTime = DateTime.fromJSDate(displayEnd).toFormat('h:mm a');
+              return `${startTime} – ${endTime}`;
+            },
           }}
           components={{
             event: (props) => (
@@ -656,9 +663,10 @@ function DraggableEvent({
           whileTap: { scale: 0.98 },
         };
 
-  // Format end time for resize preview
+  // Format end time for resize preview (add 1 minute for display)
   const visibleEnd = resizePreviewEnd ?? event.end;
-  const endTime = new Date(visibleEnd).toLocaleTimeString('en-US', {
+  const displayEnd = new Date(visibleEnd.getTime() + 60000);
+  const endTime = displayEnd.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
@@ -750,7 +758,10 @@ function DraggableEvent({
         </button>
       )}
       <div className={canDrag ? 'min-w-0 pl-6' : 'min-w-0'}>
-        <div className={`font-medium leading-snug ${textColorClass} ${titleClampClass} ${titleSizeClass}`}>
+        <div
+          className={`font-medium leading-snug ${textColorClass} ${titleClampClass} ${titleSizeClass}`}
+          title={event.title} // Show full title on hover for truncated text
+        >
           {event.title}
         </div>
       </div>
