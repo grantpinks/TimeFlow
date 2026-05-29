@@ -73,6 +73,74 @@ export function resolveCalDavUrl(href: string, baseUrl: string): string {
   return resolved.endsWith('/') ? resolved : `${resolved}/`;
 }
 
+/** Stable key for deduping the same CalDAV calendar across URL variants (port, trailing slash). */
+export function canonicalCalDavCalendarKey(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const port =
+      parsed.port && !['80', '443'].includes(parsed.port) ? `:${parsed.port}` : '';
+    const path = parsed.pathname.replace(/\/+$/, '') || '/';
+    return `${parsed.protocol}//${parsed.hostname.toLowerCase()}${port}${path.toLowerCase()}`;
+  } catch {
+    return url.replace(/\/+$/, '').toLowerCase();
+  }
+}
+
+function shouldSkipCalDavCalendar(displayName: string, href: string): boolean {
+  const name = displayName.toLowerCase();
+  const path = href.toLowerCase();
+  if (name === 'reminders' || path.includes('/reminders')) return true;
+  if (name.includes('notification center')) return true;
+  return false;
+}
+
+function unfoldIcsLines(ics: string): string {
+  const lines = ics.replace(/\r\n/g, '\n').split('\n');
+  const unfolded: string[] = [];
+  for (const line of lines) {
+    if ((line.startsWith(' ') || line.startsWith('\t')) && unfolded.length > 0) {
+      unfolded[unfolded.length - 1] += line.slice(1);
+    } else {
+      unfolded.push(line);
+    }
+  }
+  return unfolded.join('\n');
+}
+
+function parseIcsProperty(line: string): { name: string; value: string; tzid?: string } {
+  const colon = line.indexOf(':');
+  if (colon === -1) {
+    return { name: line, value: '' };
+  }
+  const head = line.slice(0, colon);
+  const value = line.slice(colon + 1);
+  const name = head.split(';')[0] ?? head;
+  const tzMatch = head.match(/TZID=([^;:]+)/i);
+  const tzid = tzMatch?.[1]?.replace(/^"|"$/g, '');
+  return { name, value, tzid };
+}
+
+function parseIcalDateToIso(
+  value: string,
+  tzid?: string,
+  defaultZone: string = 'utc'
+): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (/^\d{8}$/.test(trimmed)) {
+    const dt = DateTime.fromFormat(trimmed, 'yyyyMMdd', { zone: tzid ?? defaultZone });
+    return dt.isValid ? (dt.toUTC().toISO() ?? null) : null;
+  }
+
+  const normalized = trimmed.endsWith('Z') ? trimmed.slice(0, -1) : trimmed;
+  const format =
+    normalized.includes('T') && normalized.length >= 15 ? "yyyyMMdd'T'HHmmss" : "yyyyMMdd'T'HHmm";
+  const zone = trimmed.endsWith('Z') ? 'utc' : tzid ?? defaultZone;
+  const dt = DateTime.fromFormat(normalized, format, { zone });
+  return dt.isValid ? (dt.toUTC().toISO() ?? null) : null;
+}
+
 function displayNameFromHref(href: string): string {
   const trimmed = href.replace(/\/$/, '');
   const segment = trimmed.split('/').filter(Boolean).pop();
@@ -84,7 +152,8 @@ function displayNameFromHref(href: string): string {
  */
 export function parseCalendarsList(
   xml: string,
-  baseUrl: string = DEFAULT_BASE_URL
+  baseUrl: string = DEFAULT_BASE_URL,
+  calendarHomeUrl?: string | null
 ): Array<{ displayName: string; url: string }> {
   const parser = new XMLParser({
     ignoreAttributes: false,
@@ -94,6 +163,7 @@ export function parseCalendarsList(
   const result = parser.parse(xml);
   const calendars: Array<{ displayName: string; url: string }> = [];
   const seen = new Set<string>();
+  const homeKey = calendarHomeUrl ? canonicalCalDavCalendarKey(calendarHomeUrl) : null;
 
   try {
     const responses = result.multistatus?.response;
@@ -110,8 +180,11 @@ export function parseCalendarsList(
 
       const displayName = readDisplayName(prop) ?? displayNameFromHref(href);
       const url = resolveCalDavUrl(href, baseUrl);
-      if (seen.has(url)) continue;
-      seen.add(url);
+      const key = canonicalCalDavCalendarKey(url);
+      if (homeKey && key === homeKey) continue;
+      if (shouldSkipCalDavCalendar(displayName, href)) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
       calendars.push({ displayName, url });
     }
@@ -461,58 +534,69 @@ export async function getAccount(userId: string) {
   });
 }
 
-/**
- * Parse a single ICS event string
- */
-export function parseIcsEvent(ics: string): {
+export type ParsedIcsEvent = {
+  id?: string;
   start: string;
   end: string;
   summary?: string;
   transparency?: 'opaque' | 'transparent';
-} {
-  const lines = ics.split('\n').map((l) => l.trim());
+};
 
-  let dtstart = '';
-  let dtend = '';
+/**
+ * Parse a single ICS event string (supports TZID, folded lines, all-day dates).
+ */
+export function parseIcsEvent(ics: string, defaultZone: string = 'utc'): ParsedIcsEvent {
+  const lines = unfoldIcsLines(ics)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let uid = '';
+  let dtstartValue = '';
+  let dtstartTzid: string | undefined;
+  let dtendValue = '';
+  let dtendTzid: string | undefined;
   let summary = '';
   let transp = 'OPAQUE';
 
   for (const line of lines) {
+    if (line.startsWith('UID')) {
+      const prop = parseIcsProperty(line);
+      uid = prop.value;
+      continue;
+    }
     if (line.startsWith('DTSTART')) {
-      dtstart = line.includes(':') ? line.substring(line.indexOf(':') + 1) : '';
-    } else if (line.startsWith('DTEND')) {
-      dtend = line.includes(':') ? line.substring(line.indexOf(':') + 1) : '';
-    } else if (line.startsWith('SUMMARY:')) {
-      summary = line.substring('SUMMARY:'.length);
-    } else if (line.startsWith('TRANSP:')) {
-      transp = line.substring('TRANSP:'.length);
-    } else if (line.startsWith('STATUS:CANCELLED')) {
-      // Skip cancelled events
-      return {
-        start: '',
-        end: '',
-        summary,
-        transparency: 'opaque',
-      };
+      const prop = parseIcsProperty(line);
+      dtstartValue = prop.value;
+      dtstartTzid = prop.tzid;
+      continue;
+    }
+    if (line.startsWith('DTEND')) {
+      const prop = parseIcsProperty(line);
+      dtendValue = prop.value;
+      dtendTzid = prop.tzid;
+      continue;
+    }
+    if (line.startsWith('SUMMARY')) {
+      summary = parseIcsProperty(line).value;
+      continue;
+    }
+    if (line.startsWith('TRANSP')) {
+      transp = parseIcsProperty(line).value;
+      continue;
+    }
+    if (line.startsWith('STATUS:CANCELLED')) {
+      return { start: '', end: '', summary, transparency: 'opaque' };
     }
   }
 
-  // Convert iCal datetime to ISO 8601
-  const parseIcalDate = (icalDate: string): string => {
-    // Format: 20260110T160000Z
-    const year = icalDate.substring(0, 4);
-    const month = icalDate.substring(4, 6);
-    const day = icalDate.substring(6, 8);
-    const hour = icalDate.substring(9, 11);
-    const minute = icalDate.substring(11, 13);
-    const second = icalDate.substring(13, 15);
-
-    return `${year}-${month}-${day}T${hour}:${minute}:${second}.000Z`;
-  };
+  const start = parseIcalDateToIso(dtstartValue, dtstartTzid, defaultZone) ?? '';
+  const end = parseIcalDateToIso(dtendValue, dtendTzid ?? dtstartTzid, defaultZone) ?? '';
 
   return {
-    start: parseIcalDate(dtstart),
-    end: parseIcalDate(dtend),
+    id: uid || undefined,
+    start,
+    end,
     summary,
     transparency: transp === 'TRANSPARENT' ? 'transparent' : 'opaque',
   };
@@ -521,32 +605,20 @@ export function parseIcsEvent(ics: string): {
 /**
  * Parse multiple ICS events from CalDAV response
  */
-export function parseIcsEvents(icsData: string): Array<{
-  start: string;
-  end: string;
-  summary?: string;
-  transparency?: 'opaque' | 'transparent';
-}> {
-  const events: Array<{
-    start: string;
-    end: string;
-    summary?: string;
-    transparency?: 'opaque' | 'transparent';
-  }> = [];
-
-  // Split by VEVENT blocks
-  const eventBlocks = icsData.split('BEGIN:VEVENT');
+export function parseIcsEvents(icsData: string, defaultZone: string = 'utc'): ParsedIcsEvent[] {
+  const events: ParsedIcsEvent[] = [];
+  const eventBlocks = unfoldIcsLines(icsData).split('BEGIN:VEVENT');
 
   for (let i = 1; i < eventBlocks.length; i++) {
     const eventEnd = eventBlocks[i].indexOf('END:VEVENT');
     if (eventEnd !== -1) {
       const eventStr = 'BEGIN:VEVENT\n' + eventBlocks[i].substring(0, eventEnd + 'END:VEVENT'.length);
       try {
-        const parsed = parseIcsEvent(eventStr);
+        const parsed = parseIcsEvent(eventStr, defaultZone);
         if (parsed.start && parsed.end) {
           events.push(parsed);
         }
-      } catch (error) {
+      } catch {
         // Skip malformed events
       }
     }
@@ -558,18 +630,16 @@ export function parseIcsEvents(icsData: string): Array<{
 /**
  * Extract ICS payloads from a CalDAV REPORT multistatus response.
  */
-export function parseCalDavReportEvents(xmlOrIcs: string): Array<{
-  start: string;
-  end: string;
-  summary?: string;
-  transparency?: 'opaque' | 'transparent';
-}> {
+export function parseCalDavReportEvents(
+  xmlOrIcs: string,
+  defaultZone: string = 'utc'
+): ParsedIcsEvent[] {
   if (xmlOrIcs.includes('BEGIN:VEVENT') && !xmlOrIcs.includes('<multistatus')) {
-    return parseIcsEvents(xmlOrIcs);
+    return parseIcsEvents(xmlOrIcs, defaultZone);
   }
 
   if (!xmlOrIcs.includes('calendar-data') && !xmlOrIcs.includes('multistatus')) {
-    return parseIcsEvents(xmlOrIcs);
+    return parseIcsEvents(xmlOrIcs, defaultZone);
   }
 
   const parser = new XMLParser({
@@ -577,12 +647,7 @@ export function parseCalDavReportEvents(xmlOrIcs: string): Array<{
     removeNSPrefix: true,
   });
 
-  const events: Array<{
-    start: string;
-    end: string;
-    summary?: string;
-    transparency?: 'opaque' | 'transparent';
-  }> = [];
+  const events: ParsedIcsEvent[] = [];
 
   const collectCalendarData = (node: unknown): void => {
     if (!node || typeof node !== 'object') return;
@@ -602,7 +667,7 @@ export function parseCalDavReportEvents(xmlOrIcs: string): Array<{
               ? String((value as { '#text': string })['#text'])
               : null;
         if (ics) {
-          for (const parsed of parseIcsEvents(ics)) {
+          for (const parsed of parseIcsEvents(ics, defaultZone)) {
             if (parsed.start && parsed.end) events.push(parsed);
           }
         }
@@ -615,8 +680,8 @@ export function parseCalDavReportEvents(xmlOrIcs: string): Array<{
   try {
     const parsed = parser.parse(xmlOrIcs);
     collectCalendarData(parsed);
-  } catch (error) {
-    return parseIcsEvents(xmlOrIcs);
+  } catch {
+    return parseIcsEvents(xmlOrIcs, defaultZone);
   }
 
   return events;
@@ -666,7 +731,7 @@ export async function listCalendars(
   });
 
   const xml = await response.text();
-  return parseCalendarsList(xml, new URL(targetUrl).origin);
+  return parseCalendarsList(xml, new URL(targetUrl).origin, calendarHomeUrl);
 }
 
 /**
@@ -677,14 +742,16 @@ export async function getEvents(
   calendarUrl: string,
   timeMin: string,
   timeMax: string
-): Promise<Array<{
-  start: string;
-  end: string;
-  summary?: string;
-  transparency?: 'opaque' | 'transparent';
-}>> {
+): Promise<ParsedIcsEvent[]> {
   const account = await resolveAppleContext(userId, calendarUrl);
   if (!account) return [];
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { timeZone: true },
+  });
+  const defaultZone = user?.timeZone ?? 'America/Chicago';
+
   const authHeader = buildAuthHeader(account.email, decryptPassword(account.appPasswordEncrypted));
 
   const url = resolveCalDavUrl(calendarUrl, account.baseUrl || DEFAULT_BASE_URL);
@@ -714,7 +781,7 @@ export async function getEvents(
   });
 
   const data = await response.text();
-  return parseCalDavReportEvents(data);
+  return parseCalDavReportEvents(data, defaultZone);
 }
 
 /**

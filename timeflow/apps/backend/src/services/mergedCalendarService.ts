@@ -87,6 +87,9 @@ export async function getMergedExternalEvents(
         );
         return events.map((event) => ({
           ...event,
+          id:
+            event.id ??
+            `apple:${calendar.id}:${event.start}:${event.summary ?? 'event'}`,
           sourceType: 'external' as const,
           provider: 'apple' as const,
           connectedAccountId: calendar.connectedAccountId,

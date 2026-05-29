@@ -2,6 +2,7 @@ import { ConnectedAccountProvider } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { getPrimaryGoogleAccount } from './accountTokenService.js';
 import * as appleCalendarService from './appleCalendarService.js';
+import { canonicalCalDavCalendarKey } from './appleCalendarService.js';
 
 type ConnectedCalendarDto = {
   id: string;
@@ -63,6 +64,29 @@ async function ensureGoogleBackfill(userId: string): Promise<void> {
   await getPrimaryGoogleAccount(userId);
 }
 
+async function dedupeAppleConnectedCalendars(connectedAccountId: string): Promise<void> {
+  const existing = await prisma.connectedCalendar.findMany({
+    where: { connectedAccountId },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const groups = new Map<string, typeof existing>();
+  for (const calendar of existing) {
+    const key = canonicalCalDavCalendarKey(calendar.externalCalendarId);
+    const group = groups.get(key) ?? [];
+    group.push(calendar);
+    groups.set(key, group);
+  }
+
+  for (const group of groups.values()) {
+    if (group.length <= 1) continue;
+    const [, ...duplicates] = group;
+    await prisma.connectedCalendar.deleteMany({
+      where: { id: { in: duplicates.map((c) => c.id) } },
+    });
+  }
+}
+
 async function syncAppleCalendarsForAccount(userId: string, accountId: string): Promise<void> {
   const account = await prisma.connectedAccount.findUnique({ where: { id: accountId } });
   if (!account || account.userId !== userId || account.provider !== ConnectedAccountProvider.apple_caldav) {
@@ -74,26 +98,42 @@ async function syncAppleCalendarsForAccount(userId: string, accountId: string): 
   }
 
   const calendars = await appleCalendarService.listCalendars(userId, accountId);
-  await Promise.all(
-    calendars.map((cal) =>
-      prisma.connectedCalendar.upsert({
-        where: {
-          connectedAccountId_externalCalendarId: {
-            connectedAccountId: accountId,
-            externalCalendarId: cal.url,
-          },
-        },
-        update: { name: cal.displayName, visible: true, useForAvailability: true },
-        create: {
-          connectedAccountId: accountId,
+  const existing = await prisma.connectedCalendar.findMany({
+    where: { connectedAccountId: accountId },
+  });
+  const existingByKey = new Map(
+    existing.map((calendar) => [canonicalCalDavCalendarKey(calendar.externalCalendarId), calendar])
+  );
+
+  for (const cal of calendars) {
+    const key = canonicalCalDavCalendarKey(cal.url);
+    const match = existingByKey.get(key);
+    if (match) {
+      await prisma.connectedCalendar.update({
+        where: { id: match.id },
+        data: {
           externalCalendarId: cal.url,
           name: cal.displayName,
           visible: true,
           useForAvailability: true,
         },
-      })
-    )
-  );
+      });
+      existingByKey.delete(key);
+      continue;
+    }
+
+    await prisma.connectedCalendar.create({
+      data: {
+        connectedAccountId: accountId,
+        externalCalendarId: cal.url,
+        name: cal.displayName,
+        visible: true,
+        useForAvailability: true,
+      },
+    });
+  }
+
+  await dedupeAppleConnectedCalendars(accountId);
 }
 
 async function syncGoogleCalendarsForAccount(userId: string, accountId: string): Promise<void> {
@@ -214,15 +254,17 @@ export async function listConnectedAccounts(userId: string): Promise<ConnectedAc
     where: { userId, provider: ConnectedAccountProvider.apple_caldav },
   });
   for (const apple of appleAccounts) {
-    const count = await prisma.connectedCalendar.count({
-      where: { connectedAccountId: apple.id },
-    });
-    if (count === 0) {
-      try {
+    try {
+      const count = await prisma.connectedCalendar.count({
+        where: { connectedAccountId: apple.id },
+      });
+      if (count === 0) {
         await syncAppleCalendarsForAccount(userId, apple.id);
-      } catch (error) {
-        console.error('[ConnectedAccount] Apple calendar sync failed:', error);
+      } else {
+        await dedupeAppleConnectedCalendars(apple.id);
       }
+    } catch (error) {
+      console.error('[ConnectedAccount] Apple calendar sync failed:', error);
     }
   }
 

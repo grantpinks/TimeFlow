@@ -10,6 +10,9 @@ import { prisma } from '../../config/prisma.js';
 
 vi.mock('../../config/prisma.js', () => ({
   prisma: {
+    user: {
+      findUnique: vi.fn(),
+    },
     appleCalendarAccount: {
       upsert: vi.fn(),
       findUnique: vi.fn(),
@@ -108,6 +111,7 @@ describe('appleCalendarService HTTP', () => {
   });
 
   it('parses events from REPORT response', async () => {
+    (prisma.user.findUnique as any).mockResolvedValue({ timeZone: 'America/Chicago' });
     (prisma.connectedCalendar.findFirst as any).mockResolvedValue(null);
     (prisma.appleCalendarAccount.findUnique as any).mockResolvedValue({
       userId: 'user1',
