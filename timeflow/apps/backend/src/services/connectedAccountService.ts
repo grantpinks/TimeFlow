@@ -4,6 +4,22 @@ import { getPrimaryGoogleAccount } from './accountTokenService.js';
 import * as appleCalendarService from './appleCalendarService.js';
 import { canonicalCalDavCalendarKey } from './appleCalendarService.js';
 
+const DEFAULT_CALENDAR_COLORS = [
+  '#3B82F6',
+  '#6366F1',
+  '#8B5CF6',
+  '#EC4899',
+  '#EF4444',
+  '#F59E0B',
+  '#10B981',
+  '#14B8A6',
+  '#64748B',
+] as const;
+
+function defaultCalendarColorForIndex(index: number): string {
+  return DEFAULT_CALENDAR_COLORS[index % DEFAULT_CALENDAR_COLORS.length]!;
+}
+
 type ConnectedCalendarDto = {
   id: string;
   connectedAccountId: string;
@@ -89,7 +105,10 @@ async function dedupeAppleConnectedCalendars(connectedAccountId: string): Promis
   }
 }
 
-async function syncAppleCalendarsForAccount(userId: string, accountId: string): Promise<void> {
+export const RESYNC_NOT_AVAILABLE_MESSAGE =
+  'Resync is only available for your primary Google account and iCloud calendars.';
+
+async function syncAppleCalendarsForAccount(userId: string, accountId: string): Promise<boolean> {
   const account = await prisma.connectedAccount.findUnique({ where: { id: accountId } });
   if (!account || account.userId !== userId || account.provider !== ConnectedAccountProvider.apple_caldav) {
     throw new Error('Cannot sync calendars for non-Apple account');
@@ -123,11 +142,15 @@ async function syncAppleCalendarsForAccount(userId: string, accountId: string): 
       continue;
     }
 
+    const colorIndex = await prisma.connectedCalendar.count({
+      where: { connectedAccountId: accountId },
+    });
     await prisma.connectedCalendar.create({
       data: {
         connectedAccountId: accountId,
         externalCalendarId: cal.url,
         name: cal.displayName,
+        color: defaultCalendarColorForIndex(colorIndex),
         visible: true,
         listedInSidebar: true,
         useForAvailability: true,
@@ -136,9 +159,10 @@ async function syncAppleCalendarsForAccount(userId: string, accountId: string): 
   }
 
   await dedupeAppleConnectedCalendars(accountId);
+  return true;
 }
 
-async function syncGoogleCalendarsForAccount(userId: string, accountId: string): Promise<void> {
+async function syncGoogleCalendarsForAccount(userId: string, accountId: string): Promise<boolean> {
   const account = await prisma.connectedAccount.findUnique({ where: { id: accountId } });
   if (!account || account.userId !== userId || account.provider !== ConnectedAccountProvider.google) {
     throw new Error('Cannot sync calendars for non-Google account');
@@ -146,7 +170,7 @@ async function syncGoogleCalendarsForAccount(userId: string, accountId: string):
   // Today, googleCalendarService.listCalendars() resolves the primary Google token context.
   // Until multi-Google is implemented, only sync calendars for the primary Google account.
   if (!account.isPrimary) {
-    return;
+    return false;
   }
 
   const calendars = await (await import('./googleCalendarService.js')).listCalendars(userId);
@@ -168,6 +192,9 @@ async function syncGoogleCalendarsForAccount(userId: string, accountId: string):
           externalCalendarId: cal.id,
           name: cal.summary,
           isPrimary: cal.primary,
+          color: defaultCalendarColorForIndex(
+            calendars.findIndex((c) => c.id === cal.id)
+          ),
           visible: true,
           listedInSidebar: true,
           useForAvailability: true,
@@ -175,6 +202,7 @@ async function syncGoogleCalendarsForAccount(userId: string, accountId: string):
       })
     )
   );
+  return true;
 }
 
 async function backfillAppleAccountIfPresent(userId: string): Promise<void> {
@@ -361,6 +389,60 @@ export async function updateConnectedCalendar(
   });
 
   return next;
+}
+
+export async function resyncConnectedAccount(
+  userId: string,
+  connectedAccountId: string
+): Promise<ConnectedAccountDto> {
+  const account = await prisma.connectedAccount.findUnique({
+    where: { id: connectedAccountId },
+    include: { calendars: true },
+  });
+  if (!account || account.userId !== userId) {
+    throw new Error('Connected account not found');
+  }
+
+  try {
+    let didSync = false;
+    if (account.provider === ConnectedAccountProvider.google) {
+      didSync = await syncGoogleCalendarsForAccount(userId, connectedAccountId);
+    } else if (account.provider === ConnectedAccountProvider.apple_caldav) {
+      didSync = await syncAppleCalendarsForAccount(userId, connectedAccountId);
+    } else {
+      throw new Error('Unsupported account provider');
+    }
+
+    if (!didSync) {
+      throw new Error(RESYNC_NOT_AVAILABLE_MESSAGE);
+    }
+
+    await prisma.connectedAccount.update({
+      where: { id: connectedAccountId },
+      data: {
+        lastSuccessAt: new Date(),
+        lastErrorAt: null,
+        lastErrorMessage: null,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Sync failed';
+    await prisma.connectedAccount.update({
+      where: { id: connectedAccountId },
+      data: {
+        lastErrorAt: new Date(),
+        lastErrorMessage: message,
+      },
+    });
+    throw error;
+  }
+
+  const hydrated = await prisma.connectedAccount.findUniqueOrThrow({
+    where: { id: connectedAccountId },
+    include: { calendars: { orderBy: [{ isPrimary: 'desc' }, { name: 'asc' }] } },
+  });
+
+  return toConnectedAccountDto(hydrated);
 }
 
 export async function disconnectConnectedAccount(userId: string, connectedAccountId: string) {

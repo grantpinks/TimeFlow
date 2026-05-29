@@ -506,17 +506,6 @@ body.calendar-dnd-active .rbc-time-content .rbc-event.rbc-selected {
   pointer-events: none;
 }
 
-/* Calendar left rail: soften nested panel chrome (replaces styled-jsx block) */
-.calendar-sidebar-overrides div .border-b {
-  border-bottom: none !important;
-}
-.calendar-sidebar-overrides div .bg-white {
-  background: transparent !important;
-}
-.calendar-sidebar-overrides div .p-3 {
-  padding: 0 !important;
-}
-
 /* Week/Day view events */
 .rbc-time-slot .rbc-event {
   min-height: 20px; /* Ensure minimum visibility */

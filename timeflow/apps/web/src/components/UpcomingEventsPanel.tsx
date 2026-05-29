@@ -50,17 +50,18 @@ export function UpcomingEventsPanel({ events, onEventClick }: UpcomingEventsPane
     return { dayLabel, timeRange };
   };
 
-  // Generate a consistent color for each event (based on event ID or title)
   const getEventColor = (event: CalendarEvent) => {
+    if (event.calendarColor) return event.calendarColor;
+
     const colors = [
-      '#3B82F6', // blue
-      '#8B5CF6', // purple
-      '#EC4899', // pink
-      '#F59E0B', // amber
-      '#10B981', // emerald
-      '#6366F1', // indigo
-      '#EF4444', // red
-      '#14B8A6', // teal
+      '#3B82F6',
+      '#8B5CF6',
+      '#EC4899',
+      '#F59E0B',
+      '#10B981',
+      '#6366F1',
+      '#EF4444',
+      '#14B8A6',
     ];
 
     const hash = (event.id || event.summary).split('').reduce((acc, char) => {
@@ -71,10 +72,9 @@ export function UpcomingEventsPanel({ events, onEventClick }: UpcomingEventsPane
   };
 
   return (
-    <div className="bg-white border-b border-slate-200 overflow-hidden flex-shrink-0">
-      {/* Header */}
+    <div className="overflow-hidden flex-shrink-0">
       <div
-        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors"
+        className="flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors -mx-1 px-1 py-0.5 rounded-md"
         onClick={() => setExpanded(!expanded)}
       >
         <h3 className="text-sm font-semibold text-slate-800">Upcoming Events</h3>

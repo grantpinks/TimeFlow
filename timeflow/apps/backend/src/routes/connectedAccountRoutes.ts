@@ -21,6 +21,12 @@ export async function registerConnectedAccountRoutes(server: FastifyInstance) {
     connectedAccountController.patchConnectedCalendar
   );
 
+  server.post(
+    '/connected-accounts/:connectedAccountId/sync',
+    { preHandler: requireAuth },
+    connectedAccountController.resyncConnectedAccount
+  );
+
   server.delete(
     '/connected-accounts/:connectedAccountId',
     { preHandler: requireAuth },

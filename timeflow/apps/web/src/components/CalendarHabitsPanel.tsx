@@ -16,9 +16,9 @@ export function CalendarHabitsPanel({ habits }: CalendarHabitsPanelProps) {
   const activeHabits = habits.filter((h) => h.isActive);
 
   return (
-    <div className="bg-white border-b border-slate-200 overflow-hidden flex-shrink-0">
+    <div className="overflow-hidden flex-shrink-0">
       <div
-        className="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-slate-50/50 transition-colors"
+        className="flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors -mx-1 px-1 py-0.5 rounded-md"
         onClick={() => setExpanded(!expanded)}
       >
         <h3 className="text-sm font-semibold text-slate-800">Habits</h3>

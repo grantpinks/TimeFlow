@@ -779,6 +779,12 @@ export async function patchConnectedCalendar(
   });
 }
 
+export async function resyncConnectedAccount(connectedAccountId: string): Promise<ConnectedAccount> {
+  return request<ConnectedAccount>(`/connected-accounts/${connectedAccountId}/sync`, {
+    method: 'POST',
+  });
+}
+
 export async function disconnectConnectedAccount(connectedAccountId: string): Promise<{ success: boolean }> {
   return request<{ success: boolean }>(`/connected-accounts/${connectedAccountId}`, {
     method: 'DELETE',

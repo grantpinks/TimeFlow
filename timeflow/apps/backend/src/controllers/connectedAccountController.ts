@@ -19,7 +19,11 @@ const patchConnectedCalendarSchema = z
   .object({
     visible: z.boolean().optional(),
     listedInSidebar: z.boolean().optional(),
-    color: z.string().nullable().optional(),
+    color: z
+      .string()
+      .regex(/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/, 'Color must be a hex value like #3B82F6')
+      .nullable()
+      .optional(),
     useForAvailability: z.boolean().optional(),
   })
   .refine(
@@ -99,6 +103,33 @@ export async function patchConnectedCalendar(
       return reply.status(404).send({ error: error.message });
     }
     return reply.status(500).send({ error: 'Failed to update connected calendar' });
+  }
+}
+
+export async function resyncConnectedAccount(
+  request: FastifyRequest<{ Params: { connectedAccountId: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) return reply.status(401).send({ error: 'Not authenticated' });
+
+  try {
+    return await connectedAccountService.resyncConnectedAccount(
+      user.id,
+      request.params.connectedAccountId
+    );
+  } catch (error) {
+    request.log.error(error, 'Failed to resync connected account');
+    if (error instanceof Error && error.message === 'Connected account not found') {
+      return reply.status(404).send({ error: error.message });
+    }
+    if (
+      error instanceof Error &&
+      error.message === connectedAccountService.RESYNC_NOT_AVAILABLE_MESSAGE
+    ) {
+      return reply.status(400).send({ error: error.message });
+    }
+    return reply.status(500).send({ error: 'Failed to resync connected account' });
   }
 }
 
