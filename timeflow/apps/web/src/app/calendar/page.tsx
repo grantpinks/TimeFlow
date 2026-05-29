@@ -23,6 +23,12 @@ import { TaskSchedulePreview } from '@/components/TaskSchedulePreview';
 import { CalendarFiltersPopover } from '@/components/CalendarFiltersPopover';
 import { SchedulePreviewOverlay } from '@/components/calendar/SchedulePreviewOverlay';
 import { ConnectedCalendarsPanel } from '@/components/calendar/ConnectedCalendarsPanel';
+import { CalendarConnectBanner } from '@/components/calendar/CalendarConnectBanner';
+import {
+  isConnectBannerDismissed,
+  setConnectBannerDismissed,
+} from '@/lib/calendarSidebarPrefs';
+import { isValidCalendarColor } from '@/lib/calendarColorPresets';
 import { Button, Input, Select, Textarea, Label, LoadingSpinner } from '@/components/ui';
 import { FlowMascot } from '@/components/FlowMascot';
 import Link from 'next/link';
@@ -80,6 +86,7 @@ export default function CalendarPage() {
   const [eventsLoading, setEventsLoading] = useState(true);
   const [connectedAccounts, setConnectedAccounts] = useState<api.ConnectedAccount[]>([]);
   const [connectedAccountsLoading, setConnectedAccountsLoading] = useState(true);
+  const [connectBannerDismissed, setConnectBannerDismissedState] = useState(false);
   const [eventCategorizations, setEventCategorizations] = useState<Record<string, api.EventCategorization>>({});
   const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
   const [scheduling, setScheduling] = useState(false);
@@ -564,6 +571,57 @@ export default function CalendarPage() {
         setMessage({
           type: 'error',
           text: err instanceof Error ? err.message : 'Failed to update calendar list',
+        });
+      }
+    },
+    [fetchConnectedAccounts, fetchExternalEvents]
+  );
+
+  useEffect(() => {
+    setConnectBannerDismissedState(isConnectBannerDismissed());
+  }, []);
+
+  const handleSetCalendarColor = useCallback(
+    async (connectedCalendarId: string, color: string) => {
+      if (!isValidCalendarColor(color)) return;
+
+      setConnectedAccounts((prev) =>
+        prev.map((account) => ({
+          ...account,
+          calendars: account.calendars.map((calendar) =>
+            calendar.id === connectedCalendarId ? { ...calendar, color } : calendar
+          ),
+        }))
+      );
+
+      try {
+        await api.patchConnectedCalendar(connectedCalendarId, { color });
+        await fetchExternalEvents();
+      } catch (err) {
+        await fetchConnectedAccounts();
+        setMessage({
+          type: 'error',
+          text: err instanceof Error ? err.message : 'Failed to update calendar color',
+        });
+      }
+    },
+    [fetchConnectedAccounts, fetchExternalEvents]
+  );
+
+  const handleResyncConnectedAccount = useCallback(
+    async (connectedAccountId: string) => {
+      try {
+        const updated = await api.resyncConnectedAccount(connectedAccountId);
+        setConnectedAccounts((prev) =>
+          prev.map((account) => (account.id === connectedAccountId ? updated : account))
+        );
+        await fetchExternalEvents();
+        setMessage({ type: 'success', text: 'Calendars synced' });
+      } catch (err) {
+        await fetchConnectedAccounts();
+        setMessage({
+          type: 'error',
+          text: err instanceof Error ? err.message : 'Failed to sync calendars',
         });
       }
     },
@@ -1100,6 +1158,9 @@ export default function CalendarPage() {
     };
   };
 
+  // Track where user grabbed the event (cursor offset from event top)
+  const dragCursorOffsetRef = useRef<number>(0);
+
   const getDropWindowFromDrag = (active: any, over: any) => {
     const slotStart = over?.data?.current?.slotStart as Date | undefined;
     if (!slotStart) return null;
@@ -1107,9 +1168,14 @@ export default function CalendarPage() {
     const details = getActiveDragDetails(active);
     if (!details) return null;
 
+    // Apply cursor offset to get accurate drop position
+    // User grabbed event at cursor offset, so adjust slot start by that offset
+    const cursorOffsetMs = dragCursorOffsetRef.current;
+    const adjustedStart = new Date(slotStart.getTime() + cursorOffsetMs);
+
     return {
       details,
-      window: buildDropWindow(slotStart, details.durationMinutes),
+      window: buildDropWindow(adjustedStart, details.durationMinutes),
     };
   };
 
@@ -1117,6 +1183,29 @@ export default function CalendarPage() {
     if (typeof document !== 'undefined') {
       document.body.classList.add('calendar-dnd-active');
     }
+
+    // Calculate cursor offset from event top for accurate drop positioning
+    try {
+      const activeElement = event.active?.rect?.current?.translated;
+      const activatorEvent = event.activatorEvent;
+
+      if (activeElement && activatorEvent && 'clientY' in activatorEvent) {
+        const eventTop = activeElement.top;
+        const cursorY = activatorEvent.clientY;
+        const offsetPixels = cursorY - eventTop;
+
+        // Convert pixel offset to time offset
+        // Assuming roughly 2 pixels per minute (standard calendar density)
+        const offsetMinutes = Math.max(0, offsetPixels / 2);
+        dragCursorOffsetRef.current = -(offsetMinutes * 60 * 1000); // Convert to negative ms
+      } else {
+        dragCursorOffsetRef.current = 0;
+      }
+    } catch (error) {
+      console.warn('Could not calculate drag cursor offset:', error);
+      dragCursorOffsetRef.current = 0;
+    }
+
     const activeData = event.active?.data?.current;
     const cal = activeData?.calendarEvent as
       | {
@@ -1554,49 +1643,67 @@ export default function CalendarPage() {
         >
           <div className="grid grid-cols-12 flex-1 overflow-hidden bg-slate-50">
             {/* Left Rail - Unified Sidebar Panel */}
-            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex flex-col h-full overflow-y-auto bg-white">
-              <div className="p-4 space-y-6 calendar-sidebar-overrides">
-                <div>
-                  <MiniCalendar
-                    events={filteredExternalEvents}
-                    tasks={tasks}
-                    selectedDate={calendarDate}
-                    onDateClick={setCalendarDate}
-                  />
-                </div>
+            <div className="col-span-12 lg:col-span-2 xl:col-span-2 flex h-full flex-col overflow-y-auto border-r border-slate-100 bg-white">
+              <div className="p-3">
+                <MiniCalendar
+                  events={filteredExternalEvents}
+                  tasks={tasks}
+                  selectedDate={calendarDate}
+                  onDateClick={setCalendarDate}
+                />
+              </div>
 
-                <div className="border-t border-slate-100 pt-6">
+              <CalendarConnectBanner
+                accounts={connectedAccounts}
+                dismissed={connectBannerDismissed}
+                onDismiss={() => {
+                  setConnectBannerDismissed(true);
+                  setConnectBannerDismissedState(true);
+                }}
+              />
+
+              <div className="flex flex-col divide-y divide-slate-100 border-t border-slate-100">
+                <section className="px-3 py-2">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-slate-900">My calendars</h3>
+                    <Link
+                      href="/settings"
+                      className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                    >
+                      Manage
+                    </Link>
+                  </div>
                   <ConnectedCalendarsPanel
                     accounts={connectedAccounts}
                     loading={connectedAccountsLoading}
                     onToggleCalendar={handleToggleConnectedCalendar}
                     onSetListedInSidebar={handleSetListedInSidebar}
+                    onSetCalendarColor={handleSetCalendarColor}
+                    onResyncAccount={handleResyncConnectedAccount}
                   />
-                </div>
+                </section>
 
-                <div className="border-t border-slate-100 pt-6">
+                <section className="px-3 py-2">
                   <TimeBreakdown tasks={tasks.filter((t) => t.status === 'scheduled')} />
-                </div>
+                </section>
 
-                <div className="border-t border-slate-100 pt-6">
+                <section className="px-3 py-2">
                   <UpcomingEventsPanel events={filteredExternalEvents} />
-                </div>
+                </section>
 
-                <div className="border-t border-slate-100 pt-6">
+                <section className="px-3 py-2">
                   <UnscheduledTasksPanel
                     tasks={unscheduledTasks}
                     onCompleteTask={handleCompleteTaskById}
                     onDeleteTask={handleDeleteTaskById}
                   />
-                </div>
+                </section>
 
-                <div className="border-t border-slate-100 pt-6">
+                <section className="px-3 py-2">
                   <CalendarHabitsPanel habits={habits} />
-                </div>
+                </section>
 
-                <div className="border-t border-slate-100 pt-6">
-                  <MeetingManagementPanel />
-                </div>
+                <MeetingManagementPanel />
               </div>
             </div>
 
@@ -1619,6 +1726,7 @@ export default function CalendarPage() {
                   scheduledHabitInstances={scheduledHabitInstances}
                   selectedDate={calendarDate}
                   dropPreview={activeDropPreview}
+                  isDraggingActive={!!(activeDragTask || activeDragHabit)}
                   onRescheduleTask={handleRescheduleTask}
                   onResizeEvent={handleResizeTask}
                   onCompleteTask={handleCompleteTaskById}

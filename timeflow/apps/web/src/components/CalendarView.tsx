@@ -62,6 +62,7 @@ interface CalendarViewProps {
   scheduledHabitInstances?: Array<{ scheduledHabitId: string; habitId: string }>;
   selectedDate?: Date;
   dropPreview?: CalendarDropPreview | null;
+  isDraggingActive?: boolean; // Disable animations during drag for better performance
   onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void;
   onSelectEvent?: (event: CalendarEventItem) => void;
   onRescheduleTask?: (taskId: string, start: Date, end: Date) => Promise<void>;
@@ -115,6 +116,7 @@ export function CalendarView({
   scheduledHabitInstances,
   selectedDate,
   dropPreview,
+  isDraggingActive = false,
   onSelectSlot,
   onSelectEvent,
   onRescheduleTask,
@@ -445,7 +447,7 @@ export function CalendarView({
             event: (props) => (
               <DraggableEvent
                 event={props.event as CalendarEventItem}
-                prefersReducedMotion={prefersReducedMotion}
+                prefersReducedMotion={prefersReducedMotion || isDraggingActive}
                 onResize={onResizeEvent}
                 onCompleteTask={onCompleteTask}
                 onCompleteHabit={onCompleteHabit}
