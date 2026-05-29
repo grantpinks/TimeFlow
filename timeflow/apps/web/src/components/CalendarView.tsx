@@ -435,7 +435,7 @@ export function CalendarView({
           onView={handleViewChange}
           views={['week', 'day', 'month']}
           dayLayoutAlgorithm="no-overlap"
-          selectable
+          selectable={!isDraggingActive}
           onSelectSlot={onSelectSlot}
           onSelectEvent={handleEventClick}
           eventPropGetter={eventStyleGetter}
@@ -517,10 +517,10 @@ function DroppableSlot({
   return (
     <div
       ref={setNodeRef}
-      className={`${isOver || dropPreview ? 'bg-primary-50/70 ring-2 ring-primary-200 rounded-sm' : ''} transition-colors relative h-full`}
+      className={`${dropPreview ? 'bg-primary-50/70 ring-2 ring-primary-200 rounded-sm' : ''} transition-colors relative h-full`}
     >
       {children}
-      {(isOver || dropPreview) && (
+      {dropPreview && (
         <div className="pointer-events-none absolute inset-0 border border-dashed border-primary-300 rounded-sm" />
       )}
       {dropPreview && (
@@ -590,6 +590,20 @@ function DraggableEvent({
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
+  const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing;
+
+  // Debug non-draggable events
+  if (!event.isTask && !event.isHabit && event.sourceType) {
+    console.log('[CalendarView] Non-draggable event:', {
+      title: event.title,
+      sourceType: event.sourceType,
+      isTask: event.isTask,
+      isHabit: event.isHabit,
+      scheduledHabitId: event.scheduledHabitId,
+      taskId: event.taskId,
+    });
+  }
+
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: {
@@ -609,7 +623,7 @@ function DraggableEvent({
         categoryColor: event.categoryColor,
       },
     },
-    disabled: (!event.isTask && !event.isHabit) || isResizing,
+    disabled: isDragDisabled,
   });
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
