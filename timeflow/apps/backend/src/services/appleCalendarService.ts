@@ -32,10 +32,60 @@ export function parseCalendarHomeUrl(xml: string): string | null {
   }
 }
 
+function readDisplayName(prop: Record<string, unknown> | undefined): string | null {
+  const raw = prop?.displayname ?? prop?.displayName;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (raw && typeof raw === 'object' && '#text' in raw) {
+    const trimmed = String((raw as { '#text': string })['#text']).trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  return null;
+}
+
+function isCalendarResourceType(resourcetype: unknown): boolean {
+  if (!resourcetype || typeof resourcetype !== 'object') return false;
+  const rt = resourcetype as Record<string, unknown>;
+  // iCloud often returns empty-string child elements for collection/calendar tags.
+  return 'calendar' in rt || 'cal:calendar' in rt || 'C:calendar' in rt;
+}
+
+function getSuccessfulProp(response: Record<string, unknown>): Record<string, unknown> | undefined {
+  const propstats = response.propstat;
+  const propstatArray = Array.isArray(propstats) ? propstats : propstats ? [propstats] : [];
+
+  for (const propstat of propstatArray) {
+    const status = String((propstat as { status?: string })?.status ?? '');
+    if (status.includes('200')) {
+      return (propstat as { prop?: Record<string, unknown> }).prop;
+    }
+  }
+
+  const first = propstatArray[0] as { prop?: Record<string, unknown> } | undefined;
+  return first?.prop;
+}
+
+export function resolveCalDavUrl(href: string, baseUrl: string): string {
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const resolved = new URL(href, normalizedBase).toString();
+  return resolved.endsWith('/') ? resolved : `${resolved}/`;
+}
+
+function displayNameFromHref(href: string): string {
+  const trimmed = href.replace(/\/$/, '');
+  const segment = trimmed.split('/').filter(Boolean).pop();
+  return segment || 'Calendar';
+}
+
 /**
  * Parse calendars list from CalDAV PROPFIND response
  */
-export function parseCalendarsList(xml: string): Array<{ displayName: string; url: string }> {
+export function parseCalendarsList(
+  xml: string,
+  baseUrl: string = DEFAULT_BASE_URL
+): Array<{ displayName: string; url: string }> {
   const parser = new XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
@@ -43,6 +93,7 @@ export function parseCalendarsList(xml: string): Array<{ displayName: string; ur
 
   const result = parser.parse(xml);
   const calendars: Array<{ displayName: string; url: string }> = [];
+  const seen = new Set<string>();
 
   try {
     const responses = result.multistatus?.response;
@@ -51,22 +102,18 @@ export function parseCalendarsList(xml: string): Array<{ displayName: string; ur
     for (const response of responseArray) {
       if (!response) continue;
 
-      const href = response.href;
-      const propstat = Array.isArray(response.propstat) ? response.propstat[0] : response.propstat;
-      const prop = propstat?.prop;
+      const href = typeof response.href === 'string' ? response.href : null;
+      if (!href) continue;
 
-      const isCalendar =
-        prop?.resourcetype?.calendar ||
-        prop?.resourcetype?.['cal:calendar'] ||
-        prop?.resourcetype?.['C:calendar'] ||
-        prop?.resourcetype;
+      const prop = getSuccessfulProp(response as Record<string, unknown>);
+      if (!prop || !isCalendarResourceType(prop.resourcetype)) continue;
 
-      if (isCalendar && prop?.displayname) {
-        calendars.push({
-          displayName: prop.displayname,
-          url: href,
-        });
-      }
+      const displayName = readDisplayName(prop) ?? displayNameFromHref(href);
+      const url = resolveCalDavUrl(href, baseUrl);
+      if (seen.has(url)) continue;
+      seen.add(url);
+
+      calendars.push({ displayName, url });
     }
   } catch (error) {
     // Return empty array on parse error
@@ -142,11 +189,12 @@ type AppleAccountContext = {
   calendarHomeUrl: string | null;
 };
 
-async function discoverAccountMetadata(email: string, appPassword: string): Promise<{
-  principalUrl: string | null;
-  calendarHomeUrl: string | null;
-}> {
-  const baseUrl = DEFAULT_BASE_URL;
+async function propfindPrincipalAndHome(
+  email: string,
+  appPassword: string,
+  baseUrl: string,
+  targetUrl: string
+): Promise<{ principalUrl: string | null; calendarHomeUrl: string | null }> {
   const authHeader = buildAuthHeader(email, appPassword);
   const propfindBody = `<?xml version="1.0" encoding="utf-8" ?>
   <d:propfind xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
@@ -156,7 +204,7 @@ async function discoverAccountMetadata(email: string, appPassword: string): Prom
     </d:prop>
   </d:propfind>`;
 
-  const response = await caldavRequest(`${baseUrl}/`, {
+  const response = await caldavRequest(targetUrl, {
     method: 'PROPFIND',
     headers: {
       Authorization: authHeader,
@@ -180,12 +228,57 @@ async function discoverAccountMetadata(email: string, appPassword: string): Prom
     const responseNode = result.multistatus?.response;
     const propstat = Array.isArray(responseNode) ? responseNode[0]?.propstat : responseNode?.propstat;
     const prop = Array.isArray(propstat) ? propstat[0]?.prop : propstat?.prop;
-    principalUrl = prop?.['current-user-principal']?.href ?? null;
+    const principalHref = prop?.['current-user-principal']?.href;
+    principalUrl =
+      typeof principalHref === 'string'
+        ? resolveCalDavUrl(principalHref, baseUrl)
+        : null;
+    if (calendarHomeUrl) {
+      calendarHomeUrl = resolveCalDavUrl(calendarHomeUrl, baseUrl);
+    }
   } catch (error) {
     principalUrl = null;
   }
 
   return { principalUrl, calendarHomeUrl };
+}
+
+async function discoverAccountMetadata(email: string, appPassword: string): Promise<{
+  principalUrl: string | null;
+  calendarHomeUrl: string | null;
+  baseUrl: string;
+}> {
+  let baseUrl = DEFAULT_BASE_URL;
+  const rootUrl = resolveCalDavUrl('/', baseUrl);
+
+  let { principalUrl, calendarHomeUrl } = await propfindPrincipalAndHome(
+    email,
+    appPassword,
+    baseUrl,
+    rootUrl
+  );
+
+  // iCloud (and many servers) only expose calendar-home-set on the principal resource.
+  if (!calendarHomeUrl && principalUrl) {
+    const principalBase = new URL(principalUrl).origin;
+    const onPrincipal = await propfindPrincipalAndHome(
+      email,
+      appPassword,
+      principalBase,
+      principalUrl
+    );
+    calendarHomeUrl = onPrincipal.calendarHomeUrl;
+    if (!principalUrl && onPrincipal.principalUrl) {
+      principalUrl = onPrincipal.principalUrl;
+    }
+  }
+
+  if (calendarHomeUrl) {
+    baseUrl = new URL(calendarHomeUrl).origin;
+    calendarHomeUrl = resolveCalDavUrl(calendarHomeUrl, baseUrl);
+  }
+
+  return { principalUrl, calendarHomeUrl, baseUrl };
 }
 
 async function resolveAppleContext(
@@ -251,7 +344,7 @@ export async function discoverAccount(
   email: string,
   appPassword: string
 ): Promise<{ principalUrl: string | null; calendarHomeUrl: string | null }> {
-  const { principalUrl, calendarHomeUrl } = await discoverAccountMetadata(email, appPassword);
+  const { principalUrl, calendarHomeUrl, baseUrl } = await discoverAccountMetadata(email, appPassword);
 
   const encrypted = encryptPassword(appPassword);
 
@@ -268,6 +361,7 @@ export async function discoverAccount(
     update: {
       email,
       appPasswordEncrypted: encrypted,
+      baseUrl,
       principalUrl,
       calendarHomeUrl,
     },
@@ -284,7 +378,7 @@ export async function discoverConnectedAccount(
   email: string,
   appPassword: string
 ): Promise<{ principalUrl: string | null; calendarHomeUrl: string | null; encryptedPassword: string }> {
-  const { principalUrl, calendarHomeUrl } = await discoverAccountMetadata(email, appPassword);
+  const { principalUrl, calendarHomeUrl, baseUrl } = await discoverAccountMetadata(email, appPassword);
   const encryptedPassword = encryptPassword(appPassword);
 
   await prisma.connectedAccount.upsert({
@@ -297,7 +391,7 @@ export async function discoverConnectedAccount(
     },
     update: {
       email,
-      caldavBaseUrl: DEFAULT_BASE_URL,
+      caldavBaseUrl: baseUrl,
       caldavPrincipalUrl: principalUrl,
       caldavCalendarHomeUrl: calendarHomeUrl,
       caldavAppPasswordEncrypted: encryptedPassword,
@@ -311,7 +405,7 @@ export async function discoverConnectedAccount(
       provider: ConnectedAccountProvider.apple_caldav,
       providerAccountId: email.toLowerCase(),
       email,
-      caldavBaseUrl: DEFAULT_BASE_URL,
+      caldavBaseUrl: baseUrl,
       caldavPrincipalUrl: principalUrl,
       caldavCalendarHomeUrl: calendarHomeUrl,
       caldavAppPasswordEncrypted: encryptedPassword,
@@ -320,6 +414,42 @@ export async function discoverConnectedAccount(
   });
 
   return { principalUrl, calendarHomeUrl, encryptedPassword };
+}
+
+export async function refreshConnectedAccountDiscovery(
+  userId: string,
+  connectedAccountId: string
+): Promise<{ principalUrl: string | null; calendarHomeUrl: string | null }> {
+  const account = await prisma.connectedAccount.findFirst({
+    where: {
+      id: connectedAccountId,
+      userId,
+      provider: ConnectedAccountProvider.apple_caldav,
+    },
+  });
+  if (!account?.caldavAppPasswordEncrypted) {
+    throw new Error('Apple Calendar account not found');
+  }
+
+  const appPassword = decryptPassword(account.caldavAppPasswordEncrypted);
+  const { principalUrl, calendarHomeUrl, baseUrl } = await discoverAccountMetadata(
+    account.email,
+    appPassword
+  );
+
+  await prisma.connectedAccount.update({
+    where: { id: account.id },
+    data: {
+      caldavBaseUrl: baseUrl,
+      caldavPrincipalUrl: principalUrl,
+      caldavCalendarHomeUrl: calendarHomeUrl,
+      lastSuccessAt: new Date(),
+      lastErrorAt: null,
+      lastErrorMessage: null,
+    },
+  });
+
+  return { principalUrl, calendarHomeUrl };
 }
 
 /**
@@ -348,10 +478,10 @@ export function parseIcsEvent(ics: string): {
   let transp = 'OPAQUE';
 
   for (const line of lines) {
-    if (line.startsWith('DTSTART:')) {
-      dtstart = line.substring('DTSTART:'.length);
-    } else if (line.startsWith('DTEND:')) {
-      dtend = line.substring('DTEND:'.length);
+    if (line.startsWith('DTSTART')) {
+      dtstart = line.includes(':') ? line.substring(line.indexOf(':') + 1) : '';
+    } else if (line.startsWith('DTEND')) {
+      dtend = line.includes(':') ? line.substring(line.indexOf(':') + 1) : '';
     } else if (line.startsWith('SUMMARY:')) {
       summary = line.substring('SUMMARY:'.length);
     } else if (line.startsWith('TRANSP:')) {
@@ -426,6 +556,73 @@ export function parseIcsEvents(icsData: string): Array<{
 }
 
 /**
+ * Extract ICS payloads from a CalDAV REPORT multistatus response.
+ */
+export function parseCalDavReportEvents(xmlOrIcs: string): Array<{
+  start: string;
+  end: string;
+  summary?: string;
+  transparency?: 'opaque' | 'transparent';
+}> {
+  if (xmlOrIcs.includes('BEGIN:VEVENT') && !xmlOrIcs.includes('<multistatus')) {
+    return parseIcsEvents(xmlOrIcs);
+  }
+
+  if (!xmlOrIcs.includes('calendar-data') && !xmlOrIcs.includes('multistatus')) {
+    return parseIcsEvents(xmlOrIcs);
+  }
+
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    removeNSPrefix: true,
+  });
+
+  const events: Array<{
+    start: string;
+    end: string;
+    summary?: string;
+    transparency?: 'opaque' | 'transparent';
+  }> = [];
+
+  const collectCalendarData = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return;
+
+    if (Array.isArray(node)) {
+      for (const item of node) collectCalendarData(item);
+      return;
+    }
+
+    const record = node as Record<string, unknown>;
+    for (const [key, value] of Object.entries(record)) {
+      if (key === 'calendar-data' || key.endsWith(':calendar-data')) {
+        const ics =
+          typeof value === 'string'
+            ? value
+            : value && typeof value === 'object' && '#text' in value
+              ? String((value as { '#text': string })['#text'])
+              : null;
+        if (ics) {
+          for (const parsed of parseIcsEvents(ics)) {
+            if (parsed.start && parsed.end) events.push(parsed);
+          }
+        }
+        continue;
+      }
+      collectCalendarData(value);
+    }
+  };
+
+  try {
+    const parsed = parser.parse(xmlOrIcs);
+    collectCalendarData(parsed);
+  } catch (error) {
+    return parseIcsEvents(xmlOrIcs);
+  }
+
+  return events;
+}
+
+/**
  * List calendars for user
  */
 export async function listCalendars(
@@ -433,12 +630,24 @@ export async function listCalendars(
   connectedAccountId?: string
 ): Promise<Array<{ displayName: string; url: string }>> {
   const account = await resolveAppleContext(userId, undefined, connectedAccountId);
-  if (!account || !account.calendarHomeUrl) {
+  if (!account) {
+    return [];
+  }
+
+  let calendarHomeUrl = account.calendarHomeUrl;
+  const baseUrl = account.baseUrl || DEFAULT_BASE_URL;
+
+  if (!calendarHomeUrl && connectedAccountId) {
+    const refreshed = await refreshConnectedAccountDiscovery(userId, connectedAccountId);
+    calendarHomeUrl = refreshed.calendarHomeUrl;
+  }
+
+  if (!calendarHomeUrl) {
     return [];
   }
 
   const authHeader = buildAuthHeader(account.email, decryptPassword(account.appPasswordEncrypted));
-  const targetUrl = new URL(account.calendarHomeUrl, account.baseUrl || DEFAULT_BASE_URL).toString();
+  const targetUrl = resolveCalDavUrl(calendarHomeUrl, baseUrl);
 
   const response = await caldavRequest(targetUrl, {
     method: 'PROPFIND',
@@ -448,7 +657,7 @@ export async function listCalendars(
       'Content-Type': 'application/xml',
     },
     body: `<?xml version="1.0" encoding="utf-8" ?>
-    <d:propfind xmlns:d="DAV:">
+    <d:propfind xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav">
       <d:prop>
         <d:displayname/>
         <d:resourcetype/>
@@ -457,7 +666,7 @@ export async function listCalendars(
   });
 
   const xml = await response.text();
-  return parseCalendarsList(xml);
+  return parseCalendarsList(xml, new URL(targetUrl).origin);
 }
 
 /**
@@ -478,7 +687,7 @@ export async function getEvents(
   if (!account) return [];
   const authHeader = buildAuthHeader(account.email, decryptPassword(account.appPasswordEncrypted));
 
-  const url = new URL(calendarUrl, account.baseUrl || DEFAULT_BASE_URL).toString();
+  const url = resolveCalDavUrl(calendarUrl, account.baseUrl || DEFAULT_BASE_URL);
   const body = `<?xml version="1.0" encoding="UTF-8"?>
   <c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav">
     <d:prop>
@@ -505,7 +714,7 @@ export async function getEvents(
   });
 
   const data = await response.text();
-  return parseIcsEvents(data);
+  return parseCalDavReportEvents(data);
 }
 
 /**
@@ -542,7 +751,7 @@ TRANSP:${event.transparency === 'transparent' ? 'TRANSPARENT' : 'OPAQUE'}
 END:VEVENT
 END:VCALENDAR`;
 
-  await caldavRequest(new URL(eventUrl, account.baseUrl || DEFAULT_BASE_URL).toString(), {
+  await caldavRequest(resolveCalDavUrl(eventUrl, account.baseUrl || DEFAULT_BASE_URL), {
     method: 'PUT',
     headers: {
       Authorization: authHeader,
@@ -586,7 +795,7 @@ ${event.transparency ? `TRANSP:${event.transparency === 'transparent' ? 'TRANSPA
 END:VEVENT
 END:VCALENDAR`;
 
-  await caldavRequest(new URL(eventUrl, account.baseUrl || DEFAULT_BASE_URL).toString(), {
+  await caldavRequest(resolveCalDavUrl(eventUrl, account.baseUrl || DEFAULT_BASE_URL), {
     method: 'PUT',
     headers: {
       Authorization: authHeader,
@@ -617,7 +826,7 @@ STATUS:CANCELLED
 END:VEVENT
 END:VCALENDAR`;
 
-  await caldavRequest(new URL(eventUrl, account.baseUrl || DEFAULT_BASE_URL).toString(), {
+  await caldavRequest(resolveCalDavUrl(eventUrl, account.baseUrl || DEFAULT_BASE_URL), {
     method: 'PUT',
     headers: {
       Authorization: authHeader,

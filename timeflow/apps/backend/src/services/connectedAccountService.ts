@@ -63,6 +63,39 @@ async function ensureGoogleBackfill(userId: string): Promise<void> {
   await getPrimaryGoogleAccount(userId);
 }
 
+async function syncAppleCalendarsForAccount(userId: string, accountId: string): Promise<void> {
+  const account = await prisma.connectedAccount.findUnique({ where: { id: accountId } });
+  if (!account || account.userId !== userId || account.provider !== ConnectedAccountProvider.apple_caldav) {
+    throw new Error('Cannot sync calendars for non-Apple account');
+  }
+
+  if (!account.caldavCalendarHomeUrl) {
+    await appleCalendarService.refreshConnectedAccountDiscovery(userId, accountId);
+  }
+
+  const calendars = await appleCalendarService.listCalendars(userId, accountId);
+  await Promise.all(
+    calendars.map((cal) =>
+      prisma.connectedCalendar.upsert({
+        where: {
+          connectedAccountId_externalCalendarId: {
+            connectedAccountId: accountId,
+            externalCalendarId: cal.url,
+          },
+        },
+        update: { name: cal.displayName, visible: true, useForAvailability: true },
+        create: {
+          connectedAccountId: accountId,
+          externalCalendarId: cal.url,
+          name: cal.displayName,
+          visible: true,
+          useForAvailability: true,
+        },
+      })
+    )
+  );
+}
+
 async function syncGoogleCalendarsForAccount(userId: string, accountId: string): Promise<void> {
   const account = await prisma.connectedAccount.findUnique({ where: { id: accountId } });
   if (!account || account.userId !== userId || account.provider !== ConnectedAccountProvider.google) {
@@ -177,6 +210,22 @@ export async function listConnectedAccounts(userId: string): Promise<ConnectedAc
     }
   }
 
+  const appleAccounts = await prisma.connectedAccount.findMany({
+    where: { userId, provider: ConnectedAccountProvider.apple_caldav },
+  });
+  for (const apple of appleAccounts) {
+    const count = await prisma.connectedCalendar.count({
+      where: { connectedAccountId: apple.id },
+    });
+    if (count === 0) {
+      try {
+        await syncAppleCalendarsForAccount(userId, apple.id);
+      } catch (error) {
+        console.error('[ConnectedAccount] Apple calendar sync failed:', error);
+      }
+    }
+  }
+
   const accounts = await prisma.connectedAccount.findMany({
     where: { userId },
     include: {
@@ -202,27 +251,11 @@ export async function connectIcloudAccount(userId: string, email: string, appPas
     },
   });
 
-  const calendars = await appleCalendarService.listCalendars(userId, account.id);
-  await Promise.all(
-    calendars.map((cal) =>
-      prisma.connectedCalendar.upsert({
-        where: {
-          connectedAccountId_externalCalendarId: {
-            connectedAccountId: account.id,
-            externalCalendarId: cal.url,
-          },
-        },
-        update: { name: cal.displayName, visible: true, useForAvailability: true },
-        create: {
-          connectedAccountId: account.id,
-          externalCalendarId: cal.url,
-          name: cal.displayName,
-          visible: true,
-          useForAvailability: true,
-        },
-      })
-    )
-  );
+  await syncAppleCalendarsForAccount(userId, account.id);
+
+  const accountAfterSync = await prisma.connectedAccount.findUniqueOrThrow({
+    where: { id: account.id },
+  });
 
   // Keep legacy Apple row in sync as a compatibility bridge.
   await prisma.appleCalendarAccount.upsert({
@@ -230,7 +263,7 @@ export async function connectIcloudAccount(userId: string, email: string, appPas
     update: {
       email,
       appPasswordEncrypted: discovered.encryptedPassword,
-      baseUrl: 'https://caldav.icloud.com',
+      baseUrl: accountAfterSync.caldavBaseUrl || 'https://caldav.icloud.com',
       principalUrl: discovered.principalUrl,
       calendarHomeUrl: discovered.calendarHomeUrl,
     },
@@ -238,7 +271,7 @@ export async function connectIcloudAccount(userId: string, email: string, appPas
       userId,
       email,
       appPasswordEncrypted: discovered.encryptedPassword,
-      baseUrl: 'https://caldav.icloud.com',
+      baseUrl: accountAfterSync.caldavBaseUrl || 'https://caldav.icloud.com',
       principalUrl: discovered.principalUrl,
       calendarHomeUrl: discovered.calendarHomeUrl,
     },

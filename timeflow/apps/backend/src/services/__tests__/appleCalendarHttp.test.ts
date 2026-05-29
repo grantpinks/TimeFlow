@@ -14,6 +14,12 @@ vi.mock('../../config/prisma.js', () => ({
       upsert: vi.fn(),
       findUnique: vi.fn(),
     },
+    connectedAccount: {
+      findFirst: vi.fn(),
+    },
+    connectedCalendar: {
+      findFirst: vi.fn(),
+    },
   },
 }));
 
@@ -58,11 +64,13 @@ describe('appleCalendarService HTTP', () => {
       expect.objectContaining({ method: 'PROPFIND' })
     );
     expect(prisma.appleCalendarAccount.upsert).toHaveBeenCalled();
-    expect(result.principalUrl).toBe('/principal/user/');
-    expect(result.calendarHomeUrl).toBe('/calendars/user/');
+    expect(result.principalUrl).toBe('https://caldav.icloud.com/principal/user/');
+    expect(result.calendarHomeUrl).toBe('https://caldav.icloud.com/calendars/user/');
   });
 
   it('lists calendars via PROPFIND', async () => {
+    (prisma.connectedAccount.findFirst as any).mockResolvedValue(null);
+    (prisma.connectedCalendar.findFirst as any).mockResolvedValue(null);
     (prisma.appleCalendarAccount.findUnique as any).mockResolvedValue({
       userId: 'user1',
       email: 'user@example.com',
@@ -94,10 +102,13 @@ describe('appleCalendarService HTTP', () => {
 
     const calendars = await listCalendars('user1');
     expect(fetchMock).toHaveBeenCalled();
-    expect(calendars).toEqual([{ displayName: 'Personal', url: '/calendars/user/personal/' }]);
+    expect(calendars).toEqual([
+      { displayName: 'Personal', url: 'https://caldav.icloud.com/calendars/user/personal/' },
+    ]);
   });
 
   it('parses events from REPORT response', async () => {
+    (prisma.connectedCalendar.findFirst as any).mockResolvedValue(null);
     (prisma.appleCalendarAccount.findUnique as any).mockResolvedValue({
       userId: 'user1',
       email: 'user@example.com',
@@ -141,6 +152,7 @@ END:VEVENT`;
   });
 
   it('creates and cancels events with correct ICS payloads', async () => {
+    (prisma.connectedCalendar.findFirst as any).mockResolvedValue(null);
     (prisma.appleCalendarAccount.findUnique as any).mockResolvedValue({
       userId: 'user1',
       email: 'user@example.com',
