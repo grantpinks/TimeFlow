@@ -26,14 +26,14 @@ function readOAuthCallbackParams(): {
 
 /** Only allow same-origin relative return paths from OAuth state. */
 function safeReturnPath(state: string | null): string {
-  if (!state) return '/tasks';
+  if (!state) return '/today';
   if (state.startsWith('/') && !state.startsWith('//')) return state;
-  return '/tasks';
+  return '/today';
 }
 
 /** Parse OAuth state (plain path or base64url JSON from backend). */
 function parseOAuthReturnPath(state: string | null): string {
-  if (!state) return '/tasks';
+  if (!state) return '/today';
   if (state.startsWith('/') && !state.startsWith('//')) {
     return safeReturnPath(state);
   }
