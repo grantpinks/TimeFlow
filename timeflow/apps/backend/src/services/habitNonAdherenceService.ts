@@ -52,7 +52,7 @@ export async function detectMissedHabits(
           priorityRank: true,
         },
       },
-      completions: {
+      completion: {
         select: {
           id: true,
           status: true,
@@ -63,7 +63,7 @@ export async function detectMissedHabits(
 
   // Filter to only those without a completion
   const missed: MissedHabitInstance[] = scheduledHabits
-    .filter((sh) => sh.completions.length === 0)
+    .filter((sh) => !sh.completion)
     .map((sh) => ({
       scheduledHabitId: sh.id,
       habitId: sh.habit.id,
@@ -125,7 +125,7 @@ export async function detectMissedHabitsInRange(
           priorityRank: true,
         },
       },
-      completions: {
+      completion: {
         select: {
           id: true,
           status: true,
@@ -143,7 +143,7 @@ export async function detectMissedHabitsInRange(
   const missed: MissedHabitInstance[] = scheduledHabits
     .filter((sh) => {
       const isPastGracePeriod = sh.endDateTime < gracePeriodCutoff;
-      const hasNoCompletion = sh.completions.length === 0;
+      const hasNoCompletion = !sh.completion;
       return isPastGracePeriod && hasNoCompletion;
     })
     .map((sh) => ({
