@@ -18,6 +18,19 @@ export function GoogleSignInButton({
     track('homepage_cta_clicked', { cta_text: text, location });
   };
 
+  // Check if there's a saved redirect path from auth expiration
+  const getAuthUrl = () => {
+    if (typeof window === 'undefined') return getGoogleAuthUrl();
+
+    const savedPath = sessionStorage.getItem('auth_redirect_path');
+    if (savedPath) {
+      // Clear it so it's only used once
+      sessionStorage.removeItem('auth_redirect_path');
+      return getGoogleAuthUrl(savedPath);
+    }
+    return getGoogleAuthUrl();
+  };
+
   const baseStyles = 'group relative px-8 py-4 min-h-[56px] rounded-xl font-bold text-base sm:text-lg transition-all duration-300 inline-flex items-center justify-center gap-3 shadow-lg hover:shadow-xl active:scale-[0.98]';
 
   const variantStyles = {
@@ -27,7 +40,7 @@ export function GoogleSignInButton({
 
   return (
     <a
-      href={getGoogleAuthUrl()}
+      href={getAuthUrl()}
       onClick={handleClick}
       className={`${baseStyles} ${variantStyles[variant]}`}
     >

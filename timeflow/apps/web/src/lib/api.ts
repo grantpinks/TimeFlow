@@ -229,6 +229,19 @@ async function request<T>(
     if (refreshed) {
       return request<T>(endpoint, options, false);
     }
+    // Refresh failed - redirect to login
+    if (typeof window !== 'undefined') {
+      // Save current path to redirect back after login
+      const returnPath = window.location.pathname + window.location.search;
+      if (returnPath !== '/login') {
+        sessionStorage.setItem('auth_redirect_path', returnPath);
+      }
+      window.location.href = '/login';
+    }
+    // Throw error to prevent further execution while redirect is happening
+    throw new ApiRequestError('Session expired. Redirecting to login...', {
+      status: 401,
+    });
   }
 
   // Handle 429 rate limit with retry-after

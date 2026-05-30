@@ -4,13 +4,23 @@ import { AuthPageLayout } from '@/components/auth/AuthPageLayout';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import Link from 'next/link';
 import { track } from '@/lib/analytics';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
+  const [sessionExpired, setSessionExpired] = useState(false);
+
   useEffect(() => {
     // Track page view - using console for now
     if (typeof window !== 'undefined') {
       console.log('Login page viewed');
+
+      // Check if user was redirected due to session expiration
+      const redirectPath = sessionStorage.getItem('auth_redirect_path');
+      if (redirectPath) {
+        setSessionExpired(true);
+        // Auto-clear after 5 seconds
+        setTimeout(() => setSessionExpired(false), 5000);
+      }
     }
   }, []);
 
@@ -20,6 +30,28 @@ export default function LoginPage() {
       subheading="Sign in to continue organizing your schedule"
     >
       <div className="space-y-6">
+        {/* Session Expired Notice */}
+        {sessionExpired && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+            <svg
+              className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-900">Session Expired</p>
+              <p className="text-sm text-amber-700 mt-1">
+                Your session has expired. Please sign in again to continue.
+              </p>
+            </div>
+          </div>
+        )}
         {/* Google Sign In Button */}
         <div className="flex justify-center">
           <GoogleSignInButton
