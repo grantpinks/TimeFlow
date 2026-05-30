@@ -31,6 +31,14 @@ run_schema_check() {
   fi
 }
 
+run_security_check() {
+  if [ -n "$DIRECT_URL" ]; then
+    DATABASE_URL="$DIRECT_URL" node scripts/verify-db-security.js
+  else
+    node scripts/verify-db-security.js
+  fi
+}
+
 echo "📁 Checking files:"
 ls -lh dist/index.js || echo "❌ dist/index.js not found!"
 echo ""
@@ -49,6 +57,9 @@ run_prisma_cli migrate status
 echo ""
 echo "🔍 Verifying database schema matches deployed code..."
 run_schema_check
+echo ""
+echo "🔒 Verifying database security lockdown..."
+run_security_check
 echo "✅ Migrations complete!"
 echo ""
 echo "▶️  Starting node dist/index.js..."

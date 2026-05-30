@@ -14,6 +14,17 @@ export async function registerAuthRoutes(server: FastifyInstance) {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
   }, authController.startGoogleAuth);
 
+  // Authenticated OAuth URL builders (Gmail incremental + full reconnect)
+  server.post('/auth/google/gmail-url', {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, authController.createGoogleGmailConnectUrl);
+
+  server.post('/auth/google/reconnect-url', {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, authController.createGoogleReconnectUrl);
+
   // Handle Google OAuth callback
   server.get('/auth/google/callback', {
     config: { rateLimit: { max: 30, timeWindow: '1 minute' } },

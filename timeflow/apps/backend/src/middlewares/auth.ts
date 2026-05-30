@@ -67,3 +67,46 @@ export async function requireAuth(
   }
 }
 
+/**
+ * Attach request.user when a valid JWT is present; otherwise continue without auth.
+ */
+export async function optionalAuth(
+  request: FastifyRequest,
+  _reply: FastifyReply
+): Promise<void> {
+  const authHeader = request.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return;
+  }
+
+  try {
+    const token = authHeader.slice(7);
+    const payload = request.server.jwt.verify<{ sub: string; type?: string }>(token);
+
+    if (payload.type && payload.type !== 'access') {
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+    });
+
+    if (!user) {
+      return;
+    }
+
+    request.user = {
+      id: user.id,
+      email: user.email,
+      googleId: user.googleId,
+      timeZone: user.timeZone,
+      wakeTime: user.wakeTime,
+      sleepTime: user.sleepTime,
+      defaultTaskDurationMinutes: user.defaultTaskDurationMinutes,
+      defaultCalendarId: user.defaultCalendarId,
+    };
+  } catch {
+    // Public route — invalid or missing JWT is not an error here.
+  }
+}
+

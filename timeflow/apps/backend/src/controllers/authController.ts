@@ -11,6 +11,7 @@ import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
+import { decodeOAuthState } from '../utils/oauthState.js';
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -40,8 +41,56 @@ export async function startGoogleAuth(
   reply: FastifyReply
 ) {
   const { returnTo } = request.query;
-  const authUrl = authService.getGoogleAuthUrl(returnTo);
+  const authUrl = authService.getGoogleSignInAuthUrl(returnTo);
   return reply.redirect(authUrl);
+}
+
+const connectBodySchema = z.object({
+  returnTo: z.string().optional(),
+});
+
+/**
+ * POST /api/auth/google/gmail-url
+ * Returns OAuth URL to grant Gmail scopes for the current user.
+ */
+export async function createGoogleGmailConnectUrl(
+  request: FastifyRequest<{ Body: { returnTo?: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = connectBodySchema.safeParse(request.body ?? {});
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const url = authService.getGoogleGmailAuthUrl(user.id, parsed.data.returnTo);
+  return { url };
+}
+
+/**
+ * POST /api/auth/google/reconnect-url
+ * Returns OAuth URL to refresh all Google permissions for the current user.
+ */
+export async function createGoogleReconnectUrl(
+  request: FastifyRequest<{ Body: { returnTo?: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = connectBodySchema.safeParse(request.body ?? {});
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const url = authService.getGoogleReconnectAuthUrl(user.id, parsed.data.returnTo);
+  return { url };
 }
 
 /**
@@ -73,7 +122,8 @@ export async function handleGoogleCallback(
   }
 
   try {
-    const user = await authService.handleGoogleCallback(code);
+    const statePayload = decodeOAuthState(state);
+    const user = await authService.handleGoogleCallback(code, statePayload);
 
     // Non-fatal: default categories should not block sign-in
     try {

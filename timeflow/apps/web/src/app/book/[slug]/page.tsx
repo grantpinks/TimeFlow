@@ -33,6 +33,7 @@ export default function BookingPage() {
   // Tokens for post-booking
   const [rescheduleToken, setRescheduleToken] = useState('');
   const [cancelToken, setCancelToken] = useState('');
+  const [viewToken, setViewToken] = useState('');
   const [meetingId, setMeetingId] = useState('');
 
   const fetchAvailability = useCallback(async () => {
@@ -99,6 +100,7 @@ export default function BookingPage() {
       setMeetingId(result.meeting.id);
       setRescheduleToken(result.rescheduleToken);
       setCancelToken(result.cancelToken);
+      setViewToken(result.viewToken);
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to book meeting');
@@ -125,7 +127,7 @@ export default function BookingPage() {
 
   if (success) {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    const calendarDownloadUrl = `${API_BASE}/api/meetings/${meetingId}/calendar`;
+    const calendarDownloadUrl = `${API_BASE}/api/meetings/${meetingId}/calendar?token=${encodeURIComponent(viewToken)}`;
 
     return (
       <>

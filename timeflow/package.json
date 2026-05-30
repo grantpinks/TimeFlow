@@ -25,6 +25,7 @@
     "dev:mobile": "pnpm -C apps/mobile start",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "verify:db-security": "pnpm -C apps/backend verify:db-security",
     "ai:regression": "pnpm -C apps/backend ai:regression",
     "format": "pnpm -r format"
   },

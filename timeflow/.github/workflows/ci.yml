@@ -32,6 +32,9 @@ jobs:
       - name: Run scheduling tests
         run: pnpm -C packages/scheduling test
 
+      - name: Verify database security migration (static)
+        run: pnpm verify:db-security
+
       - name: Lint web app
         run: pnpm -C apps/web lint
 

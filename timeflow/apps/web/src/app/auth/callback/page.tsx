@@ -31,6 +31,25 @@ function safeReturnPath(state: string | null): string {
   return '/tasks';
 }
 
+/** Parse OAuth state (plain path or base64url JSON from backend). */
+function parseOAuthReturnPath(state: string | null): string {
+  if (!state) return '/tasks';
+  if (state.startsWith('/') && !state.startsWith('//')) {
+    return safeReturnPath(state);
+  }
+  try {
+    let base64 = state.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4;
+    if (pad) base64 += '='.repeat(4 - pad);
+    const json = atob(base64);
+    const parsed = JSON.parse(json) as { returnTo?: string };
+    if (parsed.returnTo) return safeReturnPath(parsed.returnTo);
+  } catch {
+    // fall through
+  }
+  return safeReturnPath(state);
+}
+
 function AuthCallbackContent() {
   const router = useRouter();
   const handledRef = useRef(false);
@@ -52,7 +71,7 @@ function AuthCallbackContent() {
         setRefreshToken(refreshToken);
       }
 
-      const redirectTo = safeReturnPath(state);
+      const redirectTo = parseOAuthReturnPath(state);
       router.replace(redirectTo);
       return;
     }

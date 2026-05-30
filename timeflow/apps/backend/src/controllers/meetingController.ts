@@ -13,6 +13,7 @@ import * as gmailService from '../services/gmailService.js';
 import * as emailTemplateService from '../services/emailTemplateService.js';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { generateICS } from '../utils/icsGenerator.js';
+import { resolveMeetingReadAccess } from '../services/meetingAccessService.js';
 import type {} from '../types/context.js';
 
 const sendLinkEmailSchema = z.object({
@@ -254,27 +255,24 @@ export async function sendMeetingLinkEmail(
 }
 
 /**
- * GET /api/meetings/:id (Public)
- * Get meeting details (public endpoint, no auth required)
+ * GET /api/meetings/:id
+ * Meeting details — requires host JWT or invitee action token (?token=).
  */
 export async function getMeetingDetails(
-  request: FastifyRequest<{ Params: { id: string } }>,
+  request: FastifyRequest<{ Params: { id: string }; Querystring: { token?: string } }>,
   reply: FastifyReply
 ) {
   const { id } = request.params;
+  const { token } = request.query;
 
   try {
-    const meeting = await prisma.meeting.findUnique({
-      where: { id },
-      include: {
-        schedulingLink: {
-          include: { user: { select: { email: true, name: true } } },
-        },
-      },
+    const meeting = await resolveMeetingReadAccess(id, {
+      token,
+      hostUserId: request.user?.id,
     });
 
     if (!meeting) {
-      reply.status(404).send({ error: 'Meeting not found' });
+      reply.status(401).send({ error: 'Unauthorized: valid token or host authentication required' });
       return;
     }
 
@@ -296,27 +294,24 @@ export async function getMeetingDetails(
 }
 
 /**
- * GET /api/meetings/:id/calendar (Public)
- * Download ICS calendar file for the meeting
+ * GET /api/meetings/:id/calendar
+ * Download ICS — requires host JWT or invitee action token (?token=).
  */
 export async function downloadMeetingCalendar(
-  request: FastifyRequest<{ Params: { id: string } }>,
+  request: FastifyRequest<{ Params: { id: string }; Querystring: { token?: string } }>,
   reply: FastifyReply
 ) {
   const { id } = request.params;
+  const { token } = request.query;
 
   try {
-    const meeting = await prisma.meeting.findUnique({
-      where: { id },
-      include: {
-        schedulingLink: {
-          include: { user: { select: { email: true, name: true } } },
-        },
-      },
+    const meeting = await resolveMeetingReadAccess(id, {
+      token,
+      hostUserId: request.user?.id,
     });
 
     if (!meeting) {
-      reply.status(404).send({ error: 'Meeting not found' });
+      reply.status(401).send({ error: 'Unauthorized: valid token or host authentication required' });
       return;
     }
 

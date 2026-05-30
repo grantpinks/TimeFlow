@@ -28,6 +28,7 @@ export default function SettingsPage() {
   const [connectedAccountsLoading, setConnectedAccountsLoading] = useState(true);
   const [icloudEmail, setIcloudEmail] = useState('');
   const [icloudAppPassword, setIcloudAppPassword] = useState('');
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [connectingIcloud, setConnectingIcloud] = useState(false);
 
   // Form state
@@ -514,17 +515,47 @@ export default function SettingsPage() {
               </span>
             </div>
             <p className="text-sm text-slate-600 mb-3">
-              If emails stop loading, reconnect your Google account to refresh permissions.
+              Sign-in uses calendar access only. Use reconnect to refresh Gmail permissions for inbox features.
             </p>
-            <a
-              href={api.getGoogleAuthUrl()}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
-            >
-              Reconnect Google
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                disabled={connectingGoogle}
+                onClick={async () => {
+                  setConnectingGoogle(true);
+                  try {
+                    const url = await api.getGoogleReconnectUrl('/settings');
+                    window.location.href = url;
+                  } catch {
+                    setMessage({ type: 'error', text: 'Could not start Google reconnect.' });
+                    setConnectingGoogle(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm disabled:opacity-60"
+              >
+                {connectingGoogle ? 'Redirecting…' : 'Reconnect Google'}
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                disabled={connectingGoogle}
+                onClick={async () => {
+                  setConnectingGoogle(true);
+                  try {
+                    const url = await api.getGoogleGmailConnectUrl('/settings');
+                    window.location.href = url;
+                  } catch {
+                    setMessage({ type: 'error', text: 'Could not start Gmail permission request.' });
+                    setConnectingGoogle(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm disabled:opacity-60"
+              >
+                Connect Gmail
+              </button>
+            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">

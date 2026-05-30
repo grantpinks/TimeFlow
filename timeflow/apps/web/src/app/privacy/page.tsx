@@ -17,7 +17,7 @@ function PrivacyPageBody() {
               We build TimeFlow with privacy in mind. This policy explains what we collect, why we collect it,
               and how you stay in control of your data.
             </p>
-            <p className="text-gray-500 mt-4">Last Updated: January 20, 2026</p>
+            <p className="text-gray-500 mt-4">Last Updated: May 29, 2026</p>
           </div>
           <div className="bg-gradient-to-br from-teal-50 to-orange-50 rounded-3xl p-8 shadow-xl border border-teal-100">
             <Image
@@ -133,7 +133,30 @@ function PrivacyPageBody() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">7. Third-Party Services</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">7. Google API Services User Data Policy</h2>
+            <p className="text-gray-700 leading-relaxed mb-4">
+              TimeFlow&apos;s use and transfer of information received from Google APIs adheres to the{' '}
+              <a
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                className="text-teal-600 hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google API Services User Data Policy
+              </a>
+              , including the Limited Use requirements.
+            </p>
+            <ul className="list-disc pl-6 text-gray-700 space-y-2">
+              <li>We only use Google user data to provide and improve TimeFlow features you enable</li>
+              <li>We do not sell Google user data or use it for advertising</li>
+              <li>We do not allow humans to read Gmail content except with your consent, for security, or to comply with law</li>
+              <li>We do not use Google user data to train generalized AI models unrelated to your account</li>
+              <li>You can revoke access at any time via Google Account permissions or TimeFlow Settings</li>
+            </ul>
+          </section>
+
+          <section className="mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">8. Third-Party Services</h2>
             <p className="text-gray-700 leading-relaxed">
               TimeFlow integrates with:
             </p>
@@ -144,7 +167,7 @@ function PrivacyPageBody() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">8. Data Retention</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">9. Data Retention</h2>
             <p className="text-gray-700 leading-relaxed">
               We retain your data as long as your account is active. After account deletion:
             </p>
@@ -156,7 +179,7 @@ function PrivacyPageBody() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">9. Children&apos;s Privacy</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">10. Children&apos;s Privacy</h2>
             <p className="text-gray-700 leading-relaxed">
               TimeFlow is not intended for users under 13. We do not knowingly collect data from children.
               If you believe we have collected data from a child, contact us immediately.
@@ -164,7 +187,7 @@ function PrivacyPageBody() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">10. Changes to This Policy</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">11. Changes to This Policy</h2>
             <p className="text-gray-700 leading-relaxed">
               We may update this Privacy Policy. We&apos;ll notify you via email or app notification for
               significant changes. Continued use after changes constitutes acceptance.
@@ -172,13 +195,13 @@ function PrivacyPageBody() {
           </section>
 
           <section className="mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">11. Contact Us</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">12. Contact Us</h2>
             <p className="text-gray-700 leading-relaxed">
               Questions about this Privacy Policy? Contact us at:
             </p>
             <p className="text-gray-700 leading-relaxed mt-4">
               Email: <a href="mailto:privacy@time-flow.app" className="text-teal-600 hover:underline">privacy@time-flow.app</a><br />
-              Address: [To be added - company registered address]
+              Website: <a href="https://time-flow.app" className="text-teal-600 hover:underline">https://time-flow.app</a>
             </p>
           </section>
         </div>

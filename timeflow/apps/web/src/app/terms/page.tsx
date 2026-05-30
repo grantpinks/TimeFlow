@@ -16,7 +16,7 @@ function TermsPageBody() {
             <p className="text-lg text-gray-600 leading-relaxed">
               These terms keep TimeFlow safe and fair for everyone. Please review them before using the service.
             </p>
-            <p className="text-gray-500 mt-4">Last Updated: January 20, 2026</p>
+            <p className="text-gray-500 mt-4">Last Updated: May 29, 2026</p>
           </div>
           <div className="bg-gradient-to-br from-teal-50 to-orange-50 rounded-3xl p-8 shadow-xl border border-teal-100">
             <Image

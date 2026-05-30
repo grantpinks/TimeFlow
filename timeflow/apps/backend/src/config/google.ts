@@ -40,17 +40,23 @@ export function getUserOAuth2Client(
 }
 
 /**
- * Scopes required for Google Calendar + Gmail access
- * and basic user profile info.
+ * Scopes requested at initial sign-in (calendar + profile).
+ * Avoids restricted Gmail scopes on first login — those are requested incrementally.
  */
-export const GOOGLE_SCOPES = [
+export const GOOGLE_SIGNIN_SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/calendar.events',
-  // Gmail access (read, compose, and send)
-  'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/gmail.compose', // For sending replies and composing emails
-  'https://www.googleapis.com/auth/gmail.modify', // For marking read/unread, archiving
   'https://www.googleapis.com/auth/userinfo.email',
   'https://www.googleapis.com/auth/userinfo.profile',
 ];
+
+/** Restricted Gmail scopes — requested when the user enables inbox/email features. */
+export const GOOGLE_GMAIL_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.compose',
+  'https://www.googleapis.com/auth/gmail.modify',
+];
+
+/** All scopes (sign-in + Gmail). Used for full reconnect in Settings. */
+export const GOOGLE_SCOPES = [...GOOGLE_SIGNIN_SCOPES, ...GOOGLE_GMAIL_SCOPES];
 

@@ -89,6 +89,7 @@ export async function bookMeeting(
   };
   rescheduleToken: string;
   cancelToken: string;
+  viewToken: string;
 }> {
   // Load scheduling link
   const link = await prisma.schedulingLink.findUnique({
@@ -227,9 +228,10 @@ export async function bookMeeting(
     throw new Error('Time slot no longer available');
   }
 
-  // Generate tokens for reschedule and cancel
+  // Generate tokens for reschedule, cancel, and read-only view/calendar access
   const rescheduleTokenData = generateToken();
   const cancelTokenData = generateToken();
+  const viewTokenData = generateToken();
 
   // Create meeting and tokens in transaction
   const meeting = await prisma.$transaction(async (tx) => {
@@ -262,6 +264,16 @@ export async function bookMeeting(
         meetingId: createdMeeting.id,
         type: 'cancel',
         tokenHash: cancelTokenData.hash,
+        expiresAt: DateTime.now().plus({ days: 30 }).toJSDate(),
+      },
+    });
+
+    // Read-only token for meeting details / calendar download
+    await tx.meetingActionToken.create({
+      data: {
+        meetingId: createdMeeting.id,
+        type: 'view',
+        tokenHash: viewTokenData.hash,
         expiresAt: DateTime.now().plus({ days: 30 }).toJSDate(),
       },
     });
@@ -368,6 +380,7 @@ export async function bookMeeting(
     },
     rescheduleToken: rescheduleTokenData.token,
     cancelToken: cancelTokenData.token,
+    viewToken: viewTokenData.token,
   };
 }
 

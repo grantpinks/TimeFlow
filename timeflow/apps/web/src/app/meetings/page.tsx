@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getUserMeetings, type HostMeeting } from '@/lib/api';
+import { getUserMeetings, downloadHostMeetingCalendar, type HostMeeting } from '@/lib/api';
 import { DateTime } from 'luxon';
 import { Layout } from '@/components/Layout';
 import { BrandedEmptyState, LoadingSpinner } from '@/components/ui';
@@ -216,9 +216,13 @@ export default function MeetingsPage() {
                           Join Meeting
                         </a>
                       )}
-                      <a
-                        href={`/api/meetings/${meeting.id}/calendar`}
-                        download
+                      <button
+                        type="button"
+                        onClick={() => {
+                          downloadHostMeetingCalendar(meeting.id).catch((err) => {
+                            console.error('Failed to download calendar:', err);
+                          });
+                        }}
                         className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors text-sm font-medium whitespace-nowrap"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +234,7 @@ export default function MeetingsPage() {
                           />
                         </svg>
                         Download ICS
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>
