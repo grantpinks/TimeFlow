@@ -229,17 +229,30 @@ async function request<T>(
     if (refreshed) {
       return request<T>(endpoint, options, false);
     }
-    // Refresh failed - redirect to login
+    // Refresh failed - redirect to login only if on a protected page
     if (typeof window !== 'undefined') {
-      // Save current path to redirect back after login
-      const returnPath = window.location.pathname + window.location.search;
-      if (returnPath !== '/login') {
-        sessionStorage.setItem('auth_redirect_path', returnPath);
+      const currentPath = window.location.pathname;
+
+      // Don't redirect if on public pages
+      const publicPaths = ['/', '/get-started', '/login', '/terms', '/privacy'];
+      const isPublicPath = publicPaths.includes(currentPath) ||
+                          currentPath.startsWith('/auth/');
+
+      if (!isPublicPath) {
+        // Save current path to redirect back after login
+        const returnPath = currentPath + window.location.search;
+        if (returnPath !== '/login') {
+          sessionStorage.setItem('auth_redirect_path', returnPath);
+        }
+        window.location.href = '/login';
+        // Throw error to prevent further execution while redirect is happening
+        throw new ApiRequestError('Session expired. Redirecting to login...', {
+          status: 401,
+        });
       }
-      window.location.href = '/login';
     }
-    // Throw error to prevent further execution while redirect is happening
-    throw new ApiRequestError('Session expired. Redirecting to login...', {
+    // For public pages or server-side, just throw the error without redirecting
+    throw new ApiRequestError('Unauthorized', {
       status: 401,
     });
   }
