@@ -59,11 +59,26 @@ export async function buildServer(): Promise<FastifyInstance> {
     },
   });
 
-  // Basic rate limiting to protect the API
+  // Basic rate limiting to protect the API (per-user when authenticated, per-IP otherwise)
+  // Higher limit for normal usage since calendar page makes ~10 parallel requests on load
   await server.register(rateLimit, {
-    max: env.RATE_LIMIT_MAX ?? 100,
+    max: env.RATE_LIMIT_MAX ?? 500,
     timeWindow: env.RATE_LIMIT_WINDOW ?? '1 minute',
     keyGenerator: (request) => {
+      const authHeader = request.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        try {
+          const payload = request.server.jwt.decode<{ sub?: string }>(
+            authHeader.slice('Bearer '.length)
+          );
+          if (payload?.sub) {
+            return `user:${payload.sub}`;
+          }
+        } catch {
+          // fall through to IP
+        }
+      }
+
       const forwardedFor = request.headers['x-forwarded-for'];
       const forwardedIp = Array.isArray(forwardedFor)
         ? forwardedFor[0]

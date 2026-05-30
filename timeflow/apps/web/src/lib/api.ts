@@ -231,6 +231,17 @@ async function request<T>(
     }
   }
 
+  // Handle 429 rate limit with retry-after
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('retry-after');
+    const retryDelayMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 0;
+
+    console.warn(`Rate limit hit for ${endpoint}, retry in ${retryDelayMs}ms`);
+
+    // Don't auto-retry - let the error surface so user knows something is wrong
+    // The increased rate limit should prevent this in normal usage
+  }
+
   if (!response.ok) {
     const rawText = await response.text().catch(() => '');
     let error: Record<string, unknown> = {};
@@ -317,10 +328,34 @@ async function refreshAccessToken(): Promise<string | null> {
 // ===== Auth =====
 
 /**
- * Get the URL to start Google OAuth.
+ * Get the URL to start Google OAuth (sign-in: calendar + profile only).
  */
-export function getGoogleAuthUrl(): string {
-  return `${API_BASE}/auth/google/start`;
+export function getGoogleAuthUrl(returnTo?: string): string {
+  const base = `${API_BASE}/auth/google/start`;
+  if (!returnTo) return base;
+  return `${base}?returnTo=${encodeURIComponent(returnTo)}`;
+}
+
+/**
+ * Get OAuth URL to grant Gmail permissions (requires auth).
+ */
+export async function getGoogleGmailConnectUrl(returnTo?: string): Promise<string> {
+  const result = await request<{ url: string }>('/auth/google/gmail-url', {
+    method: 'POST',
+    body: JSON.stringify({ returnTo }),
+  });
+  return result.url;
+}
+
+/**
+ * Get OAuth URL to reconnect all Google permissions (requires auth).
+ */
+export async function getGoogleReconnectUrl(returnTo?: string): Promise<string> {
+  const result = await request<{ url: string }>('/auth/google/reconnect-url', {
+    method: 'POST',
+    body: JSON.stringify({ returnTo }),
+  });
+  return result.url;
 }
 
 // ===== User =====
@@ -1615,6 +1650,35 @@ export async function sendMeetingLinkEmail(data: {
   });
 }
 
+/**
+ * Download meeting calendar (.ics) as the authenticated host.
+ */
+export async function downloadHostMeetingCalendar(meetingId: string): Promise<void> {
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${API_BASE}/api/meetings/${meetingId}/calendar`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to download calendar file');
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `meeting-${meetingId}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ===== Public Booking APIs (no auth required) =====
 
 /**
@@ -1660,6 +1724,7 @@ export async function bookPublicMeeting(
   };
   rescheduleToken: string;
   cancelToken: string;
+  viewToken: string;
 }> {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
   const response = await fetch(`${API_BASE}/api/book/${slug}`, {
