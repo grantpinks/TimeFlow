@@ -592,16 +592,18 @@ function DraggableEvent({
 
   const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing;
 
-  // Debug non-draggable events
-  if (isDragDisabled && (event.isTask || event.isHabit || event.scheduledHabitId || event.taskId)) {
-    console.log('[CalendarView] Event marked as non-draggable despite having task/habit flags:', {
+  // Debug ALL habit-related events to diagnose drag issues
+  if (event.title.includes('TFI Habit') || event.title.includes('[habit]') || event.isHabit || event.scheduledHabitId) {
+    console.log('[CalendarView] Habit event drag status:', {
       title: event.title,
       isDragDisabled,
+      canDrag: !isDragDisabled,
       isTask: event.isTask,
       isHabit: event.isHabit,
       sourceType: event.sourceType,
       scheduledHabitId: event.scheduledHabitId,
       taskId: event.taskId,
+      eventId: event.eventId,
     });
   }
 
