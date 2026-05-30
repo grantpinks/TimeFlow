@@ -19,6 +19,34 @@ import {
   refreshInboxCache,
   writeInboxCache,
 } from '../services/inboxCacheService.js';
+import {
+  assertGmailAccess,
+  gmailAccessForbiddenReply,
+  isGmailApiScopeError,
+} from '../services/googleScopeService.js';
+
+function handleGmailApiError(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  error: unknown,
+  logMessage: string,
+  userMessage: string
+) {
+  if (error instanceof GmailRateLimitError) {
+    return reply.status(429).send({
+      error: 'Gmail rate limit exceeded. Please try again shortly.',
+      retryAfterSeconds: error.retryAfterSeconds,
+    });
+  }
+  if (isGmailApiScopeError(error)) {
+    return reply.status(403).send({
+      error: 'Gmail is not connected. Open Settings and click Connect Gmail to enable inbox features.',
+      code: 'GMAIL_NOT_CONNECTED',
+    });
+  }
+  request.log.error(error, logMessage);
+  return reply.status(500).send({ error: userMessage });
+}
 
 const inboxQuerySchema = z.object({
   maxResults: z.coerce.number().int().min(1).max(100).optional(),
@@ -62,6 +90,12 @@ export async function getInboxEmails(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const { maxResults, pageToken, cacheMode } = parsed.data;
     const mode = cacheMode ?? 'prefer';
 
@@ -99,13 +133,13 @@ export async function getInboxEmails(
       isStale: false,
     });
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
-    }
-    request.log.error(error, 'Failed to fetch inbox emails');
-    return reply.status(500).send({ error: 'Failed to fetch inbox emails' });
+    return handleGmailApiError(
+      request,
+      reply,
+      error,
+      'Failed to fetch inbox emails',
+      'Failed to fetch inbox emails'
+    );
   }
 }
 
@@ -119,17 +153,17 @@ export async function getFullEmail(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const emailId = request.params.id;
     const email = await gmailService.getFullEmail(user.id, emailId);
     return reply.send(email);
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
-    }
-    request.log.error(error, 'Failed to fetch email');
-    return reply.status(500).send({ error: 'Failed to fetch email' });
+    return handleGmailApiError(request, reply, error, 'Failed to fetch email', 'Failed to fetch email');
   }
 }
 
@@ -148,16 +182,16 @@ export async function sendEmail(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const result = await gmailService.sendEmail(user.id, parsed.data as any);
     return reply.send(result);
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
-    }
-    request.log.error(error, 'Failed to send email');
-    return reply.status(500).send({ error: 'Failed to send email' });
+    return handleGmailApiError(request, reply, error, 'Failed to send email', 'Failed to send email');
   }
 }
 
@@ -176,17 +210,17 @@ export async function searchEmails(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const { q, maxResults } = parsed.data;
     const results = await gmailService.searchEmails(user.id, q, maxResults);
     return reply.send(results);
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
-    }
-    request.log.error(error, 'Failed to search emails');
-    return reply.status(500).send({ error: 'Failed to search emails' });
+    return handleGmailApiError(request, reply, error, 'Failed to search emails', 'Failed to search emails');
   }
 }
 
@@ -205,17 +239,23 @@ export async function markEmailAsRead(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const emailId = request.params.id;
     await gmailService.markAsRead(user.id, emailId, parsed.data.isRead);
     return reply.send({ success: true });
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
-    }
-    request.log.error(error, 'Failed to mark email as read');
-    return reply.status(500).send({ error: 'Failed to mark email as read' });
+    return handleGmailApiError(
+      request,
+      reply,
+      error,
+      'Failed to mark email as read',
+      'Failed to mark email as read'
+    );
   }
 }
 
@@ -229,17 +269,17 @@ export async function archiveEmail(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const emailId = request.params.id;
     await gmailService.archiveEmail(user.id, emailId);
     return reply.send({ success: true });
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
-    }
-    request.log.error(error, 'Failed to archive email');
-    return reply.status(500).send({ error: 'Failed to archive email' });
+    return handleGmailApiError(request, reply, error, 'Failed to archive email', 'Failed to archive email');
   }
 }
 
@@ -253,17 +293,17 @@ export async function trashEmail(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const emailId = request.params.id;
     await gmailService.trashEmail(user.id, emailId);
     return reply.send({ success: true });
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({ error: 'Gmail rate limit exceeded. Please try again shortly.', retryAfterSeconds: error.retryAfterSeconds });
-    }
-    request.log.error(error, 'Failed to trash email');
-    return reply.status(500).send({ error: 'Failed to trash email' });
+    return handleGmailApiError(request, reply, error, 'Failed to trash email', 'Failed to trash email');
   }
 }
 
@@ -331,6 +371,12 @@ export async function explainEmailCategory(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(user.id);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     const { id: emailId } = paramsResult.data;
 
     // NOTE: gmailService.getFullEmail uses the authenticated user's Gmail credentials,
@@ -359,15 +405,12 @@ export async function explainEmailCategory(
 
     return reply.send({ explanation });
   } catch (error) {
-    if (error instanceof GmailRateLimitError) {
-      return reply
-        .status(429)
-        .send({
-          error: 'Gmail rate limit exceeded. Please try again shortly.',
-          retryAfterSeconds: error.retryAfterSeconds
-        });
-    }
-    request.log.error(error, 'Failed to explain email category');
-    return reply.status(500).send({ error: 'Failed to explain categorization' });
+    return handleGmailApiError(
+      request,
+      reply,
+      error,
+      'Failed to explain email category',
+      'Failed to explain categorization'
+    );
   }
 }

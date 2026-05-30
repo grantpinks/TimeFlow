@@ -17,6 +17,7 @@ model User {
   googleRefreshToken         String?
   googleAccessToken          String?
   googleAccessTokenExpiry    DateTime?
+  googleGrantedScopes        String?
   timeZone                   String    @default("America/Chicago")
   wakeTime                   String    @default("08:00")
   sleepTime                  String    @default("23:00")

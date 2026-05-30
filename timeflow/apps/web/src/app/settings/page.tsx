@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const [icloudAppPassword, setIcloudAppPassword] = useState('');
   const [connectingGoogle, setConnectingGoogle] = useState(false);
   const [connectingIcloud, setConnectingIcloud] = useState(false);
+  const [googleOAuthStatus, setGoogleOAuthStatus] = useState<api.GoogleOAuthStatus | null>(null);
 
   // Form state
   const [wakeTime, setWakeTime] = useState('08:00');
@@ -155,6 +156,11 @@ export default function SettingsPage() {
       setAiDebugEnabled(getAiDebugEnabled());
     }
   }, [showAiDebugToggle]);
+
+  useEffect(() => {
+    if (!user) return;
+    api.getGoogleOAuthStatus().then(setGoogleOAuthStatus).catch(() => setGoogleOAuthStatus(null));
+  }, [user]);
 
   // Fetch calendars
   useEffect(() => {
@@ -510,8 +516,20 @@ export default function SettingsPage() {
                   Gmail inbox requires a connected Google account with read-only access.
                 </p>
               </div>
-              <span className="text-sm font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-1 rounded-full">
-                Connected
+              <span
+                className={`text-sm font-medium px-3 py-1 rounded-full border ${
+                  googleOAuthStatus?.gmailConnected
+                    ? 'text-green-700 bg-green-50 border-green-200'
+                    : googleOAuthStatus?.connected
+                      ? 'text-amber-700 bg-amber-50 border-amber-200'
+                      : 'text-slate-600 bg-slate-50 border-slate-200'
+                }`}
+              >
+                {googleOAuthStatus?.gmailConnected
+                  ? 'Gmail connected'
+                  : googleOAuthStatus?.connected
+                    ? 'Calendar only'
+                    : 'Not connected'}
               </span>
             </div>
             <p className="text-sm text-slate-600 mb-3">

@@ -10,6 +10,7 @@ import { createGmailDraft } from '../services/gmailService.js';
 import { sendEmail } from '../services/gmailService.js';
 import { runAssistantTask } from '../services/assistantService.js';
 import * as usageTrackingService from '../services/usageTrackingService.js';
+import { assertGmailAccess, gmailAccessForbiddenReply } from '../services/googleScopeService.js';
 import crypto from 'crypto';
 import type {
   EmailDraftRequest,
@@ -108,16 +109,10 @@ export async function generateEmailDraft(
   }
 
   try {
-    // Check Gmail connection
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user?.googleAccessToken) {
-      return reply.status(403).send({
-        error: 'Gmail account not connected. Please connect in Settings.',
-        code: 'GMAIL_NOT_CONNECTED',
-      });
+    const gmailAccess = await assertGmailAccess(userId);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
     }
 
     // Fetch original email
@@ -367,6 +362,12 @@ export async function createOrSendDraft(
   }
 
   try {
+    const gmailAccess = await assertGmailAccess(userId);
+    if (!gmailAccess.ok) {
+      gmailAccessForbiddenReply(reply, gmailAccess.code);
+      return;
+    }
+
     if (action === 'send') {
       // Send email via Gmail
       const sendResult = await sendEmail(userId, {

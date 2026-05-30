@@ -15,6 +15,7 @@ import {
 } from '../config/google.js';
 import { encrypt } from '../utils/crypto.js';
 import { encodeOAuthState, type OAuthStatePayload } from '../utils/oauthState.js';
+import { resolveGrantedScopeString } from './googleScopeService.js';
 
 export type GoogleAuthUrlOptions = {
   state?: string;
@@ -48,11 +49,18 @@ async function upsertGoogleTokensForUser(
     access_token?: string | null;
     refresh_token?: string | null;
     expiry_date?: number | null;
+    scope?: string | null;
   },
-  existingRefreshToken?: string | null
+  existingRefreshToken?: string | null,
+  existingGrantedScopes?: string | null
 ) {
   const encryptedRefreshToken = encrypt(tokens.refresh_token) ?? undefined;
   const accessTokenExpiry = tokens.expiry_date ? new Date(tokens.expiry_date) : undefined;
+  const googleGrantedScopes = await resolveGrantedScopeString(
+    tokens.access_token,
+    tokens.scope,
+    existingGrantedScopes
+  );
 
   const user = await prisma.user.update({
     where: { id: userId },
@@ -62,6 +70,7 @@ async function upsertGoogleTokensForUser(
       googleAccessToken: tokens.access_token ?? undefined,
       googleRefreshToken: encryptedRefreshToken ?? existingRefreshToken ?? undefined,
       googleAccessTokenExpiry: accessTokenExpiry,
+      googleGrantedScopes,
     },
   });
 
@@ -133,9 +142,20 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
       linkUserId,
       { email: userInfo.email, id: userInfo.id },
       tokens,
-      existing.googleRefreshToken
+      existing.googleRefreshToken,
+      existing.googleGrantedScopes
     );
   }
+
+  const existing = await prisma.user.findUnique({
+    where: { googleId: userInfo.id },
+    select: { googleGrantedScopes: true },
+  });
+  const googleGrantedScopes = await resolveGrantedScopeString(
+    tokens.access_token,
+    tokens.scope,
+    existing?.googleGrantedScopes
+  );
 
   const user = await prisma.user.upsert({
     where: { googleId: userInfo.id },
@@ -144,6 +164,7 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
       googleAccessToken: tokens.access_token,
       googleRefreshToken: encryptedRefreshToken ?? undefined,
       googleAccessTokenExpiry: accessTokenExpiry,
+      googleGrantedScopes,
     },
     create: {
       email: userInfo.email,
@@ -151,6 +172,7 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
       googleAccessToken: tokens.access_token,
       googleRefreshToken: encryptedRefreshToken,
       googleAccessTokenExpiry: accessTokenExpiry,
+      googleGrantedScopes,
     },
   });
 
@@ -184,10 +206,13 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
   return user;
 }
 
-/** Sign-in OAuth URL (calendar + profile only). */
+/** Sign-in OAuth URL (calendar + profile only). Preserves previously granted Gmail scopes. */
 export function getGoogleSignInAuthUrl(returnTo?: string): string {
   const state = encodeOAuthState({ returnTo: returnTo ?? '/tasks' });
-  return getGoogleAuthUrl(GOOGLE_SIGNIN_SCOPES, { state });
+  return getGoogleAuthUrl(GOOGLE_SIGNIN_SCOPES, {
+    state,
+    includeGrantedScopes: true,
+  });
 }
 
 /** Incremental Gmail permission OAuth URL for a logged-in user. */

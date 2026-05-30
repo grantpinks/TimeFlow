@@ -7,11 +7,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as authService from '../services/authService.js';
 import * as categoryService from '../services/categoryService.js';
-import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { decodeOAuthState } from '../utils/oauthState.js';
+import { getGoogleConnectionStatus } from '../services/googleScopeService.js';
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -213,19 +213,10 @@ export async function getGoogleOAuthStatus(
     return reply.status(401).send({ error: 'Not authenticated' });
   }
 
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-  if (!dbUser) {
-    return reply.status(404).send({ error: 'User not found' });
+  try {
+    return await getGoogleConnectionStatus(user.id);
+  } catch (error) {
+    request.log.error(error, 'Failed to get Google OAuth status');
+    return reply.status(500).send({ error: 'Failed to get Google OAuth status' });
   }
-
-  const hasGoogleAuth = !!(dbUser.googleRefreshToken && dbUser.googleAccessToken);
-  const isExpired = dbUser.googleAccessTokenExpiry
-    ? new Date(dbUser.googleAccessTokenExpiry) < new Date()
-    : true;
-
-  return {
-    connected: hasGoogleAuth,
-    expired: isExpired,
-    needsReauth: hasGoogleAuth && isExpired,
-  };
 }

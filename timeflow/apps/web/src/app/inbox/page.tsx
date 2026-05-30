@@ -44,6 +44,8 @@ export default function InboxPage() {
   }, []);
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [gmailNotConnected, setGmailNotConnected] = useState(false);
+  const [connectingGmail, setConnectingGmail] = useState(false);
   const [refreshingInbox, setRefreshingInbox] = useState(false);
   const [inboxCacheStale, setInboxCacheStale] = useState(false);
   const [emailAccounts, setEmailAccounts] = useState<EmailAccount[]>([]);
@@ -289,6 +291,7 @@ export default function InboxPage() {
 
       setNextPageToken(result.nextPageToken ?? null);
       setEmails((prev) => (append ? [...prev, ...result.messages] : result.messages));
+      setGmailNotConnected(false);
 
       if (isFirstPage) {
         cacheEmails({
@@ -310,8 +313,14 @@ export default function InboxPage() {
           }, 500); // Fast but not too aggressive to avoid rate limits
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to fetch inbox:', error);
+      if (error instanceof api.ApiRequestError && error.code === 'GMAIL_NOT_CONNECTED') {
+        setGmailNotConnected(true);
+        setEmails([]);
+        return;
+      }
+      setGmailNotConnected(false);
       if (error instanceof Error && /rate limit|429/i.test(error.message)) {
         toast.error(
           'Gmail rate limit reached. Your inbox will auto-refresh shortly. Please avoid manual refreshes.',
@@ -1075,7 +1084,34 @@ export default function InboxPage() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left Pane - Email List */}
           <div className={`${selectedThreadId ? 'hidden sm:flex' : 'flex'} flex-col w-full sm:w-[380px] flex-none border-r border-[#e0e0e0] bg-white overflow-y-auto`}>
-            {loading ? (
+            {gmailNotConnected ? (
+              <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+                <FlowMascot size="xl" expression="thinking" className="mb-4" />
+                <h3 className="text-2xl font-bold text-[#1a1a1a] mb-2" style={{ fontFamily: "'Crimson Pro', serif" }}>
+                  Connect Gmail to use Inbox
+                </h3>
+                <p className="text-sm text-[#666] mb-6 max-w-sm" style={{ fontFamily: "'Manrope', sans-serif" }}>
+                  Sign-in now uses calendar access only. Grant Gmail permission to load email, sync labels, and use AI drafts.
+                </p>
+                <button
+                  type="button"
+                  disabled={connectingGmail}
+                  onClick={async () => {
+                    setConnectingGmail(true);
+                    try {
+                      const url = await api.getGoogleGmailConnectUrl('/inbox');
+                      window.location.href = url;
+                    } catch {
+                      toast.error('Could not start Gmail connection.');
+                      setConnectingGmail(false);
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-[#0BAF9A] text-white rounded-lg hover:bg-[#099681] transition-colors text-sm font-medium disabled:opacity-60"
+                >
+                  {connectingGmail ? 'Redirecting…' : 'Connect Gmail'}
+                </button>
+              </div>
+            ) : loading ? (
               <div className="flex flex-col items-center justify-center py-20">
                 <LoadingSpinner size="lg" variant="inbox" label="Loading inbox" />
                 <div

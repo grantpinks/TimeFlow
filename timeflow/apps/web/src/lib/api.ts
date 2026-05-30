@@ -371,6 +371,18 @@ export async function getGoogleReconnectUrl(returnTo?: string): Promise<string> 
   return result.url;
 }
 
+export interface GoogleOAuthStatus {
+  connected: boolean;
+  expired: boolean;
+  needsReauth: boolean;
+  gmailConnected: boolean;
+  gmailScopesComplete: boolean;
+}
+
+export async function getGoogleOAuthStatus(): Promise<GoogleOAuthStatus> {
+  return request<GoogleOAuthStatus>('/auth/google/status');
+}
+
 // ===== User =====
 
 /**
