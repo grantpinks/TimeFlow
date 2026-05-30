@@ -10,6 +10,8 @@ import * as mergedCalendarService from '../services/mergedCalendarService.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
+import { prisma } from '../config/prisma.js';
+import { DateTime } from 'luxon';
 
 const eventQuerySchema = z.object({
   from: z.string().datetime(),
@@ -191,6 +193,8 @@ export async function createHabitEvents(
         prefix: user.eventPrefix,
         description: 'Scheduled habit from TimeFlow',
       });
+
+      // Create Google Calendar event
       const calendarEvent = await calendarService.createEvent(
         user.id,
         calendarId,
@@ -201,6 +205,21 @@ export async function createHabitEvents(
           end: event.end,
         }
       );
+
+      // Create ScheduledHabit database record to link habit to calendar event
+      await prisma.scheduledHabit.create({
+        data: {
+          habitId: event.habitId,
+          userId: user.id,
+          provider: 'google',
+          calendarId,
+          eventId: calendarEvent.eventId,
+          startDateTime: DateTime.fromISO(event.start).toJSDate(),
+          endDateTime: DateTime.fromISO(event.end).toJSDate(),
+          lastSyncedAt: new Date(),
+        },
+      });
+
       createdEvents.push(calendarEvent);
     }
 
