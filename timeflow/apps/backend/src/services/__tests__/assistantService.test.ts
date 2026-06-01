@@ -7,6 +7,7 @@ const {
   detectPlanAdjustment,
   detectRescheduleIntent,
   detectDailyPlanIntent,
+  detectDailyBriefingIntent,
   detectPlanningIntent,
   getPlanningState,
   shouldAskPlanningQuestion,
@@ -40,6 +41,10 @@ describe('assistantService helpers', () => {
     it('detects availability requests', () => {
       const mode = detectMode('When am I free this week?', false);
       expect(mode).toBe('availability');
+    });
+
+    it('routes daily briefing queries to availability mode', () => {
+      expect(detectMode('What does my day look like?', false)).toBe('availability');
     });
 
     it('detects scheduling requests', () => {
@@ -136,6 +141,18 @@ describe('assistantService helpers', () => {
 
     it('returns false for unrelated language', () => {
       expect(detectDailyPlanIntent('Schedule my tasks')).toBe(false);
+    });
+  });
+
+  describe('detectDailyBriefingIntent', () => {
+    it('detects daily briefing language', () => {
+      expect(detectDailyBriefingIntent('what does my day look like')).toBe(true);
+      expect(detectDailyBriefingIntent("what's my today look like")).toBe(true);
+      expect(detectDailyBriefingIntent('run me through my day')).toBe(true);
+    });
+
+    it('returns false for simple availability queries', () => {
+      expect(detectDailyBriefingIntent('when am I free tomorrow')).toBe(false);
     });
   });
 

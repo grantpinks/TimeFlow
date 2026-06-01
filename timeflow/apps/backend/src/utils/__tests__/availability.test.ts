@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAvailabilitySummary } from '../availability';
+import { buildAvailabilitySummary, getLargestFreeBlockToday } from '../availability';
 import type { CalendarEvent } from '@timeflow/shared';
 import type { UserPreferences } from '../scheduleValidator';
 
@@ -57,5 +57,38 @@ describe('buildAvailabilitySummary', () => {
 
     expect(summary).toContain('10:10 AM - 12:00 PM');
     expect(summary).not.toContain('10:07 AM');
+  });
+});
+
+describe('getLargestFreeBlockToday', () => {
+  it('returns the longest open window for today', () => {
+    const calendarEvents: CalendarEvent[] = [
+      {
+        summary: 'Morning meeting',
+        start: '2025-01-01T09:00:00.000Z',
+        end: '2025-01-01T10:00:00.000Z',
+      },
+      {
+        summary: 'Afternoon meeting',
+        start: '2025-01-01T14:00:00.000Z',
+        end: '2025-01-01T15:00:00.000Z',
+      },
+    ];
+    const userPrefs: UserPreferences = {
+      wakeTime: '08:00',
+      sleepTime: '18:00',
+      timeZone: 'UTC',
+      dailySchedule: null,
+      dailyScheduleConstraints: null,
+    };
+
+    const block = getLargestFreeBlockToday({
+      calendarEvents,
+      userPrefs,
+      now: new Date('2025-01-01T00:00:00.000Z'),
+    });
+
+    expect(block).toContain('10:00 AM');
+    expect(block).toContain('2:00 PM');
   });
 });

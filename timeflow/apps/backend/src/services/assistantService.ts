@@ -25,7 +25,7 @@ import {
   isWithinWakeHours,
   type UserPreferences,
 } from '../utils/scheduleValidator.js';
-import { buildAvailabilitySummary } from '../utils/availability.js';
+import { buildAvailabilitySummary, getLargestFreeBlockToday } from '../utils/availability.js';
 import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
 import { DateTime } from 'luxon';
 
@@ -356,6 +356,36 @@ function detectDailyPlanIntent(userMessage: string): boolean {
   ];
 
   return dailyPlanKeywords.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Detect if the user wants a rich narrative daily briefing.
+ * These queries route to availability mode but deserve a full LLM response.
+ */
+function detectDailyBriefingIntent(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  const dailyBriefingPhrases = [
+    'what does my day look like',
+    "what's my day look like",
+    'whats my day look like',
+    'what does today look like',
+    "what's today look like",
+    'whats today look like',
+    'how does my day look',
+    'run me through my day',
+    'walk me through my day',
+    'morning briefing',
+    'today overview',
+    'overview of my day',
+    'brief me on today',
+    'brief me on my day',
+    "what's my today look like",
+    'whats my today look like',
+    'what does my schedule look like today',
+    'what does my today look like',
+  ];
+
+  return dailyBriefingPhrases.some((phrase) => lower.includes(phrase));
 }
 
 function detectPlanningIntent(userMessage: string): boolean {
@@ -1230,7 +1260,7 @@ export async function processMessage(
       dailyScheduleConstraints: user.dailyScheduleConstraints as DailyScheduleConfig | null,
     };
 
-    if (effectiveMode === 'availability') {
+    if (effectiveMode === 'availability' && !detectDailyBriefingIntent(message)) {
       const availabilitySummary = buildAvailabilitySummary({
         message,
         calendarEvents,
@@ -1538,6 +1568,173 @@ export async function runThreadAssistTask(
   }
 
   return normalizeThreadAssistResult(mode, data);
+}
+
+/**
+ * Build a pre-computed TODAY_SUMMARY block for daily briefing queries.
+ */
+function buildTodaySummaryBlock(
+  calendarEvents: { start: string; end: string; summary?: string }[],
+  unscheduledTasks: { title: string; priority: number; dueDate: Date | null }[],
+  scheduledTasks: {
+    title: string;
+    scheduledTask: { startDateTime: Date; endDateTime: Date } | null;
+  }[],
+  habits: { title: string; frequency: string; daysOfWeek: string[] }[],
+  userPrefs: UserPreferences,
+  now: Date
+): string {
+  const { timeZone, wakeTime, sleepTime, dailySchedule, dailyScheduleConstraints } = userPrefs;
+  const nowLocal = DateTime.fromJSDate(now, { zone: timeZone });
+  const todayStart = nowLocal.startOf('day');
+  const todayEnd = nowLocal.endOf('day');
+
+  const dayScheduleKeys: Record<number, keyof DailyScheduleConfig> = {
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
+    7: 'sunday',
+  };
+  const todaySchedule = (dailyScheduleConstraints || dailySchedule)?.[dayScheduleKeys[nowLocal.weekday]];
+  const effectiveWakeTime = todaySchedule?.wakeTime || wakeTime;
+  const effectiveSleepTime = todaySchedule?.sleepTime || sleepTime;
+
+  const todayEvents = calendarEvents.filter((event) => {
+    const eventStart = DateTime.fromISO(event.start, { zone: timeZone });
+    return eventStart >= todayStart && eventStart <= todayEnd;
+  });
+
+  const todayScheduledTasks = scheduledTasks.filter((task) => {
+    if (!task.scheduledTask) return false;
+    const start = DateTime.fromJSDate(task.scheduledTask.startDateTime, { zone: timeZone });
+    return start >= todayStart && start <= todayEnd;
+  });
+
+  const committedMinutes =
+    todayEvents.reduce((sum, event) => {
+      const start = DateTime.fromISO(event.start, { zone: timeZone });
+      const end = DateTime.fromISO(event.end, { zone: timeZone });
+      return sum + end.diff(start, 'minutes').minutes;
+    }, 0) +
+    todayScheduledTasks.reduce((sum, task) => {
+      const start = DateTime.fromJSDate(task.scheduledTask!.startDateTime, { zone: timeZone });
+      const end = DateTime.fromJSDate(task.scheduledTask!.endDateTime, { zone: timeZone });
+      return sum + end.diff(start, 'minutes').minutes;
+    }, 0);
+  const committedHours = (committedMinutes / 60).toFixed(1);
+
+  const [wakeH, wakeM] = effectiveWakeTime.split(':').map(Number);
+  const [sleepH, sleepM] = effectiveSleepTime.split(':').map(Number);
+  const totalAvailableMinutes = sleepH * 60 + sleepM - (wakeH * 60 + wakeM);
+  const freeMinutes = Math.max(0, totalAvailableMinutes - committedMinutes);
+  const freeHours = (freeMinutes / 60).toFixed(1);
+
+  const overdue = unscheduledTasks.filter(
+    (task) => task.dueDate && DateTime.fromJSDate(task.dueDate, { zone: timeZone }) < nowLocal
+  );
+
+  const dueToday = unscheduledTasks.filter((task) => {
+    if (!task.dueDate) return false;
+    const due = DateTime.fromJSDate(task.dueDate, { zone: timeZone });
+    return due >= todayStart && due <= todayEnd;
+  });
+
+  const weekdayAbbrevMap: Record<number, string> = {
+    1: 'mon',
+    2: 'tue',
+    3: 'wed',
+    4: 'thu',
+    5: 'fri',
+    6: 'sat',
+    7: 'sun',
+  };
+  const weekdayAbbrev = weekdayAbbrevMap[nowLocal.weekday];
+  const habitsToday = habits.filter((habit) => {
+    if (habit.frequency === 'daily') return true;
+    if (habit.frequency === 'weekly') {
+      return habit.daysOfWeek.some((day) => day.toLowerCase().startsWith(weekdayAbbrev));
+    }
+    return false;
+  });
+
+  const topPriorityTasks = [...unscheduledTasks]
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 2)
+    .map((task) => task.title);
+
+  const largestFreeBlock = getLargestFreeBlockToday({
+    calendarEvents: [
+      ...calendarEvents,
+      ...todayScheduledTasks.map((task) => ({
+        start: task.scheduledTask!.startDateTime.toISOString(),
+        end: task.scheduledTask!.endDateTime.toISOString(),
+        summary: task.title,
+      })),
+    ],
+    userPrefs: {
+      ...userPrefs,
+      wakeTime: effectiveWakeTime,
+      sleepTime: effectiveSleepTime,
+    },
+    now,
+  });
+
+  let block = `**TODAY_SUMMARY** (pre-computed for your briefing response):\n`;
+  block += `- Committed time today: ${committedHours} hours (${todayEvents.length} calendar events, ${todayScheduledTasks.length} scheduled tasks)\n`;
+  block += `- Estimated free time today: ${freeHours} hours\n`;
+
+  if (todayEvents.length > 0) {
+    block += `- Today's calendar events:\n`;
+    todayEvents.forEach((event) => {
+      const start = DateTime.fromISO(event.start, { zone: timeZone }).toFormat('h:mm a');
+      const end = DateTime.fromISO(event.end, { zone: timeZone }).toFormat('h:mm a');
+      block += `  • ${start} - ${end}: ${event.summary || 'Untitled'}\n`;
+    });
+  }
+
+  if (todayScheduledTasks.length > 0) {
+    block += `- Today's scheduled tasks:\n`;
+    todayScheduledTasks.forEach((task) => {
+      const start = DateTime.fromJSDate(task.scheduledTask!.startDateTime, { zone: timeZone }).toFormat('h:mm a');
+      const end = DateTime.fromJSDate(task.scheduledTask!.endDateTime, { zone: timeZone }).toFormat('h:mm a');
+      block += `  • ${start} - ${end}: ${task.title}\n`;
+    });
+  }
+
+  if (overdue.length > 0) {
+    const titles = overdue
+      .map((task) => `${task.title} (${task.priority === 1 ? 'HIGH' : task.priority === 2 ? 'MEDIUM' : 'LOW'})`)
+      .join(', ');
+    block += `- OVERDUE tasks: ${titles}\n`;
+  } else {
+    block += `- No overdue tasks\n`;
+  }
+
+  if (dueToday.length > 0) {
+    block += `- Tasks due today: ${dueToday.map((task) => task.title).join(', ')}\n`;
+  } else {
+    block += `- No tasks due today\n`;
+  }
+
+  if (topPriorityTasks.length > 0) {
+    block += `- Top unscheduled priorities: ${topPriorityTasks.join(', ')}\n`;
+  }
+
+  if (habitsToday.length > 0) {
+    block += `- Habits for today: ${habitsToday.map((habit) => habit.title).join(', ')}\n`;
+  } else {
+    block += `- No habits scheduled for today\n`;
+  }
+
+  if (largestFreeBlock) {
+    block += `- Biggest free block today: ${largestFreeBlock}\n`;
+  }
+
+  block += `\nUse this data in your briefing. Focus on today — do not re-list the full week unless today is empty.\n\n`;
+  return block;
 }
 
 /**
@@ -1936,6 +2133,24 @@ async function buildContextPrompt(
   if (dailyPlanRequest) {
     prompt += `**Daily Plan Request**: Provide a concise plan for today based on scheduled tasks and calendar events. Highlight open slots if available.\n\n`;
   }
+
+  if (detectDailyBriefingIntent(userMessage)) {
+    prompt += buildTodaySummaryBlock(
+      calendarEvents,
+      unscheduledTasks,
+      scheduledTasks,
+      activeHabits,
+      {
+        wakeTime: user.wakeTime,
+        sleepTime: user.sleepTime,
+        timeZone: user.timeZone,
+        dailySchedule: user.dailySchedule as DailyScheduleConfig | null,
+        dailyScheduleConstraints: user.dailyScheduleConstraints as DailyScheduleConfig | null,
+      },
+      now
+    );
+  }
+
   if (shouldIncludeScheduledIds) {
     prompt += '**Reschedule Request**: The user is asking to move existing scheduled tasks. Only output blocks for tasks listed under "Already Scheduled Tasks".\n\n';
   }
@@ -2811,6 +3026,7 @@ export const __test__ = {
   detectPlanAdjustment,
   detectRescheduleIntent,
   detectDailyPlanIntent,
+  detectDailyBriefingIntent,
   detectPlanningIntent,
   getPlanningState,
   shouldAskPlanningQuestion,

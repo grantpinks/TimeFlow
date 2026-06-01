@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { ChatMessage } from './ChatMessage';
@@ -15,6 +15,7 @@ import { FlowMascot } from '../FlowMascot';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import SchedulePreviewCard from '../SchedulePreviewCard';
 import * as api from '@/lib/api';
+import { getAssistantQuickActionChips } from '@/lib/assistantQuickActions';
 import type { ChatMessage as ChatMessageType, Task, SchedulePreview, ApplyScheduleBlock, Habit } from '@timeflow/shared';
 
 interface FlowAIAssistantPanelProps {
@@ -65,33 +66,10 @@ export function FlowAIAssistantPanel({
   const conversationIdRef = useRef<string | null>(null); // Fix #1: Use ref to prevent split conversations
   const sessionGenerationRef = useRef(0); // Fix #4: Session token to prevent old saves writing to new session
 
-  // Quick actions for common queries
-  const quickActions: QuickAction[] = [
-    {
-      id: 'schedule-unscheduled',
-      icon: '📅',
-      label: 'Schedule my tasks',
-      prompt: 'Please help me schedule all my unscheduled tasks optimally.',
-    },
-    {
-      id: 'due-today',
-      icon: '🎯',
-      label: "What's due today?",
-      prompt: 'What tasks are due today and what should I prioritize?',
-    },
-    {
-      id: 'optimize-week',
-      icon: '⚡',
-      label: 'Optimize my week',
-      prompt: 'Can you help me reorganize my week for better productivity?',
-    },
-    {
-      id: 'productivity-insights',
-      icon: '📊',
-      label: 'Show insights',
-      prompt: 'Show me my productivity trends and insights.',
-    },
-  ];
+  const quickActions: QuickAction[] = useMemo(
+    () => getAssistantQuickActionChips(new Date(), timeZone),
+    [timeZone]
+  );
 
   // Auto-scroll to bottom when messages update
   useEffect(() => {

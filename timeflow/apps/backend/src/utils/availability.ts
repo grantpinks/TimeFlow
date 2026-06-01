@@ -163,6 +163,49 @@ function subtractIntervals(freeSlots: TimeInterval[], busyIntervals: TimeInterva
   return result.sort((a, b) => a.start - b.start);
 }
 
+export function getLargestFreeBlockToday(options: {
+  calendarEvents: CalendarEvent[];
+  userPrefs: UserPreferences;
+  now?: Date;
+  minMinutes?: number;
+}): string | null {
+  const minMinutes = options.minMinutes ?? 30;
+  const now = fromJSDate(options.now ?? new Date(), {
+    zone: options.userPrefs.timeZone,
+  });
+  const range = resolveAvailabilityRange('today', options.userPrefs.timeZone, now);
+
+  const inRangeEvents = options.calendarEvents.filter((event) => {
+    const start = fromISO(event.start, { zone: options.userPrefs.timeZone });
+    const end = fromISO(event.end, { zone: options.userPrefs.timeZone });
+    if (!start.isValid || !end.isValid) {
+      return false;
+    }
+    return start < range.end && end > range.start;
+  });
+
+  const busyIntervals = buildBusyIntervals(inRangeEvents, options.userPrefs.timeZone);
+  const freeSlots = buildFreeSlots(range.start, range.end, options.userPrefs);
+  const openSlots = subtractIntervals(freeSlots, busyIntervals);
+
+  if (openSlots.length === 0) {
+    return null;
+  }
+
+  const largest = openSlots.reduce((best, slot) =>
+    slot.end - slot.start > best.end - best.start ? slot : best
+  );
+  const durationMinutes = (largest.end - largest.start) / 60000;
+  if (durationMinutes < minMinutes) {
+    return null;
+  }
+
+  const start = fromMillis(largest.start, { zone: options.userPrefs.timeZone });
+  const end = fromMillis(largest.end, { zone: options.userPrefs.timeZone });
+  const hours = Math.round((durationMinutes / 60) * 10) / 10;
+  return `${start.toFormat('h:mm a')} - ${end.toFormat('h:mm a')} (${hours} hours)`;
+}
+
 export function buildAvailabilitySummary(options: {
   message: string;
   calendarEvents: CalendarEvent[];

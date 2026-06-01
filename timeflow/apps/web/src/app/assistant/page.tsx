@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -13,6 +13,7 @@ import { useTasks } from '../../hooks/useTasks';
 import { useHabits } from '../../hooks/useHabits';
 import { useUser } from '../../hooks/useUser';
 import * as api from '../../lib/api';
+import { getAssistantQuickActionPrompts } from '../../lib/assistantQuickActions';
 import type { ChatMessage, SchedulePreview, ApplyScheduleBlock } from '@timeflow/shared';
 
 /** C4: Map raw API/network errors to user-friendly messages. */
@@ -507,15 +508,10 @@ export default function AssistantPage() {
     }
   };
 
-  // Task 13.9: Enhanced availability question templates
-  const quickActions = [
-    'What does my schedule look like today?',
-    'When am I free today?',
-    'When am I free this week?',
-    'Schedule my high priority tasks',
-    'Do I have 2 hours free tomorrow?',
-    'What is my busiest day this week?',
-  ];
+  const quickActions = useMemo(
+    () => getAssistantQuickActionPrompts(new Date(), user?.timeZone),
+    [user?.timeZone]
+  );
 
   return (
     <Layout>
