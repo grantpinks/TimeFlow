@@ -579,7 +579,7 @@ function DraggableEvent({
     const checkWidth = () => {
       if (eventRef.current) {
         const width = eventRef.current.getBoundingClientRect().width;
-        setIsNarrow(width < 150); // Narrow if less than 150px
+        setIsNarrow(width < 100); // Narrow if less than 100px (reduced from 150px to show drag handles more often)
       }
     };
 
@@ -735,7 +735,7 @@ function DraggableEvent({
       // Check width immediately when ref is set
       if (node) {
         const width = node.getBoundingClientRect().width;
-        setIsNarrow(width < 150);
+        setIsNarrow(width < 100); // Match the threshold in useEffect
       }
     },
     [setNodeRef]
