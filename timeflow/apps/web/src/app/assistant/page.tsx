@@ -351,6 +351,11 @@ export default function AssistantPage() {
     scheduleAutoSaveFlush(800);
   };
 
+  const quickActions = useMemo(
+    () => getAssistantQuickActionPrompts(new Date(), user?.timeZone),
+    [user?.timeZone]
+  );
+
   if (userLoading || !isAuthenticated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center app-shell">
@@ -507,11 +512,6 @@ export default function AssistantPage() {
       setApplying(false);
     }
   };
-
-  const quickActions = useMemo(
-    () => getAssistantQuickActionPrompts(new Date(), user?.timeZone),
-    [user?.timeZone]
-  );
 
   return (
     <Layout>
