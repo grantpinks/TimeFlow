@@ -388,6 +388,87 @@ function detectDailyBriefingIntent(userMessage: string): boolean {
   return dailyBriefingPhrases.some((phrase) => lower.includes(phrase));
 }
 
+const SCHEDULING_INTENT_KEYWORDS = [
+  'schedule my',
+  'schedule these',
+  'schedule them',
+  'schedule it',
+  'schedule this',
+  'schedule tasks',
+  'schedule task',
+  'schedule habits',
+  'schedule habit',
+  'schedule everything',
+  'plan my tasks',
+  'plan these',
+  'plan it',
+  'plan tomorrow',
+  "tomorrow's schedule",
+  'tomorrow schedule',
+  'block time',
+  'time block',
+  'time-block',
+  'organize',
+  'fit in',
+  'put on my calendar',
+  'add to calendar',
+  'add my tasks to my calendar',
+  'add tasks to my calendar',
+  'add my tasks to the calendar',
+  'add tasks to the calendar',
+  'add my tasks to calendar',
+  'add tasks to calendar',
+  'add my habits to',
+  'add habits to',
+  'set up my habits',
+  'create a schedule',
+  'set up a schedule',
+  'make a schedule',
+  'help me schedule',
+  'can we schedule',
+  "let's schedule",
+  "i'd like to schedule",
+  'i would like to schedule',
+  'want to schedule',
+  'need to schedule',
+  'going to schedule',
+  'gonna schedule',
+  'should schedule',
+  'could you schedule',
+  'can you schedule',
+  'please schedule',
+  'schedule for',
+  'schedule on',
+  'schedule at',
+  'schedule during',
+  'schedule in',
+  'schedule between',
+  'schedule from',
+  'arrange my',
+  'arrange these',
+  'set up my tasks',
+  'put these on',
+  'add these to',
+  'reschedule',
+  'reschedule my',
+  'reschedule tasks',
+  'reschedule task',
+  'move my task',
+  'move my tasks',
+  'move task',
+  'move tasks',
+  'move it to',
+  'move this to',
+  'shift my',
+  'shift this',
+  'change time',
+];
+
+function detectSchedulingIntent(userMessage: string): boolean {
+  const lower = userMessage.toLowerCase();
+  return SCHEDULING_INTENT_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 function detectPlanningIntent(userMessage: string): boolean {
   const lower = userMessage.toLowerCase();
   const planningKeywords = [
@@ -398,10 +479,9 @@ function detectPlanningIntent(userMessage: string): boolean {
     'realistic plan',
     'what should i do next',
     'best use of my time',
-    'prioritize',
-    'prioritise',
     'prioritize my',
     'prioritise my',
+    'set my priorities',
     'organize my day',
     'organise my day',
   ];
@@ -509,6 +589,9 @@ function resolvePlanningMode(
   baseMode: 'conversation' | 'scheduling' | 'availability',
   message: string
 ): 'conversation' | 'scheduling' | 'availability' | 'planning' | 'task-creation' {
+  if (baseMode === 'conversation' && detectSchedulingIntent(message)) {
+    return 'scheduling';
+  }
   if (baseMode === 'conversation' && detectPlanningIntent(message)) {
     return 'planning';
   }
@@ -969,78 +1052,7 @@ function detectMode(
     'free evenings',
   ];
   const isAvailabilityRequest = availabilityKeywords.some((kw) => lower.includes(kw));
-
-  // Scheduling mode: Explicit scheduling requests
-  // Fix #3: Expanded keyword list to catch more natural language variations
-  const schedulingKeywords = [
-    'schedule my',
-    'schedule these',
-    'schedule them',
-    'schedule it',
-    'schedule this',
-    'schedule tasks',
-    'schedule task',
-    'schedule everything',
-    'plan my tasks',
-    'plan these',
-    'plan it',
-    'block time',
-    'time block',
-    'time-block',
-    'organize',
-    'fit in',
-    'put on my calendar',
-    'add to calendar',
-    'add my tasks to my calendar',
-    'add tasks to my calendar',
-    'add my tasks to the calendar',
-    'add tasks to the calendar',
-    'add my tasks to calendar',
-    'add tasks to calendar',
-    'create a schedule',
-    'set up a schedule',
-    'make a schedule',
-    'help me schedule',
-    'can we schedule',
-    "let's schedule",
-    "i'd like to schedule",
-    'i would like to schedule',
-    'want to schedule',
-    'need to schedule',
-    'going to schedule',
-    'gonna schedule',
-    'should schedule',
-    'could you schedule',
-    'can you schedule',
-    'please schedule',
-    'schedule for',
-    'schedule on',
-    'schedule at',
-    'schedule during',
-    'schedule in',
-    'schedule between',
-    'schedule from',
-    'arrange my',
-    'arrange these',
-    'set up my tasks',
-    'put these on',
-    'add these to',
-    'reschedule',
-    'reschedule my',
-    'reschedule tasks',
-    'reschedule task',
-    'move my task',
-    'move my tasks',
-    'move task',
-    'move tasks',
-    'move it to',
-    'move this to',
-    'shift my',
-    'shift this',
-    'change time',
-  ];
-
-  const isSchedulingRequest = schedulingKeywords.some((kw) => lower.includes(kw));
+  const isSchedulingRequest = detectSchedulingIntent(userMessage);
 
   if (isAvailabilityRequest && !isSchedulingRequest) {
     return 'availability';
@@ -3027,6 +3039,7 @@ export const __test__ = {
   detectRescheduleIntent,
   detectDailyPlanIntent,
   detectDailyBriefingIntent,
+  detectSchedulingIntent,
   detectPlanningIntent,
   getPlanningState,
   shouldAskPlanningQuestion,

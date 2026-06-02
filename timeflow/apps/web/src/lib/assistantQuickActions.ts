@@ -29,7 +29,7 @@ export function getAssistantQuickActionPrompts(now: Date = new Date(), timeZone?
   if (period === 'morning') {
     return [
       'What does my day look like?',
-      'Set my priorities for today',
+      'What should I prioritize today?',
       'What habits do I have today?',
       'Schedule my high priority tasks',
       "What's due today?",
@@ -50,7 +50,7 @@ export function getAssistantQuickActionPrompts(now: Date = new Date(), timeZone?
 
   return [
     "Plan tomorrow's schedule",
-    "What did I not finish today?",
+    "Schedule my tasks and habits for tomorrow",
     'Reschedule what I missed today',
     "What's due tomorrow?",
     'When am I free tomorrow?',
@@ -79,8 +79,8 @@ export function getAssistantQuickActionChips(now: Date = new Date(), timeZone?: 
     ];
   }
 
-  return [
-    { id: 'plan-tomorrow', icon: '📅', label: 'Plan tomorrow', prompt: "Plan tomorrow's schedule." },
+    return [
+      { id: 'plan-tomorrow', icon: '📅', label: 'Schedule tomorrow', prompt: 'Schedule my tasks and habits for tomorrow.' },
     { id: 'missed', icon: '🔄', label: 'What did I miss?', prompt: "What tasks did I not finish today?" },
     { id: 'due-tomorrow', icon: '🎯', label: 'Due tomorrow', prompt: "What's due tomorrow?" },
     { id: 'week', icon: '📊', label: 'Optimize week', prompt: 'Help me optimize my week.' },

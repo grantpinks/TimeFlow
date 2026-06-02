@@ -8,6 +8,7 @@ const {
   detectRescheduleIntent,
   detectDailyPlanIntent,
   detectDailyBriefingIntent,
+  detectSchedulingIntent,
   detectPlanningIntent,
   getPlanningState,
   shouldAskPlanningQuestion,
@@ -50,6 +51,14 @@ describe('assistantService helpers', () => {
     it('detects scheduling requests', () => {
       const mode = detectMode('Schedule my tasks for tomorrow.', false);
       expect(mode).toBe('scheduling');
+    });
+
+    it('detects habit scheduling requests', () => {
+      expect(detectMode('Schedule my habits for tomorrow', false)).toBe('scheduling');
+    });
+
+    it('detects plan tomorrow scheduling phrasing', () => {
+      expect(detectMode("Plan tomorrow's schedule", false)).toBe('scheduling');
     });
 
     it('prefers scheduling when both availability and scheduling cues exist', () => {
@@ -153,6 +162,16 @@ describe('assistantService helpers', () => {
 
     it('returns false for simple availability queries', () => {
       expect(detectDailyBriefingIntent('when am I free tomorrow')).toBe(false);
+    });
+  });
+
+  describe('resolvePlanningMode', () => {
+    it('promotes conversation to scheduling when scheduling language is present', () => {
+      expect(resolvePlanningMode('conversation', "Plan tomorrow's schedule")).toBe('scheduling');
+    });
+
+    it('does not treat bare priority wording as planning when scheduling is requested', () => {
+      expect(resolvePlanningMode('conversation', 'Schedule my high priority tasks')).toBe('scheduling');
     });
   });
 

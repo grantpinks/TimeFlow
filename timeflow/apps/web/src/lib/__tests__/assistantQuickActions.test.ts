@@ -18,6 +18,6 @@ describe('assistantQuickActions', () => {
   it('returns evening chips after 5 PM in user timezone', () => {
     const evening = new Date('2026-06-02T00:30:00.000Z'); // 7:30 PM Central
     const chips = getAssistantQuickActionChips(evening, 'America/Chicago');
-    expect(chips[0].label).toBe('Plan tomorrow');
+    expect(chips[0].label).toBe('Schedule tomorrow');
   });
 });
