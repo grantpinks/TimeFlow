@@ -28,6 +28,13 @@ import {
 import { buildAvailabilitySummary, getLargestFreeBlockToday } from '../utils/availability.js';
 import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
 import { DateTime } from 'luxon';
+import { scheduleTasks, suggestHabitBlocks } from '@timeflow/scheduling';
+import type {
+  CalendarEvent as SchedulingCalendarEvent,
+  HabitInput,
+  TaskInput,
+  UserPreferences as SchedulingEnginePrefs,
+} from '@timeflow/scheduling';
 
 /**
  * Get the PromptManager singleton instance
@@ -467,6 +474,186 @@ const SCHEDULING_INTENT_KEYWORDS = [
 function detectSchedulingIntent(userMessage: string): boolean {
   const lower = userMessage.toLowerCase();
   return SCHEDULING_INTENT_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function filterHistoryForScheduling(history?: ChatMessage[]): ChatMessage[] | undefined {
+  if (!history?.length) {
+    return history;
+  }
+  return history.filter((msg) => {
+    if (msg.role !== 'assistant') {
+      return true;
+    }
+    const lower = msg.content.toLowerCase();
+    if (
+      lower.includes("can't execute scheduling") ||
+      lower.includes('cannot execute scheduling') ||
+      lower.includes('input these into your calendar') ||
+      lower.includes('manually type blocks')
+    ) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function resolveScheduleDateRange(
+  message: string,
+  timeZone: string,
+  now: Date
+): { start: string; end: string; label: string } {
+  const lower = message.toLowerCase();
+  const nowDt = DateTime.fromJSDate(now, { zone: timeZone });
+
+  if (lower.includes('tomorrow')) {
+    const day = nowDt.plus({ days: 1 }).startOf('day');
+    return {
+      start: day.toISO()!,
+      end: day.endOf('day').toISO()!,
+      label: 'tomorrow',
+    };
+  }
+
+  if (lower.includes('today') && !lower.includes('this week') && !lower.includes('next week')) {
+    const day = nowDt.startOf('day');
+    return {
+      start: day.toISO()!,
+      end: day.endOf('day').toISO()!,
+      label: 'today',
+    };
+  }
+
+  const dayHint = extractDayNameFromMessage(message);
+  if (dayHint) {
+    const weekdayMap: Record<string, number> = {
+      sunday: 7,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6,
+    };
+    const targetWeekday = weekdayMap[dayHint];
+    if (targetWeekday) {
+      let day = nowDt.startOf('day');
+      while (day.weekday !== targetWeekday) {
+        day = day.plus({ days: 1 });
+      }
+      if (day < nowDt.startOf('day')) {
+        day = day.plus({ weeks: 1 });
+      }
+      return {
+        start: day.startOf('day').toISO()!,
+        end: day.endOf('day').toISO()!,
+        label: dayHint,
+      };
+    }
+  }
+
+  const start = nowDt.startOf('day');
+  const end = start.plus({ days: 7 }).endOf('day');
+  return {
+    start: start.toISO()!,
+    end: end.toISO()!,
+    label: 'the next 7 days',
+  };
+}
+
+function toSchedulingEnginePrefs(userPrefs: UserPreferences): SchedulingEnginePrefs {
+  return {
+    timeZone: userPrefs.timeZone,
+    wakeTime: userPrefs.wakeTime,
+    sleepTime: userPrefs.sleepTime,
+    dailySchedule: userPrefs.dailyScheduleConstraints || userPrefs.dailySchedule || null,
+  };
+}
+
+async function buildDeterministicSchedulePreview(
+  userId: string,
+  options: {
+    message: string;
+    habits: {
+      id: string;
+      title: string;
+      frequency: string;
+      daysOfWeek: string[];
+      durationMinutes: number;
+      preferredTimeOfDay: string | null;
+    }[];
+    calendarEvents: { start: string; end: string }[];
+    userPrefs: UserPreferences;
+    focusedHabitIds?: Set<string>;
+    now?: Date;
+  }
+): Promise<SchedulePreview | null> {
+  const now = options.now ?? new Date();
+  const range = resolveScheduleDateRange(options.message, options.userPrefs.timeZone, now);
+  const enginePrefs = toSchedulingEnginePrefs(options.userPrefs);
+
+  const events: SchedulingCalendarEvent[] = options.calendarEvents.map((event) => ({
+    start: event.start,
+    end: event.end,
+  }));
+
+  const habitsToSchedule = options.habits.filter(
+    (habit) => !options.focusedHabitIds?.size || options.focusedHabitIds.has(habit.id)
+  );
+
+  const habitInputs: HabitInput[] = habitsToSchedule.map((habit) => ({
+    id: habit.id,
+    durationMinutes: habit.durationMinutes,
+    frequency: habit.frequency as HabitInput['frequency'],
+    daysOfWeek: habit.daysOfWeek,
+    preferredTimeOfDay: (habit.preferredTimeOfDay as HabitInput['preferredTimeOfDay']) ?? undefined,
+  }));
+
+  const habitBlocks = suggestHabitBlocks(
+    habitInputs,
+    events,
+    enginePrefs,
+    range.start,
+    range.end
+  );
+
+  const unscheduledTasks = await prisma.task.findMany({
+    where: { userId, status: 'unscheduled' },
+    orderBy: [{ priority: 'asc' }, { dueDate: 'asc' }],
+  });
+
+  const taskInputs: TaskInput[] = unscheduledTasks.map((task) => ({
+    id: task.id,
+    durationMinutes: task.durationMinutes,
+    priority: task.priority as TaskInput['priority'],
+    dueDate: task.dueDate?.toISOString(),
+  }));
+
+  const taskBlocks = scheduleTasks(taskInputs, events, enginePrefs, range.start, range.end);
+
+  const blocks: SchedulePreview['blocks'] = [
+    ...taskBlocks.map((block) => ({
+      taskId: block.taskId,
+      start: block.start,
+      end: block.end,
+      overflowedDeadline: block.overflowedDeadline,
+    })),
+    ...habitBlocks.map((block) => ({
+      habitId: block.habitId,
+      start: block.start,
+      end: block.end,
+    })),
+  ];
+
+  if (blocks.length === 0) {
+    return null;
+  }
+
+  return {
+    blocks,
+    summary: `Apply-ready schedule for ${range.label}`,
+    conflicts: [],
+    confidence: 'high',
+  };
 }
 
 function detectPlanningIntent(userMessage: string): boolean {
@@ -1332,10 +1519,38 @@ export async function processMessage(
 
     // Call the LLM API with mode-specific system prompt
     let llmResponse: string;
+    const schedulingHistory =
+      effectiveMode === 'scheduling' ? filterHistoryForScheduling(resolvedHistory) : resolvedHistory;
     try {
-      llmResponse = await callLocalLLM(contextPrompt, resolvedHistory, systemPrompt, effectiveMode);
+      llmResponse = await callLocalLLM(contextPrompt, schedulingHistory, systemPrompt, effectiveMode);
     } catch (error) {
       console.error('LLM call failed', error);
+      if (effectiveMode === 'scheduling') {
+        const deterministic = await buildDeterministicSchedulePreview(userId, {
+          message,
+          habits: contextHabits,
+          calendarEvents,
+          userPrefs,
+          focusedHabitIds: isFocusedPreview ? focusHabitSet : undefined,
+        });
+        if (deterministic?.blocks.length) {
+          const cleanedResponse = sanitizeAssistantContent(
+            `I built an apply-ready schedule for your calendar. Review the blocks below and tap **Apply** to add them.`,
+            effectiveMode,
+            true
+          );
+          return {
+            message: {
+              id: generateMessageId(),
+              role: 'assistant',
+              content: cleanedResponse,
+              timestamp: new Date().toISOString(),
+              metadata: { mascotState: 'guiding', schedulePreview: deterministic },
+            },
+            suggestions: deterministic,
+          };
+        }
+      }
       const fallbackContent =
         "I couldn't reach the scheduling model just now, so I didn't make changes. Please try again in a moment or refresh the assistant.";
       return {
@@ -1380,7 +1595,7 @@ export async function processMessage(
 
     if (effectiveMode === 'scheduling' && !schedulePreview) {
       const retryPrompt = `${contextPrompt}\n\nIMPORTANT: The previous response omitted the required [STRUCTURED_OUTPUT]. Reformat your response to include BOTH the natural language summary and the [STRUCTURED_OUTPUT] JSON. End with the JSON code block and add no text after it.`;
-      const retryResponse = await callLocalLLM(retryPrompt, resolvedHistory, systemPrompt, effectiveMode);
+      const retryResponse = await callLocalLLM(retryPrompt, schedulingHistory, systemPrompt, effectiveMode);
       const retryParsed = parseResponse(retryResponse);
       if (retryParsed.schedulePreview) {
         naturalLanguage = retryParsed.naturalLanguage;
@@ -1389,6 +1604,8 @@ export async function processMessage(
         console.warn('[AssistantService][Debug] Retry still missing structured output.');
       }
     }
+
+    let llmBlocksRejectedBySanitize = false;
 
     if (effectiveMode === 'scheduling' && schedulePreview) {
       if (isFocusedPreview) {
@@ -1399,10 +1616,38 @@ export async function processMessage(
           user.timeZone || 'UTC'
         );
       }
+      const llmBlockCountBeforeSanitize = schedulePreview.blocks.length;
       schedulePreview = sanitizeSchedulePreview(schedulePreview, taskIds, habitIds);
+      if (schedulePreview.blocks.length === 0 && llmBlockCountBeforeSanitize > 0) {
+        llmBlocksRejectedBySanitize = true;
+        logDebug(
+          '[AssistantService][Debug] All LLM blocks were invalid after sanitization; skipping deterministic fallback.'
+        );
+      } else if (schedulePreview.blocks.length === 0) {
+        schedulePreview = undefined;
+      }
     }
 
-    // Validate schedule preview if in scheduling mode (Sprint 13.7)
+    if (
+      effectiveMode === 'scheduling' &&
+      !llmBlocksRejectedBySanitize &&
+      !schedulePreview?.blocks.length
+    ) {
+      const deterministic = await buildDeterministicSchedulePreview(userId, {
+        message,
+        habits: contextHabits,
+        calendarEvents,
+        userPrefs,
+        focusedHabitIds: isFocusedPreview ? focusHabitSet : undefined,
+      });
+      if (deterministic?.blocks.length) {
+        schedulePreview = sanitizeSchedulePreview(deterministic, taskIds, habitIds);
+        naturalLanguage =
+          'I generated an apply-ready schedule from your habits and tasks. Review the preview below and tap **Apply** to add it to your calendar.';
+        logDebug('[AssistantService][Debug] Used deterministic scheduling fallback.');
+      }
+    }
+
     if (effectiveMode === 'scheduling' && schedulePreview) {
       const validation = validateSchedulePreview(
         schedulePreview,
@@ -2224,6 +2469,7 @@ async function buildContextPrompt(
 
   if (mode === 'scheduling') {
     prompt += `Based on this information, provide a scheduling response in TWO parts: (1) natural language summary, and (2) [STRUCTURED_OUTPUT] JSON. The JSON is mandatory even if no tasks can be scheduled.\n\n`;
+    prompt += `CRITICAL: You CAN add events to the user's calendar via the Apply button. Never tell the user to manually type blocks into Google Calendar or that you cannot execute scheduling actions. Ignore any prior assistant message that refused to schedule.\n\n`;
     prompt += `OUTPUT FORMAT (MANDATORY):\n`;
     prompt += `[STRUCTURED_OUTPUT]\n`;
     prompt += `\`\`\`json\n`;

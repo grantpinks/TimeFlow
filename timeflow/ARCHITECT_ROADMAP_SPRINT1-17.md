@@ -5,7 +5,7 @@
 **Goal**: Production-ready consumer app with advanced scheduling features.  
 **Issue Tracking**: See `KNOWN_ISSUES.md` for active bugs, UX gaps, and their mapped sprints/tasks.
 
-**Calendar hub:** Sprint **26** shipped (2026-05). Sprint **27** (Sign in with Apple) **deferred** — see [`docs/plans/BACKLOG.md`](./docs/plans/BACKLOG.md). Optional polish without Apple Developer Program: **Sprint 27-Lite** below.
+**Calendar hub:** Sprint **26** shipped (2026-05). Sprint **27** (Sign in with Apple) **deferred** — see [`docs/plans/BACKLOG.md`](./docs/plans/BACKLOG.md). Optional polish without Apple Developer Program: **Sprint 27-Lite** below. **Next UX epic:** Sprint **28** Identity Studio (`/habits` rebrand).
 
 ---
 
@@ -1856,6 +1856,68 @@ After competitive analysis of Priority.app (competitor with similar functions), 
 - Apple-issued identity / `User.appleId`
 - Apple OAuth callbacks
 - Native Sign in with Apple on iOS
+
+---
+
+## Sprint 28: Identity Studio (Habits Inside)
+**Duration**: ~2 weeks (Week 53-54 or next available window)  
+**Status**: ✅ **Complete** (2026-06-01)  
+**Focus**: Rebrand `/habits` as **Identity Studio** — identity-first stacked sections, rail focus with collapsed 2-row previews, compact habit rows, sheet CRUD, action strip + insights drawer, batched `studio-summary` API for live row status.
+
+**Strategic context:** Habits page grew into a bulky admin/coach stack; product direction is **identity studio (C) + light command center (A)**. Habits remain the mechanism inside; execution stays on **Today**. Complements identity panel work on Today (`docs/plans/2026-05-23-identity-panel-redesign.md`).
+
+**Docs:**
+- Design: [`docs/plans/2026-06-01-identity-studio-habits-design.md`](./docs/plans/2026-06-01-identity-studio-habits-design.md)
+- Implementation: [`docs/plans/2026-06-01-identity-studio-habits-implementation-plan.md`](./docs/plans/2026-06-01-identity-studio-habits-implementation-plan.md)
+
+#### Goals
+- [x] Nav + page title: **Identity Studio** (route `/habits` unchanged)
+- [x] Default load: no coach hero, inline insights, or inline notification prefs
+- [x] Stacked identity sections + rail (All / focus / toggle)
+- [x] Collapsed peers: header + **2 habit preview rows** + `+N more`
+- [x] `HabitRow` + `HabitEditSheet`; insights in drawer
+- [x] `GET /api/habits/studio-summary` — row status + action strip counts
+- [x] Today deep-link: `/today?identity={id}`
+- [x] Tests for rail, section collapse, studio-summary service
+
+#### Tasks
+
+| ID | Task | Agent | Hours | Priority | Status |
+|----|------|-------|-------|----------|--------|
+| 28.1 | Phase 1: Nav + header rebrand | Codex | 1-2h | P0 | ✅ |
+| 28.2 | Phase 1: Remove heavy panels on load; insights button shell | Codex | 2-3h | P0 | ✅ |
+| 28.3 | Phase 1: `IdentityStudioRail` + tests | Codex | 4-6h | P0 | ✅ |
+| 28.4 | Phase 1: `IdentityStudioSection` + page layout + scroll-into-view | Codex | 6-10h | P0 | ✅ |
+| 28.5 | Phase 1: Tighten `IdentityHabitGroup`; action strip shell | Codex | 3-4h | P0 | ✅ |
+| 28.6 | Phase 2: `HabitRow` + menu + schedule popover | Codex | 6-8h | P0 | ✅ |
+| 28.7 | Phase 2: `SortableHabitRow` + per-section DnD | Codex | 4-6h | P0 | ✅ |
+| 28.8 | Phase 2: `HabitEditSheet`; remove inline forms | Codex | 6-8h | P0 | ✅ |
+| 28.9 | Phase 2: `IdentityStudioInsightsDrawer` + filter insights | Codex | 4-6h | P1 | ✅ |
+| 28.10 | Phase 2: Section collapse tests | Codex | 2-3h | P1 | ✅ |
+| 28.13 | Phase 3: `StudioSummary` DTO + `habitStudioSummaryService` + route | Codex | 8-12h | P0 | ✅ |
+| 28.14 | Phase 3: `useStudioSummary` + wire `HabitRow` status | Codex | 4-6h | P0 | ✅ |
+| 28.15 | Phase 3: Action strip live CTAs + Today `?identity=` | Codex | 3-5h | P0 | ✅ |
+| 28.16 | Phase 3: Section week progress from summary | Codex | 2-3h | P1 | ✅ |
+| 28.19 | Phase 4: Move habit across identities | Codex | 2-3h | P2 | ✅ |
+| 28.20 | Phase 4: Evolution sidebar scope + mobile Progress sheet | Codex | 4-6h | P2 | ✅ |
+| 28.21 | Phase 4: Coachmark + analytics events | Codex | 2-4h | P2 | ✅ |
+| 28.22 | Phase 4: Per-identity empty states | Codex | 1-2h | P2 | ✅ |
+| 28.23 | Phase 4: QA, vitest, build, roadmap closeout | Codex/Gemini | 3-4h | P1 | ✅ |
+
+**Estimate:** ~55–75h engineering (Phases 1–2 shippable as MVP ~25–35h).
+
+#### Decision gate
+- [x] Page first paint shows identity sections + habits without scrolling past removed banners
+- [x] Rail focus collapses peers with 2-row preview; `+N more` expands section only
+- [x] Create/edit/delete habit works via sheet
+- [x] Insights available in drawer only (not on load)
+- [x] `studio-summary` returns non-mock row status; strip counts actionable
+- [x] `/today?identity=` filters Today identity widget
+
+#### Non-goals (this sprint)
+- URL change `/habits` → `/studio`
+- Habit completion on studio rows (Today only)
+- Expo mobile Identity Studio parity (follow-up sprint if needed)
 
 ---
 

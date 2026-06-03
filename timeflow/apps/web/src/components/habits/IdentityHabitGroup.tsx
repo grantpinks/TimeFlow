@@ -14,6 +14,10 @@ export interface IdentityHabitGroupProps {
   isUnassigned?: boolean;
   habits: Habit[];
   evolution?: IdentityEvolutionState | null;
+  /** Tighter header/body spacing for Identity Studio */
+  compact?: boolean;
+  /** Optional trailing header content (e.g. habit count) */
+  headerExtra?: ReactNode;
   children: ReactNode;
 }
 
@@ -22,6 +26,8 @@ export function IdentityHabitGroup({
   isUnassigned = false,
   habits,
   evolution,
+  compact = false,
+  headerExtra,
   children,
 }: IdentityHabitGroupProps) {
   const stripColor = isUnassigned ? '#94a3b8' : identity?.color ?? '#64748b';
@@ -37,13 +43,23 @@ export function IdentityHabitGroup({
 
   return (
     <section
-      className="overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/40 via-white to-slate-50/80 shadow-sm ring-1 ring-white/50 backdrop-blur-[2px]"
+      className={
+        compact
+          ? 'overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm'
+          : 'overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/40 via-white to-slate-50/80 shadow-sm ring-1 ring-white/50 backdrop-blur-[2px]'
+      }
       data-testid="identity-habit-group"
       aria-label={`${habits.length} habit${habits.length === 1 ? '' : 's'}`}
     >
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-200/70 bg-white/40 px-4 py-3">
+      <header
+        className={
+          compact
+            ? 'flex flex-wrap items-center gap-2 border-b border-slate-100 bg-slate-50/50 px-3 py-2.5'
+            : 'flex flex-wrap items-center gap-3 border-b border-slate-200/70 bg-white/40 px-4 py-3'
+        }
+      >
         <div
-          className="h-9 w-1 shrink-0 rounded-full shadow-sm"
+          className={`${compact ? 'h-7' : 'h-9'} w-1 shrink-0 rounded-full shadow-sm`}
           style={{ backgroundColor: stripColor }}
           aria-hidden
         />
@@ -79,8 +95,9 @@ export function IdentityHabitGroup({
             </p>
           )}
         </div>
+        {headerExtra}
       </header>
-      <div className="space-y-3 p-3 sm:p-4">{children}</div>
+      <div className={compact ? 'space-y-2 p-2 sm:p-3' : 'space-y-3 p-3 sm:p-4'}>{children}</div>
     </section>
   );
 }

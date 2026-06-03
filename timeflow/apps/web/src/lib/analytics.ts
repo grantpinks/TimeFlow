@@ -70,6 +70,19 @@ export type AnalyticsEvent =
   | { name: 'habit_created'; properties: { frequency: string; duration_minutes: number } }
   // Habit insights and coach events (privacy-safe - no titles, hashed IDs only)
   | { name: 'page.view.habits'; properties: {} }
+  | { name: 'studio.view'; properties: { habit_count: number } }
+  | {
+      name: 'studio.focus_identity';
+      properties: { identity_id_hash: string; focused: boolean };
+    }
+  | {
+      name: 'studio.insights_open';
+      properties: { scoped: boolean; identity_id_hash?: string };
+    }
+  | {
+      name: 'studio.habit_moved';
+      properties: { habit_id_hash: string; to_unassigned: boolean };
+    }
   | { name: 'habits.insight.viewed'; properties: { days_filter: 14 | 28 } }
   | { name: 'habit.instance.complete'; properties: { habit_id_hash: string } }
   | { name: 'habit.instance.undo'; properties: { habit_id_hash: string } }

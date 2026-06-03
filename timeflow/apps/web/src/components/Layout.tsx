@@ -26,7 +26,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { id: 'today', href: '/today', label: 'Today', icon: HomeIcon },
   { id: 'tasks', href: '/tasks', label: 'Tasks', icon: CheckIcon, children: [{ href: '/categories', label: 'Categories' }] },
-  { id: 'habits', href: '/habits', label: 'Habits', icon: HabitIcon },
+  { id: 'habits', href: '/habits', label: 'Identity Studio', icon: HabitIcon },
   { id: 'assistant', href: '/assistant', label: 'Flow AI', icon: SparkIcon },
   { id: 'calendar', href: '/calendar', label: 'Calendar', icon: CalendarIcon },
   { id: 'meetings', href: '/meetings', label: 'Meetings', icon: PhoneIcon },

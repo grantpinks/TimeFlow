@@ -24,7 +24,22 @@ import type {
   MissedHabitNotification,
 } from '@timeflow/shared';
 
-export function HabitsInsights() {
+export interface HabitsInsightsProps {
+  /** When set, only show data for these habit IDs */
+  filterHabitIds?: ReadonlySet<string> | null;
+  /** Omit outer Panel padding when hosted in a drawer */
+  embedded?: boolean;
+}
+
+function habitInScope(habitId: string, filterHabitIds: ReadonlySet<string> | null | undefined): boolean {
+  if (!filterHabitIds?.size) return true;
+  return filterHabitIds.has(habitId);
+}
+
+export function HabitsInsights({
+  filterHabitIds = null,
+  embedded = false,
+}: HabitsInsightsProps) {
   const [insights, setInsights] = useState<HabitInsightsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -303,11 +318,33 @@ export function HabitsInsights() {
     );
   }
 
-  const atRiskHabits = streakNotifications;
-  const missedHabits = missedNotifications;
+  const atRiskHabits = streakNotifications.filter((n) => habitInScope(n.habitId, filterHabitIds));
+  const missedHabits = missedNotifications.filter((n) => habitInScope(n.habitId, filterHabitIds));
+
+  const scopedInsights = filterHabitIds?.size
+    ? {
+        ...insights,
+        habits: insights.habits.filter((h) => habitInScope(h.habitId, filterHabitIds)),
+        recommendations: insights.recommendations.filter((r) =>
+          habitInScope(r.habitId, filterHabitIds)
+        ),
+        coachSuggestions: {
+          primary:
+            insights.coachSuggestions.primary &&
+            habitInScope(insights.coachSuggestions.primary.habitId, filterHabitIds)
+              ? insights.coachSuggestions.primary
+              : null,
+          secondary: insights.coachSuggestions.secondary?.filter((r) =>
+            habitInScope(r.habitId, filterHabitIds)
+          ),
+        },
+      }
+    : insights;
+
+  const wrapperClass = embedded ? 'space-y-6' : 'space-y-6';
 
   return (
-    <div className="space-y-6">
+    <div className={wrapperClass}>
       {/* Period Selector */}
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-slate-800">Insights</h2>
@@ -367,15 +404,16 @@ export function HabitsInsights() {
 
       {/* Coach Card - Primary Suggestion */}
       <CoachCard
-        primary={insights.coachSuggestions.primary}
+        primary={scopedInsights.coachSuggestions.primary}
         onActionClick={handleRecommendationAction}
         onDismiss={loadInsights} // Reload insights after dismissing
       />
 
       {/* Secondary Recommendations */}
-      {insights.coachSuggestions.secondary && insights.coachSuggestions.secondary.length > 0 && (
+      {scopedInsights.coachSuggestions.secondary &&
+        scopedInsights.coachSuggestions.secondary.length > 0 && (
         <Recommendations
-          recommendations={insights.coachSuggestions.secondary}
+          recommendations={scopedInsights.coachSuggestions.secondary}
           onActionClick={handleRecommendationAction}
         />
       )}
@@ -412,7 +450,7 @@ export function HabitsInsights() {
 
       {/* Per-Habit Insights */}
       <div className="space-y-3">
-        {insights.habits.map((habit) => (
+        {scopedInsights.habits.map((habit) => (
           <HabitInsightCard key={habit.habitId} habit={habit} />
         ))}
       </div>

@@ -480,6 +480,33 @@ const habitInsightsQuerySchema = z.object({
  * GET /api/habits/insights?days=14|28
  * Returns habit insights and analytics for the authenticated user.
  */
+/**
+ * GET /api/habits/studio-summary
+ * Batched row status + action strip counts for Identity Studio.
+ */
+export async function getHabitStudioSummary(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  try {
+    const { getHabitStudioSummary: loadSummary } = await import(
+      '../services/habitStudioSummaryService.js'
+    );
+    const summary = await loadSummary(user.id);
+    return reply.send(summary);
+  } catch (error) {
+    request.log.error(error, 'Failed to get habit studio summary');
+    return reply.status(500).send({
+      error: error instanceof Error ? error.message : 'Failed to fetch studio summary',
+    });
+  }
+}
+
 export async function getHabitInsights(
   request: FastifyRequest<{ Querystring: { days?: '14' | '28' } }>,
   reply: FastifyReply

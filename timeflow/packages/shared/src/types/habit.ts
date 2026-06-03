@@ -64,6 +64,27 @@ export interface UpdateHabitRequest {
   whyStatement?: string;
 }
 
+export type HabitRowStatus = 'done_today' | 'scheduled' | 'open' | 'at_risk';
+
+export interface StudioHabitRowStatus {
+  habitId: string;
+  status: HabitRowStatus;
+  currentStreak: number;
+  streakAtRisk: boolean;
+  nextStart: string | null;
+  completedToday: boolean;
+}
+
+export interface StudioSummaryResponse {
+  rows: StudioHabitRowStatus[];
+  strip: {
+    dueTodayCount: number;
+    atRiskCount: number;
+    unscheduledWeekCount: number;
+  };
+  weekProgressByIdentityId: Record<string, { completed: number; target: number }>;
+}
+
 export interface ScheduledHabitInstance {
   scheduledHabitId: string;
   habitId: string;

@@ -96,7 +96,12 @@ export default function TodayPage() {
   const [selectedCategory, setSelectedCategory] = useState<EmailCategory | 'all'>('all');
   const [activeDragTask, setActiveDragTask] = useState<Task | null>(null);
   const [showPlanningRitual, setShowPlanningRitual] = useState(false);
-  const [identityFilter] = useState<string | null>(null);
+  const [identityFilter, setIdentityFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('identity');
+    setIdentityFilter(id && id.length > 0 ? id : null);
+  }, []);
   const [focusMode, setFocusMode] = useState(false);
   const [habits, setHabits] = useState<Habit[]>([]);
   const { progress: identityProgressFull, refresh: refreshProgress } = useIdentityProgress(

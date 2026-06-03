@@ -29,6 +29,9 @@ export interface IdentityProgressionSidebarProps {
   evolutionStates: IdentityEvolutionState[];
   identities: Identity[];
   timeZone: string;
+  /** When set, sidebar shows progression for this identity only */
+  focusedIdentityId?: string | null;
+  variant?: 'sidebar' | 'embedded';
   onRefresh?: () => void;
   onRetry?: () => void;
 }
@@ -38,13 +41,23 @@ export function IdentityProgressionSidebar({
   evolutionStates,
   identities,
   timeZone,
+  focusedIdentityId = null,
+  variant = 'sidebar',
   onRefresh,
   onRetry,
 }: IdentityProgressionSidebarProps) {
+  const scopedStates = useMemo(() => {
+    if (!focusedIdentityId) return evolutionStates;
+    return evolutionStates.filter((s) => s.identityId === focusedIdentityId);
+  }, [evolutionStates, focusedIdentityId]);
+
   const leading = useMemo(
-    () => (evolutionStates.length ? pickLeadingEvolution(evolutionStates) : null),
-    [evolutionStates]
+    () => (scopedStates.length ? pickLeadingEvolution(scopedStates) : null),
+    [scopedStates]
   );
+
+  const stickyClass =
+    variant === 'sidebar' ? 'lg:sticky lg:top-4' : '';
 
   const previewLeadingName = useMemo(() => {
     if (identities.length === 0) return 'Your identity';
@@ -52,9 +65,14 @@ export function IdentityProgressionSidebar({
   }, [identities]);
 
   const leadingName = useMemo(() => {
+    if (focusedIdentityId) {
+      return identities.find((i) => i.id === focusedIdentityId)?.name ?? 'Identity';
+    }
     if (!leading) return previewLeadingName;
     return identities.find((i) => i.id === leading.identityId)?.name ?? 'Leading identity';
-  }, [leading, identities, previewLeadingName]);
+  }, [leading, identities, previewLeadingName, focusedIdentityId]);
+
+  const progressionTitle = focusedIdentityId ? 'This identity' : 'All identities';
 
   const [nextUnlockLabel, setNextUnlockLabel] = useState<string | null>(null);
 
@@ -85,16 +103,16 @@ export function IdentityProgressionSidebar({
 
   const activeTrials = useMemo(
     () =>
-      evolutionStates.filter(
+      scopedStates.filter(
         (s) => s.trialState === 'Active' && s.trialTargetDays > 0
       ),
-    [evolutionStates]
+    [scopedStates]
   );
 
   if (surfaceMode === 'degraded') {
     return (
       <aside
-        className="h-fit space-y-4 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] lg:sticky lg:top-4"
+        className={`h-fit space-y-4 rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] ${stickyClass}`}
         data-testid="identity-progression-sidebar"
       >
         <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800/90">
@@ -119,13 +137,13 @@ export function IdentityProgressionSidebar({
   if (surfaceMode === 'preview' || !leading) {
     return (
       <aside
-        className="h-fit space-y-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] lg:sticky lg:top-4"
+        className={`h-fit space-y-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] ${stickyClass}`}
         data-testid="identity-progression-sidebar"
       >
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-teal-700/90">
-              Progression
+              {progressionTitle}
             </p>
             <p className="mt-1 text-sm font-bold text-slate-900">{previewLeadingName}</p>
             <p className="text-xs text-slate-600">
@@ -173,17 +191,19 @@ export function IdentityProgressionSidebar({
 
   return (
     <aside
-      className="h-fit space-y-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] lg:sticky lg:top-4"
+      className={`h-fit space-y-4 rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/90 via-white to-slate-50/90 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-[2px] ${stickyClass}`}
       data-testid="identity-progression-sidebar"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-widest text-teal-700/90">
-            Progression
+            {progressionTitle}
           </p>
           <p className="mt-1 text-sm font-bold text-slate-900">{leadingName}</p>
           <p className="text-xs text-slate-600">
-            Leading by level — stage {stageLabel(leading.stage)}, level {leading.level}
+            {focusedIdentityId
+              ? `Stage ${stageLabel(leading.stage)}, level ${leading.level}`
+              : `Leading by level — stage ${stageLabel(leading.stage)}, level ${leading.level}`}
           </p>
         </div>
         {onRefresh && (

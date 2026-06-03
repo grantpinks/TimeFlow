@@ -740,6 +740,10 @@ export async function getHabitInsights(days: 14 | 28 = 14): Promise<HabitInsight
   return request(`/habits/insights?days=${days}`);
 }
 
+export async function getStudioSummary(): Promise<import('@timeflow/shared').StudioSummaryResponse> {
+  return request('/habits/studio-summary');
+}
+
 /**
  * Get habit notifications (streak-at-risk + missed high-priority).
  * Returns empty arrays if user hasn't opted in to notifications.

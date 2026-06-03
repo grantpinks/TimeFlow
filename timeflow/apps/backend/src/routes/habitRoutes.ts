@@ -59,6 +59,13 @@ export async function registerHabitRoutes(server: FastifyInstance) {
     habitController.getHabitInsights
   );
 
+  // GET /api/habits/studio-summary - Identity Studio row + strip data
+  server.get(
+    '/habits/studio-summary',
+    { preHandler: requireAuth },
+    habitController.getHabitStudioSummary
+  );
+
   // GET /api/habits/missed - Get missed habit instances
   server.get(
     '/habits/missed',

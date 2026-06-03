@@ -2,7 +2,21 @@
 
 Items we explicitly chose **not** to do now. Pull into a sprint when ready.
 
-**Roadmap:** `ARCHITECT_ROADMAP_SPRINT1-17.md` — **Sprint 27** (deferred), **Sprint 27-Lite** (optional polish, no Apple Dev Program).
+**Roadmap:** `ARCHITECT_ROADMAP_SPRINT1-17.md` — **Sprint 27** (deferred), **Sprint 27-Lite** (optional polish, no Apple Dev Program), **Sprint 28** Identity Studio (complete).
+
+---
+
+## Shipped: Identity Studio — Sprint 28
+
+**Status:** Complete (2026-06-01).
+
+**Goal:** Rebrand `/habits` as Identity Studio; identity-first layout; compact rows; insights drawer; batched status API.
+
+**Docs:**
+- [`docs/plans/2026-06-01-identity-studio-habits-design.md`](./2026-06-01-identity-studio-habits-design.md)
+- [`docs/plans/2026-06-01-identity-studio-habits-implementation-plan.md`](./2026-06-01-identity-studio-habits-implementation-plan.md)
+
+**Estimate:** ~2 weeks (~55–75h). Phases 1–2 can ship as first PR.
 
 ---
 
