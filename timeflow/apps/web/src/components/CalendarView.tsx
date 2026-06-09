@@ -216,6 +216,40 @@ export function CalendarView({
       }
     }
 
+    // Add unscheduled tasks with due dates to all-day section
+    for (const task of tasks) {
+      if (!task.scheduledTask && task.dueDate && task.status !== 'completed') {
+        const categoryFromId = task.categoryId
+          ? categoryLookup.get(task.categoryId)
+          : undefined;
+        const categoryColor = task.category?.color ?? categoryFromId?.color;
+
+        // Due date task appears as all-day item on the day it's due
+        const dueDate = normalizeCalendarDate(task.dueDate);
+        const dueDateEnd = new Date(dueDate);
+        dueDateEnd.setHours(23, 59, 59, 999); // End of day
+
+        calendarEvents.push({
+          id: `due-task-${task.id}`,
+          title: `📋 ${task.title}`, // Add icon to distinguish from all-day events
+          start: dueDate,
+          end: dueDateEnd,
+          layoutEnd: dueDateEnd,
+          allDay: true, // Show in all-day section
+          isDueTask: true, // Mark as unscheduled due task
+          dueDate: dueDate,
+          priority: task.priority,
+          isTask: true,
+          taskId: task.id,
+          description: task.description ?? undefined,
+          categoryColor,
+          sourceType: 'task',
+          sourceId: task.id,
+          isCompleted: false,
+        });
+      }
+    }
+
     // Add external events with categorization and completion tracking
     for (const event of externalEvents) {
       const categorization = event.id ? eventCategorizations?.[event.id] : undefined;
@@ -262,6 +296,31 @@ export function CalendarView({
   }, [tasks, externalEvents, eventCategorizations, categories]);
 
   const eventStyleGetter = useCallback((event: CalendarEventItem) => {
+    // Due tasks in all-day section get priority-based colors
+    if (event.isDueTask) {
+      // Priority-based colors: P1=Red, P2=Amber, P3=Blue
+      const priorityColors = {
+        1: '#EF4444', // Red-500 for high priority
+        2: '#F59E0B', // Amber-500 for medium priority
+        3: '#3B82F6', // Blue-500 for low priority
+      };
+      const accentColor = priorityColors[event.priority || 2];
+      const backgroundColor = `${accentColor}F2`; // 95% opacity
+
+      return {
+        className: 'due-task-event',
+        style: {
+          backgroundColor,
+          borderRadius: '4px',
+          borderLeft: `4px solid ${accentColor}`,
+          border: `1px solid ${accentColor}60`,
+          color: '#1e293b',
+          fontWeight: '500',
+          fontSize: '0.875rem',
+        },
+      };
+    }
+
     if (event.isTask || event.sourceType === 'task') {
       // Brand Primary Teal for default tasks, or use category color
       const accentColor = event.categoryColor || '#0BAF9A'; // Brand Primary Teal
@@ -597,9 +656,10 @@ function DraggableEvent({
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
-  // Disable drag for: non-task/non-habit events, all-day events, and while resizing
+  // Disable drag for: non-task/non-habit events, all-day events (except due tasks), and while resizing
   // All-day events should not be draggable as converting them to timed events would break them
-  const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing || event.allDay;
+  // Exception: Due tasks (isDueTask) in all-day section ARE draggable for scheduling
+  const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing || (event.allDay && !event.isDueTask);
 
   // Debug ALL habit-related events to diagnose drag issues
   if (event.title.includes('TFI Habit') || event.title.includes('[habit]') || event.isHabit || event.scheduledHabitId) {

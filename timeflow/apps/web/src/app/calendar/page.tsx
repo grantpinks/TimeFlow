@@ -1081,10 +1081,21 @@ export default function CalendarPage() {
 
     if (calendarEvent?.sourceType === 'task' && calendarEvent.taskId) {
       const task = tasks.find((t) => t.id === calendarEvent.taskId);
-      const durationMinutes = Math.max(
-        15,
-        Math.round((new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000)
-      );
+
+      // For due tasks (all-day items), use the task's actual duration, not the all-day span
+      // Otherwise calculate from event times
+      let durationMinutes: number;
+      if (task && (!task.scheduledTask || task.status === 'unscheduled')) {
+        // Unscheduled/due task - use task's duration
+        durationMinutes = task.durationMinutes || 30;
+      } else {
+        // Scheduled task - calculate from event times
+        durationMinutes = Math.round(
+          (new Date(calendarEvent.end).getTime() - new Date(calendarEvent.start).getTime()) / 60000
+        );
+      }
+      durationMinutes = Math.max(15, durationMinutes);
+
       return {
         kind: 'task' as const,
         title: calendarEvent.title as string,
