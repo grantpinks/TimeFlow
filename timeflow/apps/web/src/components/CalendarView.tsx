@@ -93,6 +93,7 @@ export interface CalendarEventItem {
   end: Date;
   /** Used by react-big-calendar for overlap lane calculation only. */
   layoutEnd?: Date;
+  allDay?: boolean; // True for all-day events and unscheduled due tasks
   isTask: boolean;
   taskId?: string;
   description?: string;
@@ -108,6 +109,10 @@ export interface CalendarEventItem {
   sourceType?: 'task' | 'habit' | 'external';
   sourceId?: string; // task ID or scheduledHabit ID
   isCompleted?: boolean;
+  // Due date task properties
+  isDueTask?: boolean; // True for unscheduled tasks shown in all-day section
+  dueDate?: Date; // The actual due date for tasks
+  priority?: 1 | 2 | 3; // Task priority for styling
 }
 
 export function CalendarView({
@@ -228,6 +233,7 @@ export function CalendarView({
         start,
         end,
         layoutEnd: toExclusiveLayoutEnd(start, end),
+        allDay: event.allDay, // Mark all-day events for special rendering
         isTask: event.sourceType === 'task', // Preserve task status from merged events
         isHabit: isHabitEvent,
         scheduledHabitId: isHabitEvent ? event.sourceId : undefined,
@@ -429,6 +435,7 @@ export function CalendarView({
           events={events}
           startAccessor="start"
           endAccessor={(event) => (event as CalendarEventItem).layoutEnd ?? (event as CalendarEventItem).end}
+          allDayAccessor={(event) => (event as CalendarEventItem).allDay ?? false}
           view={view}
           date={date}
           onNavigate={handleNavigate}

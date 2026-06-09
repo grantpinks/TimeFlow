@@ -18,6 +18,7 @@ export interface CalendarEvent {
   description?: string;
   start: string; // ISO datetime
   end: string;   // ISO datetime
+  allDay?: boolean; // True for all-day events (no specific time)
   provider?: 'google' | 'apple';
   connectedAccountId?: string;
   connectedCalendarId?: string;

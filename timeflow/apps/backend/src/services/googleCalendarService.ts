@@ -217,19 +217,41 @@ export async function getEvents(
   } while (pageToken);
 
   return events
-    .filter((event) => event.start?.dateTime && event.end?.dateTime)
-    .map((event) => ({
-      id: event.id ?? undefined,
-      summary: event.summary || '(No title)',
-      start: event.start!.dateTime!,
-      end: event.end!.dateTime!,
-      description: event.description ?? undefined,
-      transparency: (event.transparency as 'opaque' | 'transparent') ?? undefined,
-      attendees:
-        event.attendees
-          ?.filter((a): a is { email: string } => Boolean(a.email))
-          .map((a) => ({ email: a.email! })) ?? undefined,
-    }));
+    .filter((event) => (event.start?.dateTime || event.start?.date) && (event.end?.dateTime || event.end?.date))
+    .map((event) => {
+      const isAllDay = Boolean(event.start?.date);
+
+      // For all-day events, Google returns just a date string (YYYY-MM-DD)
+      // We need to convert to ISO datetime at start of day
+      let startDateTime: string;
+      let endDateTime: string;
+
+      if (isAllDay) {
+        // All-day event: use date at midnight
+        startDateTime = `${event.start!.date}T00:00:00Z`;
+        // Google Calendar all-day events have exclusive end dates
+        // (e.g., a 1-day event on June 9 has end date June 10)
+        endDateTime = `${event.end!.date}T00:00:00Z`;
+      } else {
+        // Regular timed event
+        startDateTime = event.start!.dateTime!;
+        endDateTime = event.end!.dateTime!;
+      }
+
+      return {
+        id: event.id ?? undefined,
+        summary: event.summary || '(No title)',
+        start: startDateTime,
+        end: endDateTime,
+        allDay: isAllDay,
+        description: event.description ?? undefined,
+        transparency: (event.transparency as 'opaque' | 'transparent') ?? undefined,
+        attendees:
+          event.attendees
+            ?.filter((a): a is { email: string } => Boolean(a.email))
+            .map((a) => ({ email: a.email! })) ?? undefined,
+      };
+    });
 }
 
 /**
