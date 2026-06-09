@@ -10,6 +10,7 @@ import { prisma } from '../config/prisma.js';
 import { getUserOAuth2Client } from '../config/google.js';
 import { decrypt, encrypt } from '../utils/crypto.js';
 import { getGoogleTokenContext } from './accountTokenService.js';
+import { DateTime } from 'luxon';
 
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 1000; // 1 second
@@ -191,6 +192,13 @@ export async function getEvents(
   timeMin: string,
   timeMax: string
 ): Promise<CalendarEvent[]> {
+  // Fetch user's timezone for all-day event conversion
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { timeZone: true },
+  });
+  const userTimeZone = user?.timeZone || 'America/Chicago';
+
   const calendar = await getCalendarClient(userId);
   const events: calendar_v3.Schema$Event[] = [];
   let pageToken: string | undefined;
@@ -217,21 +225,36 @@ export async function getEvents(
   } while (pageToken);
 
   return events
+    .filter((event) => event.status !== 'cancelled') // Skip cancelled events
     .filter((event) => (event.start?.dateTime || event.start?.date) && (event.end?.dateTime || event.end?.date))
     .map((event) => {
       const isAllDay = Boolean(event.start?.date);
 
       // For all-day events, Google returns just a date string (YYYY-MM-DD)
-      // We need to convert to ISO datetime at start of day
+      // We need to convert to ISO datetime at start of day in user's timezone
       let startDateTime: string;
       let endDateTime: string;
 
       if (isAllDay) {
-        // All-day event: use date at midnight
-        startDateTime = `${event.start!.date}T00:00:00Z`;
+        // Validate date format before processing
+        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (!datePattern.test(event.start!.date!) || !datePattern.test(event.end!.date!)) {
+          console.error('[GoogleCalendar] Invalid all-day date format:', event.start!.date, event.end!.date);
+          return null; // Will be filtered out below
+        }
+
+        // Convert all-day date to user's local timezone midnight, then to UTC
+        // This ensures multi-day events display on correct days in user's timezone
         // Google Calendar all-day events have exclusive end dates
-        // (e.g., a 1-day event on June 9 has end date June 10)
-        endDateTime = `${event.end!.date}T00:00:00Z`;
+        // (e.g., a 1-day event on June 9 has end date June 10). Preserve as-is for react-big-calendar.
+        startDateTime = DateTime.fromISO(event.start!.date!, { zone: userTimeZone })
+          .startOf('day')
+          .toUTC()
+          .toISO()!;
+        endDateTime = DateTime.fromISO(event.end!.date!, { zone: userTimeZone })
+          .startOf('day')
+          .toUTC()
+          .toISO()!;
       } else {
         // Regular timed event
         startDateTime = event.start!.dateTime!;
@@ -251,7 +274,8 @@ export async function getEvents(
             ?.filter((a): a is { email: string } => Boolean(a.email))
             .map((a) => ({ email: a.email! })) ?? undefined,
       };
-    });
+    })
+    .filter((event): event is CalendarEvent => event !== null); // Filter out invalid all-day events
 }
 
 /**

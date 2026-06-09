@@ -233,7 +233,7 @@ export function CalendarView({
         start,
         end,
         layoutEnd: toExclusiveLayoutEnd(start, end),
-        allDay: event.allDay, // Mark all-day events for special rendering
+        allDay: event.allDay ?? false, // Mark all-day events for special rendering (normalize to boolean)
         isTask: event.sourceType === 'task', // Preserve task status from merged events
         isHabit: isHabitEvent,
         scheduledHabitId: isHabitEvent ? event.sourceId : undefined,
@@ -597,7 +597,9 @@ function DraggableEvent({
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
-  const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing;
+  // Disable drag for: non-task/non-habit events, all-day events, and while resizing
+  // All-day events should not be draggable as converting them to timed events would break them
+  const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing || event.allDay;
 
   // Debug ALL habit-related events to diagnose drag issues
   if (event.title.includes('TFI Habit') || event.title.includes('[habit]') || event.isHabit || event.scheduledHabitId) {
