@@ -640,6 +640,10 @@ export async function rescheduleTask(
     throw new Error('Task not found');
   }
 
+  // Calculate if scheduled time is after due date
+  const scheduledStart = new Date(startDateTime);
+  const overflowedDeadline = task.dueDate ? scheduledStart > task.dueDate : false;
+
   if (task.scheduledTask) {
     // Task is already scheduled - update existing schedule
     await calendarService.updateEvent(
@@ -657,6 +661,7 @@ export async function rescheduleTask(
       data: {
         startDateTime: new Date(startDateTime),
         endDateTime: new Date(endDateTime),
+        overflowedDeadline,
         lastSyncedAt: new Date(),
       },
     });
@@ -732,7 +737,7 @@ export async function rescheduleTask(
         eventId,
         startDateTime: new Date(startDateTime),
         endDateTime: new Date(endDateTime),
-        overflowedDeadline: false,
+        overflowedDeadline,
       },
     });
 

@@ -247,14 +247,35 @@ export async function getEvents(
         // This ensures multi-day events display on correct days in user's timezone
         // Google Calendar all-day events have exclusive end dates
         // (e.g., a 1-day event on June 9 has end date June 10). Preserve as-is for react-big-calendar.
-        startDateTime = DateTime.fromISO(event.start!.date!, { zone: userTimeZone })
-          .startOf('day')
-          .toUTC()
-          .toISO()!;
-        endDateTime = DateTime.fromISO(event.end!.date!, { zone: userTimeZone })
-          .startOf('day')
-          .toUTC()
-          .toISO()!;
+        const startDT = DateTime.fromISO(event.start!.date!, { zone: userTimeZone });
+        const endDT = DateTime.fromISO(event.end!.date!, { zone: userTimeZone });
+
+        // Validate DateTime objects
+        if (!startDT.isValid || !endDT.isValid) {
+          console.error('[GoogleCalendar] Invalid date values for all-day event:', {
+            start: event.start!.date,
+            end: event.end!.date,
+            startReason: startDT.invalidReason,
+            endReason: endDT.invalidReason,
+          });
+          return null;
+        }
+
+        // Convert to UTC and get ISO strings
+        const startISO = startDT.startOf('day').toUTC().toISO();
+        const endISO = endDT.startOf('day').toUTC().toISO();
+
+        if (!startISO || !endISO) {
+          console.error('[GoogleCalendar] Timezone conversion failed for all-day event:', {
+            startDate: event.start!.date,
+            endDate: event.end!.date,
+            userTimeZone,
+          });
+          return null;
+        }
+
+        startDateTime = startISO;
+        endDateTime = endISO;
       } else {
         // Regular timed event
         startDateTime = event.start!.dateTime!;

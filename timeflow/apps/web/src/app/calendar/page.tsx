@@ -1087,7 +1087,7 @@ export default function CalendarPage() {
       let durationMinutes: number;
       if (task && (!task.scheduledTask || task.status === 'unscheduled')) {
         // Unscheduled/due task - use task's duration
-        durationMinutes = task.durationMinutes || 30;
+        durationMinutes = task.durationMinutes ?? 30;
       } else {
         // Scheduled task - calculate from event times
         durationMinutes = Math.round(

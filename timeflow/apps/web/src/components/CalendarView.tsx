@@ -225,9 +225,10 @@ export function CalendarView({
         const categoryColor = task.category?.color ?? categoryFromId?.color;
 
         // Due date task appears as all-day item on the day it's due
+        // Use exclusive end convention: end time is next day at midnight (react-big-calendar standard)
         const dueDate = normalizeCalendarDate(task.dueDate);
         const dueDateEnd = new Date(dueDate);
-        dueDateEnd.setHours(23, 59, 59, 999); // End of day
+        dueDateEnd.setDate(dueDateEnd.getDate() + 1); // Exclusive end: next day at midnight
 
         calendarEvents.push({
           id: `due-task-${task.id}`,
@@ -299,12 +300,13 @@ export function CalendarView({
     // Due tasks in all-day section get priority-based colors
     if (event.isDueTask) {
       // Priority-based colors: P1=Red, P2=Amber, P3=Blue
-      const priorityColors = {
+      const priorityColors: Record<number, string> = {
         1: '#EF4444', // Red-500 for high priority
         2: '#F59E0B', // Amber-500 for medium priority
         3: '#3B82F6', // Blue-500 for low priority
       };
-      const accentColor = priorityColors[event.priority || 2];
+      const priority = event.priority ?? 2;
+      const accentColor = priorityColors[priority] ?? priorityColors[2]; // Fallback to medium priority
       const backgroundColor = `${accentColor}F2`; // 95% opacity
 
       return {
@@ -660,21 +662,6 @@ function DraggableEvent({
   // All-day events should not be draggable as converting them to timed events would break them
   // Exception: Due tasks (isDueTask) in all-day section ARE draggable for scheduling
   const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing || (event.allDay && !event.isDueTask);
-
-  // Debug ALL habit-related events to diagnose drag issues
-  if (event.title.includes('TFI Habit') || event.title.includes('[habit]') || event.isHabit || event.scheduledHabitId) {
-    console.log('[CalendarView] Habit event drag status:', {
-      title: event.title,
-      isDragDisabled,
-      canDrag: !isDragDisabled,
-      isTask: event.isTask,
-      isHabit: event.isHabit,
-      sourceType: event.sourceType,
-      scheduledHabitId: event.scheduledHabitId,
-      taskId: event.taskId,
-      eventId: event.eventId,
-    });
-  }
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
