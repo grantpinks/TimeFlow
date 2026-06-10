@@ -482,6 +482,25 @@ export function CalendarView({
     );
   };
 
+  // DateCellWrapper for all-day section droppable zones
+  const DateCellWrapper: ComponentType<any> = (cellProps: any) => {
+    const date = cellProps.value as Date;
+    // When dropping into all-day section, schedule at 9:00 AM on that date
+    const defaultDropTime = new Date(date);
+    defaultDropTime.setHours(9, 0, 0, 0);
+
+    const cellPreview =
+      dropPreview && dropPreview.start.getTime() === defaultDropTime.getTime()
+        ? dropPreview
+        : null;
+
+    return (
+      <DroppableSlot start={defaultDropTime} dropPreview={cellPreview}>
+        {cellProps.children}
+      </DroppableSlot>
+    );
+  };
+
   return (
     <div className="h-full bg-white p-3 relative" style={{ display: 'flex', flexDirection: 'column' }}>
       {isRescheduling && (
@@ -534,6 +553,7 @@ export function CalendarView({
               />
             ),
             timeSlotWrapper: TimeSlotWrapper,
+            dateCellWrapper: DateCellWrapper,
           }}
         />
       </div>
