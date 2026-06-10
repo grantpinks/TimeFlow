@@ -24,6 +24,8 @@ interface TimeSlotPickerProps {
   dateOption: 'today' | 'tomorrow' | 'this-week';
   onSelectSlot: (slot: TimeSlot) => void;
   onCancel: () => void;
+  /** Anchor popover to the left or right of the trigger (default left) */
+  align?: 'left' | 'right';
 }
 
 export function TimeSlotPicker({
@@ -32,6 +34,7 @@ export function TimeSlotPicker({
   dateOption,
   onSelectSlot,
   onCancel,
+  align = 'left',
 }: TimeSlotPickerProps) {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +42,9 @@ export function TimeSlotPicker({
   const [habitDuration, setHabitDuration] = useState<number>(30);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarAnchorDate, setCalendarAnchorDate] = useState<Date | undefined>(undefined);
+  const anchorClass =
+    align === 'right' ? 'absolute top-full right-0' : 'absolute top-full left-0';
+  const panelClass = `${anchorClass} mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl z-50`;
 
   const getAuthHeaders = (): Record<string, string> => {
     const token = localStorage.getItem('timeflow_token');
@@ -177,7 +183,7 @@ export function TimeSlotPicker({
 
   if (loading) {
     return (
-      <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border-2 border-primary-200 z-50 p-6">
+      <div className={`${panelClass} border-2 border-primary-200 p-6`}>
         <div className="flex flex-col items-center justify-center py-8">
           <LoadingSpinner size="lg" label="Finding time slots" />
           <p className="text-slate-600 font-medium mt-4">Finding available time slots…</p>
@@ -189,7 +195,7 @@ export function TimeSlotPicker({
 
   if (error) {
     return (
-      <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border-2 border-red-200 z-50 p-6">
+      <div className={`${panelClass} border-2 border-red-200 p-6`}>
         <div className="text-center py-4">
           <div className="text-4xl mb-3">⚠️</div>
           <h3 className="text-lg font-semibold text-slate-900 mb-2">Could not find slots</h3>
@@ -215,7 +221,7 @@ export function TimeSlotPicker({
 
   if (slots.length === 0) {
     return (
-      <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border-2 border-amber-200 z-50 p-6">
+      <div className={`${panelClass} border-2 border-amber-200 p-6`}>
         <div className="text-center py-4">
           <div className="text-4xl mb-3">📅</div>
           <h3 className="text-lg font-semibold text-slate-900 mb-2">No available slots</h3>
@@ -234,7 +240,7 @@ export function TimeSlotPicker({
   }
 
   return (
-    <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border-2 border-primary-200 z-50 overflow-hidden">
+    <div className={`${panelClass} border-2 border-primary-200 overflow-hidden`}>
       {/* Header */}
       <div className="bg-gradient-to-r from-primary-50 to-blue-50 px-5 py-4 border-b-2 border-primary-200">
         <h3 className="font-bold text-slate-900 text-lg mb-1">Select Time Slot</h3>

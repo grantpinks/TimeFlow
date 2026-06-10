@@ -45,8 +45,8 @@ export function IdentityHabitGroup({
     <section
       className={
         compact
-          ? 'overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-sm'
-          : 'overflow-hidden rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/40 via-white to-slate-50/80 shadow-sm ring-1 ring-white/50 backdrop-blur-[2px]'
+          ? 'rounded-xl border border-slate-200/90 bg-white shadow-sm'
+          : 'rounded-2xl border border-slate-200/90 bg-gradient-to-br from-teal-50/40 via-white to-slate-50/80 shadow-sm ring-1 ring-white/50 backdrop-blur-[2px]'
       }
       data-testid="identity-habit-group"
       aria-label={`${habits.length} habit${habits.length === 1 ? '' : 's'}`}

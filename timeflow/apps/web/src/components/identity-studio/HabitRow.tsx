@@ -5,12 +5,15 @@ import type { Habit, Identity, StudioHabitRowStatus } from '@timeflow/shared';
 import { LoadingSpinner } from '@/components/ui';
 import { TimeSlotPicker } from '@/components/habits/TimeSlotPicker';
 import type { TimeSlot } from '@/components/habits/TimeSlotPicker';
+import { HabitAdherenceMiniChart } from '@/components/habits/HabitAdherenceMiniChart';
+import type { AdherenceDay } from '@/components/habits/HabitAdherenceMiniChart';
 import { HabitRowMenu } from './HabitRowMenu';
 
 export interface HabitRowProps {
   habit: Habit;
   variant?: 'default' | 'compact';
   rowStatus?: StudioHabitRowStatus | null;
+  adherenceSeries?: AdherenceDay[];
   onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
   identities?: Identity[];
@@ -64,6 +67,7 @@ export function HabitRow({
   habit,
   variant = 'default',
   rowStatus,
+  adherenceSeries,
   onEdit,
   onDelete,
   identities,
@@ -117,10 +121,13 @@ export function HabitRow({
   };
 
   const py = variant === 'compact' ? 'py-2' : 'py-2.5';
+  const schedulingActive = scheduleOpen || dateOption !== null;
 
   return (
     <div
-      className={`rounded-lg border border-slate-100 bg-white ${py} px-3`}
+      className={`rounded-lg border border-slate-100 bg-white ${py} px-3 ${
+        schedulingActive ? 'relative z-50' : ''
+      }`}
       data-testid="habit-row"
     >
       <div className="flex items-center gap-3 min-w-0">
@@ -158,7 +165,7 @@ export function HabitRow({
             )}
           </button>
           {scheduleOpen && !dateOption && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+            <div className="absolute right-0 top-full z-50 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
               {(['today', 'tomorrow', 'this-week'] as const).map((opt) => (
                 <button
                   key={opt}
@@ -170,6 +177,19 @@ export function HabitRow({
                 </button>
               ))}
             </div>
+          )}
+          {dateOption && (
+            <TimeSlotPicker
+              habitId={habit.id}
+              habitTitle={habit.title}
+              dateOption={dateOption}
+              align="right"
+              onSelectSlot={handleSlotSelect}
+              onCancel={() => {
+                setDateOption(null);
+                setScheduleOpen(false);
+              }}
+            />
           )}
         </div>
         <HabitRowMenu
@@ -184,18 +204,9 @@ export function HabitRow({
           }
         />
       </div>
-      {dateOption && (
+      {adherenceSeries && adherenceSeries.length > 0 && (
         <div className="mt-2 border-t border-slate-100 pt-2">
-          <TimeSlotPicker
-            habitId={habit.id}
-            habitTitle={habit.title}
-            dateOption={dateOption}
-            onSelectSlot={handleSlotSelect}
-            onCancel={() => {
-              setDateOption(null);
-              setScheduleOpen(false);
-            }}
-          />
+          <HabitAdherenceMiniChart series={adherenceSeries} compact />
         </div>
       )}
     </div>

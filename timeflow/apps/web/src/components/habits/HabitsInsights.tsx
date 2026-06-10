@@ -15,6 +15,7 @@ import { Recommendations } from './Recommendations';
 import { StreakReminderBanner } from './StreakReminderBanner';
 import { MissedHighPriorityBanner } from './MissedHighPriorityBanner';
 import { MetricsTooltip } from './MetricsTooltip';
+import { HabitAdherenceMiniChart } from './HabitAdherenceMiniChart';
 import { track, hashHabitId } from '@/lib/analytics';
 import type {
   HabitInsightsSummary,
@@ -553,35 +554,8 @@ function HabitInsightCard({ habit }: HabitInsightCardProps) {
           </div>
         )}
 
-        {/* Mini Chart (simplified for MVP) */}
         <div className="border-t border-slate-200 pt-3">
-          <div className="text-xs font-medium text-slate-600 mb-2">
-            Last {habit.adherenceSeries.length} days
-          </div>
-          <div className="flex gap-1">
-            {habit.adherenceSeries.slice(-14).map((day) => (
-              <div
-                key={day.date}
-                className="flex-1 flex flex-col items-center gap-1"
-                title={`${day.date}: ${day.completed}/${day.scheduled}`}
-              >
-                <div
-                  className={`w-full h-8 rounded ${
-                    day.scheduled === 0
-                      ? 'bg-slate-100'
-                      : day.completed === day.scheduled
-                      ? 'bg-green-500'
-                      : day.completed > 0
-                      ? 'bg-amber-400'
-                      : 'bg-red-300'
-                  }`}
-                ></div>
-                <div className="text-xs text-slate-400">
-                  {new Date(day.date).getDate()}
-                </div>
-              </div>
-            ))}
-          </div>
+          <HabitAdherenceMiniChart series={habit.adherenceSeries} maxDays={15} />
         </div>
       </div>
     </Panel>

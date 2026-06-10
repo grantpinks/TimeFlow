@@ -3,11 +3,13 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Habit, Identity, StudioHabitRowStatus } from '@timeflow/shared';
+import type { AdherenceDay } from '@/components/habits/HabitAdherenceMiniChart';
 import { HabitRow } from './HabitRow';
 
 export interface SortableHabitRowProps {
   habit: Habit;
   rowStatus?: StudioHabitRowStatus | null;
+  adherenceSeries?: AdherenceDay[];
   onEdit: (habit: Habit) => void;
   onDelete: (id: string) => void;
   isDisabled?: boolean;
@@ -19,6 +21,7 @@ export interface SortableHabitRowProps {
 export function SortableHabitRow({
   habit,
   rowStatus,
+  adherenceSeries,
   onEdit,
   onDelete,
   isDisabled = false,
@@ -58,6 +61,7 @@ export function SortableHabitRow({
           habit={habit}
           variant={variant}
           rowStatus={rowStatus}
+          adherenceSeries={adherenceSeries}
           onEdit={onEdit}
           onDelete={onDelete}
           identities={identities}

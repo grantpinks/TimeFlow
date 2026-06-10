@@ -49,6 +49,7 @@ import type { Habit, Identity, IdentityEvolutionState } from '@timeflow/shared';
 import * as api from '@/lib/api';
 import { useUser } from '@/hooks/useUser';
 import { useStudioSummary } from '@/hooks/useStudioSummary';
+import { useHabitInsightsSeries } from '@/hooks/useHabitInsightsSeries';
 import { IdentityProgressionSidebar } from '@/components/habits/IdentityProgressionSidebar';
 
 function resolveGroupIdentity(
@@ -85,6 +86,7 @@ function resolveGroupIdentity(
 export default function HabitsPage() {
   const { habits, loading, createHabit, updateHabit, deleteHabit } = useHabits();
   const { summary: studioSummary, rowByHabitId } = useStudioSummary(!loading && habits.length > 0);
+  const adherenceByHabitId = useHabitInsightsSeries(!loading && habits.length > 0);
   const { user, isAuthenticated } = useUser();
   const {
     mode: evolutionMode,
@@ -514,6 +516,7 @@ export default function HabitsPage() {
                               key={habit.id}
                               habit={habit}
                               rowStatus={rowByHabitId?.get(habit.id) ?? null}
+                              adherenceSeries={adherenceByHabitId.get(habit.id)}
                               variant={expansion === 'collapsed-preview' ? 'compact' : 'default'}
                               onEdit={openEditSheet}
                               onDelete={handleDelete}
