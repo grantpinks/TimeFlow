@@ -501,6 +501,62 @@ export function CalendarView({
     );
   };
 
+  // EventWrapper makes the background area of all-day cells droppable
+  const EventWrapper: ComponentType<any> = (wrapperProps: any) => {
+    // Only wrap all-day events
+    const event = wrapperProps.event as CalendarEventItem | undefined;
+    if (!event?.allDay) {
+      return <>{wrapperProps.children}</>;
+    }
+
+    const date = event.start;
+    const defaultDropTime = new Date(date);
+    defaultDropTime.setHours(9, 0, 0, 0);
+
+    return (
+      <div className="relative">
+        {wrapperProps.children}
+      </div>
+    );
+  };
+
+  // AllDayOverlay: Adds invisible droppable zones over all-day section
+  const AllDayDroppableOverlay = () => {
+    // Get the current week's dates from selectedDate
+    const startOfWeek = DateTime.fromJSDate(selectedDate || new Date()).startOf('week');
+    const weekDays = Array.from({ length: 7 }, (_, i) => startOfWeek.plus({ days: i }).toJSDate());
+
+    return (
+      <div className="absolute top-0 left-0 right-0 pointer-events-none z-10" style={{ height: '60px' }}>
+        <div className="flex h-full">
+          {weekDays.map((date, idx) => {
+            const defaultDropTime = new Date(date);
+            defaultDropTime.setHours(9, 0, 0, 0);
+
+            const { setNodeRef } = useDroppable({
+              id: `allday-${date.toISOString()}`,
+              data: { slotStart: defaultDropTime },
+            });
+
+            const cellPreview =
+              dropPreview && dropPreview.start.getTime() === defaultDropTime.getTime()
+                ? dropPreview
+                : null;
+
+            return (
+              <div
+                key={idx}
+                ref={setNodeRef}
+                className={`flex-1 pointer-events-auto ${cellPreview ? 'bg-primary-50/50 ring-2 ring-primary-200' : 'hover:bg-slate-50/30'}`}
+                style={{ transition: 'background-color 0.15s' }}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full bg-white p-3 relative" style={{ display: 'flex', flexDirection: 'column' }}>
       {isRescheduling && (
@@ -509,7 +565,8 @@ export function CalendarView({
         </div>
       )}
 
-      <div style={{ flex: '1 1 0%', minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ flex: '1 1 0%', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+        <AllDayDroppableOverlay />
         <Calendar
           localizer={localizer}
           events={events}
@@ -554,6 +611,7 @@ export function CalendarView({
             ),
             timeSlotWrapper: TimeSlotWrapper,
             dateCellWrapper: DateCellWrapper,
+            eventWrapper: EventWrapper,
           }}
         />
       </div>
@@ -652,6 +710,8 @@ function DraggableEvent({
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [localCompleted, setLocalCompleted] = useState(Boolean(event.isCompleted));
   const [resizePreviewEnd, setResizePreviewEnd] = useState<Date | null>(null);
   const [isNarrow, setIsNarrow] = useState(false);
   const resizeStartY = useRef<number>(0);
@@ -659,6 +719,10 @@ function DraggableEvent({
   const initialDurationMinutes = useRef<number>(15);
   const pixelsPerMinute = useRef<number>(2);
   const eventRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setLocalCompleted(Boolean(event.isCompleted));
+  }, [event.isCompleted]);
 
   // Detect narrow events (overlapping/stacked) and apply compact mode
   useEffect(() => {
@@ -784,11 +848,16 @@ function DraggableEvent({
   };
 
   const motionProps =
-    prefersReducedMotion || isDragging
+    prefersReducedMotion || isDragging || isResizing
       ? {}
       : {
-          whileHover: { scale: 1.01 },
+          whileHover: { scale: localCompleted ? 1 : 1.01 },
           whileTap: { scale: 0.98 },
+          animate: {
+            opacity: localCompleted ? 0.72 : 1,
+            scale: isCompleting ? 0.97 : 1,
+          },
+          transition: { duration: 0.2, ease: 'easeOut' },
         };
 
   // Format end time for resize preview (add 1 minute for display)
@@ -824,10 +893,12 @@ function DraggableEvent({
     e.stopPropagation(); // Prevent opening popover
     e.preventDefault();
 
-    if (event.isCompleted) {
-      // Already completed, do nothing for now (could add undo functionality)
+    if (localCompleted || isCompleting) {
       return;
     }
+
+    setIsCompleting(true);
+    setLocalCompleted(true);
 
     try {
       if (event.sourceType === 'task' && event.taskId && onCompleteTask) {
@@ -836,6 +907,7 @@ function DraggableEvent({
         const actualDurationMinutes = Math.round((event.end.getTime() - event.start.getTime()) / 60000);
         await onCompleteHabit(event.scheduledHabitId, actualDurationMinutes);
       } else {
+        setLocalCompleted(false);
         // External event - log for analytics tracking
         console.log('External event completed for analytics:', {
           eventId: event.eventId,
@@ -847,15 +919,17 @@ function DraggableEvent({
         // TODO: Add proper external event completion tracking API call
       }
     } catch (error) {
+      setLocalCompleted(false);
       console.error('Failed to complete event:', error);
+    } finally {
+      setIsCompleting(false);
     }
-  }, [event, onCompleteTask, onCompleteHabit]);
+  }, [event, localCompleted, isCompleting, onCompleteTask, onCompleteHabit]);
 
-  const showCheckbox = !isNarrow && (isHovered || event.isCompleted); // Hide checkbox when narrow to save space
+  const showCheckbox = !isNarrow && (isHovered || localCompleted);
 
-  // Text color: white for solid backgrounds (incomplete), dark for translucent (completed)
-  const textColorClass = event.isCompleted ? 'text-slate-600' : 'text-white';
-  const dragHandleColorClass = event.isCompleted ? 'text-slate-600 hover:text-slate-800' : 'text-white/90 hover:text-white';
+  const textColorClass = localCompleted ? 'text-slate-600' : 'text-white';
+  const dragHandleColorClass = localCompleted ? 'text-slate-600 hover:text-slate-800' : 'text-white/90 hover:text-white';
 
   // Compact mode for narrow/overlapping events
   const showDragHandle = canDrag && !isNarrow; // Hide drag handle when narrow
@@ -925,16 +999,24 @@ function DraggableEvent({
           type="button"
           onClick={handleCheckboxClick}
           className="absolute right-1 top-1 z-20 flex h-5 w-5 cursor-pointer items-center justify-center rounded border-0 bg-white/90 hover:bg-white shadow-sm transition-all"
-          aria-label={event.isCompleted ? 'Completed' : 'Mark as complete'}
+          aria-label={localCompleted ? 'Completed' : 'Mark as complete'}
+          disabled={isCompleting}
         >
-          {event.isCompleted ? (
-            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+          {localCompleted ? (
+            <motion.svg
+              className="w-4 h-4 text-green-600"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              initial={prefersReducedMotion ? false : { scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
               <path
                 fillRule="evenodd"
                 d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
                 clipRule="evenodd"
               />
-            </svg>
+            </motion.svg>
           ) : (
             <div className="w-3 h-3 rounded-sm border-2 border-slate-400 hover:border-slate-600 transition-colors"></div>
           )}
