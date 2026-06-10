@@ -62,7 +62,14 @@ const calendarCollisionDetection = pointerWithin;
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
-  const { tasks, loading: tasksLoading, refresh: refreshTasks } = useTasks();
+  const {
+    tasks,
+    loading: tasksLoading,
+    refresh: refreshTasks,
+    patchTaskLocal,
+    completeTask,
+    deleteTask,
+  } = useTasks();
   const { user, isAuthenticated } = useUser();
   const { toasts, showToast, removeToast } = useToast();
   const showUndoActionError = useCallback(
@@ -88,6 +95,9 @@ export default function CalendarPage() {
   const [scheduledHabitInstances, setScheduledHabitInstances] = useState<ScheduledHabitInstance[]>([]);
   const [habitInsights, setHabitInsights] = useState<HabitInsightsSummary | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [calendarReady, setCalendarReady] = useState(false);
+  const [syncingCount, setSyncingCount] = useState(0);
+  const isSyncing = syncingCount > 0;
   const [connectedAccounts, setConnectedAccounts] = useState<api.ConnectedAccount[]>([]);
   const [connectedAccountsLoading, setConnectedAccountsLoading] = useState(true);
   const [connectBannerDismissed, setConnectBannerDismissedState] = useState(false);
@@ -137,9 +147,14 @@ export default function CalendarPage() {
 
   // Fetch calendar events for the current month (now includes tasks, habits, and external events from merged backend)
   // The backend getEvents endpoint returns merged events with source tracking
-  const fetchExternalEvents = useCallback(async () => {
+  const fetchExternalEvents = useCallback(async (options?: { silent?: boolean }): Promise<boolean> => {
+    const silent = options?.silent ?? false;
     try {
-      setEventsLoading(true);
+      if (silent) {
+        setSyncingCount((n) => n + 1);
+      } else {
+        setEventsLoading(true);
+      }
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
       const end = new Date(now.getFullYear(), now.getMonth() + 2, 0); // End of next month
@@ -167,10 +182,63 @@ export default function CalendarPage() {
 
       setScheduledHabitInstances(habitInstances);
       setExternalEvents(events);
+      return true;
+    } catch {
+      return false;
     } finally {
-      setEventsLoading(false);
+      if (silent) {
+        setSyncingCount((n) => Math.max(0, n - 1));
+      } else {
+        setEventsLoading(false);
+      }
     }
   }, [user?.id]);
+
+  const refreshCalendar = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      const [tasksOk, eventsOk] = await Promise.all([
+        refreshTasks(silent),
+        fetchExternalEvents({ silent }),
+      ]);
+      if (silent && (!tasksOk || !eventsOk)) {
+        showToast('Calendar sync failed — showing last saved view', 'error', { durationMs: 4000 });
+      }
+      return tasksOk && eventsOk;
+    },
+    [refreshTasks, fetchExternalEvents, showToast]
+  );
+
+  const patchExternalEventTimes = useCallback(
+    (sourceId: string, sourceType: 'task' | 'habit', start: Date, end: Date) => {
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
+      setExternalEvents((prev) =>
+        prev.map((e) =>
+          e.sourceType === sourceType && e.sourceId === sourceId
+            ? { ...e, start: startIso, end: endIso }
+            : e
+        )
+      );
+    },
+    []
+  );
+
+  const patchHabitCompletion = useCallback((scheduledHabitId: string, isCompleted: boolean) => {
+    setExternalEvents((prev) =>
+      prev.map((e) =>
+        e.sourceType === 'habit' && e.sourceId === scheduledHabitId
+          ? { ...e, isCompleted }
+          : e
+      )
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!tasksLoading && !eventsLoading) {
+      setCalendarReady(true);
+    }
+  }, [tasksLoading, eventsLoading]);
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
@@ -437,7 +505,7 @@ export default function CalendarPage() {
         type: 'success',
         text: `Scheduled ${result.scheduled} task${result.scheduled === 1 ? '' : 's'}!`,
       });
-      refreshTasks();
+      void refreshTasks(true);
     } catch (err) {
       setMessage({
         type: 'error',
@@ -514,7 +582,7 @@ export default function CalendarPage() {
 
       try {
         await api.patchConnectedCalendar(connectedCalendarId, { visible });
-        await fetchExternalEvents();
+        await fetchExternalEvents({ silent: true });
       } catch (err) {
         // Avoid reverting to a stale snapshot if multiple toggles happened quickly.
         await fetchConnectedAccounts();
@@ -552,7 +620,7 @@ export default function CalendarPage() {
           ...(visible === false ? { visible: false } : {}),
         });
         if (visible === false) {
-          await fetchExternalEvents();
+          await fetchExternalEvents({ silent: true });
         }
       } catch (err) {
         await fetchConnectedAccounts();
@@ -584,7 +652,7 @@ export default function CalendarPage() {
 
       try {
         await api.patchConnectedCalendar(connectedCalendarId, { color });
-        await fetchExternalEvents();
+        await fetchExternalEvents({ silent: true });
       } catch (err) {
         await fetchConnectedAccounts();
         setMessage({
@@ -603,7 +671,7 @@ export default function CalendarPage() {
         setConnectedAccounts((prev) =>
           prev.map((account) => (account.id === connectedAccountId ? updated : account))
         );
-        await fetchExternalEvents();
+        await fetchExternalEvents({ silent: true });
         setMessage({ type: 'success', text: 'Calendars synced' });
       } catch (err) {
         await fetchConnectedAccounts();
@@ -678,24 +746,61 @@ export default function CalendarPage() {
     }
   };
 
+  const revertTaskSchedule = useCallback(
+    (taskId: string, prevStart: Date, prevEnd: Date, prevTask?: Task) => {
+      const existingTask = prevTask ?? tasks.find((t) => t.id === taskId);
+      if (existingTask?.scheduledTask) {
+        patchTaskLocal(taskId, {
+          scheduledTask: {
+            ...existingTask.scheduledTask,
+            startDateTime: prevStart.toISOString(),
+            endDateTime: prevEnd.toISOString(),
+          },
+        });
+      } else if (prevTask) {
+        patchTaskLocal(taskId, {
+          status: prevTask.status,
+          scheduledTask: prevTask.scheduledTask ?? null,
+        });
+      }
+      patchExternalEventTimes(taskId, 'task', prevStart, prevEnd);
+    },
+    [tasks, patchTaskLocal, patchExternalEventTimes]
+  );
+
   const handleRescheduleTask = async (taskId: string, start: Date, end: Date) => {
+    const existingTask = tasks.find((t) => t.id === taskId);
+    const prevStart = existingTask?.scheduledTask
+      ? new Date(existingTask.scheduledTask.startDateTime)
+      : start;
+    const prevEnd = existingTask?.scheduledTask
+      ? new Date(existingTask.scheduledTask.endDateTime)
+      : end;
+
+    if (existingTask?.scheduledTask) {
+      patchTaskLocal(taskId, {
+        scheduledTask: {
+          ...existingTask.scheduledTask,
+          startDateTime: start.toISOString(),
+          endDateTime: end.toISOString(),
+        },
+      });
+    }
+    patchExternalEventTimes(taskId, 'task', start, end);
     try {
       await api.rescheduleTask(taskId, start.toISOString(), end.toISOString());
-      // Refresh both tasks and calendar events to show the updated schedule
-      await Promise.all([
-        refreshTasks(),
-        fetchExternalEvents(),
-      ]);
+      void refreshCalendar({ silent: true });
       setMessage({
         type: 'success',
         text: 'Task rescheduled successfully!',
       });
     } catch (error) {
+      revertTaskSchedule(taskId, prevStart, prevEnd, existingTask);
       setMessage({
         type: 'error',
         text: error instanceof Error ? error.message : 'Failed to reschedule task',
       });
-      throw error; // Re-throw so the calendar knows it failed
+      throw error;
     }
   };
 
@@ -703,7 +808,7 @@ export default function CalendarPage() {
     try {
       await api.rescheduleHabitInstance(scheduledHabitId, start.toISOString(), end.toISOString());
       await Promise.all([
-        fetchExternalEvents(),
+        fetchExternalEvents({ silent: true }),
         fetchHabitInsights(),
       ]);
       setMessage({
@@ -739,7 +844,7 @@ export default function CalendarPage() {
       });
 
       const result = await api.applySchedule(applyBlocks);
-      await Promise.all([refreshTasks(), fetchExternalEvents()]);
+      await refreshCalendar({ silent: true });
 
       const taskCount = result.tasksScheduled ?? 0;
       const habitCount = result.habitsScheduled ?? 0;
@@ -782,17 +887,33 @@ export default function CalendarPage() {
   };
 
   const handleResizeTask = async (taskId: string, start: Date, end: Date) => {
+    const existingTask = tasks.find((t) => t.id === taskId);
+    const prevStart = existingTask?.scheduledTask
+      ? new Date(existingTask.scheduledTask.startDateTime)
+      : start;
+    const prevEnd = existingTask?.scheduledTask
+      ? new Date(existingTask.scheduledTask.endDateTime)
+      : end;
+
+    if (existingTask?.scheduledTask) {
+      patchTaskLocal(taskId, {
+        scheduledTask: {
+          ...existingTask.scheduledTask,
+          startDateTime: start.toISOString(),
+          endDateTime: end.toISOString(),
+        },
+      });
+    }
+    patchExternalEventTimes(taskId, 'task', start, end);
     try {
       await api.rescheduleTask(taskId, start.toISOString(), end.toISOString());
-      await Promise.all([
-        refreshTasks(),
-        fetchExternalEvents(),
-      ]);
+      void refreshCalendar({ silent: true });
       setMessage({
         type: 'success',
         text: 'Task duration updated!',
       });
     } catch (error) {
+      revertTaskSchedule(taskId, prevStart, prevEnd, existingTask);
       setMessage({
         type: 'error',
         text: error instanceof Error ? error.message : 'Failed to resize task',
@@ -802,39 +923,34 @@ export default function CalendarPage() {
   };
 
   const handleCompleteTaskById = async (taskId: string) => {
-    // Clear preview if this task is being previewed
     if (previewTask?.id === taskId) {
       setPreviewTask(null);
       setPreviewSlot(null);
     }
 
     try {
-      await api.completeTask(taskId);
-      await refreshTasks();
-      setMessage({
-        type: 'success',
-        text: 'Task completed!',
-      });
+      await completeTask(taskId);
+      void fetchExternalEvents({ silent: true });
     } catch (error) {
+      void refreshCalendar({ silent: true });
       setMessage({
         type: 'error',
         text: 'Failed to complete task',
       });
+      throw error;
     }
   };
 
   const handleCompleteHabitById = async (scheduledHabitId: string, actualDurationMinutes?: number) => {
-    try {
-      // Find habitId for analytics
-      const habitInstance = scheduledHabitInstances.find(
-        inst => inst.scheduledHabitId === scheduledHabitId
-      );
+    const habitInstance = scheduledHabitInstances.find(
+      (inst) => inst.scheduledHabitId === scheduledHabitId
+    );
 
+    patchHabitCompletion(scheduledHabitId, true);
+
+    try {
       await api.completeHabitInstance(scheduledHabitId, actualDurationMinutes);
-      await Promise.all([
-        fetchExternalEvents(), // Refresh to get updated completion status
-        fetchHabitInsights(), // Refresh streak data
-      ]);
+      void Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
 
       // Track completion (privacy-safe: hashed ID only, no title)
       if (habitInstance) {
@@ -860,10 +976,12 @@ export default function CalendarPage() {
         });
       }
     } catch (error) {
+      patchHabitCompletion(scheduledHabitId, false);
       setMessage({
         type: 'error',
         text: 'Failed to complete habit',
       });
+      throw error;
     }
   };
 
@@ -874,11 +992,9 @@ export default function CalendarPage() {
         inst => inst.scheduledHabitId === scheduledHabitId
       );
 
+      patchHabitCompletion(scheduledHabitId, false);
       await api.undoHabitInstance(scheduledHabitId);
-      await Promise.all([
-        fetchExternalEvents(), // Refresh to get updated completion status
-        fetchHabitInsights(), // Refresh streak data
-      ]);
+      void Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
 
       // Track undo (privacy-safe: hashed ID only)
       if (habitInstance) {
@@ -908,8 +1024,8 @@ export default function CalendarPage() {
 
       await api.skipHabitInstance(scheduledHabitId, reasonCode);
       await Promise.all([
-        fetchExternalEvents(), // Refresh to get updated completion status
-        fetchHabitInsights(), // Refresh streak data
+        fetchExternalEvents({ silent: true }),
+        fetchHabitInsights(),
       ]);
 
       // Track skip (privacy-safe: hashed ID + preset reason code only)
@@ -999,7 +1115,7 @@ export default function CalendarPage() {
         dueDate: editingState.dueDate || undefined,
         categoryId: editingState.categoryId || undefined,
       });
-      await Promise.all([refreshTasks(), fetchExternalEvents()]);
+      await refreshCalendar({ silent: true });
       setMessage({
         type: 'success',
         text: 'Task updated successfully!',
@@ -1017,8 +1133,7 @@ export default function CalendarPage() {
   const handleUnscheduleTaskById = async (taskId: string) => {
     try {
       await api.updateTask(taskId, { status: 'unscheduled' });
-      await refreshTasks();
-      await fetchExternalEvents();
+      void refreshCalendar({ silent: true });
       setMessage({
         type: 'success',
         text: 'Task unscheduled successfully!',
@@ -1039,9 +1154,8 @@ export default function CalendarPage() {
     }
 
     try {
-      await api.deleteTask(taskId);
-      await refreshTasks();
-      await fetchExternalEvents();
+      await deleteTask(taskId);
+      void fetchExternalEvents({ silent: true });
       setMessage({
         type: 'success',
         text: 'Task deleted successfully!',
@@ -1324,7 +1438,7 @@ export default function CalendarPage() {
 
         // Refresh calendar data (non-critical - don't block on failure)
         try {
-          await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+          await Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
         } catch (refreshError) {
           console.error('Habit scheduled successfully, but refresh failed:', refreshError);
           // Not critical - calendar will show stale data until next refresh
@@ -1392,12 +1506,18 @@ export default function CalendarPage() {
 
     try {
       if (details.kind === 'habit' && details.scheduledHabitId) {
+        patchExternalEventTimes(
+          details.scheduledHabitId,
+          'habit',
+          window.start,
+          window.end
+        );
         await api.rescheduleHabitInstance(
           details.scheduledHabitId,
           window.start.toISOString(),
           window.end.toISOString()
         );
-        await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+        void Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
         if (preferInstant && snap?.scheduledHabitId === details.scheduledHabitId) {
           const prevStart = snap.prevStart;
           const prevEnd = snap.prevEnd;
@@ -1413,7 +1533,7 @@ export default function CalendarPage() {
                   prevStart.toISOString(),
                   prevEnd.toISOString()
                 );
-                await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+                await Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
               },
             },
           });
@@ -1433,7 +1553,7 @@ export default function CalendarPage() {
           if (prog?.status === 'failed') {
             throw new Error(prog.error || 'Could not schedule habit');
           }
-          await Promise.all([fetchExternalEvents(), fetchHabitInsights()]);
+          await Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
           showToast('Habit scheduled', 'success', { durationMs: 5000 });
         } else {
           setPreviewTask(null);
@@ -1445,12 +1565,23 @@ export default function CalendarPage() {
           setPreviewSlot({ start: window.start, end: window.end });
         }
       } else if (details.fromCalendar && details.taskId) {
+        const existingTask = tasks.find((t) => t.id === details.taskId);
+        if (existingTask?.scheduledTask) {
+          patchTaskLocal(details.taskId, {
+            scheduledTask: {
+              ...existingTask.scheduledTask,
+              startDateTime: window.start.toISOString(),
+              endDateTime: window.end.toISOString(),
+            },
+          });
+        }
+        patchExternalEventTimes(details.taskId, 'task', window.start, window.end);
         await api.rescheduleTask(
           details.taskId,
           window.start.toISOString(),
           window.end.toISOString()
         );
-        await Promise.all([refreshTasks(), fetchExternalEvents()]);
+        void refreshCalendar({ silent: true });
         if (preferInstant && snap?.taskId === details.taskId) {
           const prevStart = snap.prevStart;
           const prevEnd = snap.prevEnd;
@@ -1466,7 +1597,7 @@ export default function CalendarPage() {
                   prevStart.toISOString(),
                   prevEnd.toISOString()
                 );
-                await Promise.all([refreshTasks(), fetchExternalEvents()]);
+                await refreshCalendar({ silent: true });
               },
             },
           });
@@ -1480,7 +1611,7 @@ export default function CalendarPage() {
             window.start.toISOString(),
             window.end.toISOString()
           );
-          await Promise.all([refreshTasks(), fetchExternalEvents()]);
+          void refreshCalendar({ silent: true });
           const tid = details.task.id;
           showToast('Task scheduled', 'success', {
             durationMs: 5000,
@@ -1489,7 +1620,7 @@ export default function CalendarPage() {
               label: 'Undo',
               onClick: async () => {
                 await api.updateTask(tid, { status: 'unscheduled' });
-                await Promise.all([refreshTasks(), fetchExternalEvents()]);
+                await refreshCalendar({ silent: true });
               },
             },
           });
@@ -1499,6 +1630,22 @@ export default function CalendarPage() {
         }
       }
     } catch (error) {
+      if (snap?.taskId && details.fromCalendar) {
+        revertTaskSchedule(snap.taskId, snap.prevStart, snap.prevEnd);
+      } else if (snap?.scheduledHabitId && details.kind === 'habit') {
+        patchExternalEventTimes(
+          snap.scheduledHabitId,
+          'habit',
+          snap.prevStart,
+          snap.prevEnd
+        );
+      } else if (details.task && !details.fromCalendar) {
+        patchTaskLocal(details.task.id, {
+          status: details.task.status,
+          scheduledTask: details.task.scheduledTask ?? null,
+        });
+      }
+      void refreshCalendar({ silent: true });
       console.error('Drag schedule failed:', error);
       setMessage({
         type: 'error',
@@ -1718,8 +1865,8 @@ export default function CalendarPage() {
             </div>
 
             {/* Main Panel - Calendar */}
-            <div className="col-span-12 lg:col-span-10 xl:col-span-10 h-full overflow-hidden">
-              {tasksLoading || eventsLoading ? (
+            <div className="col-span-12 lg:col-span-10 xl:col-span-10 h-full overflow-hidden relative">
+              {!calendarReady && (tasksLoading || eventsLoading) ? (
                 <div className="h-full surface-card rounded-lg flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
                   <LoadingSpinner size="lg" label="Loading calendar" />
                   <p className="text-sm text-slate-600 max-w-sm">
@@ -1727,6 +1874,16 @@ export default function CalendarPage() {
                   </p>
                 </div>
               ) : (
+                <>
+                  {isSyncing && (
+                    <div
+                      className="absolute top-3 right-3 z-30 flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm"
+                      aria-live="polite"
+                    >
+                      <LoadingSpinner size="sm" label="Syncing calendar" />
+                      Syncing…
+                    </div>
+                  )}
                 <CalendarView
                   tasks={tasks}
                   externalEvents={externalEventsForView}
@@ -1748,16 +1905,31 @@ export default function CalendarPage() {
                   onUnscheduleTask={handleUnscheduleTaskById}
                   onDeleteTask={handleDeleteTaskById}
                   onCategoryChange={handleCategoryChange}
-                  onTasksRefresh={refreshTasks}
+                  onTasksRefresh={() => void refreshTasks(true)}
                 />
+                </>
               )}
             </div>
           </div>
 
           {/* Drag Overlay */}
-          <DragOverlay dropAnimation={null}>
+          <DragOverlay
+            dropAnimation={
+              reduceMotion
+                ? null
+                : {
+                    duration: 220,
+                    easing: 'cubic-bezier(0.18, 0.67, 0.6, 1)',
+                  }
+            }
+          >
             {activeDragTask ? (
-              <div className="rounded-lg border border-primary-200 bg-white shadow-xl px-4 py-3 w-64">
+              <motion.div
+                layout={!reduceMotion}
+                initial={reduceMotion ? false : { scale: 1.02, rotate: -0.5 }}
+                animate={{ scale: 1, rotate: 0 }}
+                className="rounded-lg border border-primary-200 bg-white shadow-xl px-4 py-3 w-64"
+              >
                 <p className="text-sm font-semibold text-slate-800">{activeDragTask.title}</p>
                 <p className="text-xs text-slate-600 mt-1">
                   {activeDropPreview
@@ -1766,16 +1938,21 @@ export default function CalendarPage() {
                         activeDragTask.category ? ` • ${activeDragTask.category.name}` : ''
                       }`}
                 </p>
-              </div>
+              </motion.div>
             ) : activeDragHabit ? (
-              <div className="rounded-lg border border-indigo-200 bg-white shadow-xl px-4 py-3 w-64">
+              <motion.div
+                layout={!reduceMotion}
+                initial={reduceMotion ? false : { scale: 1.02, rotate: 0.5 }}
+                animate={{ scale: 1, rotate: 0 }}
+                className="rounded-lg border border-indigo-200 bg-white shadow-xl px-4 py-3 w-64"
+              >
                 <p className="text-sm font-semibold text-slate-800">{activeDragHabit.title}</p>
                 <p className="text-xs text-slate-600 mt-1">
                   {activeDropPreview
                     ? formatDropPreviewTime(activeDropPreview.start, activeDropPreview.end)
                     : `${activeDragHabit.durationMinutes} min • Habit`}
                 </p>
-              </div>
+              </motion.div>
             ) : null}
           </DragOverlay>
         </DndContext>

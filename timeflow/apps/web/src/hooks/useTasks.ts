@@ -16,18 +16,32 @@ export function useTasks(initialStatus?: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (silent = false): Promise<boolean> => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
       const data = await api.getTasks(initialStatus);
       setTasks(data);
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+      if (!silent) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch tasks');
+      }
+      return false;
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [initialStatus]);
+
+  const patchTaskLocal = useCallback((id: string, patch: Partial<Task>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? ({ ...t, ...patch } as Task) : t))
+    );
+  }, []);
 
   useEffect(() => {
     fetchTasks();
@@ -70,6 +84,7 @@ export function useTasks(initialStatus?: string) {
     loading,
     error,
     refresh: fetchTasks,
+    patchTaskLocal,
     createTask,
     updateTask,
     deleteTask,

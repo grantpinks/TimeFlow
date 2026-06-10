@@ -499,6 +499,20 @@ body {
   z-index: 5;
 }
 
+/* Smooth reposition after drag-drop / reschedule (disabled during active drag). */
+body:not(.calendar-dnd-active) .rbc-time-content .rbc-event {
+  transition:
+    top 0.22s cubic-bezier(0.18, 0.67, 0.6, 1),
+    height 0.22s cubic-bezier(0.18, 0.67, 0.6, 1),
+    opacity 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(.calendar-dnd-active) .rbc-time-content .rbc-event {
+    transition: none;
+  }
+}
+
 /* While dragging on the calendar, let pointer hit droppable time slots (not stacked events). */
 body.calendar-dnd-active .rbc-time-content .rbc-event,
 body.calendar-dnd-active .rbc-time-content .rbc-event:hover,
