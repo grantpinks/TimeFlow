@@ -22,6 +22,10 @@ vi.mock('../../config/google.js', () => ({
   getUserOAuth2Client: vi.fn(() => oauth2ClientMock),
 }));
 
+vi.mock('../accountTokenService.js', () => ({
+  getGoogleOAuth2ClientForUser: vi.fn(async () => oauth2ClientMock),
+}));
+
 vi.mock('../../config/prisma.js', () => ({
   prisma: {
     user: {

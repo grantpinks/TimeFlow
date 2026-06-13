@@ -6,7 +6,7 @@ import type { FastifyReply } from 'fastify';
 import { google } from 'googleapis';
 import { prisma } from '../config/prisma.js';
 import { GOOGLE_GMAIL_SCOPES, getOAuth2Client, getUserOAuth2Client } from '../config/google.js';
-import { decrypt } from '../utils/crypto.js';
+import { decryptStoredToken, decryptWithLegacyFallback } from '../utils/crypto.js';
 
 export type GmailAccessDenialCode = 'GMAIL_NOT_CONNECTED' | 'NO_GOOGLE_AUTH';
 
@@ -70,9 +70,12 @@ async function probeGmailReadAccess(userId: string): Promise<boolean> {
   if (!user?.googleAccessToken) return false;
 
   try {
+    const accessToken = decryptStoredToken(user.googleAccessToken);
+    if (!accessToken) return false;
+
     const oauth2Client = getUserOAuth2Client(
-      user.googleAccessToken,
-      decrypt(user.googleRefreshToken),
+      accessToken,
+      decryptWithLegacyFallback(user.googleRefreshToken),
       user.googleAccessTokenExpiry?.getTime()
     );
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
@@ -139,7 +142,11 @@ export async function assertGmailAccess(
       return { ok: true };
     }
 
-    const knownScopes = await resolveGrantedScopeString(user.googleAccessToken, null, null);
+    const knownScopes = await resolveGrantedScopeString(
+      decryptStoredToken(user.googleAccessToken),
+      null,
+      null
+    );
     if (knownScopes) {
       await persistGrantedScopes(userId, knownScopes);
     }
@@ -198,7 +205,11 @@ export async function getGoogleConnectionStatus(userId: string): Promise<{
     if (gmailConnected) {
       await persistGrantedScopes(userId, GOOGLE_GMAIL_SCOPES.join(' '));
     } else if (user.googleAccessToken) {
-      const knownScopes = await resolveGrantedScopeString(user.googleAccessToken, null, null);
+      const knownScopes = await resolveGrantedScopeString(
+      decryptStoredToken(user.googleAccessToken),
+      null,
+      null
+    );
       if (knownScopes) {
         await persistGrantedScopes(userId, knownScopes);
       }

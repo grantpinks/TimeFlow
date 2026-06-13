@@ -6,37 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { FlowSchedulingBanner } from '../FlowSchedulingBanner';
 
-const getAuthHeader = (headers?: HeadersInit) => {
-  if (!headers) return undefined;
-  if (headers instanceof Headers) {
-    return headers.get('Authorization') ?? undefined;
-  }
-  if (Array.isArray(headers)) {
-    const match = headers.find(([key]) => key.toLowerCase() === 'authorization');
-    return match ? match[1] : undefined;
-  }
-  return (headers as Record<string, string>).Authorization;
-};
-
 describe('FlowSchedulingBanner', () => {
   beforeEach(() => {
-    const store = new Map<string, string>();
-    globalThis.localStorage = {
-      getItem: (key: string) => store.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        store.set(key, value);
-      },
-      removeItem: (key: string) => {
-        store.delete(key);
-      },
-      clear: () => {
-        store.clear();
-      },
-      key: (index: number) => Array.from(store.keys())[index] ?? null,
-      get length() {
-        return store.size;
-      },
-    } as Storage;
     vi.stubGlobal('fetch', vi.fn());
   });
 
@@ -44,9 +15,7 @@ describe('FlowSchedulingBanner', () => {
     vi.unstubAllGlobals();
   });
 
-  it('includes auth token from timeflow_token for scheduling requests', async () => {
-    localStorage.setItem('timeflow_token', 'test-token');
-
+  it('includes credentials for scheduling requests', async () => {
     const fetchMock = vi.mocked(global.fetch);
     fetchMock.mockImplementation((input) => {
       const url = typeof input === 'string' ? input : input.toString();
@@ -105,10 +74,7 @@ describe('FlowSchedulingBanner', () => {
     expect(contextCall).toBeTruthy();
     expect(habitsCall).toBeTruthy();
 
-    const contextAuth = getAuthHeader(contextCall?.[1]?.headers);
-    const habitsAuth = getAuthHeader(habitsCall?.[1]?.headers);
-
-    expect(contextAuth).toBe('Bearer test-token');
-    expect(habitsAuth).toBe('Bearer test-token');
+    expect(contextCall?.[1]?.credentials).toBe('include');
+    expect(habitsCall?.[1]?.credentials).toBe('include');
   });
 });

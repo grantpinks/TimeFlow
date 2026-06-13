@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IdentityEvolutionState } from '@timeflow/shared';
 import * as api from '@/lib/api';
-import { ApiRequestError, hasStoredAuthSession } from '@/lib/api';
+import { ApiRequestError } from '@/lib/api';
 
 export type EvolutionSurfaceMode = 'active' | 'preview' | 'degraded';
 
@@ -28,7 +28,7 @@ export function useEvolutionSurface(
   const [loadStatus, setLoadStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
 
   const fetchStates = useCallback(async () => {
-    if (!isAuthenticated || !hasStoredAuthSession() || !evolutionEnabled) {
+    if (!isAuthenticated || !evolutionEnabled) {
       setStates([]);
       setLoadStatus(evolutionEnabled ? 'idle' : 'ok');
       return;

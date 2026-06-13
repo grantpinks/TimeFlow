@@ -6,8 +6,7 @@
 
 import { google, gmail_v1 } from 'googleapis';
 import { prisma } from '../config/prisma.js';
-import { decrypt, encrypt } from '../utils/crypto.js';
-import { getUserOAuth2Client } from '../config/google.js';
+import { getGoogleOAuth2ClientForUser } from './accountTokenService.js';
 import { analyzeEmailImportance } from '../utils/emailImportance.js';
 import { assertWithinGmailRateLimit } from '../utils/gmailRateLimiter.js';
 import {
@@ -64,30 +63,7 @@ export function extractMessageBody(
 }
 
 async function getGmailClient(userId: string): Promise<gmail_v1.Gmail> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || !user.googleAccessToken) {
-    throw new Error('User not authenticated with Google');
-  }
-
-  const oauth2Client = getUserOAuth2Client(
-    user.googleAccessToken,
-    decrypt(user.googleRefreshToken),
-    user.googleAccessTokenExpiry?.getTime()
-  );
-
-  oauth2Client.on('tokens', async (tokens) => {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        googleAccessToken: tokens.access_token ?? user.googleAccessToken,
-        googleRefreshToken: encrypt(tokens.refresh_token) ?? user.googleRefreshToken,
-        googleAccessTokenExpiry: tokens.expiry_date
-          ? new Date(tokens.expiry_date)
-          : user.googleAccessTokenExpiry,
-      },
-    });
-  });
-
+  const oauth2Client = await getGoogleOAuth2ClientForUser(userId);
   return google.gmail({ version: 'v1', auth: oauth2Client });
 }
 

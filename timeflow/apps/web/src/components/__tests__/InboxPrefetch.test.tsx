@@ -9,6 +9,7 @@ import * as api from '@/lib/api';
 import * as emailCache from '@/lib/emailCache';
 
 vi.mock('@/lib/api', () => ({
+  checkSession: vi.fn().mockResolvedValue(true),
   getInboxEmails: vi.fn().mockResolvedValue({ messages: [] }),
 }));
 
@@ -30,10 +31,6 @@ function mockStorage() {
       store.clear();
     },
   };
-  Object.defineProperty(window, 'localStorage', {
-    value: storage,
-    configurable: true,
-  });
   Object.defineProperty(window, 'sessionStorage', {
     value: storage,
     configurable: true,
@@ -44,7 +41,7 @@ describe('InboxPrefetch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStorage();
-    window.localStorage.setItem('timeflow_token', 'token');
+    vi.mocked(api.checkSession).mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -74,6 +71,16 @@ describe('InboxPrefetch', () => {
 
   it('skips prefetch when recently prefetched in session', async () => {
     window.sessionStorage.setItem('timeflow_inbox_prefetch_at', String(Date.now()));
+    vi.mocked(emailCache.getCacheAge).mockReturnValue(null);
+
+    render(<InboxPrefetch />);
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(api.getInboxEmails).not.toHaveBeenCalled();
+  });
+
+  it('skips prefetch when not authenticated', async () => {
+    vi.mocked(api.checkSession).mockResolvedValue(false);
     vi.mocked(emailCache.getCacheAge).mockReturnValue(null);
 
     render(<InboxPrefetch />);

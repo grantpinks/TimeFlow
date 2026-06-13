@@ -6,7 +6,7 @@
 
 import { FastifyInstance } from 'fastify';
 import * as authController from '../controllers/authController.js';
-import { requireAuth } from '../middlewares/auth.js';
+import { requireAuth, optionalAuth } from '../middlewares/auth.js';
 
 export async function registerAuthRoutes(server: FastifyInstance) {
   // Start Google OAuth flow
@@ -40,5 +40,17 @@ export async function registerAuthRoutes(server: FastifyInstance) {
   server.post('/auth/refresh', {
     config: { rateLimit: { max: 60, timeWindow: '5 minutes' } },
   }, authController.refreshToken);
+
+  // Clear session cookies
+  server.post('/auth/logout', {
+    preHandler: optionalAuth,
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+  }, authController.logout);
+
+  // Session probe for web client
+  server.get('/auth/session', {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 120, timeWindow: '1 minute' } },
+  }, authController.getSession);
 }
 

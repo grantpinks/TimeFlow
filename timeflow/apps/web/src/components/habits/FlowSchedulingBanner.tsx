@@ -41,11 +41,6 @@ export function FlowSchedulingBanner() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [selectedHabitIds, setSelectedHabitIds] = useState<Set<string>>(new Set());
 
-  const getAuthHeaders = (): Record<string, string> => {
-    const token = localStorage.getItem('timeflow_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
   useEffect(() => {
     fetchContext();
     fetchHabits();
@@ -54,9 +49,7 @@ export function FlowSchedulingBanner() {
   const fetchContext = async () => {
     try {
       const response = await fetch('/api/habits/scheduling-context', {
-        headers: {
-          ...getAuthHeaders(),
-        },
+        credentials: 'include',
       });
       const data = await response.json();
       setContext(data);
@@ -70,9 +63,7 @@ export function FlowSchedulingBanner() {
   const fetchHabits = async () => {
     try {
       const response = await fetch('/api/habits', {
-        headers: {
-          ...getAuthHeaders(),
-        },
+        credentials: 'include',
       });
       const data = await response.json();
       // Don't filter by isActive - show all habits that are visible on the page
@@ -173,9 +164,9 @@ export function FlowSchedulingBanner() {
     try {
       const response = await fetch('/api/habits/bulk-schedule', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           dateRangeStart,
@@ -214,9 +205,9 @@ export function FlowSchedulingBanner() {
     try {
       const response = await fetch('/api/habits/commit-schedule', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           acceptedBlocks: blocks.map((b) => ({

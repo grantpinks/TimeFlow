@@ -27,7 +27,7 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        value: https://api.time-flow.app/api/auth/google/callback
+        value: https://time-flow.app/api/auth/google/callback
       - key: APP_BASE_URL
         value: https://time-flow.app
       - key: OPENAI_API_KEY

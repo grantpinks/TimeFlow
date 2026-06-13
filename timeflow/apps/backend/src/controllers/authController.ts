@@ -7,11 +7,20 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as authService from '../services/authService.js';
 import * as categoryService from '../services/categoryService.js';
+import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
 import { z } from 'zod';
 import { formatZodError } from '../utils/errorFormatter.js';
 import { decodeOAuthState } from '../utils/oauthState.js';
 import { getGoogleConnectionStatus } from '../services/googleScopeService.js';
+import { extractRefreshToken } from '../utils/authTokenExtractor.js';
+import {
+  ACCESS_COOKIE_NAME,
+  REFRESH_COOKIE_NAME,
+  buildAccessCookieOptions,
+  buildRefreshCookieOptions,
+  buildClearCookieOptions,
+} from '../utils/sessionCookies.js';
 
 const callbackQuerySchema = z.object({
   code: z.string().optional(),
@@ -122,7 +131,12 @@ export async function handleGoogleCallback(
   }
 
   try {
-    const statePayload = decodeOAuthState(state);
+    let statePayload: ReturnType<typeof decodeOAuthState>;
+    try {
+      statePayload = decodeOAuthState(state);
+    } catch {
+      return reply.redirect(authErrorRedirect('invalid_state'));
+    }
     const user = await authService.handleGoogleCallback(code, statePayload);
 
     // Non-fatal: default categories should not block sign-in
@@ -141,13 +155,20 @@ export async function handleGoogleCallback(
       { expiresIn: '7d' }
     );
 
-    const baseUrl = frontendBaseUrl();
-    const stateParam = state ? `&state=${encodeURIComponent(state)}` : '';
-    return reply.redirect(
-      `${baseUrl}/auth/callback?token=${encodeURIComponent(accessToken)}&refreshToken=${encodeURIComponent(
-        refreshToken
-      )}${stateParam}`
+    reply.setCookie(
+      ACCESS_COOKIE_NAME,
+      accessToken,
+      buildAccessCookieOptions(env.NODE_ENV)
     );
+    reply.setCookie(
+      REFRESH_COOKIE_NAME,
+      refreshToken,
+      buildRefreshCookieOptions(env.NODE_ENV)
+    );
+
+    const baseUrl = frontendBaseUrl();
+    const stateParam = state ? `?state=${encodeURIComponent(state)}` : '';
+    return reply.redirect(`${baseUrl}/auth/callback${stateParam}`);
   } catch (err) {
     request.log.error(err, 'Failed to handle Google callback');
     try {
@@ -159,25 +180,35 @@ export async function handleGoogleCallback(
 }
 
 const refreshBodySchema = z.object({
-  refreshToken: z.string().min(1, 'refreshToken is required'),
+  refreshToken: z.string().min(1).optional(),
 });
 
 /**
  * POST /api/auth/refresh
- * Issues a new access token from a refresh token.
+ * Issues a new access token from a refresh token (cookie for web, body for mobile).
  */
 export async function refreshToken(
-  request: FastifyRequest<{ Body: { refreshToken: string } }>,
+  request: FastifyRequest<{ Body: { refreshToken?: string } }>,
   reply: FastifyReply
 ) {
-  const parsed = refreshBodySchema.safeParse(request.body);
+  const parsed = refreshBodySchema.safeParse(request.body ?? {});
   if (!parsed.success) {
     return reply.status(400).send({ error: formatZodError(parsed.error) });
   }
 
+  const fromCookie = extractRefreshToken({
+    cookies: request.cookies as Record<string, string | undefined>,
+  });
+  const fromBody = parsed.data.refreshToken;
+  const refreshTokenValue = fromCookie ?? fromBody;
+
+  if (!refreshTokenValue) {
+    return reply.status(401).send({ error: 'Missing refresh token' });
+  }
+
   try {
     const payload = request.server.jwt.verify<{ sub: string; type?: string }>(
-      parsed.data.refreshToken
+      refreshTokenValue
     );
 
     if (payload.type !== 'refresh') {
@@ -193,11 +224,62 @@ export async function refreshToken(
       { expiresIn: '7d' }
     );
 
-    return reply.status(200).send({ accessToken, refreshToken: newRefreshToken });
+    reply.setCookie(
+      ACCESS_COOKIE_NAME,
+      accessToken,
+      buildAccessCookieOptions(env.NODE_ENV)
+    );
+    reply.setCookie(
+      REFRESH_COOKIE_NAME,
+      newRefreshToken,
+      buildRefreshCookieOptions(env.NODE_ENV)
+    );
+
+    return reply.status(200).send({
+      success: true,
+      ...(fromBody ? { accessToken, refreshToken: newRefreshToken } : {}),
+    });
   } catch (error) {
     request.log.error(error, 'Failed to refresh token');
     return reply.status(401).send({ error: 'Invalid or expired refresh token' });
   }
+}
+
+/**
+ * POST /api/auth/logout
+ * Clears session cookies and revokes Google tokens when session is known.
+ */
+export async function logout(request: FastifyRequest, reply: FastifyReply) {
+  if (request.user) {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: request.user.id },
+        select: { googleRefreshToken: true },
+      });
+      if (dbUser?.googleRefreshToken) {
+        await authService.revokeGoogleRefreshToken(dbUser.googleRefreshToken);
+      }
+    } catch (err) {
+      request.log.warn({ err, userId: request.user.id }, 'Google token revoke failed on logout');
+    }
+  }
+
+  const clearOpts = buildClearCookieOptions(env.NODE_ENV);
+  reply.clearCookie(ACCESS_COOKIE_NAME, clearOpts);
+  reply.clearCookie(REFRESH_COOKIE_NAME, clearOpts);
+  return { success: true };
+}
+
+/**
+ * GET /api/auth/session
+ * Lightweight session probe for the web client.
+ */
+export async function getSession(request: FastifyRequest, _reply: FastifyReply) {
+  const user = request.user;
+  if (!user) {
+    return { authenticated: false };
+  }
+  return { authenticated: true, userId: user.id };
 }
 
 /**

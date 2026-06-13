@@ -6,9 +6,11 @@
 
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
 import fastifyJwt from '@fastify/jwt';
 import { env } from './config/env.js';
+import { ACCESS_COOKIE_NAME } from './utils/sessionCookies.js';
 import { prisma } from './config/prisma.js';
 
 // Route registrations
@@ -36,6 +38,7 @@ import { registerIdentityRoutes } from './routes/identityRoutes.js';
 import { registerInternalCronRoutes } from './routes/internalCronRoutes.js';
 import { registerAnalyticsRoutes } from './routes/analyticsRoutes.js';
 import { registerConnectedAccountRoutes } from './routes/connectedAccountRoutes.js';
+import { validateOrigin } from './middlewares/validateOrigin.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
@@ -48,8 +51,13 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   // Register plugins
   await server.register(cors, {
-    origin: env.APP_BASE_URL || true,
+    origin: [env.APP_BASE_URL],
     credentials: true,
+  });
+
+  await server.register(cookie, {
+    secret: env.SESSION_SECRET,
+    parseOptions: {},
   });
 
   await server.register(fastifyJwt, {
@@ -66,11 +74,14 @@ export async function buildServer(): Promise<FastifyInstance> {
     timeWindow: env.RATE_LIMIT_WINDOW ?? '1 minute',
     keyGenerator: (request) => {
       const authHeader = request.headers.authorization;
-      if (authHeader?.startsWith('Bearer ')) {
+      const tokenFromHeader =
+        authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
+      const tokenFromCookie = request.cookies?.[ACCESS_COOKIE_NAME];
+      const token = tokenFromHeader ?? tokenFromCookie;
+
+      if (token) {
         try {
-          const payload = request.server.jwt.decode<{ sub?: string }>(
-            authHeader.slice('Bearer '.length)
-          );
+          const payload = request.server.jwt.verify<{ sub?: string }>(token);
           if (payload?.sub) {
             return `user:${payload.sub}`;
           }
@@ -118,6 +129,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   // Register API routes under /api prefix
   await server.register(
     async (api) => {
+      api.addHook('preHandler', validateOrigin);
       await registerAuthRoutes(api);
       await registerUserRoutes(api);
       await registerTaskRoutes(api);

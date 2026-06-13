@@ -46,11 +46,6 @@ export function TimeSlotPicker({
     align === 'right' ? 'absolute top-full right-0' : 'absolute top-full left-0';
   const panelClass = `${anchorClass} mt-2 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl z-50`;
 
-  const getAuthHeaders = (): Record<string, string> => {
-    const token = localStorage.getItem('timeflow_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
   useEffect(() => {
     console.log('[TimeSlotPicker] Component mounted/updated', { habitId, dateOption });
     fetchAvailableSlots();
@@ -96,9 +91,9 @@ export function TimeSlotPicker({
 
       const response = await fetch(url, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify(payload),
       });

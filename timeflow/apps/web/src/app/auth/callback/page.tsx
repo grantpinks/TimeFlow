@@ -2,23 +2,18 @@
 
 import { Suspense, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { setAuthToken, setRefreshToken } from '../../../lib/api';
 import { LoadingSpinner } from '@/components/ui';
 
 /** Read OAuth params from the live URL (reliable on external redirect; useSearchParams can be empty briefly). */
 function readOAuthCallbackParams(): {
-  token: string | null;
-  refreshToken: string | null;
   error: string | null;
   state: string | null;
 } {
   if (typeof window === 'undefined') {
-    return { token: null, refreshToken: null, error: null, state: null };
+    return { error: null, state: null };
   }
   const params = new URLSearchParams(window.location.search);
   return {
-    token: params.get('token') || params.get('accessToken'),
-    refreshToken: params.get('refreshToken'),
     error: params.get('error'),
     state: params.get('state'),
   };
@@ -58,25 +53,16 @@ function AuthCallbackContent() {
     if (handledRef.current) return;
     handledRef.current = true;
 
-    const { token, refreshToken, error, state } = readOAuthCallbackParams();
+    const { error, state } = readOAuthCallbackParams();
 
     if (error) {
       router.replace(`/auth/error?error=${encodeURIComponent(error)}`);
       return;
     }
 
-    if (token) {
-      setAuthToken(token);
-      if (refreshToken) {
-        setRefreshToken(refreshToken);
-      }
-
-      const redirectTo = parseOAuthReturnPath(state);
-      router.replace(redirectTo);
-      return;
-    }
-
-    router.replace('/auth/error?error=no_token');
+    // Session cookies are set by the backend OAuth callback redirect.
+    const redirectTo = parseOAuthReturnPath(state);
+    router.replace(redirectTo);
   }, [router]);
 
   return (

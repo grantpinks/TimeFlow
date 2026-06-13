@@ -11,7 +11,6 @@ const DEBUG_PREFETCH = process.env.NEXT_PUBLIC_INBOX_PREFETCH_DEBUG === 'true';
 function canUseStorage(): boolean {
   return (
     typeof window !== 'undefined' &&
-    typeof window.localStorage?.getItem === 'function' &&
     typeof window.sessionStorage?.getItem === 'function'
   );
 }
@@ -22,37 +21,39 @@ export function InboxPrefetch() {
   useEffect(() => {
     if (!canUseStorage() || startedRef.current) return;
 
-    const token = window.localStorage.getItem('timeflow_token');
-    if (!token) return;
+    void (async () => {
+      const authenticated = await api.checkSession();
+      if (!authenticated) return;
 
-    const cacheAge = getCacheAge();
-    if (cacheAge !== null && cacheAge < PREFETCH_TTL_MS) {
-      if (DEBUG_PREFETCH) {
-        console.log('[InboxPrefetch] Skipping: cache fresh', { cacheAge });
+      const cacheAge = getCacheAge();
+      if (cacheAge !== null && cacheAge < PREFETCH_TTL_MS) {
+        if (DEBUG_PREFETCH) {
+          console.log('[InboxPrefetch] Skipping: cache fresh', { cacheAge });
+        }
+        return;
       }
-      return;
-    }
 
-    const lastPrefetch = Number(window.sessionStorage.getItem(PREFETCH_KEY) ?? 0);
-    if (lastPrefetch && Date.now() - lastPrefetch < PREFETCH_TTL_MS) {
-      if (DEBUG_PREFETCH) {
-        console.log('[InboxPrefetch] Skipping: recent session prefetch');
+      const lastPrefetch = Number(window.sessionStorage.getItem(PREFETCH_KEY) ?? 0);
+      if (lastPrefetch && Date.now() - lastPrefetch < PREFETCH_TTL_MS) {
+        if (DEBUG_PREFETCH) {
+          console.log('[InboxPrefetch] Skipping: recent session prefetch');
+        }
+        return;
       }
-      return;
-    }
 
-    startedRef.current = true;
-    window.sessionStorage.setItem(PREFETCH_KEY, Date.now().toString());
+      startedRef.current = true;
+      window.sessionStorage.setItem(PREFETCH_KEY, Date.now().toString());
 
-    if (DEBUG_PREFETCH) {
-      console.log('[InboxPrefetch] Starting prefetch');
-    }
-
-    void api.getInboxEmails({ maxResults: 100, cacheMode: 'prefer' }).catch((error) => {
       if (DEBUG_PREFETCH) {
-        console.warn('[InboxPrefetch] Prefetch failed', error);
+        console.log('[InboxPrefetch] Starting prefetch');
       }
-    });
+
+      void api.getInboxEmails({ maxResults: 100, cacheMode: 'prefer' }).catch((error) => {
+        if (DEBUG_PREFETCH) {
+          console.warn('[InboxPrefetch] Prefetch failed', error);
+        }
+      });
+    })();
   }, []);
 
   return null;

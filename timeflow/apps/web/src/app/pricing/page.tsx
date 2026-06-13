@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getGoogleAuthUrl, createCheckoutSession } from '@/lib/api';
+import { getGoogleAuthUrl, createCheckoutSession, checkSession } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { LoadingSpinner } from '@/components/ui';
 import { AppShellWhenAuthed } from '@/components/AppShellWhenAuthed';
@@ -81,26 +81,26 @@ function PricingPageContent() {
   useEffect(() => {
     const checkoutPlanKey = searchParams.get('checkout');
     if (checkoutPlanKey && !loading) {
-      // Check if user is now authenticated
-      const token = typeof window !== 'undefined' ? window.localStorage.getItem('timeflow_token') : null;
+      void (async () => {
+        const authenticated = await checkSession();
 
-      if (token) {
-        // User is authenticated, proceed with checkout
-        setLoading(checkoutPlanKey);
-        track('billing.checkout_resumed_after_auth', { planKey: checkoutPlanKey });
+        if (authenticated) {
+          setLoading(checkoutPlanKey);
+          track('billing.checkout_resumed_after_auth', { planKey: checkoutPlanKey });
 
-        createCheckoutSession(checkoutPlanKey)
-          .then(({ url }) => {
-            if (url) {
-              window.location.href = url;
-            }
-          })
-          .catch((err) => {
-            console.error('Auto-checkout failed:', err);
-            alert('Failed to start checkout. Please try the button again.');
-            setLoading(null);
-          });
-      }
+          createCheckoutSession(checkoutPlanKey)
+            .then(({ url }) => {
+              if (url) {
+                window.location.href = url;
+              }
+            })
+            .catch((err) => {
+              console.error('Auto-checkout failed:', err);
+              alert('Failed to start checkout. Please try the button again.');
+              setLoading(null);
+            });
+        }
+      })();
     }
   }, [searchParams, loading]);
 
@@ -111,10 +111,9 @@ function PricingPageContent() {
     setLoading(plan.key);
     track('billing.checkout_started', { plan: plan.key, billing: annual ? 'yearly' : 'monthly' });
 
-    // Check if user is authenticated
-    const token = typeof window !== 'undefined' ? window.localStorage.getItem('timeflow_token') : null;
+    const authenticated = await checkSession();
 
-    if (!token) {
+    if (!authenticated) {
       // User not logged in — redirect to Google Auth with returnTo parameter
       const returnUrl = `/pricing?checkout=${planKey}`;
       const authUrl = `${getGoogleAuthUrl()}?returnTo=${encodeURIComponent(returnUrl)}`;

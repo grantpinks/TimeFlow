@@ -23,11 +23,11 @@
     "verify:db-security": "node scripts/verify-db-security.js"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.0",
     "@fastify/jwt": "^9.0.0",
     "@fastify/rate-limit": "^10.3.0",
     "@prisma/client": "5.20.0",
-    "prisma": "5.20.0",
     "@timeflow/scheduling": "workspace:*",
     "@timeflow/shared": "workspace:*",
     "dotenv": "^16.4.0",
@@ -36,6 +36,7 @@
     "googleapis": "^144.0.0",
     "luxon": "^3.4.4",
     "openai": "^6.15.0",
+    "prisma": "5.20.0",
     "stripe": "^20.2.0",
     "zod": "^3.23.0"
   },

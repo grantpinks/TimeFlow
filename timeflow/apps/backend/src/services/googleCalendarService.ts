@@ -8,8 +8,8 @@
 import { google, calendar_v3 } from 'googleapis';
 import { prisma } from '../config/prisma.js';
 import { getUserOAuth2Client } from '../config/google.js';
-import { decrypt, encrypt } from '../utils/crypto.js';
-import { getGoogleTokenContext } from './accountTokenService.js';
+import { decryptWithLegacyFallback } from '../utils/crypto.js';
+import { getGoogleTokenContext, persistGoogleOAuthTokens } from './accountTokenService.js';
 import { DateTime } from 'luxon';
 
 const MAX_RETRIES = 3;
@@ -141,43 +141,26 @@ async function getCalendarClient(userId: string): Promise<calendar_v3.Calendar> 
 
   const oauth2Client = getUserOAuth2Client(
     tokenContext.accessToken,
-    decrypt(tokenContext.refreshTokenEncrypted),
+    decryptWithLegacyFallback(tokenContext.refreshTokenEncrypted),
     tokenContext.accessTokenExpiry?.getTime()
   );
 
   // Handle token refresh
   oauth2Client.on('tokens', async (tokens) => {
-    const nextAccessToken = tokens.access_token ?? tokenContext.accessToken;
-    const nextRefreshToken = encrypt(tokens.refresh_token) ?? tokenContext.refreshTokenEncrypted;
-    const nextExpiry = tokens.expiry_date
-      ? new Date(tokens.expiry_date)
-      : tokenContext.accessTokenExpiry;
-
-    const writes: Array<Promise<unknown>> = [
-      prisma.user.update({
-        where: { id: userId },
-        data: {
-          googleAccessToken: nextAccessToken,
-          googleRefreshToken: nextRefreshToken,
-          googleAccessTokenExpiry: nextExpiry,
-        },
-      }),
-    ];
-
-    if (tokenContext.connectedAccountId) {
-      writes.push(
-        prisma.connectedAccount.update({
-          where: { id: tokenContext.connectedAccountId },
-          data: {
-            googleAccessToken: nextAccessToken,
-            googleRefreshToken: nextRefreshToken,
-            googleAccessTokenExpiry: nextExpiry,
-          },
-        })
-      );
+    try {
+      await persistGoogleOAuthTokens(userId, tokenContext.connectedAccountId, {
+        accessToken: tokens.access_token ?? tokenContext.accessToken,
+        refreshTokenPlain: tokens.refresh_token ?? undefined,
+        accessTokenExpiry: tokens.expiry_date
+          ? new Date(tokens.expiry_date)
+          : tokenContext.accessTokenExpiry,
+      });
+    } catch (err) {
+      console.error('[googleCalendarService] Failed to persist refreshed Google tokens', {
+        userId,
+        err,
+      });
     }
-
-    await Promise.all(writes);
   });
 
   return google.calendar({ version: 'v3', auth: oauth2Client });

@@ -39,8 +39,8 @@ export function useUser() {
     return updated;
   };
 
-  const logout = () => {
-    api.clearAuthToken();
+  const logout = async () => {
+    await api.logout();
     setUser(null);
   };
 

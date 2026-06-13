@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import * as api from '@/lib/api';
-import { hasStoredAuthSession } from '@/lib/api';
 import type { IdentityProgressResponse } from '@timeflow/shared';
 
 export function useIdentityProgress(
@@ -17,7 +16,7 @@ export function useIdentityProgress(
   const targetDate = date ?? new Date().toISOString().split('T')[0];
 
   const fetchProgress = useCallback(async () => {
-    if (!sessionReady || !hasStoredAuthSession()) {
+    if (!sessionReady) {
       setProgress(null);
       setError(null);
       setLoading(false);

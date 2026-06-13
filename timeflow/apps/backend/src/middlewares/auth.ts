@@ -1,59 +1,63 @@
 /**
  * Authentication Middleware
  *
- * Verifies JWT or session token and attaches user to request.
- * TODO: Implement full JWT verification with proper secret and expiry.
+ * Verifies JWT from Authorization header (mobile) or httpOnly cookie (web).
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '../config/prisma.js';
 import type { AuthenticatedUser } from '../types/context.js';
+import { extractAccessToken } from '../utils/authTokenExtractor.js';
+
+async function loadAuthenticatedUser(userId: string): Promise<AuthenticatedUser | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    googleId: user.googleId,
+    timeZone: user.timeZone,
+    wakeTime: user.wakeTime,
+    sleepTime: user.sleepTime,
+    defaultTaskDurationMinutes: user.defaultTaskDurationMinutes,
+    defaultCalendarId: user.defaultCalendarId,
+  };
+}
 
 /**
  * Middleware to require authentication.
- * Extracts user ID from Authorization header (Bearer token) and loads user.
- *
- * For MVP, we use a simple scheme where the token is the user ID.
- * TODO: Replace with proper JWT verification.
  */
 export async function requireAuth(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<void> {
   try {
-    const authHeader = request.headers.authorization;
+    const token = extractAccessToken({
+      authorization: request.headers.authorization,
+      cookies: request.cookies as Record<string, string | undefined>,
+    });
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       return reply.status(401).send({ error: 'Unauthorized: Missing token' });
     }
 
-    const token = authHeader.slice(7);
     const payload = request.server.jwt.verify<{ sub: string; type?: string }>(token);
 
     if (payload.type && payload.type !== 'access') {
       return reply.status(401).send({ error: 'Unauthorized: Invalid token type' });
     }
 
-    const userId = payload.sub;
+    const authenticatedUser = await loadAuthenticatedUser(payload.sub);
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
+    if (!authenticatedUser) {
       return reply.status(401).send({ error: 'Unauthorized: User not found' });
     }
-
-    const authenticatedUser: AuthenticatedUser = {
-      id: user.id,
-      email: user.email,
-      googleId: user.googleId,
-      timeZone: user.timeZone,
-      wakeTime: user.wakeTime,
-      sleepTime: user.sleepTime,
-      defaultTaskDurationMinutes: user.defaultTaskDurationMinutes,
-      defaultCalendarId: user.defaultCalendarId,
-    };
 
     request.user = authenticatedUser;
   } catch (error) {
@@ -74,39 +78,27 @@ export async function optionalAuth(
   request: FastifyRequest,
   _reply: FastifyReply
 ): Promise<void> {
-  const authHeader = request.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
+  const token = extractAccessToken({
+    authorization: request.headers.authorization,
+    cookies: request.cookies as Record<string, string | undefined>,
+  });
+
+  if (!token) {
     return;
   }
 
   try {
-    const token = authHeader.slice(7);
     const payload = request.server.jwt.verify<{ sub: string; type?: string }>(token);
 
     if (payload.type && payload.type !== 'access') {
       return;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-    });
-
-    if (!user) {
-      return;
+    const authenticatedUser = await loadAuthenticatedUser(payload.sub);
+    if (authenticatedUser) {
+      request.user = authenticatedUser;
     }
-
-    request.user = {
-      id: user.id,
-      email: user.email,
-      googleId: user.googleId,
-      timeZone: user.timeZone,
-      wakeTime: user.wakeTime,
-      sleepTime: user.sleepTime,
-      defaultTaskDurationMinutes: user.defaultTaskDurationMinutes,
-      defaultCalendarId: user.defaultCalendarId,
-    };
   } catch {
     // Public route — invalid or missing JWT is not an error here.
   }
 }
-

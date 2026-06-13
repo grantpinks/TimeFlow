@@ -12,7 +12,7 @@ const envSchema = z.object({
   GOOGLE_REDIRECT_URI: z.string().optional(),
   DEFAULT_GOOGLE_CALENDAR_ID: z.string().optional(),
   SESSION_SECRET: z.string().min(1, 'SESSION_SECRET is required'),
-  APP_BASE_URL: z.string().optional(),
+  APP_BASE_URL: z.string().url('APP_BASE_URL must be a valid URL').default('http://localhost:3000'),
   ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY is required (32+ chars)'),
   RATE_LIMIT_MAX: z.coerce.number().optional(),
   RATE_LIMIT_WINDOW: z.string().optional(),

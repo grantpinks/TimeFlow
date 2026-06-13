@@ -79,19 +79,14 @@ export function HabitRow({
   );
   const [isScheduling, setIsScheduling] = useState(false);
 
-  const getAuthHeaders = (): Record<string, string> => {
-    const token = localStorage.getItem('timeflow_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
   const handleSlotSelect = async (slot: TimeSlot) => {
     setIsScheduling(true);
     try {
       const response = await fetch('/api/habits/commit-schedule', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           acceptedBlocks: [

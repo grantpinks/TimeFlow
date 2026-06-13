@@ -1,7 +1,8 @@
 /**
  * Email Cache Utility
  *
- * Provides a 2-minute cache for inbox emails to reduce Gmail API calls.
+ * Short-lived session cache for inbox emails to reduce Gmail API calls.
+ * Uses sessionStorage (not localStorage) so data clears when the tab closes.
  */
 
 import type { EmailInboxResponse } from '@timeflow/shared';
@@ -12,32 +13,37 @@ interface CacheEntry {
 }
 
 const CACHE_KEY = 'timeflow_email_cache';
-const CACHE_TTL_MS = 90 * 1000; // 90 seconds - balanced between freshness and rate limits
+const CACHE_TTL_MS = 90 * 1000; // 90 seconds
+
+function getStorage(): Storage | null {
+  if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {
+    return null;
+  }
+  return window.sessionStorage;
+}
 
 /**
- * Get cached emails if they exist and are less than 2 minutes old.
+ * Get cached emails if they exist and are less than TTL old.
  */
 export function getCachedEmails(): EmailInboxResponse | null {
-  if (typeof window === 'undefined') return null;
+  const storage = getStorage();
+  if (!storage) return null;
 
   try {
-    const cached = localStorage.getItem(CACHE_KEY);
+    const cached = storage.getItem(CACHE_KEY);
     if (!cached) return null;
 
     const entry: CacheEntry = JSON.parse(cached);
     const now = Date.now();
 
-    // Check if cache is still valid (less than 2 minutes old)
     if (now - entry.timestamp < CACHE_TTL_MS) {
       return entry.data;
     }
 
-    // Cache expired, remove it
-    localStorage.removeItem(CACHE_KEY);
+    storage.removeItem(CACHE_KEY);
     return null;
-  } catch (err) {
-    // If parsing fails, clear the cache
-    localStorage.removeItem(CACHE_KEY);
+  } catch {
+    storage.removeItem(CACHE_KEY);
     return null;
   }
 }
@@ -46,26 +52,27 @@ export function getCachedEmails(): EmailInboxResponse | null {
  * Cache email data with current timestamp.
  */
 export function cacheEmails(data: EmailInboxResponse): void {
-  if (typeof window === 'undefined') return;
+  const storage = getStorage();
+  if (!storage) return;
 
   try {
     const entry: CacheEntry = {
       data,
       timestamp: Date.now(),
     };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
+    storage.setItem(CACHE_KEY, JSON.stringify(entry));
   } catch (err) {
-    // If storage quota exceeded or other error, just ignore
     console.warn('Failed to cache emails:', err);
   }
 }
 
 /**
- * Clear the email cache manually.
+ * Clear the email cache manually (e.g. on logout).
  */
 export function clearEmailCache(): void {
-  if (typeof window === 'undefined') return;
-  localStorage.removeItem(CACHE_KEY);
+  const storage = getStorage();
+  if (!storage) return;
+  storage.removeItem(CACHE_KEY);
 }
 
 /**
@@ -73,15 +80,16 @@ export function clearEmailCache(): void {
  * Returns null if no cache exists.
  */
 export function getCacheAge(): number | null {
-  if (typeof window === 'undefined') return null;
+  const storage = getStorage();
+  if (!storage) return null;
 
   try {
-    const cached = localStorage.getItem(CACHE_KEY);
+    const cached = storage.getItem(CACHE_KEY);
     if (!cached) return null;
 
     const entry: CacheEntry = JSON.parse(cached);
     return Date.now() - entry.timestamp;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

@@ -40,11 +40,6 @@ export function HabitCard({
   const [isScheduling, setIsScheduling] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const getAuthHeaders = (): Record<string, string> => {
-    const token = localStorage.getItem('timeflow_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,9 +83,9 @@ export function HabitCard({
       // Call the commit API to schedule this specific slot
       const response = await fetch('/api/habits/commit-schedule', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           acceptedBlocks: [

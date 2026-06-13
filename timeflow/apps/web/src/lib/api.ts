@@ -77,6 +77,7 @@ import type {
 } from '@timeflow/shared';
 import { getAiDebugEnabled } from './aiDebug';
 import { track } from './analytics';
+import { clearEmailCache } from './emailCache';
 
 /**
  * Email category configuration type (matches backend)
@@ -99,6 +100,9 @@ export interface EmailCategoryConfig {
 
 const API_BASE = '/api';
 
+/** Default fetch init for cookie-based web auth. */
+const CREDENTIALS_INIT: RequestCredentials = 'include';
+
 /** Thrown for non-OK API responses; includes optional `code` (e.g. INSUFFICIENT_CREDITS). */
 export class ApiRequestError extends Error {
   readonly status: number;
@@ -118,91 +122,59 @@ export class ApiRequestError extends Error {
   }
 }
 
-/**
- * Get auth token from localStorage.
- * TODO: Replace with proper session management.
- */
-function getAuthToken(): string | null {
-  if (
-    typeof window === 'undefined' ||
-    typeof window.localStorage?.getItem !== 'function'
-  ) {
-    return null;
-  }
-  return window.localStorage.getItem('timeflow_token');
-}
-
-/**
- * Set auth token in localStorage.
- */
-export function setAuthToken(token: string): void {
-  if (
-    typeof window === 'undefined' ||
-    typeof window.localStorage?.setItem !== 'function'
-  ) {
-    return;
-  }
-  window.localStorage.setItem('timeflow_token', token);
-}
-
-/**
- * Get refresh token from localStorage.
- */
-function getRefreshToken(): string | null {
-  if (
-    typeof window === 'undefined' ||
-    typeof window.localStorage?.getItem !== 'function'
-  ) {
-    return null;
-  }
-  return window.localStorage.getItem('timeflow_refresh_token');
-}
-
-/**
- * Set refresh token in localStorage.
- */
-export function setRefreshToken(token: string): void {
-  if (
-    typeof window === 'undefined' ||
-    typeof window.localStorage?.setItem !== 'function'
-  ) {
-    return;
-  }
-  window.localStorage.setItem('timeflow_refresh_token', token);
-}
-
 /** In-flight refresh so parallel 401s share one token rotation (avoids clearing session). */
-let refreshInFlight: Promise<string | null> | null = null;
+let refreshInFlight: Promise<boolean> | null = null;
 
-/** True when the browser has a stored access token (session may still be invalid). */
-export function hasStoredAuthSession(): boolean {
-  return !!getAuthToken();
+/**
+ * Check whether the browser has a valid httpOnly cookie session.
+ */
+export async function checkSession(): Promise<boolean> {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/auth/session`, {
+      credentials: CREDENTIALS_INIT,
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { authenticated?: boolean };
+    return data.authenticated === true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Clear auth token.
+ * Clear session by calling logout endpoint (clears httpOnly cookies server-side).
  */
-export function clearAuthToken(): void {
-  if (
-    typeof window === 'undefined' ||
-    typeof window.localStorage?.removeItem !== 'function'
-  ) {
+export async function clearAuthToken(): Promise<void> {
+  if (typeof window === 'undefined') {
     return;
   }
-  window.localStorage.removeItem('timeflow_token');
-  window.localStorage.removeItem('timeflow_refresh_token');
+  clearEmailCache();
+  try {
+    await fetch(`${API_BASE}/auth/logout`, {
+      method: 'POST',
+      credentials: CREDENTIALS_INIT,
+    });
+  } catch {
+    // Best-effort cookie clear
+  }
+}
+
+/** Sign out: clears cookies and returns when done. */
+export async function logout(): Promise<void> {
+  await clearAuthToken();
 }
 
 /**
- * Make an authenticated API request.
+ * Make an authenticated API request (uses httpOnly cookies).
  */
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
   allowRefresh = true
 ): Promise<T> {
-  const token = getAuthToken();
-
   const headers: Record<string, string> = {
     ...((options.headers as Record<string, string>) || {}),
   };
@@ -215,12 +187,9 @@ async function request<T>(
     headers['Content-Type'] = 'application/json';
   }
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
+    credentials: CREDENTIALS_INIT,
     headers,
   });
 
@@ -239,8 +208,9 @@ async function request<T>(
                           currentPath.startsWith('/auth/');
 
       if (!isPublicPath) {
-        // Save current path to redirect back after login
-        const returnPath = currentPath + window.location.search;
+        const rawPath = currentPath + window.location.search;
+        const returnPath =
+          rawPath.startsWith('/') && !rawPath.startsWith('//') ? rawPath : '/today';
         if (returnPath !== '/login') {
           sessionStorage.setItem('auth_redirect_path', returnPath);
         }
@@ -306,41 +276,31 @@ async function request<T>(
 }
 
 /**
- * Try to refresh the access token using the stored refresh token.
+ * Try to refresh the access token using the httpOnly refresh cookie.
  * Concurrent callers await the same in-flight refresh.
  */
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(): Promise<boolean> {
   if (refreshInFlight) {
     return refreshInFlight;
   }
 
   refreshInFlight = (async () => {
-    const refreshToken = getRefreshToken();
-    if (!refreshToken) return null;
-
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
+        credentials: CREDENTIALS_INIT,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
       });
 
       if (!res.ok) {
-        clearAuthToken();
-        return null;
+        await clearAuthToken();
+        return false;
       }
 
-      const data = (await res.json()) as { accessToken?: string; refreshToken?: string };
-      if (data.accessToken) {
-        setAuthToken(data.accessToken);
-      }
-      if (data.refreshToken) {
-        setRefreshToken(data.refreshToken);
-      }
-      return data.accessToken ?? null;
+      return true;
     } catch (_err) {
-      clearAuthToken();
-      return null;
+      await clearAuthToken();
+      return false;
     }
   })();
 
@@ -1021,9 +981,9 @@ export async function searchEmails(query: string, maxResults?: number): Promise<
 export async function markEmailAsRead(emailId: string, isRead: boolean): Promise<void> {
   const response = await fetch(`${API_BASE}/email/${emailId}/read`, {
     method: 'POST',
+    credentials: CREDENTIALS_INIT,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getAuthToken()}`,
     },
     body: JSON.stringify({ isRead }),
   });
@@ -1041,9 +1001,9 @@ export async function markEmailAsRead(emailId: string, isRead: boolean): Promise
 export async function archiveEmail(emailId: string): Promise<void> {
   const response = await fetch(`${API_BASE}/email/${emailId}/archive`, {
     method: 'POST',
+    credentials: CREDENTIALS_INIT,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getAuthToken()}`,
     },
   });
 
@@ -1060,9 +1020,9 @@ export async function archiveEmail(emailId: string): Promise<void> {
 export async function trashEmail(emailId: string): Promise<void> {
   const response = await fetch(`${API_BASE}/email/${emailId}/trash`, {
     method: 'POST',
+    credentials: CREDENTIALS_INIT,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getAuthToken()}`,
     },
   });
 
@@ -1696,14 +1656,8 @@ export async function sendMeetingLinkEmail(data: {
  * Download meeting calendar (.ics) as the authenticated host.
  */
 export async function downloadHostMeetingCalendar(meetingId: string): Promise<void> {
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const response = await fetch(`${API_BASE}/api/meetings/${meetingId}/calendar`, {
-    headers: { Authorization: `Bearer ${token}` },
+  const response = await fetch(`${API_BASE}/meetings/${meetingId}/calendar`, {
+    credentials: CREDENTIALS_INIT,
   });
 
   if (!response.ok) {
@@ -1734,9 +1688,8 @@ export async function getPublicAvailability(
   link: { name: string; durationsMinutes: number[] };
   slots: Record<number, Array<{ start: string; end: string }>>;
 }> {
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
   const response = await fetch(
-    `${API_BASE}/api/availability/${slug}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+    `${API_BASE}/availability/${slug}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch availability');
@@ -1768,8 +1721,7 @@ export async function bookPublicMeeting(
   cancelToken: string;
   viewToken: string;
 }> {
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const response = await fetch(`${API_BASE}/api/book/${slug}`, {
+  const response = await fetch(`${API_BASE}/book/${slug}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -1798,8 +1750,7 @@ export async function reschedulePublicMeeting(
     endDateTime: string;
   };
 }> {
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const response = await fetch(`${API_BASE}/api/book/${slug}/reschedule`, {
+  const response = await fetch(`${API_BASE}/book/${slug}/reschedule`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, ...data }),
@@ -1818,8 +1769,7 @@ export async function cancelPublicMeeting(
   slug: string,
   token: string
 ): Promise<{ success: boolean }> {
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  const response = await fetch(`${API_BASE}/api/book/${slug}/cancel`, {
+  const response = await fetch(`${API_BASE}/book/${slug}/cancel`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token }),

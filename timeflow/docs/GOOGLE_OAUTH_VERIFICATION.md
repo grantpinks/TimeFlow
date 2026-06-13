@@ -18,6 +18,21 @@ TimeFlow now uses **incremental authorization**:
 - **Gmail connect** (`POST /api/auth/google/gmail-url`): Gmail scopes when user enables inbox features
 - **Full reconnect** (`POST /api/auth/google/reconnect-url`): All scopes from Settings
 
+### Web session (httpOnly cookies)
+
+After OAuth, the backend sets session cookies on the API domain — **not** tokens in the redirect URL:
+
+| Cookie | Purpose | Max-Age |
+|--------|---------|---------|
+| `tf_access` | JWT access token | 15 minutes |
+| `tf_refresh` | JWT refresh token | 7 days |
+
+Production cookies use `Domain=.time-flow.app`, `HttpOnly`, `Secure`, `SameSite=Lax`. The OAuth callback routes through the **web proxy** (`time-flow.app/api/auth/google/callback` → backend) so cookies are set on the same origin users navigate to (Safari ITP compatible). After callback, redirect goes to `time-flow.app/auth/callback?state=...` with **no** `token` or `refreshToken` query params.
+
+The web client sends cookies on every `/api/*` request via `credentials: 'include'` (Next.js rewrites proxy to the backend). Tokens are never stored in `localStorage` or URL parameters on web.
+
+Mobile (Expo) continues to use Bearer tokens in the `Authorization` header; the backend accepts Bearer **or** cookies.
+
 After deploying backend + web to production, new users see a simpler consent screen at sign-in.
 
 **Existing users** who already granted all scopes are unaffected. Users who need Gmail should use **Settings → Connect Gmail** or **Reconnect Google**.
@@ -63,11 +78,11 @@ Remove any unused scopes.
 Under **APIs & Services → Credentials → OAuth 2.0 Client IDs**:
 
 - **Authorized JavaScript origins:** `https://time-flow.app`
-- **Authorized redirect URIs:** `https://api.time-flow.app/api/auth/google/callback`
+- **Authorized redirect URIs:** `https://time-flow.app/api/auth/google/callback`
 
 Must match production env vars:
 - `APP_BASE_URL=https://time-flow.app`
-- `GOOGLE_REDIRECT_URI=https://api.time-flow.app/api/auth/google/callback`
+- `GOOGLE_REDIRECT_URI=https://time-flow.app/api/auth/google/callback`
 
 ## Step 3 — Move from Testing to Production
 
@@ -131,9 +146,9 @@ Verify `time-flow.app` in [Google Search Console](https://search.google.com/sear
 
 Google may require an annual **security assessment** for apps using restricted Gmail scopes that store or transmit Gmail data on a server.
 
-TimeFlow stores encrypted Google refresh tokens and access tokens server-side. Expect Google to ask about:
+TimeFlow stores encrypted Google refresh tokens and **access tokens** server-side (AES-256-GCM). Expect Google to ask about:
 
-- Encryption at rest (AES-256-GCM for refresh tokens)
+- Encryption at rest (AES-256-GCM for OAuth access + refresh tokens)
 - HTTPS in transit
 - Access controls and incident response
 - Data retention and deletion

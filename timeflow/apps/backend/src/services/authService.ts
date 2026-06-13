@@ -13,7 +13,7 @@ import {
   GOOGLE_SCOPES,
   GOOGLE_SIGNIN_SCOPES,
 } from '../config/google.js';
-import { encrypt } from '../utils/crypto.js';
+import { encrypt, decryptWithLegacyFallback } from '../utils/crypto.js';
 import { encodeOAuthState, type OAuthStatePayload } from '../utils/oauthState.js';
 import { resolveGrantedScopeString } from './googleScopeService.js';
 
@@ -67,7 +67,7 @@ async function upsertGoogleTokensForUser(
     data: {
       email: userInfo.email,
       googleId: userInfo.id,
-      googleAccessToken: tokens.access_token ?? undefined,
+      googleAccessToken: encrypt(tokens.access_token ?? undefined) ?? undefined,
       googleRefreshToken: encryptedRefreshToken ?? existingRefreshToken ?? undefined,
       googleAccessTokenExpiry: accessTokenExpiry,
       googleGrantedScopes,
@@ -85,7 +85,7 @@ async function upsertGoogleTokensForUser(
     update: {
       email: userInfo.email,
       isPrimary: true,
-      googleAccessToken: tokens.access_token ?? undefined,
+      googleAccessToken: encrypt(tokens.access_token ?? undefined) ?? undefined,
       googleRefreshToken: encryptedRefreshToken ?? existingRefreshToken ?? undefined,
       googleAccessTokenExpiry: accessTokenExpiry,
     },
@@ -95,7 +95,7 @@ async function upsertGoogleTokensForUser(
       providerAccountId: userInfo.id,
       email: userInfo.email,
       isPrimary: true,
-      googleAccessToken: tokens.access_token ?? undefined,
+      googleAccessToken: encrypt(tokens.access_token ?? undefined) ?? undefined,
       googleRefreshToken: encryptedRefreshToken ?? existingRefreshToken ?? undefined,
       googleAccessTokenExpiry: accessTokenExpiry,
     },
@@ -161,7 +161,7 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
     where: { googleId: userInfo.id },
     update: {
       email: userInfo.email,
-      googleAccessToken: tokens.access_token,
+      googleAccessToken: encrypt(tokens.access_token) ?? undefined,
       googleRefreshToken: encryptedRefreshToken ?? undefined,
       googleAccessTokenExpiry: accessTokenExpiry,
       googleGrantedScopes,
@@ -169,7 +169,7 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
     create: {
       email: userInfo.email,
       googleId: userInfo.id,
-      googleAccessToken: tokens.access_token,
+      googleAccessToken: encrypt(tokens.access_token) ?? undefined,
       googleRefreshToken: encryptedRefreshToken,
       googleAccessTokenExpiry: accessTokenExpiry,
       googleGrantedScopes,
@@ -187,7 +187,7 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
     update: {
       email: userInfo.email,
       isPrimary: true,
-      googleAccessToken: tokens.access_token,
+      googleAccessToken: encrypt(tokens.access_token) ?? undefined,
       googleRefreshToken: encryptedRefreshToken ?? undefined,
       googleAccessTokenExpiry: accessTokenExpiry,
     },
@@ -197,7 +197,7 @@ export async function handleGoogleCallback(code: string, statePayload?: OAuthSta
       providerAccountId: userInfo.id,
       email: userInfo.email,
       isPrimary: true,
-      googleAccessToken: tokens.access_token,
+      googleAccessToken: encrypt(tokens.access_token) ?? undefined,
       googleRefreshToken: encryptedRefreshToken,
       googleAccessTokenExpiry: accessTokenExpiry,
     },
@@ -244,3 +244,14 @@ export function getGoogleReconnectAuthUrl(userId: string, returnTo?: string): st
 }
 
 export { GOOGLE_SIGNIN_SCOPES, GOOGLE_GMAIL_SCOPES, GOOGLE_SCOPES };
+
+/**
+ * Best-effort revoke of a Google OAuth refresh token on logout.
+ */
+export async function revokeGoogleRefreshToken(storedToken: string | null | undefined): Promise<void> {
+  if (!storedToken) return;
+  const refreshToken = decryptWithLegacyFallback(storedToken);
+  if (!refreshToken) return;
+  const oauth2Client = getOAuth2Client();
+  await oauth2Client.revokeToken(refreshToken);
+}
