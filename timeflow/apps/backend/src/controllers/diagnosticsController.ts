@@ -71,7 +71,6 @@ export async function checkCalendar(request: FastifyRequest, reply: FastifyReply
       } catch (error) {
         diagnostics.calendarConnectionStatus = 'error';
         diagnostics.error = error instanceof Error ? error.message : 'Unknown error';
-        diagnostics.errorDetails = error instanceof Error ? error.stack : null;
       }
     } else {
       diagnostics.calendarConnectionStatus = 'not_connected';
@@ -106,12 +105,10 @@ export async function checkEnvironment(request: FastifyRequest, reply: FastifyRe
     hasEncryptionKey: !!process.env.ENCRYPTION_KEY,
     hasGoogleClientId: !!process.env.GOOGLE_CLIENT_ID,
     hasGoogleClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-    googleRedirectUri: process.env.GOOGLE_REDIRECT_URI,
+    hasGoogleRedirectUri: !!process.env.GOOGLE_REDIRECT_URI,
     llmProvider: process.env.LLM_PROVIDER || 'local',
-    llmModel: process.env.OPENAI_MODEL || process.env.LLM_MODEL || 'default',
     hasOpenAiKey: !!process.env.OPENAI_API_KEY,
-    frontendUrl: process.env.FRONTEND_URL,
-    port: process.env.PORT,
+    hasAppBaseUrl: !!process.env.APP_BASE_URL,
   };
 
   return reply.send(diagnostics);

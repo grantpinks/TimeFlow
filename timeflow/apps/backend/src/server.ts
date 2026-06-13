@@ -7,6 +7,7 @@
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyJwt from '@fastify/jwt';
 import { env } from './config/env.js';
@@ -45,14 +46,19 @@ export async function buildServer(): Promise<FastifyInstance> {
     logger: {
       level: env.NODE_ENV === 'development' ? 'info' : 'warn',
     },
-    // Trust proxy headers so rate limiting can distinguish clients behind ngrok/proxies.
-    trustProxy: true,
+    // Trust first proxy hop (Render/Vercel) for rate limiting and client IP.
+    trustProxy: 1,
   });
 
   // Register plugins
   await server.register(cors, {
     origin: [env.APP_BASE_URL],
     credentials: true,
+  });
+
+  await server.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
   });
 
   await server.register(cookie, {

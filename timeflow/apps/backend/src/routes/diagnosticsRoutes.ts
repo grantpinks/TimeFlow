@@ -5,10 +5,15 @@
  */
 
 import type { FastifyInstance } from 'fastify';
+import { env } from '../config/env.js';
 import { requireAuth } from '../middlewares/auth.js';
 import * as diagnosticsController from '../controllers/diagnosticsController.js';
 
 export async function registerDiagnosticsRoutes(server: FastifyInstance) {
+  if (env.NODE_ENV === 'production') {
+    return;
+  }
+
   // Check Google Calendar connection
   server.get(
     '/diagnostics/calendar',
