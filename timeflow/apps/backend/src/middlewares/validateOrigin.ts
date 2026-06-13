@@ -21,6 +21,14 @@ function isOriginExempt(url: string): boolean {
   );
 }
 
+function allowedAppOrigin(): string {
+  return env.APP_BASE_URL.replace(/\/$/, '');
+}
+
+function refererMatchesApp(referer: string, allowed: string): boolean {
+  return referer === allowed || referer.startsWith(`${allowed}/`);
+}
+
 export async function validateOrigin(
   request: FastifyRequest,
   reply: FastifyReply
@@ -34,24 +42,46 @@ export async function validateOrigin(
     return;
   }
 
-  const allowedOrigin = env.APP_BASE_URL.replace(/\/$/, '');
+  const allowed = allowedAppOrigin();
   const origin = request.headers.origin;
   const referer = request.headers.referer;
+  const secFetchSite = request.headers['sec-fetch-site'];
+  const hasBearer = request.headers.authorization?.startsWith('Bearer ');
 
-  if (origin) {
-    if (origin !== allowedOrigin) {
-      return reply.status(403).send({ error: 'Forbidden' });
-    }
+  // Mobile / API clients use Bearer tokens, not cookies.
+  if (hasBearer) {
     return;
   }
 
-  if (referer && !referer.startsWith(`${allowedOrigin}/`) && referer !== allowedOrigin) {
+  // Modern browsers send Sec-Fetch-Site on navigations and fetch().
+  // Same-origin/same-site POSTs from our web app are safe; CSRF is cross-site.
+  if (secFetchSite === 'same-origin' || secFetchSite === 'same-site') {
+    return;
+  }
+
+  if (origin) {
+    if (origin === allowed) {
+      return;
+    }
     return reply.status(403).send({ error: 'Forbidden' });
   }
 
-  const hasCookie = Boolean(request.cookies?.[ACCESS_COOKIE_NAME]);
-  const hasBearer = request.headers.authorization?.startsWith('Bearer ');
-  if (hasCookie && !hasBearer && !referer) {
+  if (referer && refererMatchesApp(referer, allowed)) {
+    return;
+  }
+
+  if (referer) {
     return reply.status(403).send({ error: 'Forbidden' });
   }
+
+  // Cross-site cookie POST (classic CSRF) — block when browser signals cross-site.
+  if (secFetchSite === 'cross-site') {
+    const hasCookie = Boolean(request.cookies?.[ACCESS_COOKIE_NAME]);
+    if (hasCookie) {
+      return reply.status(403).send({ error: 'Forbidden' });
+    }
+  }
+
+  // Same-origin fetch via Next.js rewrite often omits Origin/Referer/Sec-Fetch-Site
+  // when proxied server-side. Allow cookie requests without cross-site signal.
 }
