@@ -1,9 +1,11 @@
 import type { EmailInboxResponse } from '@timeflow/shared';
+import { stripInboxSnippets } from '@timeflow/shared';
 import { prisma } from '../config/prisma.js';
 import * as gmailService from './gmailService.js';
 import { syncGmailLabelsOnInboxFetch } from './gmailLabelSyncService.js';
 
-const CACHE_TTL_MS = 90 * 1000; // 90 seconds - balanced between freshness and rate limits
+const STALE_REFRESH_TTL_MS = 90 * 1000; // background refresh threshold
+const SERVER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // hard expiry — metadata only
 const refreshLocks = new Map<string, Promise<void>>();
 
 export function getInboxCacheKey(maxResults?: number): string {
@@ -11,7 +13,11 @@ export function getInboxCacheKey(maxResults?: number): string {
 }
 
 export function getInboxCacheTtlMs(): number {
-  return CACHE_TTL_MS;
+  return STALE_REFRESH_TTL_MS;
+}
+
+export function getInboxCacheMaxAgeMs(): number {
+  return SERVER_CACHE_MAX_AGE_MS;
 }
 
 export async function readInboxCache(
@@ -25,10 +31,17 @@ export async function readInboxCache(
   if (!record) return null;
 
   const ageMs = Date.now() - record.fetchedAt.getTime();
+  if (ageMs >= SERVER_CACHE_MAX_AGE_MS) {
+    await prisma.inboxCache.delete({
+      where: { userId_cacheKey: { userId, cacheKey } },
+    });
+    return null;
+  }
+
   return {
-    data: record.data as EmailInboxResponse,
+    data: stripInboxSnippets(record.data as EmailInboxResponse),
     ageMs,
-    isStale: ageMs >= CACHE_TTL_MS,
+    isStale: ageMs >= STALE_REFRESH_TTL_MS,
   };
 }
 
@@ -38,16 +51,17 @@ export async function writeInboxCache(
   data: EmailInboxResponse
 ): Promise<void> {
   const fetchedAt = new Date();
+  const sanitized = stripInboxSnippets(data);
   await prisma.inboxCache.upsert({
     where: { userId_cacheKey: { userId, cacheKey } },
     create: {
       userId,
       cacheKey,
-      data,
+      data: sanitized,
       fetchedAt,
     },
     update: {
-      data,
+      data: sanitized,
       fetchedAt,
     },
   });

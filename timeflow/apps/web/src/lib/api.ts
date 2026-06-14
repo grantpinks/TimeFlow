@@ -385,6 +385,15 @@ export async function updatePreferences(
   });
 }
 
+/**
+ * Permanently delete the current user's account and all associated data.
+ */
+export async function deleteAccount(): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>('/user/account', {
+    method: 'DELETE',
+  });
+}
+
 export async function getRestDays(): Promise<UserRestDaysResponse> {
   return request<UserRestDaysResponse>('/user/rest-days');
 }

@@ -1,11 +1,12 @@
 /**
  * Email Cache Utility
  *
- * Short-lived session cache for inbox emails to reduce Gmail API calls.
+ * Short-lived session cache for inbox metadata (no snippets) to reduce Gmail API calls.
  * Uses sessionStorage (not localStorage) so data clears when the tab closes.
  */
 
 import type { EmailInboxResponse } from '@timeflow/shared';
+import { stripInboxSnippets } from '@timeflow/shared';
 
 interface CacheEntry {
   data: EmailInboxResponse;
@@ -57,7 +58,7 @@ export function cacheEmails(data: EmailInboxResponse): void {
 
   try {
     const entry: CacheEntry = {
-      data,
+      data: stripInboxSnippets(data),
       timestamp: Date.now(),
     };
     storage.setItem(CACHE_KEY, JSON.stringify(entry));

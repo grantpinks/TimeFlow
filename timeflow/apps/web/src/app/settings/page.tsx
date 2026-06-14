@@ -11,6 +11,7 @@ import * as api from '@/lib/api';
 import type { BillingSubscriptionStatus } from '@/lib/api';
 import { canShowAiDebugToggle, getAiDebugEnabled, setAiDebugEnabled as persistAiDebugEnabled } from '@/lib/aiDebug';
 import { track } from '@/lib/analytics';
+import { clearEmailCache } from '@/lib/emailCache';
 import type {
   Calendar,
   DailyScheduleConfig,
@@ -70,6 +71,9 @@ export default function SettingsPage() {
   const [billing, setBilling] = useState<BillingSubscriptionStatus | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
   const [billingAction, setBillingAction] = useState<string | null>(null); // 'cancel' | 'manage' | null
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const writableGoogleCalendars = calendars.filter((cal) => (cal.provider ?? 'google') === 'google');
 
   // Initialize form from user data
@@ -237,6 +241,27 @@ export default function SettingsPage() {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to open billing portal.' });
     } finally {
       setBillingAction(null);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') return;
+    setDeletingAccount(true);
+    try {
+      await api.deleteAccount();
+      clearEmailCache();
+      if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+        window.location.href = '/';
+      }
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to delete account. Please try again or contact support.',
+      });
+      setDeletingAccount(false);
+      setShowDeleteDialog(false);
+      setDeleteConfirmText('');
     }
   };
 
@@ -1479,6 +1504,59 @@ export default function SettingsPage() {
             </button>
           </div>
         </form>
+
+        {/* Danger zone — outside main settings form */}
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-red-200 p-6">
+          <h2 className="text-lg font-semibold text-red-700 mb-1">Delete account</h2>
+          <p className="text-slate-600 text-sm mb-4">
+            Permanently delete your TimeFlow account, revoke Google access, and remove all stored data.
+            This cannot be undone.
+          </p>
+          {!showDeleteDialog ? (
+            <button
+              type="button"
+              onClick={() => setShowDeleteDialog(true)}
+              className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
+            >
+              Delete my account
+            </button>
+          ) : (
+            <div className="space-y-3 max-w-md">
+              <p className="text-sm text-slate-700">
+                Type <span className="font-mono font-semibold">DELETE</span> to confirm.
+              </p>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                autoComplete="off"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== 'DELETE' || deletingAccount}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deletingAccount ? 'Deleting...' : 'Permanently delete'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteDialog(false);
+                    setDeleteConfirmText('');
+                  }}
+                  disabled={deletingAccount}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );

@@ -17,7 +17,7 @@ function PrivacyPageBody() {
               We build TimeFlow with privacy in mind. This policy explains what we collect, why we collect it,
               and how you stay in control of your data.
             </p>
-            <p className="text-gray-500 mt-4">Last Updated: May 29, 2026</p>
+            <p className="text-gray-500 mt-4">Last Updated: June 13, 2026</p>
           </div>
           <div className="bg-gradient-to-br from-teal-50 to-orange-50 rounded-3xl p-8 shadow-xl border border-teal-100">
             <Image
@@ -68,8 +68,10 @@ function PrivacyPageBody() {
               If you enable email categorization:
             </p>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
-              <li>Gmail message metadata (sender, subject, date)</li>
-              <li>We DO NOT store full email content</li>
+              <li>Gmail message metadata (sender, subject, date, labels)</li>
+              <li>We DO NOT store full email content or message snippets on our servers</li>
+              <li>Metadata may be cached briefly (up to 24 hours) to reduce Gmail API usage</li>
+              <li>Your browser may hold metadata in session storage until you close the tab</li>
               <li>Category labels sync back to Gmail</li>
             </ul>
 
@@ -122,7 +124,7 @@ function PrivacyPageBody() {
             <p className="text-gray-700 leading-relaxed mb-4">You have the right to:</p>
             <ul className="list-disc pl-6 text-gray-700 space-y-2">
               <li><strong>Access:</strong> Request a copy of your data</li>
-              <li><strong>Delete:</strong> Request deletion of your account and data</li>
+              <li><strong>Delete:</strong> Delete your account and data from Settings at any time</li>
               <li><strong>Correct:</strong> Update inaccurate information</li>
               <li><strong>Revoke:</strong> Revoke Google Calendar/Gmail access at any time</li>
               <li><strong>Export:</strong> Download your tasks and calendar data</li>

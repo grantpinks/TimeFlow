@@ -49,6 +49,7 @@ export function createControllerReply(): FastifyReply {
       return this;
     },
     send: vi.fn(),
+    clearCookie: vi.fn(),
   };
 
   return reply as unknown as FastifyReply;

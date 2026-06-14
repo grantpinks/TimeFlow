@@ -43,6 +43,14 @@ export interface EmailInboxResponse {
   isStale?: boolean;
 }
 
+/** Strip snippet/body fields before persisting inbox data in a cache. */
+export function stripInboxSnippets(data: EmailInboxResponse): EmailInboxResponse {
+  return {
+    ...data,
+    messages: data.messages.map(({ snippet: _snippet, ...message }) => message),
+  };
+}
+
 export interface InboxView {
   id: string;
   name: string;
