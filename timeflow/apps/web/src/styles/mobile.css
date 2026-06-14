@@ -1,0 +1,115 @@
+/**
+ * Mobile-specific styles
+ * Applied at breakpoints < 768px
+ */
+
+@media (max-width: 767px) {
+  /* Base mobile typography - larger, more readable */
+  body {
+    font-size: 16px; /* Prevent iOS zoom on inputs */
+    line-height: 1.6;
+  }
+
+  /* Page titles larger and clearer on mobile */
+  .page-title {
+    font-size: 1.75rem; /* 28px */
+    line-height: 2rem;
+  }
+
+  .page-subtitle {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+
+  /* Better readability for body text */
+  p, .text-base {
+    font-size: 1rem;
+    line-height: 1.75rem;
+  }
+
+  /* Smaller elements still readable */
+  .text-sm {
+    font-size: 0.875rem;
+    line-height: 1.5rem;
+  }
+
+  .text-xs {
+    font-size: 0.8125rem; /* Slightly larger than default 0.75rem */
+    line-height: 1.25rem;
+  }
+
+  /* Headings optimized for mobile */
+  h1 {
+    font-size: 2rem;
+    line-height: 2.25rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+
+  /* Mobile-optimized spacing */
+  .app-main {
+    padding: 1rem 0.75rem; /* 16px top/bottom, 12px left/right */
+  }
+
+  .app-header {
+    padding: 0.75rem 1rem; /* 12px top/bottom, 16px left/right */
+  }
+
+  .app-footer {
+    padding: 1rem;
+  }
+
+  /* Reduce gap in page layouts */
+  .page-shell {
+    gap: 1rem; /* 16px instead of 24px */
+  }
+
+  /* Cards and panels full width on mobile */
+  .surface-card {
+    border-radius: 12px; /* Slightly smaller radius */
+  }
+
+  /* Better scrolling on mobile */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  /* Performance optimizations */
+  * {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-touch-callout: none;
+  }
+
+  /* GPU acceleration for smooth animations */
+  .animate-slide-in,
+  .animate-fade-in,
+  .transition-transform {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  /* Optimize images for mobile */
+  img {
+    image-rendering: -webkit-optimize-contrast;
+  }
+}
+
+/* Reduce motion for better battery life */
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
