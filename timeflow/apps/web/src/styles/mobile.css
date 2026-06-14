@@ -10,6 +10,11 @@
     line-height: 1.6;
   }
 
+  /* Ensure ALL form controls have 16px minimum to prevent iOS zoom */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
   /* Page titles larger and clearer on mobile */
   .page-title {
     font-size: 1.75rem; /* 28px */
@@ -21,22 +26,13 @@
     line-height: 1.5rem;
   }
 
-  /* Better readability for body text */
-  p, .text-base {
+  /* Better readability for body text - target elements, not utility classes */
+  p {
     font-size: 1rem;
     line-height: 1.75rem;
   }
 
-  /* Smaller elements still readable */
-  .text-sm {
-    font-size: 0.875rem;
-    line-height: 1.5rem;
-  }
-
-  .text-xs {
-    font-size: 0.8125rem; /* Slightly larger than default 0.75rem */
-    line-height: 1.25rem;
-  }
+  /* Don't override Tailwind utilities - they should work consistently across breakpoints */
 
   /* Headings optimized for mobile */
   h1 {
@@ -83,33 +79,37 @@
     scrollbar-width: thin;
   }
 
-  /* Performance optimizations */
-  * {
+  /* Performance optimizations - target specific elements, not universal selector */
+  button, a, [role="button"], input, textarea, select {
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  }
+
+  /* Only disable callout on UI controls, not content (users expect long-press on images/links) */
+  button, [role="button"], input, select {
     -webkit-touch-callout: none;
   }
 
-  /* GPU acceleration for smooth animations */
+  /* GPU acceleration for smooth animations - let browser optimize */
   .animate-slide-in,
-  .animate-fade-in,
-  .transition-transform {
-    will-change: transform;
-    transform: translateZ(0);
-  }
-
-  /* Optimize images for mobile */
-  img {
-    image-rendering: -webkit-optimize-contrast;
+  .animate-fade-in {
+    /* Removed will-change to prevent memory pressure on mobile */
+    /* Browser will promote to GPU when animation is active */
   }
 }
 
-/* Reduce motion for better battery life */
+/* Reduce motion for better battery life and accessibility */
 @media (max-width: 767px) and (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  .animate-slide-in,
+  .animate-fade-in,
+  .transition-transform {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Keep essential UI feedback like loading spinners */
+  .loading-spinner,
+  .animate-spin {
+    animation: inherit !important;
   }
 }
