@@ -6,6 +6,14 @@ module.exports = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
+    screens: {
+      'xs': '475px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         // TimeFlow brand colors
@@ -34,6 +42,15 @@ module.exports = {
           900: '#701a75',
         },
       },
+      fontSize: {
+        // Mobile-optimized font sizes
+        'mobile-xs': ['0.75rem', { lineHeight: '1.25rem' }],
+        'mobile-sm': ['0.875rem', { lineHeight: '1.5rem' }],
+        'mobile-base': ['1rem', { lineHeight: '1.75rem' }],
+        'mobile-lg': ['1.125rem', { lineHeight: '1.875rem' }],
+        'mobile-xl': ['1.25rem', { lineHeight: '2rem' }],
+        'mobile-2xl': ['1.5rem', { lineHeight: '2.25rem' }],
+      },
       // Design Token System
       spacing: {
         // Standard rhythm: 4/8/12/16/24/32/48
@@ -41,6 +58,9 @@ module.exports = {
         // Inside containers: 16-24 (p-4, p-6)
         // Between sections: 24-32 (gap-6, gap-8)
         // Between dense rows: 8-12 (gap-2, gap-3)
+        // Mobile-friendly touch targets
+        'touch': '44px',
+        'touch-lg': '56px',
       },
       borderRadius: {
         // Panel/Card surfaces
