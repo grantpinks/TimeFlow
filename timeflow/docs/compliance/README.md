@@ -1,13 +1,18 @@
-# Compliance Evidence (SOC 2 / ISO 27001) — Folder Guide
+# Compliance Evidence (SOC 2 / ISO 27001 / CASA Tier 2)
 
-This folder is where we store **audit evidence artifacts** for SOC 2 Type I readiness (and later Type II).
+This folder stores **audit evidence artifacts** for SOC 2 Type I readiness, Google CASA Tier 2, and related assessments.
 
 ## Structure
-- `policies/` — approved policies (small, enforceable)
-- `evidence/` — evidence records (access reviews, incident tabletop, vendor list, etc.)
+
+- `casa/` — CASA Tier 2 evidence (system description, attestations, self-scan results, MFA checklist)
+- `policies/` — approved security policies (short, enforceable, versioned in git)
+- `evidence/` — evidence records (access reviews, vendor list, incident tabletop)
+
+**CASA index**: start at `casa/README.md`
 
 ## How to use
-- Prefer short markdown docs over screenshots.
-- If screenshots are necessary, store them under `evidence/screenshots/` and reference them from a markdown file.
+
+- Prefer short markdown docs over screenshots where possible.
+- If screenshots are necessary, store them under `casa/evidence/mfa-screenshots/` or `evidence/screenshots/` and reference them from a markdown file.
 
 
