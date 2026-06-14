@@ -62,6 +62,11 @@ module.exports = {
         'touch': '44px',
         'touch-lg': '56px',
       },
+      minHeight: {
+        // Mobile-friendly touch targets
+        'touch': '44px',
+        'touch-lg': '56px',
+      },
       borderRadius: {
         // Panel/Card surfaces
         'panel': '12px',
