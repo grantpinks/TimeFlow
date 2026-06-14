@@ -1,6 +1,6 @@
 'use client';
 
-import { useMediaQuery } from './useMediaQuery';
+import { useEffect, useState } from 'react';
 
 export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
 
@@ -11,16 +11,38 @@ export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
  * Desktop: >= 1024px
  */
 export function useViewport() {
-  const isMobile = useMediaQuery('(max-width: 767px)');
-  const isTablet = useMediaQuery('(min-width: 768px) and (max-width: 1023px)');
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [breakpoint, setBreakpoint] = useState<Breakpoint | undefined>(undefined);
 
-  const breakpoint: Breakpoint = isMobile ? 'mobile' : isTablet ? 'tablet' : 'desktop';
+  useEffect(() => {
+    const getBreakpoint = (): Breakpoint => {
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        return 'mobile';
+      } else if (window.matchMedia('(max-width: 1023px)').matches) {
+        return 'tablet';
+      } else {
+        return 'desktop';
+      }
+    };
+
+    // Initialize on mount
+    setBreakpoint(getBreakpoint());
+
+    // Update on resize
+    const handleResize = () => {
+      setBreakpoint(getBreakpoint());
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // During SSR, default to desktop to avoid hydration issues
+  const currentBreakpoint = breakpoint ?? 'desktop';
 
   return {
-    isMobile,
-    isTablet,
-    isDesktop,
-    breakpoint,
+    isMobile: currentBreakpoint === 'mobile',
+    isTablet: currentBreakpoint === 'tablet',
+    isDesktop: currentBreakpoint === 'desktop',
+    breakpoint: currentBreakpoint,
   };
 }

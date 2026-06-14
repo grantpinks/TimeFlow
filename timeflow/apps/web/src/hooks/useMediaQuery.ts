@@ -8,29 +8,23 @@ import { useEffect, useState } from 'react';
  * @returns boolean indicating if query matches
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
     const media = window.matchMedia(query);
 
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
+    // Initialize state on mount
+    setMatches(media.matches);
 
     const listener = (event: MediaQueryListEvent) => {
       setMatches(event.matches);
     };
 
-    // Modern browsers
-    if (media.addEventListener) {
-      media.addEventListener('change', listener);
-      return () => media.removeEventListener('change', listener);
-    }
+    // Modern browsers (Safari 14+, Chrome 45+, Firefox 55+)
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [query]); // Only re-run if query changes
 
-    // Fallback for older browsers
-    media.addListener(listener);
-    return () => media.removeListener(listener);
-  }, [matches, query]);
-
-  return matches;
+  // During SSR, return false to avoid hydration mismatch
+  return matches ?? false;
 }
