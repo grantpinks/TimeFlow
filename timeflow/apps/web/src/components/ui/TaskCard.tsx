@@ -46,7 +46,7 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
     const isCompleted = task.status === 'completed';
 
     const baseCardStyles = `
-      bg-white border rounded-lg p-3 sm:p-4 transition-all duration-200
+      bg-white border rounded-lg p-3 md:p-4 transition-all duration-200
       ${isOverdue ? 'border-red-200 bg-red-50' : 'border-slate-200'}
       ${isCompleted ? 'opacity-60' : ''}
     `;
@@ -144,7 +144,7 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
           <div className="flex-1 min-w-0">
             {/* Title and Priority */}
             <div className="flex items-start gap-2 mb-2">
-              <h3 className={`font-medium text-sm sm:text-base text-slate-900 flex-1 leading-snug ${isCompleted ? 'line-through' : ''}`}>
+              <h3 className={`font-semibold text-base md:text-sm text-slate-900 flex-1 leading-snug ${isCompleted ? 'line-through' : ''}`}>
                 {task.title}
               </h3>
               <span className={`px-2 py-1 text-xs font-semibold rounded border ${priority.color} whitespace-nowrap flex-shrink-0`}>
@@ -179,7 +179,7 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
             )}
 
             {/* Metadata Row */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-600 mb-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm md:text-xs text-slate-600 mb-2">
               {/* Duration */}
               <div className="flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

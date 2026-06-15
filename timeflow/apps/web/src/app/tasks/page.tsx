@@ -739,54 +739,46 @@ export default function TasksPage() {
         {/* Tabs + Task List Panel */}
         <Panel padding="none">
           {/* Tabs */}
-          <div className="border-b border-slate-200">
-            <nav className="flex -mb-px px-6" aria-label="Tabs">
-              <button
-                onClick={() => setActiveTab('unscheduled')}
-                className={`
-                  py-4 px-4 border-b-2 font-medium text-sm transition-colors
-                  ${activeTab === 'unscheduled'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                  }
-                `}
-              >
-                Unscheduled
-                <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-slate-100 text-slate-600">
-                  {unscheduledTasks.length}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab('scheduled')}
-                className={`
-                  py-4 px-4 border-b-2 font-medium text-sm transition-colors
-                  ${activeTab === 'scheduled'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                  }
-                `}
-              >
-                Scheduled
-                <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-slate-100 text-slate-600">
-                  {scheduledTasks.length}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab('completed')}
-                className={`
-                  py-4 px-4 border-b-2 font-medium text-sm transition-colors
-                  ${activeTab === 'completed'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                  }
-                `}
-              >
-                Completed
-                <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-slate-100 text-slate-600">
-                  {completedTasks.length}
-                </span>
-              </button>
-            </nav>
+          <div className="flex gap-2 border-b border-slate-200 -mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto scrollbar-thin pb-px">
+            <button
+              onClick={() => setActiveTab('unscheduled')}
+              className={`flex-shrink-0 px-4 md:px-6 py-3 md:py-4 min-h-[48px] text-base md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === 'unscheduled'
+                  ? 'border-primary-600 text-primary-700 bg-primary-50/50'
+                  : 'border-transparent text-slate-600 hover:text-primary-600 hover:border-slate-300'
+              }`}
+            >
+              Unscheduled
+              <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-slate-100 text-slate-600">
+                {unscheduledTasks.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('scheduled')}
+              className={`flex-shrink-0 px-4 md:px-6 py-3 md:py-4 min-h-[48px] text-base md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === 'scheduled'
+                  ? 'border-primary-600 text-primary-700 bg-primary-50/50'
+                  : 'border-transparent text-slate-600 hover:text-primary-600 hover:border-slate-300'
+              }`}
+            >
+              Scheduled
+              <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-slate-100 text-slate-600">
+                {scheduledTasks.length}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('completed')}
+              className={`flex-shrink-0 px-4 md:px-6 py-3 md:py-4 min-h-[48px] text-base md:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === 'completed'
+                  ? 'border-primary-600 text-primary-700 bg-primary-50/50'
+                  : 'border-transparent text-slate-600 hover:text-primary-600 hover:border-slate-300'
+              }`}
+            >
+              Completed
+              <span className="ml-2 py-0.5 px-2 rounded-full text-xs bg-slate-100 text-slate-600">
+                {completedTasks.length}
+              </span>
+            </button>
           </div>
 
           {/* Task list for active tab */}
