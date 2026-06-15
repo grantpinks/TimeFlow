@@ -11,14 +11,7 @@
   }
 
   /* Ensure ALL form controls have 16px minimum to prevent iOS zoom */
-  /* Using Tailwind @layer to ensure this overrides utility classes */
-  @layer utilities {
-    input,
-    textarea,
-    select {
-      font-size: 16px !important;
-    }
-  }
+  /* This was handled at component level - Input/Textarea/Select now use text-base (16px) */
 
   /* Page titles larger and clearer on mobile */
   .page-title {
