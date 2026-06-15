@@ -40,10 +40,10 @@ export function SearchBar({
   }, [onChange]);
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       {/* Search Icon */}
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -59,7 +59,7 @@ export function SearchBar({
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         placeholder={placeholder}
-        className="pl-10 pr-10"
+        className="w-full pl-10 pr-12"
       />
 
       {/* Clear Button */}
@@ -69,7 +69,7 @@ export function SearchBar({
           className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 active:text-slate-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-slate-100 active:bg-slate-200"
           aria-label="Clear search"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

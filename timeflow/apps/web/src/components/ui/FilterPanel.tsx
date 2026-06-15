@@ -84,7 +84,7 @@ export function FilterPanel({
   const activeCount = getActiveFilterCount();
 
   return (
-    <div className="space-y-3">
+    <div className="w-full space-y-3">
       {/* Toggle Button */}
       <div className="flex items-center justify-between">
         <Button
@@ -92,7 +92,7 @@ export function FilterPanel({
           variant="ghost"
           size="sm"
           leftIcon={
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 md:h-4 md:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -113,7 +113,7 @@ export function FilterPanel({
         {activeCount > 0 && (
           <button
             onClick={handleClearAll}
-            className="text-sm text-slate-500 hover:text-slate-700 underline"
+            className="text-base md:text-sm text-slate-500 hover:text-slate-700 underline min-h-[44px] px-2"
           >
             Clear all
           </button>
@@ -130,7 +130,7 @@ export function FilterPanel({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="bg-white border border-slate-200 rounded-lg p-4 space-y-4">
+            <div className="bg-white border border-slate-200 rounded-lg p-4 md:p-6 space-y-4 md:space-y-5">
               {/* Category Filter */}
               {categories.length > 0 && (
                 <div>
@@ -143,7 +143,7 @@ export function FilterPanel({
                           key={category.id}
                           onClick={() => handleCategoryToggle(category.id)}
                           className={`
-                            px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+                            px-3 py-2 md:py-1.5 rounded-lg text-base md:text-sm font-medium transition-all min-h-[44px] md:min-h-0 flex items-center
                             ${
                               isSelected
                                 ? 'ring-2 ring-primary-500 ring-offset-1'
@@ -158,7 +158,7 @@ export function FilterPanel({
                           {category.name}
                           {isSelected && (
                             <svg
-                              className="inline ml-1 w-3 h-3"
+                              className="inline ml-1 h-4 w-4 md:h-3 md:w-3"
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
@@ -179,7 +179,7 @@ export function FilterPanel({
               {/* Priority Filter */}
               <div>
                 <Label>Priority</Label>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {[
                     { value: null, label: 'Any' },
                     { value: 1, label: 'High' },
@@ -190,7 +190,7 @@ export function FilterPanel({
                       key={option.label}
                       onClick={() => handlePriorityChange(option.value)}
                       className={`
-                        px-3 py-1.5 rounded-lg text-sm font-medium transition-all border-2
+                        px-4 py-3 md:px-3 md:py-1.5 rounded-lg text-base md:text-sm font-medium transition-all border-2 min-h-[48px] md:min-h-0
                         ${
                           localFilters.priority === option.value
                             ? 'border-primary-500 bg-primary-50 text-primary-700'
@@ -207,7 +207,7 @@ export function FilterPanel({
               {/* Duration Filter */}
               <div>
                 <Label>Duration</Label>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {[
                     { value: null, label: 'Any' },
                     { value: 'short' as const, label: '< 30min' },
@@ -218,7 +218,7 @@ export function FilterPanel({
                       key={option.label}
                       onClick={() => handleDurationChange(option.value)}
                       className={`
-                        px-3 py-1.5 rounded-lg text-sm font-medium transition-all border-2
+                        px-4 py-3 md:px-3 md:py-1.5 rounded-lg text-base md:text-sm font-medium transition-all border-2 min-h-[48px] md:min-h-0
                         ${
                           localFilters.durationRange === option.value
                             ? 'border-primary-500 bg-primary-50 text-primary-700'
@@ -235,9 +235,9 @@ export function FilterPanel({
               {/* Date Range Filter */}
               <div>
                 <Label>Due Date Range</Label>
-                <div className="mt-2 grid grid-cols-2 gap-3">
+                <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-slate-600 mb-1 block">From</label>
+                    <label className="text-sm md:text-xs text-slate-600 mb-1 block">From</label>
                     <Input
                       type="date"
                       value={localFilters.dueDateFrom}
@@ -245,7 +245,7 @@ export function FilterPanel({
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-600 mb-1 block">To</label>
+                    <label className="text-sm md:text-xs text-slate-600 mb-1 block">To</label>
                     <Input
                       type="date"
                       value={localFilters.dueDateTo}
@@ -272,7 +272,7 @@ export function FilterPanel({
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.8, opacity: 0 }}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium"
+                className="inline-flex items-center gap-1 px-3 py-2 md:px-2 md:py-1 rounded-md text-sm md:text-xs font-medium"
                 style={{
                   backgroundColor: category.color ? `${category.color}30` : '#e2e8f0',
                   color: category.color || '#64748b',
@@ -281,9 +281,10 @@ export function FilterPanel({
                 {category.name}
                 <button
                   onClick={() => handleCategoryToggle(categoryId)}
-                  className="hover:opacity-70"
+                  className="hover:opacity-70 min-h-[24px] min-w-[24px] flex items-center justify-center"
+                  aria-label={`Remove ${category.name} filter`}
                 >
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-4 w-4 md:h-3 md:w-3" fill="currentColor" viewBox="0 0 20 20">
                     <path
                       fillRule="evenodd"
                       d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -301,7 +302,7 @@ export function FilterPanel({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-md text-xs font-medium text-slate-700"
+              className="inline-flex items-center gap-1 px-3 py-2 md:px-2 md:py-1 bg-slate-100 rounded-md text-sm md:text-xs font-medium text-slate-700"
             >
               Priority:{' '}
               {localFilters.priority === 1
@@ -309,8 +310,12 @@ export function FilterPanel({
                 : localFilters.priority === 2
                   ? 'Medium'
                   : 'Low'}
-              <button onClick={() => handlePriorityChange(null)} className="hover:opacity-70">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <button
+                onClick={() => handlePriorityChange(null)}
+                className="hover:opacity-70 min-h-[24px] min-w-[24px] flex items-center justify-center"
+                aria-label="Remove priority filter"
+              >
+                <svg className="h-4 w-4 md:h-3 md:w-3" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -327,7 +332,7 @@ export function FilterPanel({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-md text-xs font-medium text-slate-700"
+              className="inline-flex items-center gap-1 px-3 py-2 md:px-2 md:py-1 bg-slate-100 rounded-md text-sm md:text-xs font-medium text-slate-700"
             >
               Duration:{' '}
               {localFilters.durationRange === 'short'
@@ -335,8 +340,12 @@ export function FilterPanel({
                 : localFilters.durationRange === 'medium'
                   ? '30-60min'
                   : '> 1hr'}
-              <button onClick={() => handleDurationChange(null)} className="hover:opacity-70">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <button
+                onClick={() => handleDurationChange(null)}
+                className="hover:opacity-70 min-h-[24px] min-w-[24px] flex items-center justify-center"
+                aria-label="Remove duration filter"
+              >
+                <svg className="h-4 w-4 md:h-3 md:w-3" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
@@ -353,7 +362,7 @@ export function FilterPanel({
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-md text-xs font-medium text-slate-700"
+              className="inline-flex items-center gap-1 px-3 py-2 md:px-2 md:py-1 bg-slate-100 rounded-md text-sm md:text-xs font-medium text-slate-700"
             >
               Due:{' '}
               {localFilters.dueDateFrom &&
@@ -373,9 +382,10 @@ export function FilterPanel({
                   setLocalFilters(updated);
                   onFiltersChange(updated);
                 }}
-                className="hover:opacity-70"
+                className="hover:opacity-70 min-h-[24px] min-w-[24px] flex items-center justify-center"
+                aria-label="Remove date range filter"
               >
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="h-4 w-4 md:h-3 md:w-3" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fillRule="evenodd"
                     d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
