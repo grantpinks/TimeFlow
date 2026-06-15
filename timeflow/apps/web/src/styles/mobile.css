@@ -174,8 +174,7 @@
   }
 
   /* Better visual feedback for draggable items on mobile */
-  .rbc-event:active,
-  [data-task-id]:active {
+  .rbc-event:active {
     opacity: 0.9;
     transform: scale(0.98);
   }

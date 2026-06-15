@@ -153,13 +153,6 @@ export function CalendarView({
       setDate(selectedDate);
     }
   }, [selectedDate]);
-
-  // Update view when viewport changes from desktop to mobile
-  useEffect(() => {
-    if (isMobile && (view === Views.WEEK || view === Views.MONTH)) {
-      setView(Views.DAY);
-    }
-  }, [isMobile, view]);
   const isRescheduling = false;
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
