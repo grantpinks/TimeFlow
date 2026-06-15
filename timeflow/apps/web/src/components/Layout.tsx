@@ -99,7 +99,6 @@ export function Layout({ children }: LayoutProps) {
   }, [pathname, isMobileSidebarOpen]);
 
   const isSidebarExpanded = !isSidebarCollapsed || isMobileSidebarOpen;
-  const sidebarWidth = isSidebarExpanded ? 'w-60' : 'w-[72px]';
   const orderedNavItems = useMemo(
     () => normalizeNavOrder(navOrder).map((id) => navItemLookup[id]).filter(Boolean),
     [navOrder]
@@ -213,7 +212,9 @@ export function Layout({ children }: LayoutProps) {
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200 bg-white/90 backdrop-blur transition-all duration-200 ease-out md:relative md:z-auto md:translate-x-0 ${sidebarWidth} ${
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200 bg-white/90 backdrop-blur transition-all duration-200 ease-out md:relative md:z-auto md:translate-x-0 ${
+          isMobileSidebarOpen ? 'w-full sm:w-80' : 'w-60'
+        } ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
@@ -476,7 +477,7 @@ export function Layout({ children }: LayoutProps) {
                   href={item.href}
                   title={item.label}
                   aria-label={item.label}
-                  className={`flex items-center gap-2.5 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap active:scale-95 ${
+                  className={`flex items-center gap-2.5 rounded-xl px-4 py-3 min-h-[48px] text-base font-medium transition-colors whitespace-nowrap active:scale-95 ${
                     isActive
                       ? 'bg-primary-50 text-primary-700 shadow-sm'
                       : 'text-slate-600 hover:text-primary-600 hover:bg-slate-100'
