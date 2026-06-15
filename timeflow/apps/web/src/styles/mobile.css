@@ -105,9 +105,5 @@
     transition-duration: 0.01ms !important;
   }
 
-  /* Keep essential UI feedback like loading spinners */
-  .loading-spinner,
-  .animate-spin {
-    animation: inherit !important;
-  }
+  /* Loading spinners remain active - essential UI feedback for all users */
 }

@@ -99,6 +99,14 @@ export function Layout({ children }: LayoutProps) {
   }, [pathname, isMobileSidebarOpen]);
 
   const isSidebarExpanded = !isSidebarCollapsed || isMobileSidebarOpen;
+
+  // Desktop sidebar width based on collapsed state, mobile based on open state
+  const sidebarWidth = isMobileSidebarOpen
+    ? 'w-full sm:w-80' // Mobile: full-width or 320px tablet
+    : isSidebarExpanded
+      ? 'w-60 md:w-60' // Desktop expanded: 240px
+      : 'w-60 md:w-[72px]'; // Desktop collapsed: 72px icon-only
+
   const orderedNavItems = useMemo(
     () => normalizeNavOrder(navOrder).map((id) => navItemLookup[id]).filter(Boolean),
     [navOrder]
@@ -212,9 +220,7 @@ export function Layout({ children }: LayoutProps) {
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200 bg-white/90 backdrop-blur transition-all duration-200 ease-out md:relative md:z-auto md:translate-x-0 ${
-          isMobileSidebarOpen ? 'w-full sm:w-80' : 'w-60'
-        } ${
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col border-r border-slate-200 bg-white/90 backdrop-blur transition-all duration-200 ease-out md:relative md:z-auto md:translate-x-0 ${sidebarWidth} ${
           isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
