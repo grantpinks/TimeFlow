@@ -1928,10 +1928,10 @@ export default function CalendarPage() {
                 layout={!reduceMotion}
                 initial={reduceMotion ? false : { scale: 1.02, rotate: -0.5 }}
                 animate={{ scale: 1, rotate: 0 }}
-                className="rounded-lg border border-primary-200 bg-white shadow-xl px-4 py-3 w-64"
+                className="rounded-lg border-2 border-primary-300 bg-white shadow-2xl px-4 md:px-4 py-3 md:py-3 w-72 md:w-64"
               >
-                <p className="text-sm font-semibold text-slate-800">{activeDragTask.title}</p>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className="text-base md:text-sm font-semibold text-slate-800">{activeDragTask.title}</p>
+                <p className="text-sm md:text-xs text-slate-600 mt-1">
                   {activeDropPreview
                     ? formatDropPreviewTime(activeDropPreview.start, activeDropPreview.end)
                     : `${activeDragTask.durationMinutes} min${
@@ -1944,10 +1944,10 @@ export default function CalendarPage() {
                 layout={!reduceMotion}
                 initial={reduceMotion ? false : { scale: 1.02, rotate: 0.5 }}
                 animate={{ scale: 1, rotate: 0 }}
-                className="rounded-lg border border-indigo-200 bg-white shadow-xl px-4 py-3 w-64"
+                className="rounded-lg border-2 border-indigo-300 bg-white shadow-2xl px-4 md:px-4 py-3 md:py-3 w-72 md:w-64"
               >
-                <p className="text-sm font-semibold text-slate-800">{activeDragHabit.title}</p>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className="text-base md:text-sm font-semibold text-slate-800">{activeDragHabit.title}</p>
+                <p className="text-sm md:text-xs text-slate-600 mt-1">
                   {activeDropPreview
                     ? formatDropPreviewTime(activeDropPreview.start, activeDropPreview.end)
                     : `${activeDragHabit.durationMinutes} min • Habit`}

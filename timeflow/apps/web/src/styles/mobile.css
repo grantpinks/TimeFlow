@@ -162,6 +162,29 @@
   .rbc-allday-cell {
     min-height: 60px;
   }
+
+  /* Drag-and-drop touch optimizations */
+  [draggable="true"] {
+    cursor: grab;
+    touch-action: none; /* Prevent scrolling during drag */
+  }
+
+  [draggable="true"]:active {
+    cursor: grabbing;
+  }
+
+  /* Better visual feedback for draggable items on mobile */
+  .rbc-event:active,
+  [data-task-id]:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+
+  /* Drop zone feedback on mobile */
+  .rbc-time-slot:hover,
+  .rbc-day-slot:hover {
+    background-color: rgba(79, 70, 229, 0.03);
+  }
 }
 
 /* Reduce motion for better battery life and accessibility */
