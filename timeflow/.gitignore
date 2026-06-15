@@ -12,4 +12,7 @@ pnpm-lock.yaml
 # TypeScript incremental build cache (per app)
 apps/web/tsconfig.tsbuildinfo
 
+# Claude Code local settings
+.claude/settings.local.json
+
 
