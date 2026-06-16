@@ -19,10 +19,15 @@ const devices: DeviceSize[] = [
 /**
  * Developer tool for previewing component at different device sizes
  * Usage: Wrap your component with <DevicePreview>
+ *
+ * Security: Only renders in development mode. The build process will dead-code-eliminate
+ * this component in production builds since NODE_ENV is hardcoded at build time.
  */
 export function DevicePreview({ children }: { children: React.ReactNode }) {
   const [selectedDevice, setSelectedDevice] = useState(devices[0]);
 
+  // This check is evaluated at build time, not runtime
+  // Production builds will completely remove this component via dead code elimination
   if (process.env.NODE_ENV !== 'development') {
     return <>{children}</>;
   }

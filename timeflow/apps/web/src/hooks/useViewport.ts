@@ -11,9 +11,14 @@ export type Breakpoint = 'mobile' | 'tablet' | 'desktop';
  * Desktop: >= 1024px
  */
 export function useViewport() {
+  // Initialize with undefined for SSR safety - will be set on client mount
   const [breakpoint, setBreakpoint] = useState<Breakpoint | undefined>(undefined);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    // Mark that we're on client to prevent hydration mismatch
+    setIsClient(true);
+
     const getBreakpoint = (): Breakpoint => {
       if (window.matchMedia('(max-width: 767px)').matches) {
         return 'mobile';
@@ -27,17 +32,27 @@ export function useViewport() {
     // Initialize on mount
     setBreakpoint(getBreakpoint());
 
-    // Update on resize
+    // Throttle resize events to prevent performance issues
+    let timeoutId: NodeJS.Timeout;
     const handleResize = () => {
-      setBreakpoint(getBreakpoint());
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setBreakpoint(getBreakpoint());
+      }, 150); // 150ms debounce - balances responsiveness with performance
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Use passive listener for better scroll performance
+    window.addEventListener('resize', handleResize, { passive: true });
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
-  // During SSR, default to desktop to avoid hydration issues
-  const currentBreakpoint = breakpoint ?? 'desktop';
+  // During SSR or initial client render, default to desktop to avoid hydration mismatch
+  // Once client is mounted, use actual breakpoint
+  const currentBreakpoint = isClient && breakpoint !== undefined ? breakpoint : 'desktop';
 
   return {
     isMobile: currentBreakpoint === 'mobile',

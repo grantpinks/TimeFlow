@@ -32,8 +32,22 @@ import { useEffect, useRef, useState } from 'react';
 export function useLazyLoad(options?: IntersectionObserverInit) {
   const [isIntersecting, setIsIntersecting] = useState(false);
   const targetRef = useRef<HTMLDivElement>(null);
+  // Store options in ref to avoid observer recreation on every options change
+  const optionsRef = useRef(options);
 
   useEffect(() => {
+    // Update options ref if they change
+    optionsRef.current = options;
+  }, [options]);
+
+  useEffect(() => {
+    const currentTarget = targetRef.current;
+
+    // Guard against null target - don't create observer if no element to observe
+    if (!currentTarget) {
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -44,16 +58,15 @@ export function useLazyLoad(options?: IntersectionObserverInit) {
       {
         rootMargin: '50px', // Preload 50px before entering viewport
         threshold: 0.1, // Trigger when 10% visible
-        ...options,
+        ...optionsRef.current,
       }
     );
 
-    if (targetRef.current) {
-      observer.observe(targetRef.current);
-    }
+    observer.observe(currentTarget);
 
     return () => observer.disconnect();
-  }, [options]);
+    // Empty deps array - observer is created once and uses optionsRef
+  }, []);
 
   return { targetRef, isVisible: isIntersecting };
 }

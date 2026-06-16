@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useViewport } from '@/hooks/useViewport';
 
 export interface Column<T> {
+  id?: string; // Optional unique identifier for the column (used as React key)
   header: string;
   accessor: keyof T | ((row: T) => React.ReactNode);
   className?: string;
@@ -30,6 +31,26 @@ export function ResponsiveTable<T>({
 }: ResponsiveTableProps<T>) {
   const { isMobile } = useViewport();
 
+  // Memoize getValue to prevent re-renders with large datasets
+  const getValue = useCallback((row: T, column: Column<T>): React.ReactNode => {
+    if (typeof column.accessor === 'function') {
+      return column.accessor(row);
+    }
+    const value = row[column.accessor];
+    // Handle null/undefined gracefully instead of blind type assertion
+    if (value === null || value === undefined) {
+      return '—'; // Em dash for missing values
+    }
+    return value as React.ReactNode;
+  }, []);
+
+  // Generate stable keys for columns based on id or header
+  const getColumnKey = useCallback((column: Column<T>, fallbackIndex: number): string => {
+    if (column.id) return column.id;
+    if (typeof column.accessor === 'string') return column.accessor as string;
+    return `col-${column.header}-${fallbackIndex}`;
+  }, []);
+
   if (data.length === 0) {
     return (
       <div className="text-center py-12 text-slate-500">
@@ -37,13 +58,6 @@ export function ResponsiveTable<T>({
       </div>
     );
   }
-
-  const getValue = (row: T, column: Column<T>): React.ReactNode => {
-    if (typeof column.accessor === 'function') {
-      return column.accessor(row);
-    }
-    return row[column.accessor] as React.ReactNode;
-  };
 
   // Mobile: Card-based layout
   if (isMobile) {
@@ -59,7 +73,7 @@ export function ResponsiveTable<T>({
           >
             <div className="space-y-2">
               {columns.map((column, idx) => (
-                <div key={idx} className="flex justify-between items-start gap-3">
+                <div key={getColumnKey(column, idx)} className="flex justify-between items-start gap-3">
                   <span className="text-sm font-medium text-slate-600 flex-shrink-0">
                     {column.mobileLabel || column.header}:
                   </span>
@@ -83,7 +97,7 @@ export function ResponsiveTable<T>({
           <tr>
             {columns.map((column, idx) => (
               <th
-                key={idx}
+                key={getColumnKey(column, idx)}
                 className={`px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider ${column.className || ''}`}
               >
                 {column.header}
@@ -99,7 +113,7 @@ export function ResponsiveTable<T>({
               onClick={() => onRowClick?.(row)}
             >
               {columns.map((column, idx) => (
-                <td key={idx} className={`px-6 py-4 whitespace-nowrap text-sm ${column.className || ''}`}>
+                <td key={getColumnKey(column, idx)} className={`px-6 py-4 whitespace-nowrap text-sm ${column.className || ''}`}>
                   {getValue(row, column)}
                 </td>
               ))}

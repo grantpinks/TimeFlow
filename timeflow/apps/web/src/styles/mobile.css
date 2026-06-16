@@ -230,8 +230,8 @@
     padding: 1rem;
   }
 
-  /* Optimize images for mobile rendering */
-  img {
+  /* Optimize images for mobile rendering - only target regular img tags, not Next.js Image */
+  img:not([loading="lazy"]) {
     image-rendering: -webkit-optimize-contrast;
   }
 }
