@@ -23,3 +23,5 @@ export * from './LoadingSpinner';
 
 // Mobile-Responsive Components
 export * from './MobileModal';
+export * from './ResponsiveTable';
+export type { Column } from './ResponsiveTable';

@@ -213,6 +213,22 @@
   .animate-fade-in {
     animation: fade-in 0.2s ease-out;
   }
+
+  /* Horizontal scroll for tables that can't be card-ified */
+  .table-scroll-mobile {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-scroll-mobile table {
+    min-width: 600px;
+  }
+
+  /* Card-based list items larger touch targets */
+  .mobile-list-item {
+    min-height: 60px;
+    padding: 1rem;
+  }
 }
 
 /* Reduce motion for better battery life and accessibility */
