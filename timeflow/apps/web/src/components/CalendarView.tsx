@@ -15,6 +15,7 @@ import {
 } from '@/app/calendar/calendarDragUtils';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { resolveEventDisplayColor } from '@/lib/eventDisplayColor';
+import { useViewport } from '@/hooks/useViewport';
 
 // Setup luxon localizer
 const localizer = luxonLocalizer(DateTime);
@@ -140,7 +141,10 @@ export function CalendarView({
   onCategoryChange,
   onTasksRefresh,
 }: CalendarViewProps) {
-  const [view, setView] = useState<View>(Views.WEEK);
+  const { isMobile } = useViewport();
+
+  // Default to day view on mobile, week view on desktop
+  const [view, setView] = useState<View>(isMobile ? Views.DAY : Views.WEEK);
   const [date, setDate] = useState(selectedDate || new Date());
 
   // Update internal date when selectedDate prop changes
@@ -149,6 +153,13 @@ export function CalendarView({
       setDate(selectedDate);
     }
   }, [selectedDate]);
+
+  // Update view when viewport changes from desktop to mobile
+  useEffect(() => {
+    if (isMobile && (view === Views.WEEK || view === Views.MONTH)) {
+      setView(Views.DAY);
+    }
+  }, [isMobile, view]);
   const isRescheduling = false;
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
