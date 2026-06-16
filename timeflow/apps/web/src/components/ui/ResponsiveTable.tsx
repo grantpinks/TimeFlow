@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { useViewport } from '@/hooks/useViewport';
 
 export interface Column<T> {
   id?: string; // Optional unique identifier for the column (used as React key)
@@ -21,6 +20,7 @@ interface ResponsiveTableProps<T> {
 
 /**
  * Table that switches to card-based layout on mobile
+ * Uses CSS to hide/show layouts to avoid hydration mismatch
  */
 export function ResponsiveTable<T>({
   data,
@@ -29,7 +29,6 @@ export function ResponsiveTable<T>({
   onRowClick,
   emptyMessage = 'No data available',
 }: ResponsiveTableProps<T>) {
-  const { isMobile } = useViewport();
 
   // Memoize getValue to prevent re-renders with large datasets
   const getValue = useCallback((row: T, column: Column<T>): React.ReactNode => {
@@ -59,10 +58,12 @@ export function ResponsiveTable<T>({
     );
   }
 
-  // Mobile: Card-based layout
-  if (isMobile) {
-    return (
-      <div className="space-y-3">
+  // Render both layouts, use CSS to show/hide based on breakpoint
+  // This avoids hydration mismatch since server and client render the same HTML
+  return (
+    <>
+      {/* Mobile: Card-based layout (hidden on desktop) */}
+      <div className="md:hidden space-y-3">
         {data.map((row) => (
           <div
             key={keyExtractor(row)}
@@ -86,41 +87,39 @@ export function ResponsiveTable<T>({
           </div>
         ))}
       </div>
-    );
-  }
 
-  // Desktop: Standard table layout
-  return (
-    <div className="overflow-x-auto -mx-4 md:mx-0">
-      <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
-          <tr>
-            {columns.map((column, idx) => (
-              <th
-                key={getColumnKey(column, idx)}
-                className={`px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider ${column.className || ''}`}
-              >
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-slate-200">
-          {data.map((row) => (
-            <tr
-              key={keyExtractor(row)}
-              className={onRowClick ? 'hover:bg-slate-50 cursor-pointer transition-colors' : ''}
-              onClick={() => onRowClick?.(row)}
-            >
+      {/* Desktop: Standard table layout (hidden on mobile) */}
+      <div className="hidden md:block overflow-x-auto -mx-4 md:mx-0">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
               {columns.map((column, idx) => (
-                <td key={getColumnKey(column, idx)} className={`px-6 py-4 whitespace-nowrap text-sm ${column.className || ''}`}>
-                  {getValue(row, column)}
-                </td>
+                <th
+                  key={getColumnKey(column, idx)}
+                  className={`px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider ${column.className || ''}`}
+                >
+                  {column.header}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="bg-white divide-y divide-slate-200">
+            {data.map((row) => (
+              <tr
+                key={keyExtractor(row)}
+                className={onRowClick ? 'hover:bg-slate-50 cursor-pointer transition-colors' : ''}
+                onClick={() => onRowClick?.(row)}
+              >
+                {columns.map((column, idx) => (
+                  <td key={getColumnKey(column, idx)} className={`px-6 py-4 whitespace-nowrap text-sm ${column.className || ''}`}>
+                    {getValue(row, column)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

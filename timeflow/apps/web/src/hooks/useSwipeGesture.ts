@@ -31,7 +31,8 @@ export function useSwipeGesture({
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart.current || !touchEnd.current) return;
+    // Check for null explicitly - clientX can legitimately be 0 at screen edge
+    if (touchStart.current === null || touchEnd.current === null) return;
 
     const distance = touchStart.current - touchEnd.current;
     const isLeftSwipe = distance > threshold;

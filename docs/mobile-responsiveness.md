@@ -87,11 +87,8 @@ const pullHandlers = usePullToRefresh(async () => {
 
 ### Automated Testing
 ```bash
-# Visual regression tests
-pnpm test:visual --mobile
-
-# Accessibility tests
-pnpm test:a11y --mobile
+# TODO: Visual regression and a11y testing to be added in future sprint
+# For now, use manual testing checklist above and browser DevTools
 ```
 
 ## Performance
