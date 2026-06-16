@@ -229,6 +229,11 @@
     min-height: 60px;
     padding: 1rem;
   }
+
+  /* Optimize images for mobile rendering */
+  img {
+    image-rendering: -webkit-optimize-contrast;
+  }
 }
 
 /* Reduce motion for better battery life and accessibility */
