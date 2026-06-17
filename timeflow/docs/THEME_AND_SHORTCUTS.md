@@ -1,6 +1,6 @@
 # Theme Usage and Keyboard Shortcuts
 
-Last Updated: 2025-12-11
+Last Updated: 2026-06-16
 
 This document outlines how to use themes and keyboard shortcuts in the TimeFlow web application.
 
@@ -21,11 +21,32 @@ The theme is applied using a `data-theme` attribute on the `html` element.
 
 Keyboard shortcuts are available to help you navigate and use the application more efficiently.
 
-| Keys              | Description                   |
-| ----------------- | ----------------------------- |
-| `Ctrl` + `K`      | Quick add a task to "Unscheduled" |
-| `Ctrl` + `/`      | Show this keyboard shortcuts guide   |
-| `?`               | Show this keyboard shortcuts guide   |
-| `Esc`             | Close modals and dialogs      |
-
 **Note**: On macOS, use `⌘` (Command) instead of `Ctrl`.
+
+### Global
+
+| Keys              | Description                          |
+| ----------------- | ------------------------------------ |
+| `Ctrl` + `K`      | Open command palette (navigation)    |
+| `Ctrl` + `/`      | Show keyboard shortcuts guide        |
+| `?`               | Show keyboard shortcuts guide        |
+| `Esc`             | Close modals and dialogs             |
+
+### Tasks page
+
+On `/tasks`, `Ctrl` + `K` focuses the **Flow AI command strip** at the top of the page (instead of opening the global command palette). Type a question and press Enter, or use a quick-action chip.
+
+| Keys              | Description                          |
+| ----------------- | ------------------------------------ |
+| `Ctrl` + `K`      | Focus Flow AI command strip          |
+| `Ctrl` + `/`      | Show keyboard shortcuts guide        |
+| `?`               | Show keyboard shortcuts guide        |
+| `Esc`             | Close modals and dialogs             |
+
+### Tasks page features (no shortcut)
+
+- **Unschedule** — calendar icon on scheduled task cards; **Undo** appears in the toast for 8 seconds
+- **Completed tab** — group by **Date** (default) or **Category** via the toggle above the list
+- **Command strip CTA** — contextual button: **Schedule N** or **Tackle N overdue**
+
+See also: [Tasks Page UX Upgrade Plan](./plans/tasks-page-ux-upgrade-plan.md)

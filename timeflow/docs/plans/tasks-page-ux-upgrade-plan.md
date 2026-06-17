@@ -1,9 +1,49 @@
 # Tasks Page UX Upgrade - Implementation Plan
 
-**Created:** 2026-04-15
-**Status:** Planning
-**Sprint:** TBD
-**Estimated Effort:** 18-24 hours
+**Created:** 2026-04-15  
+**Last Updated:** 2026-06-16  
+**Status:** Complete (Slices 1–4 shipped)  
+**Sprint:** Active  
+**Estimated Remaining:** Polish / follow-ups only
+
+---
+
+## Implementation progress (2026-06-16)
+
+### Shipped — Slice 1 (command center foundation)
+
+- [x] **Flow command strip** — inline AI input, quick-action chips, opens assistant with prompt
+- [x] **Completed tab** — group by date (Today / Yesterday / Past 7 Days / Earlier) with Date | Category toggle
+- [x] **Scheduled tab** — group by `scheduledTask.startDateTime` (Today / Tomorrow / This Week / Later)
+- [x] **Today's progress %** — fixed to `completedToday / (completedToday + active)`
+- [x] **Quick unschedule** — calendar-off action on scheduled task cards (removes Google event)
+
+**Key files:** `FlowCommandStrip.tsx`, `FlowAnalyticsPanel.tsx`, `taskListGrouping.ts`, `tasks/page.tsx`, `TaskCard.tsx`
+
+### Shipped — Slice 2 (polish)
+
+- [x] **Undo toast on unschedule** — 8s toast with Undo via `rescheduleTask` API
+- [x] **⌘K / Ctrl+K on Tasks page** — focuses Flow command strip (capture listener; overrides global palette on this page)
+- [x] **Contextual CTA in command strip** — `Tackle N overdue` (AI) or `Schedule N` (Smart Schedule)
+- [x] **Mascot expression from analytics** — celebrating / encouraging / thinking / happy
+- [x] **Keyboard shortcuts modal** — Tasks-specific shortcut list
+
+### Shipped — Slice 3 (completed depth)
+
+- [x] **Archive completed tasks** — hide without delete; `POST /tasks/:id/archive` and unarchive endpoint
+- [x] **`completedAt` column** — migration + backfill; grouping and analytics use `completedAt` (fallback `updatedAt`)
+- [x] **Group by Identity** on Completed tab — Date | Category | Identity toggle
+- [x] **Load more** for Earlier section — initial 5, load 10 more per click
+- [x] **Show archived** toggle on Completed tab
+
+### Shipped — Slice 4 (differentiation)
+
+- [x] **Task lock / pin** — `scheduleLocked` on Task; Smart Schedule and apply-schedule skip pinned tasks
+- [x] **Proactive AI briefing** — `buildProactiveBriefing` powers insight line with overdue, trend, peak time, top category
+- [x] **Productivity trends + category breakdown** — wired into `FlowAnalyticsPanel` metric chips
+- [x] **Shared command strip on Today page** — `FlowTodayCommandSection` with AI panel
+- [x] **Global action palette extensions** — Ask Flow, Smart Schedule, Inbox, Identity Studio
+- [x] **Auto-reshuffle on calendar change** — `GET /schedule/conflicts` + `POST /schedule/reshuffle`; banners on Tasks and Today
 
 ---
 
@@ -951,64 +991,33 @@ router.get('/api/tasks/category-breakdown', authenticate, async (req, res) => {
 
 ### Phase 1: Foundation & Analytics (8-10 hours)
 
-- [ ] **Backend Setup**
-  - [ ] Create analytics endpoints in `apps/backend/src/controllers/analyticsController.ts`
-  - [ ] Add routes in `apps/backend/src/routes/analyticsRoutes.ts`
-  - [ ] Write unit tests for analytics calculations
-  - [ ] Add analytics response types to `@timeflow/shared`
+- [x] **Analytics Panel Component** (partial — core metrics + command strip; productivity row pending)
+  - [x] Create `apps/web/src/components/analytics/FlowAnalyticsPanel.tsx`
+  - [x] Create `apps/web/src/components/analytics/FlowCommandStrip.tsx`
+  - [ ] Create `MetricCard.tsx`, `MetricsGrid.tsx` as separate files (inline for now)
+  - [ ] Productivity indicator row
 
-- [ ] **Frontend Data Layer**
-  - [ ] Create `apps/web/src/hooks/useGoalTracking.ts`
-  - [ ] Create `apps/web/src/hooks/useCompletionMetrics.ts`
-  - [ ] Create `apps/web/src/hooks/useTimeInsights.ts`
-  - [ ] Create `apps/web/src/hooks/useProductivityTrends.ts`
-  - [ ] Create `apps/web/src/hooks/useCategoryBreakdown.ts`
-  - [ ] Create `apps/web/src/hooks/useStreak.ts`
-  - [ ] Add API client functions to `apps/web/src/lib/api.ts`
-
-- [ ] **Analytics Panel Component**
-  - [ ] Create `apps/web/src/components/analytics/FlowAnalyticsPanel.tsx`
-  - [ ] Create `apps/web/src/components/analytics/MetricCard.tsx`
-  - [ ] Create `apps/web/src/components/analytics/MetricsGrid.tsx`
-  - [ ] Create `apps/web/src/components/analytics/AnalyticsMessage.tsx`
-  - [ ] Create `apps/web/src/components/analytics/ProductivityIndicator.tsx`
-  - [ ] Add CSS for glassmorphism + neon effects in `globals.css`
-
-- [ ] **Integration**
-  - [ ] Update `apps/web/src/app/tasks/page.tsx` to include analytics panel
-  - [ ] Add state management for AI panel toggle
-  - [ ] Test analytics data fetching and display
+- [x] **Integration**
+  - [x] Update `apps/web/src/app/tasks/page.tsx` to include analytics panel
+  - [x] AI panel toggle + initial prompt from command strip
+  - [x] Tab-aware task grouping (`taskListGrouping.ts`)
 
 ### Phase 2: AI Assistant & Animations (10-14 hours)
 
-- [ ] **AI Assistant Panel**
-  - [ ] Create `apps/web/src/components/ai/FlowAIAssistantPanel.tsx`
-  - [ ] Create `apps/web/src/components/ai/ChatMessage.tsx`
-  - [ ] Create `apps/web/src/components/ai/QuickActionButton.tsx`
-  - [ ] Add slide-in animation with Framer Motion
-  - [ ] Integrate with existing AI assistant backend
-  - [ ] Add context passing (tasks, analytics) to AI prompts
+- [x] **AI Assistant Panel** (core)
+  - [x] `FlowAIAssistantPanel.tsx` with quick actions + schedule apply
+  - [x] Initial prompt from command strip
 
-- [ ] **Backend AI Integration**
-  - [ ] Update `apps/backend/src/services/assistantService.ts` to accept task context
-  - [ ] Add quick action handlers (schedule tasks, show due today, etc.)
-  - [ ] Enhance prompts to include analytics insights
-  - [ ] Add streaming support for real-time responses (optional)
+- [x] **Mascot** (partial)
+  - [x] Expression logic from analytics state in `FlowAnalyticsPanel`
+  - [ ] `AnimatedFlowMascot.tsx` + CSS keyframe polish from spec below
 
-- [ ] **Mascot Animations**
-  - [ ] Create `apps/web/src/components/AnimatedFlowMascot.tsx`
-  - [ ] Add CSS keyframe animations (`gentle-bounce`, `glow`, `float`)
-  - [ ] Implement expression logic based on analytics state
-  - [ ] Add hover effects and transitions
-  - [ ] Test performance on animations
-
-- [ ] **Polish & UX**
-  - [ ] Add loading states for all analytics
-  - [ ] Add error boundaries and fallbacks
-  - [ ] Implement responsive design (mobile/tablet)
-  - [ ] Add keyboard shortcuts (Cmd+K to open AI, Esc to close)
-  - [ ] Add transitions between mascot expressions
-  - [ ] Optimize re-renders with React.memo
+- [x] **Polish & UX** (partial)
+  - [x] ⌘K focus command strip on Tasks page
+  - [x] Undo toast on unschedule
+  - [x] Contextual CTA in command strip
+  - [ ] Responsive polish pass
+  - [ ] Glassmorphism / neon visual spec (below)
 
 ### Phase 3: Testing & Refinement (2-4 hours)
 
