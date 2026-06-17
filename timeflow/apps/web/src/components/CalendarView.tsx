@@ -143,9 +143,17 @@ export function CalendarView({
 }: CalendarViewProps) {
   const { isMobile } = useViewport();
 
-  // Default to day view on mobile, week view on desktop
-  const [view, setView] = useState<View>(isMobile ? Views.DAY : Views.WEEK);
+  // Default to week view to avoid hydration mismatch
+  // User can switch to day view if preferred
+  const [view, setView] = useState<View>(Views.WEEK);
   const [date, setDate] = useState(selectedDate || new Date());
+
+  // Switch to day view on mobile after mount (no hydration mismatch)
+  useEffect(() => {
+    if (isMobile && view === Views.WEEK) {
+      setView(Views.DAY);
+    }
+  }, [isMobile, view]);
 
   // Update internal date when selectedDate prop changes
   useEffect(() => {
@@ -562,14 +570,14 @@ export function CalendarView({
   };
 
   return (
-    <div className="h-full bg-white p-3 relative" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="h-full bg-white p-1 md:p-3 relative w-full" style={{ display: 'flex', flexDirection: 'column', maxWidth: '100vw', overflow: 'hidden' }}>
       {isRescheduling && (
-        <div className="absolute top-4 right-4 bg-primary-600 text-white px-4 py-2 rounded-lg shadow-lg z-10">
+        <div className="absolute top-2 right-2 md:top-4 md:right-4 bg-primary-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg shadow-lg z-10 text-sm">
           Rescheduling...
         </div>
       )}
 
-      <div style={{ flex: '1 1 0%', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+      <div className="w-full" style={{ flex: '1 1 0%', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
         <AllDayDroppableOverlay />
         <Calendar
           localizer={localizer}
