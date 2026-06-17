@@ -78,6 +78,10 @@ const createTaskSchema = z.object({
 
 const tasksQuerySchema = z.object({
   status: z.enum(TASK_STATUS_VALUES).optional(),
+  includeArchived: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((val) => val === 'true'),
 });
 
 const updateTaskSchema = z
@@ -90,6 +94,7 @@ const updateTaskSchema = z
     identityId: z.string().cuid().nullable().optional(),
     dueDate: flexibleDateString.optional(),
     status: z.enum(TASK_STATUS_VALUES).optional(),
+    scheduleLocked: z.boolean().optional(),
     sourceEmailId: z.string().optional(),
     sourceThreadId: z.string().optional(),
     sourceEmailProvider: z.string().optional(),
@@ -104,7 +109,9 @@ const updateTaskSchema = z
  * Returns all tasks for the authenticated user.
  */
 export async function getTasks(
-  request: FastifyRequest<{ Querystring: { status?: string } }>,
+  request: FastifyRequest<{
+    Querystring: { status?: string; includeArchived?: string };
+  }>,
   reply: FastifyReply
 ) {
   const user = request.user;
@@ -117,8 +124,8 @@ export async function getTasks(
     return reply.status(400).send({ error: formatZodError(parsedQuery.error) });
   }
 
-  const { status } = parsedQuery.data;
-  const tasks = await tasksService.getTasks(user.id, status);
+  const { status, includeArchived } = parsedQuery.data;
+  const tasks = await tasksService.getTasks(user.id, { status, includeArchived });
 
   return tasks;
 }
@@ -192,6 +199,7 @@ interface UpdateTaskBody {
   identityId?: string | null;
   dueDate?: string;
   status?: string;
+  scheduleLocked?: boolean;
   sourceEmailId?: string;
   sourceThreadId?: string;
   sourceEmailProvider?: string;
@@ -227,6 +235,7 @@ export async function updateTask(
     identityId,
     dueDate,
     status,
+    scheduleLocked,
     sourceEmailId,
     sourceThreadId,
     sourceEmailProvider,
@@ -242,6 +251,7 @@ export async function updateTask(
     identityId,
     dueDate: dueDate ? new Date(dueDate) : undefined,
     status,
+    scheduleLocked,
     sourceEmailId,
     sourceThreadId,
     sourceEmailProvider,
@@ -299,4 +309,50 @@ export async function completeTask(
   }
 
   return { ...result.task, identityEngagement: result.identityEngagement };
+}
+
+/**
+ * POST /api/tasks/:id/archive
+ * Archives a completed task (hide without delete).
+ */
+export async function archiveTask(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const { id } = request.params;
+  const task = await tasksService.archiveTask(id, user.id);
+
+  if (!task) {
+    return reply.status(404).send({ error: 'Task not found or not completed' });
+  }
+
+  return task;
+}
+
+/**
+ * POST /api/tasks/:id/unarchive
+ * Restores an archived task to the default completed list.
+ */
+export async function unarchiveTask(
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const { id } = request.params;
+  const task = await tasksService.unarchiveTask(id, user.id);
+
+  if (!task) {
+    return reply.status(404).send({ error: 'Task not found or not archived' });
+  }
+
+  return task;
 }

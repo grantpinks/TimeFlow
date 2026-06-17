@@ -31,6 +31,7 @@ export interface UpdateTaskInput {
   identityId?: string | null;
   dueDate?: Date;
   status?: string;
+  scheduleLocked?: boolean;
   sourceEmailId?: string;
   sourceThreadId?: string;
   sourceEmailProvider?: string;
@@ -39,11 +40,24 @@ export interface UpdateTaskInput {
 
 /**
  * Get all tasks for a user, optionally filtered by status.
+ * Archived tasks are excluded unless includeArchived is true.
  */
-export async function getTasks(userId: string, status?: string) {
-  const where: { userId: string; status?: string } = { userId };
-  if (status) {
-    where.status = status;
+export async function getTasks(
+  userId: string,
+  options?: { status?: string; includeArchived?: boolean }
+) {
+  const where: {
+    userId: string;
+    status?: string;
+    archivedAt?: null;
+  } = { userId };
+
+  if (options?.status) {
+    where.status = options.status;
+  }
+
+  if (!options?.includeArchived) {
+    where.archivedAt = null;
   }
 
   return prisma.task.findMany({
@@ -198,7 +212,17 @@ export async function updateTask(
 
   const updated = await prisma.task.update({
     where: { id: taskId },
-    data: input,
+    data: {
+      ...input,
+      ...(input.status === 'completed' && existing.status !== 'completed'
+        ? { completedAt: new Date() }
+        : {}),
+      ...(input.status !== undefined &&
+      input.status !== 'completed' &&
+      existing.status === 'completed'
+        ? { completedAt: null }
+        : {}),
+    },
     include: {
       scheduledTask: true,
       category: true,
@@ -277,7 +301,10 @@ export async function completeTask(taskId: string, userId: string) {
 
   const task = await prisma.task.update({
     where: { id: taskId },
-    data: { status: 'completed' },
+    data: {
+      status: 'completed',
+      completedAt: new Date(),
+    },
   });
 
   let identityEngagement: identityEngagementService.RecordCompletionResult | null = null;
@@ -290,4 +317,55 @@ export async function completeTask(taskId: string, userId: string) {
   }
 
   return { task, identityEngagement };
+}
+
+/**
+ * Archive a completed task (hide from default lists without deleting).
+ */
+export async function archiveTask(taskId: string, userId: string) {
+  const existing = await prisma.task.findFirst({
+    where: { id: taskId, userId },
+    include: {
+      scheduledTask: true,
+      category: true,
+      identity: true,
+    },
+  });
+
+  if (!existing || existing.status !== 'completed') {
+    return null;
+  }
+
+  return prisma.task.update({
+    where: { id: taskId },
+    data: { archivedAt: new Date() },
+    include: {
+      scheduledTask: true,
+      category: true,
+      identity: true,
+    },
+  });
+}
+
+/**
+ * Restore an archived task to the default completed list.
+ */
+export async function unarchiveTask(taskId: string, userId: string) {
+  const existing = await prisma.task.findFirst({
+    where: { id: taskId, userId },
+  });
+
+  if (!existing || !existing.archivedAt) {
+    return null;
+  }
+
+  return prisma.task.update({
+    where: { id: taskId },
+    data: { archivedAt: null },
+    include: {
+      scheduledTask: true,
+      category: true,
+      identity: true,
+    },
+  });
 }

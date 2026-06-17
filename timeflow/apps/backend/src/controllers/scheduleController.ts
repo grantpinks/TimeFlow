@@ -128,6 +128,77 @@ export async function applySchedule(
   }
 }
 
+const scheduleRangeQuerySchema = z.object({
+  dateRangeStart: z.string().datetime(),
+  dateRangeEnd: z.string().datetime(),
+});
+
+/**
+ * GET /api/schedule/conflicts
+ * Returns scheduled tasks that overlap external calendar events.
+ */
+export async function getScheduleConflicts(
+  request: FastifyRequest<{
+    Querystring: { dateRangeStart?: string; dateRangeEnd?: string };
+  }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = scheduleRangeQuerySchema.safeParse(request.query);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const { dateRangeStart, dateRangeEnd } = parsed.data;
+
+  try {
+    return await scheduleService.detectScheduleConflicts(
+      user.id,
+      dateRangeStart,
+      dateRangeEnd
+    );
+  } catch (error) {
+    request.log.error(error, 'Conflict detection failed');
+    return reply.status(500).send({ error: 'Failed to detect schedule conflicts' });
+  }
+}
+
+/**
+ * POST /api/schedule/reshuffle
+ * Reschedules unlocked tasks that conflict with calendar changes.
+ */
+export async function reshuffleConflicts(
+  request: FastifyRequest<{ Body: { dateRangeStart: string; dateRangeEnd: string } }>,
+  reply: FastifyReply
+) {
+  const user = request.user;
+  if (!user) {
+    return reply.status(401).send({ error: 'Not authenticated' });
+  }
+
+  const parsed = scheduleRangeQuerySchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: formatZodError(parsed.error) });
+  }
+
+  const { dateRangeStart, dateRangeEnd } = parsed.data;
+
+  try {
+    return await scheduleService.reshuffleConflictingTasks(
+      user.id,
+      dateRangeStart,
+      dateRangeEnd
+    );
+  } catch (error) {
+    request.log.error(error, 'Reshuffle failed');
+    return reply.status(500).send({ error: 'Failed to reshuffle conflicting tasks' });
+  }
+}
+
 interface RescheduleBody {
   startDateTime: string;
   endDateTime: string;

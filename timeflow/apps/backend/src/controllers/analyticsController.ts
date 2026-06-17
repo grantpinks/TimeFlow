@@ -148,13 +148,14 @@ export async function getCompletionMetrics(
         startDate.setHours(0, 0, 0, 0);
     }
 
-    // Count completed tasks in range
+    // Count completed tasks in range (completedAt only; migration backfills legacy rows)
     const completed = await prisma.task.count({
       where: {
         userId,
         status: 'completed',
-        updatedAt: { gte: startDate }
-      }
+        archivedAt: null,
+        completedAt: { gte: startDate },
+      },
     });
 
     // Count total tasks created in range
@@ -281,22 +282,23 @@ export async function getProductivityTrends(
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // Fetch completed tasks in range
     const completedTasks = await prisma.task.findMany({
       where: {
         userId,
         status: 'completed',
-        updatedAt: { gte: startDate }
+        archivedAt: null,
+        completedAt: { gte: startDate },
       },
       select: {
-        updatedAt: true
-      }
+        completedAt: true,
+      },
     });
 
     // Calculate completion by hour
     const hourCounts: Record<number, number> = {};
-    completedTasks.forEach(task => {
-      const hour = new Date(task.updatedAt).getHours();
+    completedTasks.forEach((task) => {
+      if (!task.completedAt) return;
+      const hour = new Date(task.completedAt).getHours();
       hourCounts[hour] = (hourCounts[hour] || 0) + 1;
     });
 
@@ -308,8 +310,9 @@ export async function getProductivityTrends(
 
     // Calculate completion by day of week
     const completionByDayOfWeek: Record<string, number> = {};
-    completedTasks.forEach(task => {
-      const dayName = new Date(task.updatedAt).toLocaleDateString('en-US', { weekday: 'long' });
+    completedTasks.forEach((task) => {
+      if (!task.completedAt) return;
+      const dayName = new Date(task.completedAt).toLocaleDateString('en-US', { weekday: 'long' });
       completionByDayOfWeek[dayName] = (completionByDayOfWeek[dayName] || 0) + 1;
     });
 
@@ -366,14 +369,16 @@ export async function getStreak(
     const completedTasks = await prisma.task.findMany({
       where: {
         userId,
-        status: 'completed'
+        status: 'completed',
+        archivedAt: null,
+        completedAt: { not: null },
       },
       select: {
-        updatedAt: true
+        completedAt: true,
       },
       orderBy: {
-        updatedAt: 'desc'
-      }
+        completedAt: 'desc',
+      },
     });
 
     if (completedTasks.length === 0) {
@@ -389,8 +394,9 @@ export async function getStreak(
 
     // Create set of completion dates (normalized to date only)
     const completionDates = new Set<number>();
-    completedTasks.forEach(task => {
-      const date = new Date(task.updatedAt);
+    completedTasks.forEach((task) => {
+      if (!task.completedAt) return;
+      const date = new Date(task.completedAt);
       date.setHours(0, 0, 0, 0);
       completionDates.add(date.getTime());
     });
@@ -441,7 +447,7 @@ export async function getStreak(
     const response: StreakResponse = {
       currentStreak,
       longestStreak,
-      lastCompletionDate: completedTasks[0].updatedAt.toISOString(),
+      lastCompletionDate: completedTasks[0].completedAt?.toISOString() ?? null,
       streakActive
     };
 

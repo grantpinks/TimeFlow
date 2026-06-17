@@ -27,5 +27,19 @@ export async function registerTaskRoutes(server: FastifyInstance) {
     { preHandler: requireAuth },
     tasksController.completeTask
   );
+
+  // Archive completed task
+  server.post(
+    '/tasks/:id/archive',
+    { preHandler: requireAuth },
+    tasksController.archiveTask
+  );
+
+  // Unarchive task
+  server.post(
+    '/tasks/:id/unarchive',
+    { preHandler: requireAuth },
+    tasksController.unarchiveTask
+  );
 }
 

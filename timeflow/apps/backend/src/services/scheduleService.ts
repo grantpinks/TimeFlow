@@ -25,7 +25,7 @@ import {
   type UserPreferences as ValidationPreferences,
 } from '../utils/scheduleValidator.js';
 import { normalizeDateOnlyToEndOfDay } from '../utils/dateUtils.js';
-import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
+import { buildTimeflowEventDetails, isTimeflowEvent } from '../utils/timeflowEventPrefix.js';
 import { validateSchedule } from './scheduleValidationService.js';
 
 /**
@@ -76,7 +76,16 @@ export async function scheduleTasksForUser(
   );
 
   // 4. Prepare inputs for scheduling engine
-  const taskInputs: TaskInput[] = tasks.map((t) => {
+  const lockedScheduled = tasks.filter((t) => t.scheduleLocked && t.scheduledTask);
+  const tasksToSchedule = tasks.filter((t) => !(t.scheduleLocked && t.scheduledTask));
+
+  const lockedBusyEvents: SchedulerEvent[] = lockedScheduled.map((t) => ({
+    id: t.scheduledTask!.eventId,
+    start: t.scheduledTask!.startDateTime.toISOString(),
+    end: t.scheduledTask!.endDateTime.toISOString(),
+  }));
+
+  const taskInputs: TaskInput[] = tasksToSchedule.map((t) => {
     const normalizedDueDate = t.dueDate
       ? normalizeDateOnlyToEndOfDay(t.dueDate, user.timeZone || 'UTC')
       : null;
@@ -89,11 +98,14 @@ export async function scheduleTasksForUser(
     };
   });
 
-  const schedulerEvents: SchedulerEvent[] = existingEvents.map((e) => ({
-    id: e.id,
-    start: e.start,
-    end: e.end,
-  }));
+  const schedulerEvents: SchedulerEvent[] = [
+    ...existingEvents.map((e) => ({
+      id: e.id,
+      start: e.start,
+      end: e.end,
+    })),
+    ...lockedBusyEvents,
+  ];
 
   const preferences: UserPreferences = {
     timeZone: user.timeZone || 'UTC',
@@ -319,6 +331,7 @@ export async function applyScheduleBlocks(
 
   const taskIds = Array.from(new Set(taskBlocks.map((block) => block.taskId)));
   const habitIds = Array.from(new Set(habitBlocks.map((block) => block.habitId)));
+  let lockedTaskIds = new Set<string>();
 
   if (taskIds.length > 0) {
     const tasks = await prisma.task.findMany({
@@ -326,7 +339,7 @@ export async function applyScheduleBlocks(
         id: { in: taskIds },
         userId,
       },
-      select: { id: true },
+      select: { id: true, scheduleLocked: true, scheduledTask: { select: { startDateTime: true, endDateTime: true } } },
     });
 
     if (tasks.length !== taskIds.length) {
@@ -334,6 +347,12 @@ export async function applyScheduleBlocks(
       const missing = taskIds.filter((id) => !foundIds.has(id));
       throw new Error(`Schedule validation failed: Unknown task IDs: ${missing.join(', ')}`);
     }
+
+    lockedTaskIds = new Set(
+      tasks
+        .filter((task) => task.scheduleLocked && task.scheduledTask)
+        .map((task) => task.id)
+    );
 
     const duplicateTaskIds = taskBlocks.reduce((acc, block) => {
       acc[block.taskId] = (acc[block.taskId] || 0) + 1;
@@ -538,6 +557,9 @@ export async function applyScheduleBlocks(
 
   let tasksScheduled = 0;
   for (const block of taskBlocks) {
+    if (lockedTaskIds.has(block.taskId)) {
+      continue;
+    }
     await rescheduleTask(userId, block.taskId, block.start, block.end);
     tasksScheduled += 1;
   }
@@ -747,4 +769,163 @@ export async function rescheduleTask(
       data: { status: 'scheduled' },
     });
   }
+}
+
+export type ScheduleConflictTask = {
+  id: string;
+  title: string;
+  startDateTime: string;
+  endDateTime: string;
+};
+
+export type ScheduleConflictsResponse = {
+  count: number;
+  tasks: ScheduleConflictTask[];
+};
+
+type ConflictCheckEvent = {
+  id?: string;
+  summary: string;
+  start: string;
+  end: string;
+  description?: string;
+};
+
+type ConflictCheckTask = {
+  title: string;
+  description?: string | null;
+  scheduledTask: {
+    eventId: string;
+    startDateTime: Date;
+    endDateTime: Date;
+  };
+};
+
+type ConflictCheckUser = {
+  eventPrefixEnabled?: boolean | null;
+  eventPrefix?: string | null;
+};
+
+/**
+ * Returns true when a calendar event is the task's own TimeFlow block (not an external conflict).
+ */
+export function isOwnScheduledTaskEvent(
+  event: ConflictCheckEvent,
+  task: ConflictCheckTask,
+  user: ConflictCheckUser | null
+): boolean {
+  const scheduled = task.scheduledTask;
+  if (event.id && event.id === scheduled.eventId) {
+    return true;
+  }
+
+  const taskStart = scheduled.startDateTime.toISOString();
+  const taskEnd = scheduled.endDateTime.toISOString();
+  if (event.start === taskStart && event.end === taskEnd && isTimeflowEvent(event)) {
+    return true;
+  }
+
+  const expected = buildTimeflowEventDetails({
+    title: task.title,
+    kind: 'task',
+    prefixEnabled: user?.eventPrefixEnabled,
+    prefix: user?.eventPrefix,
+    description: task.description,
+  });
+
+  return event.summary === expected.summary;
+}
+
+/**
+ * Find scheduled (unlocked) tasks that overlap external calendar events.
+ */
+export async function detectScheduleConflicts(
+  userId: string,
+  dateRangeStart: string,
+  dateRangeEnd: string
+): Promise<ScheduleConflictsResponse> {
+  const rangeStart = new Date(dateRangeStart);
+  const rangeEnd = new Date(dateRangeEnd);
+
+  const [user, scheduledTasks] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { eventPrefixEnabled: true, eventPrefix: true },
+    }),
+    prisma.task.findMany({
+      where: {
+        userId,
+        status: 'scheduled',
+        scheduleLocked: false,
+        scheduledTask: {
+          isNot: null,
+          startDateTime: {
+            gte: rangeStart,
+            lte: rangeEnd,
+          },
+        },
+      },
+      include: { scheduledTask: true },
+    }),
+  ]);
+
+  if (scheduledTasks.length === 0) {
+    return { count: 0, tasks: [] };
+  }
+
+  const externalEvents = await mergedCalendarService.getMergedExternalEvents(
+    userId,
+    dateRangeStart,
+    dateRangeEnd,
+    'availability'
+  );
+
+  const conflicting: ScheduleConflictTask[] = [];
+
+  for (const task of scheduledTasks) {
+    const scheduled = task.scheduledTask!;
+    const taskStart = scheduled.startDateTime.toISOString();
+    const taskEnd = scheduled.endDateTime.toISOString();
+
+    const overlapsExternal = externalEvents.some((event) => {
+      if (isOwnScheduledTaskEvent(event, task, user)) {
+        return false;
+      }
+      return hasTimeOverlap(taskStart, taskEnd, event.start, event.end);
+    });
+
+    if (overlapsExternal) {
+      conflicting.push({
+        id: task.id,
+        title: task.title,
+        startDateTime: taskStart,
+        endDateTime: taskEnd,
+      });
+    }
+  }
+
+  return { count: conflicting.length, tasks: conflicting };
+}
+
+/**
+ * Reschedule unlocked tasks that conflict with external calendar events.
+ */
+export async function reshuffleConflictingTasks(
+  userId: string,
+  dateRangeStart: string,
+  dateRangeEnd: string
+): Promise<{ rescheduled: number; blocks: ScheduledBlock[]; skippedLocked: number }> {
+  const { tasks } = await detectScheduleConflicts(userId, dateRangeStart, dateRangeEnd);
+  if (tasks.length === 0) {
+    return { rescheduled: 0, blocks: [], skippedLocked: 0 };
+  }
+
+  const blocks = await scheduleTasksForUser(
+    userId,
+    tasks.map((task) => task.id),
+    dateRangeStart,
+    dateRangeEnd
+  );
+
+  return { rescheduled: blocks.length, blocks, skippedLocked: 0 };
 }

@@ -25,6 +25,23 @@ export async function registerScheduleRoutes(server: FastifyInstance) {
     scheduleController.applySchedule
   );
 
+  // Detect calendar conflicts with scheduled tasks
+  server.get(
+    '/schedule/conflicts',
+    { preHandler: requireAuth },
+    scheduleController.getScheduleConflicts
+  );
+
+  // Reschedule tasks that conflict with calendar changes
+  server.post(
+    '/schedule/reshuffle',
+    {
+      preHandler: requireAuth,
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    },
+    scheduleController.reshuffleConflicts
+  );
+
   // Manually reschedule a task
   server.patch(
     '/schedule/:taskId',
