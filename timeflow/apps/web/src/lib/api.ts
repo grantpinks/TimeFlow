@@ -419,8 +419,14 @@ export async function deleteRestDay(localDate: string): Promise<void> {
 /**
  * Get all tasks, optionally filtered by status.
  */
-export async function getTasks(status?: string): Promise<Task[]> {
-  const query = status ? `?status=${status}` : '';
+export async function getTasks(
+  status?: string,
+  options?: { includeArchived?: boolean }
+): Promise<Task[]> {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (options?.includeArchived) params.set('includeArchived', 'true');
+  const query = params.toString() ? `?${params.toString()}` : '';
   return request<Task[]>(`/tasks${query}`);
 }
 
@@ -468,6 +474,20 @@ export async function completeTask(
       method: 'POST',
     }
   );
+}
+
+/**
+ * Archive a completed task (hide without deleting).
+ */
+export async function archiveTask(id: string): Promise<Task> {
+  return request<Task>(`/tasks/${id}/archive`, { method: 'POST' });
+}
+
+/**
+ * Restore an archived task to the default completed list.
+ */
+export async function unarchiveTask(id: string): Promise<Task> {
+  return request<Task>(`/tasks/${id}/unarchive`, { method: 'POST' });
 }
 
 // ===== Categories =====
@@ -895,6 +915,36 @@ export async function rescheduleTask(
   return request<void>(`/schedule/${taskId}`, {
     method: 'PATCH',
     body: JSON.stringify({ startDateTime, endDateTime }),
+  });
+}
+
+export type ScheduleConflictTask = {
+  id: string;
+  title: string;
+  startDateTime: string;
+  endDateTime: string;
+};
+
+export type ScheduleConflictsResponse = {
+  count: number;
+  tasks: ScheduleConflictTask[];
+};
+
+export async function getScheduleConflicts(
+  dateRangeStart: string,
+  dateRangeEnd: string
+): Promise<ScheduleConflictsResponse> {
+  const params = new URLSearchParams({ dateRangeStart, dateRangeEnd });
+  return request<ScheduleConflictsResponse>(`/schedule/conflicts?${params.toString()}`);
+}
+
+export async function reshuffleScheduleConflicts(
+  dateRangeStart: string,
+  dateRangeEnd: string
+): Promise<{ rescheduled: number; skippedLocked: number }> {
+  return request<{ rescheduled: number; skippedLocked: number }>('/schedule/reshuffle', {
+    method: 'POST',
+    body: JSON.stringify({ dateRangeStart, dateRangeEnd }),
   });
 }
 

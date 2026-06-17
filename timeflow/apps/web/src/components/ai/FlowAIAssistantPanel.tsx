@@ -24,6 +24,8 @@ interface FlowAIAssistantPanelProps {
   tasks?: Task[];
   habits?: Habit[];
   timeZone?: string;
+  initialPrompt?: string | null;
+  onInitialPromptConsumed?: () => void;
   onTasksUpdate?: () => void; // Callback to refresh tasks after schedule apply
 }
 
@@ -40,6 +42,8 @@ export function FlowAIAssistantPanel({
   tasks = [],
   habits = [],
   timeZone,
+  initialPrompt,
+  onInitialPromptConsumed,
   onTasksUpdate,
 }: FlowAIAssistantPanelProps) {
   const router = useRouter();
@@ -65,6 +69,7 @@ export function FlowAIAssistantPanel({
   const latestMessagesRef = useRef<ChatMessageType[]>([]);
   const conversationIdRef = useRef<string | null>(null); // Fix #1: Use ref to prevent split conversations
   const sessionGenerationRef = useRef(0); // Fix #4: Session token to prevent old saves writing to new session
+  const handleSendRef = useRef<(messageText: string) => Promise<void>>(async () => {});
 
   const quickActions: QuickAction[] = useMemo(
     () => getAssistantQuickActionChips(new Date(), timeZone),
@@ -105,6 +110,18 @@ export function FlowAIAssistantPanel({
       void flushAutoSave();
     }
   }, [isOpen]);
+
+  // Submit a prompt passed from the Tasks page command strip
+  useEffect(() => {
+    if (!isOpen || !initialPrompt?.trim()) return;
+
+    const timer = setTimeout(() => {
+      void handleSendRef.current(initialPrompt);
+      onInitialPromptConsumed?.();
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [isOpen, initialPrompt, onInitialPromptConsumed]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -169,6 +186,8 @@ export function FlowAIAssistantPanel({
       setLoading(false);
     }
   };
+
+  handleSendRef.current = handleSend;
 
   // Fix #1: Apply schedule handler
   const handleApplySchedule = async () => {

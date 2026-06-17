@@ -23,6 +23,8 @@ import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
 import { IdentityPanel } from '@/components/identity/IdentityPanel';
 import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
+import { FlowTodayCommandSection } from '@/components/analytics/FlowTodayCommandSection';
+import { useScheduleConflicts } from '@/hooks/useScheduleConflicts';
 import { WhatsNowContextPanel } from '@/components/today/WhatsNowContextPanel';
 import { ActionableEmailsWidget } from '@/components/today/ActionableEmailsWidget';
 import { HabitsDueSoonWidget } from '@/components/today/HabitsDueSoonWidget';
@@ -113,6 +115,9 @@ export default function TodayPage() {
   const [showEodSummary, setShowEodSummary] = useState(false);
   const [habitRelatedFollowUp, setHabitRelatedFollowUp] = useState<PostHabitFollowUp | null>(null);
   const [completingHabitId, setCompletingHabitId] = useState<string | null>(null);
+  const [reshuffling, setReshuffling] = useState(false);
+  const [conflictRefreshToken, setConflictRefreshToken] = useState(0);
+  const [reshuffleMessage, setReshuffleMessage] = useState<string | null>(null);
   /** Mobile: habit suggestions collapsible (default collapsed). Desktop (lg+): always expanded. */
   const [mobileHabitsOpen, setMobileHabitsOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -126,6 +131,45 @@ export default function TodayPage() {
     if (evolutionStates.length === 0) return null;
     return [...evolutionStates].sort((a, b) => b.level - a.level || b.xp - a.xp)[0]!;
   }, [evolutionStates]);
+
+  const { conflicts, refetch: refetchConflicts } = useScheduleConflicts(
+    isAuthenticated && !eventsLoading,
+    conflictRefreshToken
+  );
+
+  const handleReshuffleConflicts = async () => {
+    setReshuffling(true);
+    try {
+      const now = new Date();
+      const end = new Date();
+      end.setDate(end.getDate() + 14);
+      const result = await api.reshuffleScheduleConflicts(now.toISOString(), end.toISOString());
+      await refreshTasks();
+      await fetchTodayEvents();
+      refetchConflicts();
+      setReshuffleMessage(
+        result.rescheduled > 0
+          ? `Rescheduled ${result.rescheduled} conflicting task${result.rescheduled === 1 ? '' : 's'}.`
+          : 'No unlocked conflicts to reshuffle.'
+      );
+    } catch {
+      setReshuffleMessage('Could not reshuffle tasks. Try from the Tasks page.');
+    } finally {
+      setReshuffling(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!reshuffleMessage) return;
+    const timer = setTimeout(() => setReshuffleMessage(null), 8000);
+    return () => clearTimeout(timer);
+  }, [reshuffleMessage]);
+
+  useEffect(() => {
+    if (conflicts?.count === 0) {
+      setReshuffleMessage(null);
+    }
+  }, [conflicts?.count]);
 
   /** Evolution analytics: at most once per browser tab session (sessionStorage). */
   useEffect(() => {
@@ -248,6 +292,7 @@ export default function TodayPage() {
       setScheduledHabitInstances(habitInstances);
       setConnectedAccounts(accounts);
       setEvents(calendarEvents);
+      setConflictRefreshToken((token) => token + 1);
 
       const eventIds = calendarEvents.map((e) => e.id).filter((id): id is string => Boolean(id));
       if (eventIds.length > 0) {
@@ -815,6 +860,28 @@ Please generate a schedule preview for today.`;
           <p className="text-sm text-slate-600">
             {unscheduledTasks.length} tasks to schedule • {scheduledTasks.length} on timeline
           </p>
+          <div className="mt-4">
+            <FlowTodayCommandSection timeZone={user?.timeZone} />
+          </div>
+          {conflicts && conflicts.count > 0 && (
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm text-amber-900">
+                <span className="font-semibold">{conflicts.count} task{conflicts.count === 1 ? '' : 's'}</span>
+                {' '}overlap new calendar events.
+              </p>
+              <button
+                type="button"
+                onClick={() => void handleReshuffleConflicts()}
+                disabled={reshuffling}
+                className="flex-shrink-0 rounded-lg bg-white border border-amber-300 px-4 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+              >
+                {reshuffling ? 'Reshuffling…' : 'Reshuffle unlocked'}
+              </button>
+            </div>
+          )}
+          {reshuffleMessage && (
+            <p className="mt-2 text-sm text-primary-700">{reshuffleMessage}</p>
+          )}
           {/* Identity Panel */}
           <div className="mt-4">
             <IdentityPanel

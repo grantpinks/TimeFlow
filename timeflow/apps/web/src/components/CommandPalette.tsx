@@ -34,6 +34,30 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
 
   const commands: Command[] = [
     {
+      id: 'inbox',
+      label: 'Go to Inbox',
+      action: () => router.push('/inbox'),
+      keywords: ['inbox', 'email', 'mail'],
+    },
+    {
+      id: 'identity',
+      label: 'Go to Identity Studio',
+      action: () => router.push('/identity'),
+      keywords: ['identity', 'studio', 'persona'],
+    },
+    {
+      id: 'ask-flow-tasks',
+      label: 'Ask Flow AI about tasks',
+      action: () => router.push('/tasks?action=ai'),
+      keywords: ['ai', 'flow', 'assistant', 'ask', 'help'],
+    },
+    {
+      id: 'smart-schedule',
+      label: 'Run Smart Schedule',
+      action: () => router.push('/tasks?action=schedule'),
+      keywords: ['schedule', 'smart', 'calendar', 'plan'],
+    },
+    {
       id: 'today',
       label: 'Go to Today',
       action: () => router.push('/today'),

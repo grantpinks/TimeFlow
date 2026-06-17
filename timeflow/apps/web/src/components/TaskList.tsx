@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useDroppable } from '@dnd-kit/core';
 import type { Task, CreateTaskRequest, UpdateTaskRequest, Identity, IdentityDayProgress } from '@timeflow/shared';
@@ -15,6 +15,8 @@ import { CategoryTrainingModal } from '@/components/CategoryTrainingModal';
 import { IdentitySelector } from '@/components/identity/IdentitySelector';
 import { IdentityCelebrationModal } from '@/components/identity/IdentityCelebrationModal';
 import { TaskEmailSourceLink } from '@/components/tasks/TaskEmailSourceLink';
+import type { TaskListSection } from '@/utils/taskListGrouping';
+import { EARLIER_SECTION_LOAD_MORE } from '@/utils/taskListGrouping';
 import * as api from '@/lib/api';
 
 interface TaskListProps {
@@ -23,18 +25,17 @@ interface TaskListProps {
   onUpdateTask: (id: string, data: UpdateTaskRequest) => Promise<void>;
   onCompleteTask: (id: string) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
+  onUnscheduleTask?: (id: string) => Promise<void>;
+  onArchiveTask?: (id: string) => Promise<void>;
+  onUnarchiveTask?: (id: string) => Promise<void>;
+  onToggleLockTask?: (id: string, locked: boolean) => Promise<void>;
   loading?: boolean;
   droppableId?: string;
   autoOpenForm?: boolean;
   selectionMode?: boolean;
   selectedTasks?: Set<string>;
   onToggleSelect?: (taskId: string) => void;
-  groupedSections?: Array<{
-    id: string;
-    title: string;
-    tasks: Task[];
-    description?: string;
-  }>;
+  groupedSections?: TaskListSection[];
   emptyState?: {
     title: string;
     description?: string;
@@ -47,6 +48,10 @@ export function TaskList({
   onUpdateTask,
   onCompleteTask,
   onDeleteTask,
+  onUnscheduleTask,
+  onArchiveTask,
+  onUnarchiveTask,
+  onToggleLockTask,
   loading,
   droppableId,
   autoOpenForm = false,
@@ -101,11 +106,43 @@ export function TaskList({
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showCustomCategoryModal, setShowCustomCategoryModal] = useState(false);
   const [customCategoryTarget, setCustomCategoryTarget] = useState<'create' | 'edit' | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
+  const [sectionVisibleCounts, setSectionVisibleCounts] = useState<Record<string, number>>({});
+  const initializedCollapseRef = useRef<Set<string>>(new Set());
   const totalTasks = groupedSections?.length
     ? groupedSections.reduce((sum, section) => sum + section.tasks.length, 0)
     : tasks.length;
   const emptyTitle = emptyState?.title ?? 'No tasks yet.';
   const emptyDescription = emptyState?.description ?? 'Add one above to get started.';
+
+  useEffect(() => {
+    if (!groupedSections) return;
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      groupedSections.forEach((section) => {
+        if (
+          section.defaultCollapsed &&
+          !initializedCollapseRef.current.has(section.id)
+        ) {
+          next.add(section.id);
+          initializedCollapseRef.current.add(section.id);
+        }
+      });
+      return next;
+    });
+  }, [groupedSections]);
+
+  const toggleSectionCollapsed = (sectionId: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -464,19 +501,51 @@ export function TaskList({
         >
           {groupedSections && groupedSections.length > 0 ? (
             <div className="space-y-8">
-              {groupedSections.map((section) => (
+              {groupedSections.map((section) => {
+                const isCollapsed = collapsedSections.has(section.id);
+                const visibleLimit = section.pageSize
+                  ? (sectionVisibleCounts[section.id] ?? section.pageSize)
+                  : section.tasks.length;
+                const visibleTasks = section.tasks.slice(0, visibleLimit);
+                const remainingCount = section.tasks.length - visibleTasks.length;
+
+                return (
                 <div key={section.id} className="space-y-3">
-                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-400">
-                    <span>{section.title}</span>
-                    {section.description && <span className="text-[11px] normal-case tracking-normal">{section.description}</span>}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleSectionCollapsed(section.id)}
+                    className="flex w-full items-center justify-between text-xs uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <svg
+                        className={`w-3.5 h-3.5 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>{section.title}</span>
+                      <span className="text-[11px] normal-case tracking-normal text-slate-400">
+                        ({section.tasks.length})
+                      </span>
+                    </span>
+                    {section.description && (
+                      <span className="text-[11px] normal-case tracking-normal">{section.description}</span>
+                    )}
+                  </button>
+                  {!isCollapsed && (
                   <div className="space-y-3">
-                    {section.tasks.map((task) => (
+                    {visibleTasks.map((task) => (
                       <TaskCard
                         key={task.id}
                         task={task}
                         onEdit={openEditModal}
                         onDelete={onDeleteTask}
+                        onUnschedule={onUnscheduleTask}
+                        onArchive={onArchiveTask}
+                        onUnarchive={onUnarchiveTask}
+                        onToggleLock={onToggleLockTask}
                         onComplete={handleCompleteTask}
                         draggable={!selectionMode}
                         selectable={selectionMode}
@@ -484,9 +553,31 @@ export function TaskList({
                         onToggleSelect={onToggleSelect}
                       />
                     ))}
+                    {remainingCount > 0 && section.pageSize && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="w-full"
+                        onClick={() =>
+                          setSectionVisibleCounts((prev) => ({
+                            ...prev,
+                            [section.id]:
+                              (prev[section.id] ?? section.pageSize!) + EARLIER_SECTION_LOAD_MORE,
+                          }))
+                        }
+                      >
+                        Load {Math.min(remainingCount, EARLIER_SECTION_LOAD_MORE)} more
+                        {remainingCount > EARLIER_SECTION_LOAD_MORE
+                          ? ` (${remainingCount} remaining)`
+                          : ''}
+                      </Button>
+                    )}
                   </div>
+                  )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           ) : (
             <div className="space-y-3">
@@ -496,6 +587,10 @@ export function TaskList({
                   task={task}
                   onEdit={openEditModal}
                   onDelete={onDeleteTask}
+                  onUnschedule={onUnscheduleTask}
+                  onArchive={onArchiveTask}
+                  onUnarchive={onUnarchiveTask}
+                  onToggleLock={onToggleLockTask}
                   onComplete={handleCompleteTask}
                   draggable={!selectionMode}
                   selectable={selectionMode}

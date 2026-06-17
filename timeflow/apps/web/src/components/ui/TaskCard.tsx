@@ -11,6 +11,10 @@ export interface TaskCardProps {
   task: Task;
   onEdit?: (task: Task) => void;
   onDelete?: (taskId: string) => void;
+  onUnschedule?: (taskId: string) => void;
+  onArchive?: (taskId: string) => void;
+  onUnarchive?: (taskId: string) => void;
+  onToggleLock?: (taskId: string, locked: boolean) => void;
   onComplete?: (taskId: string) => void;
   showActions?: boolean;
   draggable?: boolean;
@@ -20,7 +24,7 @@ export interface TaskCardProps {
 }
 
 export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
-  ({ task, onEdit, onDelete, onComplete, showActions = true, draggable = false, selectable = false, selected = false, onToggleSelect }, ref) => {
+  ({ task, onEdit, onDelete, onUnschedule, onArchive, onUnarchive, onToggleLock, onComplete, showActions = true, draggable = false, selectable = false, selected = false, onToggleSelect }, ref) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const {
@@ -44,11 +48,14 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
 
     const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed';
     const isCompleted = task.status === 'completed';
+    const isArchived = Boolean(task.archivedAt);
+    const isLocked = Boolean(task.scheduleLocked);
 
     const baseCardStyles = `
       bg-white border rounded-lg p-3 md:p-4 transition-all duration-200
       ${isOverdue ? 'border-red-200 bg-red-50' : 'border-slate-200'}
       ${isCompleted ? 'opacity-60' : ''}
+      ${isArchived ? 'opacity-50 border-dashed' : ''}
     `;
 
     const categoryBorderStyle = task.category?.color
@@ -150,6 +157,16 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
               <span className={`px-2 py-1 text-xs font-semibold rounded border ${priority.color} whitespace-nowrap flex-shrink-0`}>
                 {priority.label}
               </span>
+              {isArchived && (
+                <span className="px-2 py-1 text-xs font-medium rounded border border-slate-200 bg-slate-100 text-slate-500 whitespace-nowrap flex-shrink-0">
+                  Archived
+                </span>
+              )}
+              {isLocked && task.status === 'scheduled' && (
+                <span className="px-2 py-1 text-xs font-medium rounded border border-amber-200 bg-amber-50 text-amber-700 whitespace-nowrap flex-shrink-0">
+                  Pinned
+                </span>
+              )}
             </div>
 
             {/* Category + Identity Badges */}
@@ -231,8 +248,61 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
           </div>
 
           {/* Actions */}
-          {showActions && (onEdit || onDelete) && (
+          {showActions && (onEdit || onDelete || onUnschedule || onArchive || onUnarchive || onToggleLock) && (
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              {onToggleLock && task.status === 'scheduled' && (
+                <button
+                  onClick={() => onToggleLock(task.id, !isLocked)}
+                  className={`p-2.5 sm:p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg transition-colors inline-flex items-center justify-center ${
+                    isLocked
+                      ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                      : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'
+                  }`}
+                  title={isLocked ? 'Unpin — Smart Schedule can move this' : 'Pin — Smart Schedule won\'t move this'}
+                  aria-label={isLocked ? `Unpin ${task.title}` : `Pin ${task.title}`}
+                >
+                  <svg className="w-5 h-5" fill={isLocked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                </button>
+              )}
+              {onArchive && isCompleted && !isArchived && (
+                <button
+                  onClick={() => onArchive(task.id)}
+                  className="p-2.5 sm:p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-slate-400 hover:text-slate-600 hover:bg-slate-100 active:bg-slate-200 rounded-lg transition-colors inline-flex items-center justify-center"
+                  title="Archive task"
+                  aria-label={`Archive ${task.title}`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                </button>
+              )}
+              {onUnarchive && isArchived && (
+                <button
+                  onClick={() => onUnarchive(task.id)}
+                  className="p-2.5 sm:p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-slate-400 hover:text-primary-600 hover:bg-primary-50 active:bg-primary-100 rounded-lg transition-colors inline-flex items-center justify-center"
+                  title="Restore from archive"
+                  aria-label={`Restore ${task.title}`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+              )}
+              {onUnschedule && task.status === 'scheduled' && (
+                <button
+                  onClick={() => onUnschedule(task.id)}
+                  className="p-2.5 sm:p-2 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-slate-400 hover:text-amber-600 hover:bg-amber-50 active:bg-amber-100 rounded-lg transition-colors inline-flex items-center justify-center"
+                  title="Remove from calendar"
+                  aria-label={`Unschedule ${task.title}`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 11l4 4m0-4l-4 4" />
+                  </svg>
+                </button>
+              )}
               {onEdit && (
                 <button
                   onClick={() => onEdit(task)}

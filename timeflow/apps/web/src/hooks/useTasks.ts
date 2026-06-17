@@ -11,7 +11,7 @@ import type { Task, CreateTaskRequest, UpdateTaskRequest } from '@timeflow/share
 import * as api from '../lib/api';
 import { track } from '../lib/analytics';
 
-export function useTasks(initialStatus?: string) {
+export function useTasks(initialStatus?: string, includeArchived = false) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function useTasks(initialStatus?: string) {
         setLoading(true);
         setError(null);
       }
-      const data = await api.getTasks(initialStatus);
+      const data = await api.getTasks(initialStatus, { includeArchived });
       setTasks(data);
       return true;
     } catch (err) {
@@ -35,7 +35,7 @@ export function useTasks(initialStatus?: string) {
         setLoading(false);
       }
     }
-  }, [initialStatus]);
+  }, [initialStatus, includeArchived]);
 
   const patchTaskLocal = useCallback((id: string, patch: Partial<Task>) => {
     setTasks((prev) =>
@@ -79,6 +79,23 @@ export function useTasks(initialStatus?: string) {
     return updated;
   };
 
+  const archiveTask = async (id: string) => {
+    const updated = await api.archiveTask(id);
+    setTasks((prev) => {
+      if (includeArchived) {
+        return prev.map((t) => (t.id === id ? updated : t));
+      }
+      return prev.filter((t) => t.id !== id);
+    });
+    return updated;
+  };
+
+  const unarchiveTask = async (id: string) => {
+    const updated = await api.unarchiveTask(id);
+    setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
+    return updated;
+  };
+
   return {
     tasks,
     loading,
@@ -89,6 +106,8 @@ export function useTasks(initialStatus?: string) {
     updateTask,
     deleteTask,
     completeTask,
+    archiveTask,
+    unarchiveTask,
   };
 }
 

@@ -7,44 +7,112 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, type Ref } from 'react';
 import { FlowMascot } from '../FlowMascot';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import {
+  FlowCommandStrip,
+  type FlowCommandStripAction,
+  type FlowCommandStripHandle,
+} from './FlowCommandStrip';
 import {
   useGoalTracking,
   useCompletionMetrics,
   useTimeInsights,
   useStreak,
+  useProductivityTrends,
+  useCategoryBreakdown,
 } from '@/hooks/useAnalytics';
+import { buildProactiveBriefing } from '@/utils/buildProactiveBriefing';
+import type { ComponentProps } from 'react';
+
+type MascotExpression = NonNullable<ComponentProps<typeof FlowMascot>['expression']>;
 
 interface FlowAnalyticsPanelProps {
-  onOpenAI?: () => void;
+  onOpenAI?: (prompt?: string) => void;
   onRefresh?: () => void;
+  timeZone?: string;
+  commandStripRef?: Ref<FlowCommandStripHandle>;
+  contextualAction?: FlowCommandStripAction | null;
+  /** Increment to refetch analytics without remounting the panel */
+  refreshToken?: number;
 }
 
-export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelProps) {
+export function FlowAnalyticsPanel({
+  onOpenAI,
+  onRefresh,
+  timeZone,
+  commandStripRef,
+  contextualAction,
+  refreshToken = 0,
+}: FlowAnalyticsPanelProps) {
   const { data: goalTracking, loading: goalLoading, error: goalError, refetch: refetchGoal } = useGoalTracking();
   const { data: completion, loading: completionLoading, error: completionError, refetch: refetchCompletion } = useCompletionMetrics('today');
   const { data: timeInsights, loading: timeLoading, error: timeError, refetch: refetchTime } = useTimeInsights();
   const { data: streak, loading: streakLoading, error: streakError, refetch: refetchStreak } = useStreak();
+  const { data: productivity, refetch: refetchProductivity } = useProductivityTrends(7);
+  const { data: categories, refetch: refetchCategories } = useCategoryBreakdown();
 
   const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
+
+  const todayProgress = useMemo(() => {
+    if (!completion) return { completed: 0, total: 0, percent: 0, hasPlan: false };
+
+    const completed = completion.completedToday;
+    const dueToday = goalTracking?.dueTodayCount ?? 0;
+    const total = completed + dueToday;
+    const percent =
+      total > 0 ? Math.round((completed / total) * 100) : completed > 0 ? 100 : 0;
+
+    return { completed, total, percent, hasPlan: total > 0 };
+  }, [completion, goalTracking]);
 
   // Generate personalized message
   const message = useMemo(() => {
     if (!completion || !goalTracking) return 'Loading your analytics...';
 
-    if (completion.completionRate >= 80) {
+    if (todayProgress.percent >= 80) {
       return '🎉 Amazing progress today!';
     }
     if (goalTracking.overdueCount > 0) {
       return `💪 You've got ${goalTracking.overdueCount} overdue ${goalTracking.overdueCount === 1 ? 'task' : 'tasks'}. Let's tackle them!`;
     }
-    if (completion.completionRate < 40) {
+    if (todayProgress.percent < 40 && todayProgress.hasPlan) {
       return '🤔 Let me help you optimize your schedule.';
     }
     return '👋 Great work today!';
-  }, [completion, goalTracking]);
+  }, [completion, goalTracking, todayProgress]);
+
+  const insightLine = useMemo(
+    () =>
+      buildProactiveBriefing({
+        goalTracking,
+        completion,
+        productivity,
+        categories,
+      }),
+    [goalTracking, completion, productivity, categories]
+  );
+
+  const trendLabel =
+    productivity?.weeklyTrend === 'up'
+      ? '📈 Trending up'
+      : productivity?.weeklyTrend === 'down'
+        ? '📉 Trending down'
+        : productivity?.weeklyTrend === 'stable'
+          ? '➡️ Steady week'
+          : null;
+
+  const topCategoryLabel = categories?.topCategories?.[0] ?? null;
+
+  const mascotExpression = useMemo((): MascotExpression => {
+    if (!completion || !goalTracking) return 'happy';
+
+    if (todayProgress.percent >= 80) return 'celebrating';
+    if (goalTracking.overdueCount > 0) return 'encouraging';
+    if (todayProgress.percent < 40 && todayProgress.hasPlan) return 'thinking';
+    return 'happy';
+  }, [completion, goalTracking, todayProgress]);
 
   const isLoading = goalLoading || completionLoading || timeLoading || streakLoading;
   const hasError = goalError || completionError || timeError || streakError;
@@ -55,8 +123,20 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
     refetchCompletion();
     refetchTime();
     refetchStreak();
+    refetchProductivity();
+    refetchCategories();
     onRefresh?.();
   };
+
+  useEffect(() => {
+    if (refreshToken === 0) return;
+    refetchGoal();
+    refetchCompletion();
+    refetchTime();
+    refetchStreak();
+    refetchProductivity();
+    refetchCategories();
+  }, [refreshToken, refetchGoal, refetchCompletion, refetchTime, refetchStreak, refetchProductivity, refetchCategories]);
 
   const toggleMetric = (metricId: string) => {
     setExpandedMetric(expandedMetric === metricId ? null : metricId);
@@ -113,7 +193,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
               <div className="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-inner border-2 border-primary-200/50 dark:border-primary-700/50">
                 <FlowMascot
                   size="lg"
-                  expression="happy"
+                  expression={mascotExpression}
                 />
               </div>
             </div>
@@ -127,11 +207,16 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             <h3 className="text-xl font-bold text-slate-900 dark:text-white">
               {message}
             </h3>
-            {completion && (
+            {completion && todayProgress.hasPlan && (
               <p className="text-sm text-slate-600 dark:text-slate-400">
-                You've completed <span className="font-semibold text-primary-600 dark:text-primary-400">{completion.completedToday}</span> of{' '}
-                <span className="font-semibold">{completion.completedToday + completion.totalActiveTasks}</span> tasks today{' '}
-                <span className="text-primary-600 dark:text-primary-400 font-bold">({completion.completionRate}%)</span>
+                You've completed <span className="font-semibold text-primary-600 dark:text-primary-400">{todayProgress.completed}</span> of{' '}
+                <span className="font-semibold">{todayProgress.total}</span> tasks due today{' '}
+                <span className="text-primary-600 dark:text-primary-400 font-bold">({todayProgress.percent}%)</span>
+              </p>
+            )}
+            {completion && !todayProgress.hasPlan && todayProgress.completed > 0 && (
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                You've completed <span className="font-semibold text-primary-600 dark:text-primary-400">{todayProgress.completed}</span> task{todayProgress.completed === 1 ? '' : 's'} today
               </p>
             )}
           </div>
@@ -142,7 +227,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {goalTracking && (
               <button
                 onClick={() => toggleMetric('overdue')}
-                className="group relative overflow-hidden rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-red-300 dark:hover:border-red-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="group relative rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-red-300 dark:hover:border-red-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
               >
                 <div className="relative space-y-1">
                   <div className="text-3xl">🎯</div>
@@ -171,7 +256,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {timeInsights && (
               <button
                 onClick={() => toggleMetric('scheduled')}
-                className="group relative overflow-hidden rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="group relative rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
               >
                 <div className="relative space-y-1">
                   <div className="text-3xl">⏰</div>
@@ -200,7 +285,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {completion && (
               <button
                 onClick={() => toggleMetric('active')}
-                className="group relative overflow-hidden rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="group relative rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
               >
                 <div className="relative space-y-1">
                   <div className="text-3xl">📊</div>
@@ -221,7 +306,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
                           ◯ Remaining: {completion.totalActiveTasks}
                         </p>
                         <p className="text-xs text-primary-600 dark:text-primary-400 mt-1">
-                          {completion.completionRate}% completion rate
+                          {todayProgress.percent}% of today's plan done
                         </p>
                       </div>
                     </div>
@@ -234,7 +319,7 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             {streak && (
               <button
                 onClick={() => toggleMetric('streak')}
-                className="group relative overflow-hidden rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-cyan-300 dark:hover:border-cyan-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="group relative rounded-xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-4 hover:border-cyan-300 dark:hover:border-cyan-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
               >
                 <div className="relative space-y-1">
                   <div className="text-3xl">🔥</div>
@@ -260,25 +345,34 @@ export function FlowAnalyticsPanel({ onOpenAI, onRefresh }: FlowAnalyticsPanelPr
             )}
           </div>
 
-          {/* AI Assistant Button */}
+          {(productivity || topCategoryLabel) && (
+            <div className="flex flex-wrap gap-2 text-xs">
+              {productivity?.bestTimeOfDay && productivity.bestTimeOfDay !== 'N/A' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-3 py-1 text-slate-600 dark:text-slate-300">
+                  ⚡ Peak: {productivity.bestTimeOfDay.replace('-', '–')}
+                </span>
+              )}
+              {trendLabel && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-3 py-1 text-slate-600 dark:text-slate-300">
+                  {trendLabel}
+                </span>
+              )}
+              {topCategoryLabel && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 px-3 py-1 text-slate-600 dark:text-slate-300">
+                  🏷️ Top: {topCategoryLabel}
+                </span>
+              )}
+            </div>
+          )}
+
           {onOpenAI && (
-            <button
-              onClick={onOpenAI}
-              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-primary-500/90 via-cyan-500/90 to-blue-500/90 hover:from-primary-500 hover:via-cyan-500 hover:to-blue-500 p-[1px] transition-all duration-300 hover:shadow-xl hover:shadow-primary-500/20"
-            >
-              <div className="relative flex items-center justify-center gap-2 rounded-[11px] bg-gradient-to-r from-primary-600 via-cyan-600 to-blue-600 px-6 py-3 text-white transition-all duration-300">
-                <span className="text-xl">💬</span>
-                <span className="font-semibold">Ask Flow AI about your tasks...</span>
-                <svg
-                  className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div>
-            </button>
+            <FlowCommandStrip
+              ref={commandStripRef}
+              timeZone={timeZone}
+              insightLine={insightLine}
+              contextualAction={contextualAction}
+              onSubmit={(prompt) => onOpenAI(prompt)}
+            />
           )}
 
           {/* Partial data warning */}

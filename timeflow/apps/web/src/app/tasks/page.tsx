@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, KeyboardSensor, DragEndEvent } from '@dnd-kit/core';
 import { FloatingAssistantButton } from '@/components/FloatingAssistantButton';
 import { Layout } from '@/components/Layout';
@@ -10,20 +10,37 @@ import type { TaskFilters } from '@/components/ui/FilterPanel';
 import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 import { BulkActionToolbar } from '@/components/BulkActionToolbar';
 import { FlowAnalyticsPanel } from '@/components/analytics/FlowAnalyticsPanel';
+import type { FlowCommandStripAction, FlowCommandStripHandle } from '@/components/analytics/FlowCommandStrip';
 import { FlowAIAssistantPanel } from '@/components/ai/FlowAIAssistantPanel';
+import { ToastContainer } from '@/components/Toast';
+import { useToast } from '@/hooks/useToast';
 import { useTasks } from '@/hooks/useTasks';
 import { useCategories } from '@/hooks/useCategories';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useHabits } from '@/hooks/useHabits';
 import { useUser } from '@/hooks/useUser';
 import { exportTasksToCSV } from '@/utils/exportTasks';
+import { buildTaskListSections, type CompletedGroupMode } from '@/utils/taskListGrouping';
+import { useScheduleConflicts } from '@/hooks/useScheduleConflicts';
 import * as api from '@/lib/api';
 import type { Task } from '@timeflow/shared';
 import '@/styles/print.css';
 
 type TabType = 'unscheduled' | 'scheduled' | 'completed';
 
+const COMPLETED_GROUP_MODES = ['date', 'category', 'identity'] as const;
+
+function parseCompletedGroupMode(value: string | null): CompletedGroupMode {
+  if (value && COMPLETED_GROUP_MODES.includes(value as CompletedGroupMode)) {
+    return value as CompletedGroupMode;
+  }
+  return 'date';
+}
+
 export default function TasksPage() {
+  const [showArchived, setShowArchived] = useState(false);
+  const [reshuffling, setReshuffling] = useState(false);
+
   const {
     tasks,
     loading,
@@ -32,11 +49,15 @@ export default function TasksPage() {
     updateTask,
     completeTask,
     deleteTask,
+    archiveTask,
+    unarchiveTask,
     refresh,
-  } = useTasks();
+  } = useTasks(undefined, showArchived);
 
   const { habits } = useHabits();
   const { user } = useUser();
+  const { toasts, showToast, removeToast } = useToast();
+  const commandStripRef = useRef<FlowCommandStripHandle>(null);
 
   // Tab state (replaces 3-column layout)
   const [activeTab, setActiveTab] = useState<TabType>('unscheduled');
@@ -53,14 +74,26 @@ export default function TasksPage() {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
-  // Analytics refresh trigger - Fix #2: Refresh analytics after task mutations
-  const [analyticsRefreshKey, setAnalyticsRefreshKey] = useState(0);
+  // Analytics refresh — increment token to refetch without remounting panel
+  const [analyticsRefreshToken, setAnalyticsRefreshToken] = useState(0);
+  const [conflictRefreshToken, setConflictRefreshToken] = useState(0);
+  const pendingDeepLinkAction = useRef<'ai' | 'schedule' | null>(null);
   const triggerAnalyticsRefresh = () => {
-    setAnalyticsRefreshKey(prev => prev + 1);
+    setAnalyticsRefreshToken((prev) => prev + 1);
+  };
+  const triggerConflictRefresh = () => {
+    setConflictRefreshToken((prev) => prev + 1);
   };
 
   // AI Assistant Panel state - Phase 2C
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [aiInitialPrompt, setAiInitialPrompt] = useState<string | null>(null);
+
+  // Completed tab grouping
+  const [completedGroupMode, setCompletedGroupMode] = useState<CompletedGroupMode>(() => {
+    if (typeof window === 'undefined') return 'date';
+    return parseCompletedGroupMode(localStorage.getItem('taskCompletedGroupMode'));
+  });
 
   // Bulk selection state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -106,7 +139,52 @@ export default function TasksPage() {
     );
   }, [sortField, sortDirection]);
 
-  // Configure sensors for drag interactions
+  useEffect(() => {
+    localStorage.setItem('taskCompletedGroupMode', completedGroupMode);
+  }, [completedGroupMode]);
+
+  useEffect(() => {
+    if (!scheduleResult) return;
+    const timer = setTimeout(() => setScheduleResult(null), 5000);
+    return () => clearTimeout(timer);
+  }, [scheduleResult]);
+
+  useEffect(() => {
+    if (!scheduleError) return;
+    const timer = setTimeout(() => setScheduleError(null), 8000);
+    return () => clearTimeout(timer);
+  }, [scheduleError]);
+
+  const handleOpenAI = (prompt?: string) => {
+    setAiInitialPrompt(prompt ?? null);
+    setShowAIPanel(true);
+  };
+
+  const focusCommandStrip = useCallback(() => {
+    commandStripRef.current?.focusInput();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && !event.shiftKey) {
+        const target = event.target as HTMLElement;
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.contentEditable === 'true'
+        ) {
+          return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        focusCommandStrip();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [focusCommandStrip]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -242,6 +320,17 @@ export default function TasksPage() {
   const scheduledTasks = filteredAndSortedTasks.filter((t) => t.status === 'scheduled');
   const completedTasks = filteredAndSortedTasks.filter((t) => t.status === 'completed');
 
+  const filteredActiveOverdueCount = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    return filteredAndSortedTasks.filter(
+      (task) =>
+        task.status !== 'completed' &&
+        task.dueDate &&
+        new Date(task.dueDate) < startOfToday
+    ).length;
+  }, [filteredAndSortedTasks]);
+
   // Get active tab tasks
   const activeTabTasks =
     activeTab === 'unscheduled' ? unscheduledTasks :
@@ -257,8 +346,8 @@ export default function TasksPage() {
     endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay()));
     endOfWeek.setHours(23, 59, 59, 999);
 
-    const overdueCount = activeTabTasks.filter((task) => {
-      if (!task.dueDate) return false;
+    const overdueCount = tasks.filter((task) => {
+      if (task.status === 'completed' || !task.dueDate) return false;
       return new Date(task.dueDate) < startOfToday;
     }).length;
 
@@ -287,53 +376,19 @@ export default function TasksPage() {
       avgMinutes,
       hasData: activeTabTasks.length > 0,
     };
-  }, [activeTabTasks]);
+  }, [activeTabTasks, tasks]);
 
-  const groupedSections = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfToday = new Date(startOfToday);
-    endOfToday.setHours(23, 59, 59, 999);
-    const endOfWeek = new Date(startOfToday);
-    endOfWeek.setDate(startOfToday.getDate() + (6 - startOfToday.getDay()));
-    endOfWeek.setHours(23, 59, 59, 999);
+  const { conflicts, refetch: refetchConflicts } = useScheduleConflicts(
+    activeTab === 'scheduled' || activeTab === 'unscheduled',
+    conflictRefreshToken
+  );
 
-    const buckets = {
-      today: [] as Task[],
-      thisWeek: [] as Task[],
-      later: [] as Task[],
-      noDueDate: [] as Task[],
-    };
+  const groupedSections = useMemo(
+    () => buildTaskListSections(activeTabTasks, activeTab, completedGroupMode),
+    [activeTabTasks, activeTab, completedGroupMode]
+  );
 
-    activeTabTasks.forEach((task) => {
-      if (!task.dueDate) {
-        buckets.noDueDate.push(task);
-        return;
-      }
-
-      const dueDate = new Date(task.dueDate);
-      if (dueDate >= startOfToday && dueDate <= endOfToday) {
-        buckets.today.push(task);
-        return;
-      }
-
-      if (dueDate <= endOfWeek) {
-        buckets.thisWeek.push(task);
-        return;
-      }
-
-      buckets.later.push(task);
-    });
-
-    return [
-      { id: 'today', title: 'Today', tasks: buckets.today },
-      { id: 'this-week', title: 'This Week', tasks: buckets.thisWeek },
-      { id: 'later', title: 'Later', tasks: buckets.later },
-      { id: 'no-due-date', title: 'No Due Date', tasks: buckets.noDueDate },
-    ].filter((section) => section.tasks.length > 0);
-  }, [activeTabTasks]);
-
-  const handleSmartSchedule = async () => {
+  const handleSmartSchedule = useCallback(async () => {
     const taskIds = unscheduledTasks.map((t) => t.id);
     if (taskIds.length === 0) {
       setScheduleError('No unscheduled tasks to schedule');
@@ -361,7 +416,8 @@ export default function TasksPage() {
         }!`
       );
       refresh();
-      triggerAnalyticsRefresh(); // Fix #2: Refresh analytics after Smart Schedule
+      triggerAnalyticsRefresh();
+      triggerConflictRefresh();
     } catch (err) {
       setScheduleError(
         err instanceof Error ? err.message : 'Failed to run scheduling'
@@ -369,7 +425,57 @@ export default function TasksPage() {
     } finally {
       setScheduling(false);
     }
-  };
+  }, [unscheduledTasks, refresh]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+    if (action === 'ai' || action === 'schedule') {
+      pendingDeepLinkAction.current = action;
+      const url = new URL(window.location.href);
+      url.searchParams.delete('action');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (loading || !pendingDeepLinkAction.current) return;
+    const action = pendingDeepLinkAction.current;
+    pendingDeepLinkAction.current = null;
+    if (action === 'ai') {
+      handleOpenAI();
+    } else if (action === 'schedule') {
+      void handleSmartSchedule();
+    }
+  }, [loading, handleSmartSchedule]);
+
+  const commandStripAction = useMemo((): FlowCommandStripAction | null => {
+    if (filteredActiveOverdueCount > 0) {
+      return {
+        id: 'tackle-overdue',
+        label: `Tackle ${filteredActiveOverdueCount} overdue`,
+        onClick: () =>
+          handleOpenAI(
+            filteredActiveOverdueCount === 1
+              ? 'Help me prioritize and schedule my overdue task.'
+              : `Help me prioritize and schedule my ${filteredActiveOverdueCount} overdue tasks.`
+          ),
+      };
+    }
+
+    if (unscheduledTasks.length > 0) {
+      return {
+        id: 'smart-schedule',
+        label: scheduling ? 'Scheduling…' : `Schedule ${unscheduledTasks.length}`,
+        disabled: scheduling,
+        onClick: () => {
+          void handleSmartSchedule();
+        },
+      };
+    }
+
+    return null;
+  }, [filteredActiveOverdueCount, unscheduledTasks.length, scheduling, handleSmartSchedule]);
 
   // Drag and drop handlers
   const handleDragStart = (event: any) => {
@@ -502,16 +608,168 @@ export default function TasksPage() {
     triggerAnalyticsRefresh();
   };
 
+  const handleUnscheduleTask = async (id: string): Promise<void> => {
+    const task = tasks.find((t) => t.id === id);
+    const scheduledSnapshot = task?.scheduledTask
+      ? {
+          taskId: id,
+          title: task.title,
+          startDateTime: task.scheduledTask.startDateTime,
+          endDateTime: task.scheduledTask.endDateTime,
+        }
+      : null;
+
+    try {
+      await updateTask(id, { status: 'unscheduled' });
+      await refresh();
+      triggerAnalyticsRefresh();
+      triggerConflictRefresh();
+
+      if (scheduledSnapshot) {
+        showToast(`"${scheduledSnapshot.title}" removed from calendar`, 'info', {
+          durationMs: 8000,
+          action: {
+            label: 'Undo',
+            onClick: async () => {
+              await api.rescheduleTask(
+                scheduledSnapshot.taskId,
+                scheduledSnapshot.startDateTime,
+                scheduledSnapshot.endDateTime
+              );
+              await refresh();
+              triggerAnalyticsRefresh();
+              triggerConflictRefresh();
+              showToast('Task restored to calendar', 'success');
+            },
+          },
+          onActionError: () => {
+            showToast('Could not restore — try Smart Schedule or Flow AI', 'error');
+          },
+        });
+      }
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Failed to unschedule task',
+        'error'
+      );
+    }
+  };
+
+  const handleArchiveTask = async (id: string): Promise<void> => {
+    const task = tasks.find((t) => t.id === id);
+    try {
+      await archiveTask(id);
+      triggerAnalyticsRefresh();
+      if (task) {
+        showToast(`"${task.title}" archived`, 'success');
+      }
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Failed to archive task',
+        'error'
+      );
+    }
+  };
+
+  const handleUnarchiveTask = async (id: string): Promise<void> => {
+    const task = tasks.find((t) => t.id === id);
+    try {
+      await unarchiveTask(id);
+      if (task) {
+        showToast(`"${task.title}" restored`, 'success');
+      }
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Failed to restore task',
+        'error'
+      );
+    }
+  };
+
+  const handleToggleLockTask = async (id: string, locked: boolean): Promise<void> => {
+    try {
+      await updateTask(id, { scheduleLocked: locked });
+      showToast(locked ? 'Task pinned — Smart Schedule won\'t move it' : 'Task unpinned', 'success');
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Failed to update pin',
+        'error'
+      );
+    }
+  };
+
+  const handleReshuffleConflicts = async (): Promise<void> => {
+    setReshuffling(true);
+    try {
+      const now = new Date();
+      const end = new Date();
+      end.setDate(end.getDate() + 14);
+      const result = await api.reshuffleScheduleConflicts(now.toISOString(), end.toISOString());
+      await refresh();
+      refetchConflicts();
+      triggerAnalyticsRefresh();
+      triggerConflictRefresh();
+      showToast(
+        result.rescheduled > 0
+          ? `Rescheduled ${result.rescheduled} conflicting task${result.rescheduled === 1 ? '' : 's'}`
+          : 'No conflicts to reshuffle',
+        result.rescheduled > 0 ? 'success' : 'info'
+      );
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : 'Failed to reshuffle tasks',
+        'error'
+      );
+    } finally {
+      setReshuffling(false);
+    }
+  };
+
+  const tasksPageShortcuts = useMemo(
+    () => [
+      { keys: ['Ctrl', 'K'], description: 'Focus Flow AI command strip' },
+      { keys: ['Ctrl', '/'], description: 'Show keyboard shortcuts' },
+      { keys: ['Esc'], description: 'Close modals and dialogs' },
+      { keys: ['?'], description: 'Show keyboard shortcuts' },
+    ],
+    []
+  );
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Analytics Panel with AI Assistant integration (Phase 2C) */}
         {/* Fix #2: Pass refresh key to force re-fetch after task mutations */}
         <FlowAnalyticsPanel
-          key={analyticsRefreshKey}
           onRefresh={triggerAnalyticsRefresh}
-          onOpenAI={() => setShowAIPanel(true)}
+          onOpenAI={handleOpenAI}
+          timeZone={user?.timeZone}
+          commandStripRef={commandStripRef}
+          contextualAction={commandStripAction}
+          refreshToken={analyticsRefreshToken}
         />
+
+        {conflicts && conflicts.count > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-sm text-amber-900">
+              <span className="font-semibold">{conflicts.count} scheduled task{conflicts.count === 1 ? '' : 's'}</span>
+              {' '}conflict{conflicts.count === 1 ? 's' : ''} with calendar changes.
+              {conflicts.tasks[0] && (
+                <span className="text-amber-800"> e.g. &quot;{conflicts.tasks[0].title}&quot;</span>
+              )}
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void handleReshuffleConflicts()}
+              disabled={reshuffling}
+              loading={reshuffling}
+              className="flex-shrink-0"
+            >
+              Reshuffle unlocked
+            </Button>
+          </div>
+        )}
 
         {/* Header with Smart Schedule primary action */}
         <SectionHeader
@@ -781,6 +1039,60 @@ export default function TasksPage() {
             </button>
           </div>
 
+          {activeTab === 'completed' && (
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+              {completedTasks.length > 0 && (
+                <>
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Group by</span>
+                  <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setCompletedGroupMode('date')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        completedGroupMode === 'date'
+                          ? 'bg-primary-600 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Date
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCompletedGroupMode('category')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        completedGroupMode === 'category'
+                          ? 'bg-primary-600 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Category
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCompletedGroupMode('identity')}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        completedGroupMode === 'identity'
+                          ? 'bg-primary-600 text-white'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Identity
+                    </button>
+                  </div>
+                </>
+              )}
+              <label className="ml-auto inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(e) => setShowArchived(e.target.checked)}
+                  className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                />
+                Show archived
+              </label>
+            </div>
+          )}
+
           {/* Task list for active tab */}
           <DndContext
             sensors={sensors}
@@ -794,6 +1106,10 @@ export default function TasksPage() {
                 onUpdateTask={handleUpdateTask}
                 onCompleteTask={handleCompleteTask}
                 onDeleteTask={handleDeleteTask}
+                onUnscheduleTask={handleUnscheduleTask}
+                onArchiveTask={activeTab === 'completed' ? handleArchiveTask : undefined}
+                onUnarchiveTask={activeTab === 'completed' && showArchived ? handleUnarchiveTask : undefined}
+                onToggleLockTask={activeTab === 'scheduled' ? handleToggleLockTask : undefined}
                 loading={loading}
                 droppableId={activeTab}
                 groupedSections={groupedSections}
@@ -837,6 +1153,7 @@ export default function TasksPage() {
       <KeyboardShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
+        shortcuts={tasksPageShortcuts}
       />
       <BulkActionToolbar
         selectedCount={selectedTasks.size}
@@ -854,11 +1171,14 @@ export default function TasksPage() {
         tasks={tasks}
         habits={habits}
         timeZone={user?.timeZone}
+        initialPrompt={aiInitialPrompt}
+        onInitialPromptConsumed={() => setAiInitialPrompt(null)}
         onTasksUpdate={() => {
           refresh();
           triggerAnalyticsRefresh();
         }}
       />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </Layout>
   );
 }

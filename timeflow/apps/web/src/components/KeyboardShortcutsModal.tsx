@@ -10,17 +10,20 @@ interface Shortcut {
 interface KeyboardShortcutsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  shortcuts?: Shortcut[];
 }
 
-export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
+const DEFAULT_SHORTCUTS: Shortcut[] = [
+  { keys: ['Ctrl', 'K'], description: 'Open command palette (navigation)' },
+  { keys: ['Ctrl', '/'], description: 'Show keyboard shortcuts' },
+  { keys: ['Esc'], description: 'Close modals/dialogs' },
+  { keys: ['?'], description: 'Show keyboard shortcuts' },
+];
+
+export function KeyboardShortcutsModal({ isOpen, onClose, shortcuts = DEFAULT_SHORTCUTS }: KeyboardShortcutsModalProps) {
   const prefersReducedMotion = useReducedMotion();
 
-  const shortcuts: Shortcut[] = [
-    { keys: ['Ctrl', 'K'], description: 'Quick add task' },
-    { keys: ['Ctrl', '/'], description: 'Show keyboard shortcuts' },
-    { keys: ['Esc'], description: 'Close modals/dialogs' },
-    { keys: ['?'], description: 'Show keyboard shortcuts' },
-  ];
+  const shortcutList = shortcuts;
 
   return (
     <AnimatePresence>
@@ -65,7 +68,7 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
             {/* Shortcuts List */}
             <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
               <div className="space-y-3">
-                {shortcuts.map((shortcut, index) => (
+                {shortcutList.map((shortcut, index) => (
                   <div
                     key={index}
                     className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors"
