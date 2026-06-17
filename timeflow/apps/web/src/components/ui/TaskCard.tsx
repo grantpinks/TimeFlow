@@ -125,26 +125,23 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(
             </button>
           )}
 
-          {/* Completion Checkbox */}
-          {!selectable && showActions && onComplete && (
+          {/* Completion Checkbox — active tasks only (completed rows are not re-toggleable) */}
+          {!selectable && showActions && onComplete && !isCompleted && (
             <button
               onClick={() => onComplete(task.id)}
-              className={`
-                mt-1 w-7 h-7 sm:w-6 sm:h-6 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg border-2 flex items-center justify-center
-                transition-all duration-200 flex-shrink-0
-                ${isCompleted
-                  ? 'bg-green-500 border-green-500'
-                  : 'border-slate-300 hover:border-primary-500 hover:bg-primary-50 active:bg-primary-100'
-                }
-              `}
+              className="mt-1 w-7 h-7 sm:w-6 sm:h-6 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 border-slate-300 hover:border-primary-500 hover:bg-primary-50 active:bg-primary-100"
               aria-label={`Mark ${task.title} as complete`}
+            />
+          )}
+          {!selectable && isCompleted && (
+            <div
+              className="mt-1 w-7 h-7 sm:w-6 sm:h-6 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 rounded-lg border-2 flex items-center justify-center flex-shrink-0 bg-green-500 border-green-500"
+              aria-hidden
             >
-              {isCompleted && (
-                <svg className="w-4 h-4 sm:w-3 sm:h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </button>
+              <svg className="w-4 h-4 sm:w-3 sm:h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
           )}
 
           {/* Content */}

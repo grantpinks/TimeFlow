@@ -58,13 +58,13 @@ export function FlowAnalyticsPanel({
   const todayProgress = useMemo(() => {
     if (!completion) return { completed: 0, total: 0, percent: 0, hasPlan: false };
 
-    const completed = completion.completedToday;
+    const completedDueToday = completion.completedDueTodayCount ?? 0;
     const dueToday = goalTracking?.dueTodayCount ?? 0;
-    const total = completed + dueToday;
+    const total = completedDueToday + dueToday;
     const percent =
-      total > 0 ? Math.round((completed / total) * 100) : completed > 0 ? 100 : 0;
+      total > 0 ? Math.round((completedDueToday / total) * 100) : completedDueToday > 0 ? 100 : 0;
 
-    return { completed, total, percent, hasPlan: total > 0 };
+    return { completed: completedDueToday, total, percent, hasPlan: total > 0 };
   }, [completion, goalTracking]);
 
   // Generate personalized message

@@ -129,11 +129,14 @@ export async function getCompletionMetrics(
 
     const now = new Date();
     let startDate: Date;
+    let todayEnd: Date | null = null;
 
     switch (range) {
       case 'today':
         startDate = new Date(now);
         startDate.setHours(0, 0, 0, 0);
+        todayEnd = new Date(now);
+        todayEnd.setHours(23, 59, 59, 999);
         break;
       case 'week':
         startDate = new Date(now);
@@ -158,6 +161,19 @@ export async function getCompletionMetrics(
       },
     });
 
+    const completedDueTodayCount =
+      range === 'today' && todayEnd
+        ? await prisma.task.count({
+            where: {
+              userId,
+              status: 'completed',
+              archivedAt: null,
+              completedAt: { gte: startDate },
+              dueDate: { gte: startDate, lte: todayEnd },
+            },
+          })
+        : 0;
+
     // Count total tasks created in range
     const total = await prisma.task.count({
       where: {
@@ -179,6 +195,7 @@ export async function getCompletionMetrics(
 
     const response: CompletionMetricsResponse = {
       completedToday: range === 'today' ? completed : 0,
+      completedDueTodayCount: range === 'today' ? completedDueTodayCount : 0,
       completedThisWeek: range === 'week' ? completed : 0,
       totalActiveTasks,
       completionRate

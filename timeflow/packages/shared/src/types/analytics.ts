@@ -18,6 +18,8 @@ export interface GoalTrackingResponse {
 
 export interface CompletionMetricsResponse {
   completedToday: number;
+  /** Completed today among tasks due today (for today's plan progress %) */
+  completedDueTodayCount: number;
   completedThisWeek: number;
   totalActiveTasks: number;
   completionRate: number; // percentage 0-100

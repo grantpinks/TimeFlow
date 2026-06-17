@@ -32,7 +32,7 @@ describe('isOwnScheduledTaskEvent', () => {
     ).toBe(true);
   });
 
-  it('matches by TimeFlow summary', () => {
+  it('matches by exact TimeFlow time block when event id is missing', () => {
     expect(
       isOwnScheduledTaskEvent(
         {
@@ -44,6 +44,20 @@ describe('isOwnScheduledTaskEvent', () => {
         user
       )
     ).toBe(true);
+  });
+
+  it('does not match same title at a different time', () => {
+    expect(
+      isOwnScheduledTaskEvent(
+        {
+          summary: 'TF| Write report',
+          start: '2026-06-16T16:00:00.000Z',
+          end: '2026-06-16T17:00:00.000Z',
+        },
+        task,
+        user
+      )
+    ).toBe(false);
   });
 
   it('does not treat unrelated external events as own task', () => {

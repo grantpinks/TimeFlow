@@ -130,6 +130,22 @@ export async function updateTask(
     return null;
   }
 
+  // Idempotent PATCH — don't rewrite completedAt or trigger side effects
+  if (input.status === 'completed' && existing.status === 'completed') {
+    const { status: _status, ...rest } = input;
+    if (Object.keys(rest).length === 0) {
+      return prisma.task.findFirst({
+        where: { id: taskId, userId },
+        include: {
+          scheduledTask: true,
+          category: true,
+          identity: true,
+        },
+      });
+    }
+    return updateTask(taskId, userId, rest);
+  }
+
   // Handle calendar sync for status changes
   if (input.status) {
     // If changing from scheduled to unscheduled, delete calendar event
@@ -296,7 +312,15 @@ export async function completeTask(taskId: string, userId: string) {
   }
 
   if (existing.status === 'completed') {
-    return { task: existing, identityEngagement: null };
+    const task = await prisma.task.findFirst({
+      where: { id: taskId, userId },
+      include: {
+        scheduledTask: true,
+        category: true,
+        identity: true,
+      },
+    });
+    return { task, identityEngagement: null };
   }
 
   const task = await prisma.task.update({

@@ -812,7 +812,7 @@ type ConflictCheckUser = {
 export function isOwnScheduledTaskEvent(
   event: ConflictCheckEvent,
   task: ConflictCheckTask,
-  user: ConflictCheckUser | null
+  _user?: ConflictCheckUser | null
 ): boolean {
   const scheduled = task.scheduledTask;
   if (event.id && event.id === scheduled.eventId) {
@@ -825,15 +825,7 @@ export function isOwnScheduledTaskEvent(
     return true;
   }
 
-  const expected = buildTimeflowEventDetails({
-    title: task.title,
-    kind: 'task',
-    prefixEnabled: user?.eventPrefixEnabled,
-    prefix: user?.eventPrefix,
-    description: task.description,
-  });
-
-  return event.summary === expected.summary;
+  return false;
 }
 
 /**
@@ -859,10 +851,8 @@ export async function detectScheduleConflicts(
         scheduleLocked: false,
         scheduledTask: {
           isNot: null,
-          startDateTime: {
-            gte: rangeStart,
-            lte: rangeEnd,
-          },
+          startDateTime: { lt: rangeEnd },
+          endDateTime: { gt: rangeStart },
         },
       },
       include: { scheduledTask: true },
