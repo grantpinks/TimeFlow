@@ -38,6 +38,9 @@ export interface Task {
   sourceEmailUrl?: string | null;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string | null;
+  archivedAt?: string | null;
+  scheduleLocked?: boolean;
   scheduledTask?: ScheduledTaskInfo | null;
 }
 
@@ -84,6 +87,7 @@ export interface UpdateTaskRequest {
   identityId?: string | null;
   dueDate?: string;
   status?: TaskStatus;
+  scheduleLocked?: boolean;
   sourceEmailId?: string;
   sourceThreadId?: string;
   sourceEmailProvider?: string;

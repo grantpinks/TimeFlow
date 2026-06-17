@@ -112,6 +112,9 @@ model Task {
   sourceEmailUrl      String?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
+  completedAt         DateTime?
+  archivedAt          DateTime?
+  scheduleLocked      Boolean        @default(false)
   categoryId          String?
   identityId          String? // Optional link to Identity
   scheduledTask       ScheduledTask?
