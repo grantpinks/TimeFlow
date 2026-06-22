@@ -16,7 +16,9 @@ import { getGoogleConnectionStatus } from '../services/googleScopeService.js';
 import { extractRefreshToken } from '../utils/authTokenExtractor.js';
 import {
   ACCESS_COOKIE_NAME,
+  ACCESS_TOKEN_EXPIRES_IN,
   REFRESH_COOKIE_NAME,
+  REFRESH_TOKEN_EXPIRES_IN,
   buildAccessCookieOptions,
   buildRefreshCookieOptions,
   buildClearCookieOptions,
@@ -148,11 +150,11 @@ export async function handleGoogleCallback(
 
     const accessToken = await reply.jwtSign(
       { sub: user.id, type: 'access' },
-      { expiresIn: '15m' }
+      { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
     );
     const refreshToken = await reply.jwtSign(
       { sub: user.id, type: 'refresh' },
-      { expiresIn: '7d' }
+      { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
     );
 
     reply.setCookie(
@@ -217,11 +219,11 @@ export async function refreshToken(
 
     const accessToken = await reply.jwtSign(
       { sub: payload.sub, type: 'access' },
-      { expiresIn: '15m' }
+      { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
     );
     const newRefreshToken = await reply.jwtSign(
       { sub: payload.sub, type: 'refresh' },
-      { expiresIn: '7d' }
+      { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
     );
 
     reply.setCookie(

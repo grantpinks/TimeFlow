@@ -10,6 +10,7 @@ import * as SecureStore from 'expo-secure-store';
 const API_BASE = 'http://localhost:3001/api';
 
 const TOKEN_KEY = 'timeflow_token';
+const REFRESH_TOKEN_KEY = 'timeflow_refresh_token';
 
 /**
  * Get auth token from secure storage.
@@ -30,10 +31,21 @@ export async function setAuthToken(token: string): Promise<void> {
 }
 
 /**
+ * Store access and refresh tokens for long-lived mobile sessions.
+ */
+export async function setAuthTokens(accessToken: string, refreshToken?: string): Promise<void> {
+  await SecureStore.setItemAsync(TOKEN_KEY, accessToken);
+  if (refreshToken) {
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+  }
+}
+
+/**
  * Clear auth token.
  */
 export async function clearAuthToken(): Promise<void> {
   await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
 }
 
 /**
@@ -41,7 +53,50 @@ export async function clearAuthToken(): Promise<void> {
  */
 export async function isAuthenticated(): Promise<boolean> {
   const token = await getAuthToken();
-  return !!token;
+  if (token) return true;
+  return !!(await getRefreshToken());
+}
+
+async function getRefreshToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      await clearAuthToken();
+      return false;
+    }
+
+    const data = (await response.json()) as {
+      accessToken?: string;
+      refreshToken?: string;
+    };
+    if (!data.accessToken) {
+      await clearAuthToken();
+      return false;
+    }
+
+    await setAuthTokens(data.accessToken, data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -49,7 +104,8 @@ export async function isAuthenticated(): Promise<boolean> {
  */
 async function request<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  allowRefresh = true
 ): Promise<T> {
   const token = await getAuthToken();
 
@@ -66,6 +122,13 @@ async function request<T>(
     ...options,
     headers,
   });
+
+  if (response.status === 401 && allowRefresh) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      return request<T>(endpoint, options, false);
+    }
+  }
 
   if (!response.ok) {
     const error = (await response.json().catch(() => ({}))) as {

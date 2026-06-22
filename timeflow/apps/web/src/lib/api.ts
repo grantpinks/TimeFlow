@@ -136,6 +136,9 @@ export async function checkSession(): Promise<boolean> {
     const res = await fetch(`${API_BASE}/auth/session`, {
       credentials: CREDENTIALS_INIT,
     });
+    if (res.status === 401) {
+      return refreshAccessToken();
+    }
     if (!res.ok) return false;
     const data = (await res.json()) as { authenticated?: boolean };
     return data.authenticated === true;

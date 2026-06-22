@@ -4,8 +4,11 @@ export const ACCESS_COOKIE_NAME = 'tf_access';
 export const REFRESH_COOKIE_NAME = 'tf_refresh';
 
 const PROD_DOMAIN = '.time-flow.app';
-const ACCESS_MAX_AGE = 15 * 60;
-const REFRESH_MAX_AGE = 7 * 24 * 60 * 60;
+export const ACCESS_TOKEN_EXPIRES_IN = '24h';
+export const REFRESH_TOKEN_EXPIRES_IN = '30d';
+
+const ACCESS_MAX_AGE = 24 * 60 * 60;
+const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 
 function baseOptions(nodeEnv: string): CookieSerializeOptions {
   const isProd = nodeEnv === 'production';

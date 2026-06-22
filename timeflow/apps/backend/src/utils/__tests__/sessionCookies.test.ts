@@ -37,4 +37,9 @@ describe('sessionCookies', () => {
     const refresh = buildRefreshCookieOptions('production');
     expect(refresh.maxAge).toBeGreaterThan(access.maxAge!);
   });
+
+  it('keeps the access cookie valid through normal mobile browser backgrounding', () => {
+    const access = buildAccessCookieOptions('production');
+    expect(access.maxAge).toBeGreaterThanOrEqual(24 * 60 * 60);
+  });
 });

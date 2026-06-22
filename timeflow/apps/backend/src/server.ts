@@ -69,7 +69,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   await server.register(fastifyJwt, {
     secret: env.SESSION_SECRET,
     sign: {
-      expiresIn: '15m',
+      expiresIn: '24h',
     },
   });
 

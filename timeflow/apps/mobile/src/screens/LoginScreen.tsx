@@ -46,20 +46,21 @@ export function LoginScreen() {
         redirectUri
       )}`;
 
-      // Use AuthSession for better OAuth handling
-      const result = await AuthSession.startAsync({
-        authUrl,
-        returnUrl: redirectUri,
-      });
+      // Use the system browser so returning to the app preserves the OAuth result URL.
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
       if (result.type === 'success') {
         // Extract token from redirect URL
         const url = result.url || '';
         const tokenMatch = url.match(/token=([^&]+)/);
+        const refreshTokenMatch = url.match(/refreshToken=([^&]+)/);
 
         if (tokenMatch && tokenMatch[1]) {
           const token = decodeURIComponent(tokenMatch[1]);
-          await login(token);
+          const refreshToken = refreshTokenMatch?.[1]
+            ? decodeURIComponent(refreshTokenMatch[1])
+            : undefined;
+          await login(token, refreshToken);
         } else {
           // Fallback: try to get token from backend callback
           // The backend should redirect to our redirectUri with token
@@ -185,7 +186,6 @@ const styles = StyleSheet.create({
   googleIcon: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
     marginRight: 12,
     backgroundColor: '#fff',
     color: '#3b82f6',
