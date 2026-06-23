@@ -13,6 +13,7 @@ import {
   snapResizeDuration,
   type CalendarDropPreview,
 } from '@/app/calendar/calendarDragUtils';
+import { buildDueTaskCalendarWindow } from './calendarDueTaskEvents';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { resolveEventDisplayColor } from '@/lib/eventDisplayColor';
 import { useViewport } from '@/hooks/useViewport';
@@ -236,11 +237,8 @@ export function CalendarView({
           : undefined;
         const categoryColor = task.category?.color ?? categoryFromId?.color;
 
-        // Due date task appears as all-day item on the day it's due
-        // Use exclusive end convention: end time is next day at midnight (react-big-calendar standard)
-        const dueDate = normalizeCalendarDate(task.dueDate);
-        const dueDateEnd = new Date(dueDate);
-        dueDateEnd.setDate(dueDateEnd.getDate() + 1); // Exclusive end: next day at midnight
+        // Due date task appears as all-day item on the local day it's due.
+        const { start: dueDate, end: dueDateEnd } = buildDueTaskCalendarWindow(task.dueDate);
 
         calendarEvents.push({
           id: `due-task-${task.id}`,

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Input } from './Input';
 import { Label } from './Label';
 import { CalendarSlotPickerModal } from '@/components/scheduling/CalendarSlotPickerModal';
+import { formatLocalDateTimeInput } from './dueDatePickerUtils';
 
 interface DueDatePickerProps {
   value: string; // ISO date string (YYYY-MM-DD or YYYY-MM-DDTHH:mm)
@@ -198,9 +199,7 @@ export function DueDatePicker({
     const minutes = targetDate.getMinutes().toString().padStart(2, '0');
     setSelectedTime(`${hours}:${minutes}`);
 
-    // Format as YYYY-MM-DDTHH:mm
-    const isoString = targetDate.toISOString().slice(0, 16);
-    onChange(isoString);
+    onChange(formatLocalDateTimeInput(targetDate));
   };
 
   const handleTimeChange = (newTime: string) => {
@@ -256,8 +255,7 @@ export function DueDatePicker({
         return;
     }
 
-    const isoString = targetDate.toISOString().slice(0, 16);
-    onChange(isoString);
+    onChange(formatLocalDateTimeInput(targetDate));
   };
 
   const handleClear = () => {
@@ -566,8 +564,7 @@ export function DueDatePicker({
             if (showCustomPicker) {
               setCustomDate(`${y}-${m}-${d}`);
             }
-            const isoString = start.toISOString().slice(0, 16);
-            onChange(isoString);
+            onChange(formatLocalDateTimeInput(start));
             setTimePreset('custom-time');
             setShowCalendarPicker(false);
           }}
