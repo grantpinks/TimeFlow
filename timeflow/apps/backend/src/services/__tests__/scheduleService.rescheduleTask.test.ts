@@ -59,4 +59,41 @@ describe('scheduleService.rescheduleTask', () => {
       })
     );
   });
+
+  it('marks manually scheduled tasks overflowed when the block ends after the due date', async () => {
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-1',
+      defaultCalendarId: 'primary',
+    } as any);
+
+    vi.mocked(prisma.task.findFirst).mockResolvedValue({
+      id: 'task-1',
+      userId: 'user-1',
+      title: 'Due soon task',
+      description: null,
+      dueDate: new Date('2026-01-02T10:00:00.000Z'),
+      scheduledTask: null,
+    } as any);
+
+    vi.mocked(calendarService.createEvent).mockResolvedValue({
+      eventId: 'google-event-1',
+    });
+    vi.mocked(prisma.scheduledTask.create).mockResolvedValue({} as any);
+    vi.mocked(prisma.task.update).mockResolvedValue({} as any);
+
+    await rescheduleTask(
+      'user-1',
+      'task-1',
+      '2026-01-02T09:30:00.000Z',
+      '2026-01-02T10:30:00.000Z'
+    );
+
+    expect(prisma.scheduledTask.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          overflowedDeadline: true,
+        }),
+      })
+    );
+  });
 });

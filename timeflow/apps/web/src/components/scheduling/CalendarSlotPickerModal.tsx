@@ -185,12 +185,19 @@ export function CalendarSlotPickerModal({
     setSelectedStart(start);
   };
 
+  useEffect(() => {
+    if (!selectedStart) return;
+    if (isSlotBlocked(startOfDay(selectedStart), selectedStart.getHours(), selectedStart.getMinutes())) {
+      setSelectedStart(null);
+    }
+  }, [blockedEvents, durationMinutes, selectedStart]);
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/35 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-5xl">
-        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
           <div>
             <h3 className="text-base font-semibold text-slate-900">Pick a time on your calendar</h3>
             <p className="text-xs text-slate-600">{title} • {durationMinutes} min</p>
@@ -204,7 +211,7 @@ export function CalendarSlotPickerModal({
           </button>
         </div>
 
-        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
           <div className="flex gap-2">
             <button
               type="button"
@@ -254,7 +261,7 @@ export function CalendarSlotPickerModal({
           </div>
         </div>
 
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 overflow-y-auto flex-1 min-h-0">
           {error && (
             <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
               {error}
@@ -444,7 +451,7 @@ export function CalendarSlotPickerModal({
           </div>
         </div>
 
-        <div className="px-4 py-4 border-t border-slate-200 bg-slate-50/50">
+        <div className="px-4 py-4 border-t border-slate-200 bg-slate-50/50 flex-shrink-0">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="text-sm font-medium text-slate-700">
               {selectedStart && selectedEnd ? (
@@ -534,6 +541,9 @@ function FragmentRow({
           <button
             key={`${day.toISOString()}-${hour}-${minute}`}
             type="button"
+            aria-label={`${blocked ? 'Busy' : 'Select'} ${formatDayLabel(day)} at ${hour
+              .toString()
+              .padStart(2, '0')}:${minute.toString().padStart(2, '0')}`}
             disabled={blocked || loading}
             onClick={() => onSelect(day, hour, minute)}
             className={`border-b border-slate-200 relative transition-colors ${

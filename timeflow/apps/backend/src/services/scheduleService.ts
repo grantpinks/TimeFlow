@@ -662,9 +662,9 @@ export async function rescheduleTask(
     throw new Error('Task not found');
   }
 
-  // Calculate if scheduled time is after due date
-  const scheduledStart = new Date(startDateTime);
-  const overflowedDeadline = task.dueDate ? scheduledStart > task.dueDate : false;
+  // Match the scheduling engine: a task overflows when the block finishes after its due date.
+  const scheduledEnd = new Date(endDateTime);
+  const overflowedDeadline = task.dueDate ? scheduledEnd > task.dueDate : false;
 
   if (task.scheduledTask) {
     // Task is already scheduled - update existing schedule

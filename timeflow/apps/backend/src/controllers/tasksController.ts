@@ -7,6 +7,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as tasksService from '../services/tasksService.js';
 import { z } from 'zod';
+import { parseTaskDueDateInput } from '../utils/taskDueDate.js';
 
 const TASK_STATUS_VALUES = ['unscheduled', 'scheduled', 'completed'] as const;
 
@@ -31,7 +32,6 @@ function formatZodError(error: z.ZodError): string {
  * - ISO datetime strings (2025-12-04T17:00:00Z)
  * - Date + time without seconds from DueDatePicker / datetime-local (2025-12-04T17:00)
  * - Plain date strings (2025-12-04)
- * Converts plain dates to ISO datetime at start of day UTC.
  */
 const flexibleDateString = z
   .string()
@@ -51,16 +51,7 @@ const flexibleDateString = z
       return false;
     },
     { message: 'Invalid date format. Use YYYY-MM-DD or ISO datetime' }
-  )
-  .transform((val) => {
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(val)) {
-      return val;
-    }
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val)) {
-      return `${val}:00`;
-    }
-    return `${val}T00:00:00.000Z`;
-  });
+  );
 
 const createTaskSchema = z.object({
   title: z.string().trim().min(1, 'Title is required'),
@@ -180,7 +171,7 @@ export async function createTask(
     durationMinutes,
     priority,
     categoryId,
-    dueDate: dueDate ? new Date(dueDate) : undefined,
+    dueDate: dueDate ? parseTaskDueDateInput(dueDate, user.timeZone || 'UTC') : undefined,
     sourceEmailId,
     sourceThreadId,
     sourceEmailProvider,
@@ -249,7 +240,7 @@ export async function updateTask(
     priority,
     categoryId,
     identityId,
-    dueDate: dueDate ? new Date(dueDate) : undefined,
+    dueDate: dueDate ? parseTaskDueDateInput(dueDate, user.timeZone || 'UTC') : undefined,
     status,
     scheduleLocked,
     sourceEmailId,

@@ -114,6 +114,7 @@ export interface CalendarEventItem {
   // Due date task properties
   isDueTask?: boolean; // True for unscheduled tasks shown in all-day section
   dueDate?: Date; // The actual due date for tasks
+  dueTaskDurationMinutes?: number; // Real task duration; all-day bar is only visual
   priority?: 1 | 2 | 3; // Task priority for styling
 }
 
@@ -249,6 +250,7 @@ export function CalendarView({
           allDay: true, // Show in all-day section
           isDueTask: true, // Mark as unscheduled due task
           dueDate: dueDate,
+          dueTaskDurationMinutes: task.durationMinutes,
           priority: task.priority,
           isTask: true,
           taskId: task.id,
@@ -763,7 +765,9 @@ function DraggableEvent({
       task: event.isTask
         ? {
             id: event.taskId,
-            durationMinutes: (event.end.getTime() - event.start.getTime()) / 60000,
+            durationMinutes: event.isDueTask && event.dueTaskDurationMinutes
+              ? event.dueTaskDurationMinutes
+              : (event.end.getTime() - event.start.getTime()) / 60000,
           }
         : null,
       calendarEvent: {
@@ -780,7 +784,7 @@ function DraggableEvent({
   });
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    if (!event.isTask || !onResize) return;
+    if (!event.isTask || event.isDueTask || !onResize) return;
     e.stopPropagation();
     e.preventDefault();
     setIsResizing(true);
@@ -990,7 +994,7 @@ function DraggableEvent({
           {event.title}
         </div>
       </div>
-      {event.isTask && onResize && !isDragging && (isHovered || isResizing) && (
+      {event.isTask && !event.isDueTask && onResize && !isDragging && (isHovered || isResizing) && (
         <div
           className="absolute bottom-0 left-0 right-0 h-3 bg-white/25 hover:bg-white/45 cursor-ns-resize flex items-center justify-center"
           onMouseDown={handleResizeStart}

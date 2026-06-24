@@ -59,6 +59,39 @@ import { useToast } from '@/hooks/useToast';
 
 /** Only droppables under the pointer count — never pick a "nearest" slot when releasing outside the grid. */
 const calendarCollisionDetection = pointerWithin;
+const UTC_MIDNIGHT_DUE_DATE_PATTERN = /^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.000)?Z$/;
+
+const formatDateTimeLocal = (value?: string | null) => {
+  if (!value) return '';
+
+  const date = new Date(value);
+  const pad = (num: number) => num.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours()
+  )}:${pad(date.getMinutes())}`;
+};
+
+const formatDueDateTimeLocal = (value?: string | null) => {
+  if (!value) return '';
+
+  const utcMidnightMarker = UTC_MIDNIGHT_DUE_DATE_PATTERN.exec(value);
+  if (utcMidnightMarker) {
+    return `${utcMidnightMarker[1]}T00:00`;
+  }
+
+  return formatDateTimeLocal(value);
+};
+
+const getDueDateUpdateValue = (originalValue: string | null | undefined, editedValue: string) => {
+  if (!editedValue) return undefined;
+
+  const utcMidnightMarker = originalValue ? UTC_MIDNIGHT_DUE_DATE_PATTERN.exec(originalValue) : null;
+  if (utcMidnightMarker && editedValue === `${utcMidnightMarker[1]}T00:00`) {
+    return utcMidnightMarker[1];
+  }
+
+  return editedValue;
+};
 
 export default function CalendarPage() {
   const reduceMotion = useReducedMotion();
@@ -1057,21 +1090,13 @@ export default function CalendarPage() {
       });
       return;
     }
-    const formatDateTimeLocal = (value?: string | null) => {
-      if (!value) return '';
-      const date = new Date(value);
-      const pad = (num: number) => num.toString().padStart(2, '0');
-      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
-        date.getHours()
-      )}:${pad(date.getMinutes())}`;
-    };
     setEditingTask(task);
     setEditingState({
       title: task.title,
       description: task.description ?? '',
       durationMinutes: task.durationMinutes,
       priority: task.priority as 1 | 2 | 3,
-      dueDate: task.dueDate ? task.dueDate.slice(0, 10) : '',
+      dueDate: formatDueDateTimeLocal(task.dueDate),
       categoryId: task.categoryId ?? '',
       scheduledStart: formatDateTimeLocal(task.scheduledTask?.startDateTime ?? null),
       scheduledEnd: formatDateTimeLocal(task.scheduledTask?.endDateTime ?? null),
@@ -1112,7 +1137,7 @@ export default function CalendarPage() {
         description: editingState.description.trim() || undefined,
         durationMinutes: editingState.durationMinutes,
         priority: editingState.priority,
-        dueDate: editingState.dueDate || undefined,
+        dueDate: getDueDateUpdateValue(editingTask.dueDate, editingState.dueDate),
         categoryId: editingState.categoryId || undefined,
       });
       await refreshCalendar({ silent: true });
@@ -2130,7 +2155,7 @@ export default function CalendarPage() {
                   <div>
                     <Label>Due Date</Label>
                     <Input
-                      type="date"
+                      type="datetime-local"
                       value={editingState.dueDate}
                       onChange={(e) =>
                         setEditingState((prev) => prev && { ...prev, dueDate: e.target.value })
