@@ -168,6 +168,16 @@ export function ConnectedCalendarsPanel({
   const [hiddenExpanded, setHiddenExpanded] = useState(false);
   const [collapsedAccounts, setCollapsedAccounts] = useState<Record<string, boolean>>({});
   const [resyncingId, setResyncingId] = useState<string | null>(null);
+  const [calendarsCollapsed, setCalendarsCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem('timeflow_calendars_collapsed');
+    return stored === 'true';
+  });
+
+  // Persist collapse state to localStorage
+  useEffect(() => {
+    localStorage.setItem('timeflow_calendars_collapsed', String(calendarsCollapsed));
+  }, [calendarsCollapsed]);
 
   if (loading) {
     return <p className="text-xs text-slate-500">Loading connected calendars…</p>;
@@ -201,8 +211,36 @@ export function ConnectedCalendarsPanel({
   let globalCalendarIndex = 0;
 
   return (
-    <div className="space-y-3">
-      {accounts.map((account) => {
+    <div>
+      {/* My calendars header */}
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setCalendarsCollapsed(!calendarsCollapsed)}
+          className="flex items-center gap-2 text-left"
+        >
+          <svg
+            className={`h-4 w-4 text-slate-500 transition-transform ${calendarsCollapsed ? '' : 'rotate-90'}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          </svg>
+          <h3 className="text-base font-semibold text-slate-900">My calendars</h3>
+        </button>
+        <Link
+          href="/settings"
+          className="text-sm font-medium text-primary-600 hover:text-primary-700"
+        >
+          Manage
+        </Link>
+      </div>
+
+      {/* Calendars list - only show when not collapsed */}
+      {!calendarsCollapsed && (
+        <div className="space-y-3">
+          {accounts.map((account) => {
         const calendars = account.calendars.filter((cal) => cal.listedInSidebar !== false);
         if (calendars.length === 0) return null;
 
@@ -350,6 +388,8 @@ export function ConnectedCalendarsPanel({
               ))}
             </ul>
           )}
+        </div>
+      )}
         </div>
       )}
     </div>
