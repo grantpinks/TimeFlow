@@ -38,7 +38,7 @@ describe('Schedule Validation Service', () => {
       id: 'user-1',
       email: 'test@example.com',
       name: 'Test User',
-      timezone: 'America/New_York',
+      timeZone: 'America/New_York',
       wakeTime: '08:00',
       sleepTime: '23:00',
       defaultTaskDuration: 30,
@@ -136,6 +136,24 @@ describe('Schedule Validation Service', () => {
   });
 
   describe('Wake/Sleep Validation', () => {
+    it('selects the Prisma timeZone field when checking wake and sleep bounds', async () => {
+      vi.mocked(prisma.task.findMany).mockResolvedValue([{ id: 'task-1' } as any]);
+
+      const blocks: ApplyScheduleBlock[] = [
+        { taskId: 'task-1', start: '2025-12-24T19:00:00Z', end: '2025-12-24T20:00:00Z' },
+      ];
+
+      await validateSchedule('user-1', blocks);
+
+      expect(prisma.user.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            timeZone: true,
+          }),
+        })
+      );
+    });
+
     it('rejects blocks before wake time', async () => {
       // User: wake 08:00, sleep 23:00, timezone America/New_York (EST, UTC-5)
       const blocks: ApplyScheduleBlock[] = [

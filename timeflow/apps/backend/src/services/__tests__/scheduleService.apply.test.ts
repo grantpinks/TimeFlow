@@ -36,7 +36,7 @@ describe('applyScheduleBlocks', () => {
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-1',
-      timezone: 'America/New_York', // Use proper IANA timezone
+      timeZone: 'America/New_York', // Use proper IANA timezone
       wakeTime: '08:00',
       sleepTime: '22:00',
       defaultTaskDurationMinutes: 30,
@@ -88,7 +88,7 @@ describe('applyScheduleBlocks', () => {
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-1',
-      timezone: 'America/New_York',
+      timeZone: 'America/New_York',
       wakeTime: '08:00',
       sleepTime: '22:00',
       defaultTaskDurationMinutes: 30,

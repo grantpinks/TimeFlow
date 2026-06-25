@@ -6,7 +6,7 @@ import * as api from '@/lib/api';
 
 export function useStudioSummary(enabled = true) {
   const [summary, setSummary] = useState<StudioSummaryResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {

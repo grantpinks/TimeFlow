@@ -170,7 +170,7 @@ async function validateWakeSleepBounds(
     select: { 
       wakeTime: true, 
       sleepTime: true, 
-      timezone: true 
+      timeZone: true 
     },
   });
   
@@ -186,8 +186,8 @@ async function validateWakeSleepBounds(
   
   blocks.forEach((block, index) => {
     try {
-      const startLocal = convertToUserTime(block.start, user.timezone);
-      const endLocal = convertToUserTime(block.end, user.timezone);
+      const startLocal = convertToUserTime(block.start, user.timeZone);
+      const endLocal = convertToUserTime(block.end, user.timeZone);
       
       const wakeMinutes = timeToMinutes(user.wakeTime);
       const sleepMinutes = timeToMinutes(user.sleepTime);

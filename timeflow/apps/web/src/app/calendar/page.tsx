@@ -54,6 +54,7 @@ import { track, hashHabitId } from '@/lib/analytics';
 import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelatedTasksModal';
 import { buildPostHabitFollowUp, type PostHabitFollowUp } from '@/lib/postHabitRelatedTasks';
 import { useIdentityProgress } from '@/hooks/useIdentityProgress';
+import { useStudioSummary } from '@/hooks/useStudioSummary';
 import { ToastContainer } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
 
@@ -122,6 +123,11 @@ export default function CalendarPage() {
     prevEnd: Date;
   } | null>(null);
   const { refresh: refreshIdentityProgress } = useIdentityProgress(undefined, isAuthenticated);
+  const {
+    summary: habitStudioSummary,
+    loading: habitStudioLoading,
+    refresh: refreshHabitStudioSummary,
+  } = useStudioSummary(Boolean(user?.id));
   const [habits, setHabits] = useState<Habit[]>([]);
   const [habitRelatedFollowUp, setHabitRelatedFollowUp] = useState<PostHabitFollowUp | null>(null);
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
@@ -843,6 +849,7 @@ export default function CalendarPage() {
       await Promise.all([
         fetchExternalEvents({ silent: true }),
         fetchHabitInsights(),
+        refreshHabitStudioSummary(),
       ]);
       setMessage({
         type: 'success',
@@ -877,7 +884,10 @@ export default function CalendarPage() {
       });
 
       const result = await api.applySchedule(applyBlocks);
-      await refreshCalendar({ silent: true });
+      await Promise.all([
+        refreshCalendar({ silent: true }),
+        refreshHabitStudioSummary(),
+      ]);
 
       const taskCount = result.tasksScheduled ?? 0;
       const habitCount = result.habitsScheduled ?? 0;
@@ -983,7 +993,11 @@ export default function CalendarPage() {
 
     try {
       await api.completeHabitInstance(scheduledHabitId, actualDurationMinutes);
-      void Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
+      void Promise.all([
+        fetchExternalEvents({ silent: true }),
+        fetchHabitInsights(),
+        refreshHabitStudioSummary(),
+      ]);
 
       // Track completion (privacy-safe: hashed ID only, no title)
       if (habitInstance) {
@@ -1027,7 +1041,11 @@ export default function CalendarPage() {
 
       patchHabitCompletion(scheduledHabitId, false);
       await api.undoHabitInstance(scheduledHabitId);
-      void Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
+      void Promise.all([
+        fetchExternalEvents({ silent: true }),
+        fetchHabitInsights(),
+        refreshHabitStudioSummary(),
+      ]);
 
       // Track undo (privacy-safe: hashed ID only)
       if (habitInstance) {
@@ -1059,6 +1077,7 @@ export default function CalendarPage() {
       await Promise.all([
         fetchExternalEvents({ silent: true }),
         fetchHabitInsights(),
+        refreshHabitStudioSummary(),
       ]);
 
       // Track skip (privacy-safe: hashed ID + preset reason code only)
@@ -1463,7 +1482,11 @@ export default function CalendarPage() {
 
         // Refresh calendar data (non-critical - don't block on failure)
         try {
-          await Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
+          await Promise.all([
+            fetchExternalEvents({ silent: true }),
+            fetchHabitInsights(),
+            refreshHabitStudioSummary(),
+          ]);
         } catch (refreshError) {
           console.error('Habit scheduled successfully, but refresh failed:', refreshError);
           // Not critical - calendar will show stale data until next refresh
@@ -1542,7 +1565,11 @@ export default function CalendarPage() {
           window.start.toISOString(),
           window.end.toISOString()
         );
-        void Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
+        void Promise.all([
+          fetchExternalEvents({ silent: true }),
+          fetchHabitInsights(),
+          refreshHabitStudioSummary(),
+        ]);
         if (preferInstant && snap?.scheduledHabitId === details.scheduledHabitId) {
           const prevStart = snap.prevStart;
           const prevEnd = snap.prevEnd;
@@ -1558,7 +1585,11 @@ export default function CalendarPage() {
                   prevStart.toISOString(),
                   prevEnd.toISOString()
                 );
-                await Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
+                await Promise.all([
+                  fetchExternalEvents({ silent: true }),
+                  fetchHabitInsights(),
+                  refreshHabitStudioSummary(),
+                ]);
               },
             },
           });
@@ -1578,7 +1609,11 @@ export default function CalendarPage() {
           if (prog?.status === 'failed') {
             throw new Error(prog.error || 'Could not schedule habit');
           }
-          await Promise.all([fetchExternalEvents({ silent: true }), fetchHabitInsights()]);
+          await Promise.all([
+            fetchExternalEvents({ silent: true }),
+            fetchHabitInsights(),
+            refreshHabitStudioSummary(),
+          ]);
           showToast('Habit scheduled', 'success', { durationMs: 5000 });
         } else {
           setPreviewTask(null);
@@ -1882,7 +1917,12 @@ export default function CalendarPage() {
                 </section>
 
                 <section className="px-3 py-2">
-                  <CalendarHabitsPanel habits={habits} />
+                  <CalendarHabitsPanel
+                    habits={habits}
+                    studioSummary={habitStudioSummary}
+                    loadingSummary={habitStudioLoading}
+                    timeZone={user?.timeZone}
+                  />
                 </section>
 
                 <MeetingManagementPanel />

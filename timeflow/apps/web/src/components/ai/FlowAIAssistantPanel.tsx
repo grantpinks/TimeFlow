@@ -16,6 +16,7 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 import SchedulePreviewCard from '../SchedulePreviewCard';
 import * as api from '@/lib/api';
 import { getAssistantQuickActionChips } from '@/lib/assistantQuickActions';
+import { friendlyApplyError } from '@/lib/friendlyApplyError';
 import type { ChatMessage as ChatMessageType, Task, SchedulePreview, ApplyScheduleBlock, Habit } from '@timeflow/shared';
 
 interface FlowAIAssistantPanelProps {
@@ -247,8 +248,8 @@ export function FlowAIAssistantPanel({
         stack: err instanceof Error ? err.stack : undefined,
         schedulePreview,
       });
-      const errorMsg = err instanceof Error ? err.message : 'Failed to apply schedule';
-      setApplyError(errorMsg);
+      const rawMessage = err instanceof Error && err.message ? err.message : '';
+      setApplyError(friendlyApplyError(rawMessage));
       console.error('Failed to apply schedule:', err);
     } finally {
       setApplying(false);
