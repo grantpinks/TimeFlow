@@ -1,18 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../config/prisma.js', () => ({
-  prisma: {
-    user: { findUnique: vi.fn() },
-    habit: { findMany: vi.fn(), findFirst: vi.fn() },
-    scheduledTask: { findMany: vi.fn() },
-    scheduledHabit: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
-    habitCompletion: { findMany: vi.fn(), findFirst: vi.fn() },
-  },
+  prisma: (() => {
+    const prismaMock = {
+      $executeRaw: vi.fn(),
+      $transaction: vi.fn(async (callback: any) => callback(prismaMock)),
+      user: { findUnique: vi.fn() },
+      habit: { findMany: vi.fn(), findFirst: vi.fn() },
+      scheduledTask: { findMany: vi.fn(), findFirst: vi.fn() },
+      scheduledHabit: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+      habitCompletion: { findMany: vi.fn(), findFirst: vi.fn() },
+    };
+    return prismaMock;
+  })(),
 }));
 
 vi.mock('../googleCalendarService.js', () => ({
   getEvents: vi.fn(),
   createEvent: vi.fn(),
+  deleteEvent: vi.fn(),
 }));
 
 import { prisma } from '../../config/prisma.js';
@@ -45,11 +51,17 @@ describe('habitSuggestionService', () => {
       },
     ] as any);
     vi.mocked(prisma.scheduledTask.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.scheduledTask.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([]);
     vi.mocked(prisma.scheduledHabit.findFirst).mockResolvedValue(null);
+    vi.mocked(prisma.scheduledHabit.create).mockResolvedValue({ id: 'reservation-1' } as any);
+    vi.mocked(prisma.scheduledHabit.update).mockResolvedValue({ id: 'scheduled-1' } as any);
+    vi.mocked(prisma.scheduledHabit.delete).mockResolvedValue({ id: 'reservation-1' } as any);
     vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
     vi.mocked(prisma.habitCompletion.findFirst).mockResolvedValue(null);
     vi.mocked(calendarService.getEvents).mockResolvedValue([]);
+    vi.mocked(calendarService.createEvent).mockResolvedValue({ eventId: 'event-1' });
+    vi.mocked(calendarService.deleteEvent).mockResolvedValue(undefined);
   });
 
   it('does not suggest a habit already scheduled on that local day', async () => {
@@ -219,6 +231,62 @@ describe('habitSuggestionService', () => {
     expect(calendarService.createEvent).not.toHaveBeenCalled();
   });
 
+  it('rejects accepting a suggestion that overlaps a scheduled task', async () => {
+    vi.mocked(prisma.habit.findFirst).mockResolvedValue({
+      id: 'habit-1',
+      userId: 'user-1',
+      title: 'Run',
+      description: null,
+      frequency: 'daily',
+      daysOfWeek: [],
+      durationMinutes: 30,
+    } as any);
+    vi.mocked(prisma.scheduledTask.findFirst).mockResolvedValue({ id: 'scheduled-task-1' } as any);
+
+    await expect(
+      acceptSuggestion(
+        'user-1',
+        'habit-1',
+        '2026-06-25T09:00:00-05:00',
+        '2026-06-25T09:30:00-05:00'
+      )
+    ).rejects.toThrow('overlaps a scheduled task');
+    expect(prisma.scheduledTask.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          startDateTime: expect.objectContaining({ lt: new Date('2026-06-25T09:30:00-05:00') }),
+          endDateTime: expect.objectContaining({ gt: new Date('2026-06-25T09:00:00-05:00') }),
+        }),
+      })
+    );
+    expect(calendarService.createEvent).not.toHaveBeenCalled();
+  });
+
+  it('rejects accepting a suggestion that overlaps another scheduled habit', async () => {
+    vi.mocked(prisma.habit.findFirst).mockResolvedValue({
+      id: 'habit-1',
+      userId: 'user-1',
+      title: 'Run',
+      description: null,
+      frequency: 'daily',
+      daysOfWeek: [],
+      durationMinutes: 30,
+    } as any);
+    vi.mocked(prisma.scheduledHabit.findFirst)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'scheduled-habit-2' } as any);
+
+    await expect(
+      acceptSuggestion(
+        'user-1',
+        'habit-1',
+        '2026-06-25T09:00:00-05:00',
+        '2026-06-25T09:30:00-05:00'
+      )
+    ).rejects.toThrow('overlaps another scheduled habit');
+    expect(calendarService.createEvent).not.toHaveBeenCalled();
+  });
+
   it('rejects accepting a suggestion with an invalid end before creating a calendar event', async () => {
     vi.mocked(prisma.habit.findFirst).mockResolvedValue({
       id: 'habit-1',
@@ -275,8 +343,8 @@ describe('habitSuggestionService', () => {
     } as any);
     vi.mocked(prisma.scheduledHabit.findFirst).mockResolvedValue(null);
     vi.mocked(prisma.habitCompletion.findFirst).mockResolvedValue(null);
-    vi.mocked(calendarService.createEvent).mockResolvedValue({ eventId: 'event-1' });
-    vi.mocked(prisma.scheduledHabit.create).mockResolvedValue({ id: 'scheduled-1' } as any);
+    vi.mocked(prisma.scheduledHabit.create).mockResolvedValue({ id: 'reservation-1' } as any);
+    vi.mocked(prisma.scheduledHabit.update).mockResolvedValue({ id: 'scheduled-1' } as any);
 
     await expect(
       acceptSuggestion(
@@ -291,5 +359,76 @@ describe('habitSuggestionService', () => {
         where: expect.objectContaining({ status: 'completed' }),
       })
     );
+    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prisma.$executeRaw).toHaveBeenCalled();
+    expect(prisma.scheduledHabit.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          eventId: expect.stringContaining('pending:habit-1:'),
+          status: 'pending',
+        }),
+      })
+    );
+    expect(prisma.scheduledHabit.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'reservation-1' },
+        data: { eventId: 'event-1', status: 'scheduled' },
+      })
+    );
+  });
+
+  it('deletes the Google event and reservation when finalizing the reservation fails', async () => {
+    vi.mocked(prisma.habit.findFirst).mockResolvedValue({
+      id: 'habit-1',
+      userId: 'user-1',
+      title: 'Run',
+      description: null,
+      frequency: 'daily',
+      daysOfWeek: [],
+      durationMinutes: 30,
+    } as any);
+    vi.mocked(prisma.scheduledHabit.create).mockResolvedValue({ id: 'reservation-1' } as any);
+    vi.mocked(calendarService.createEvent).mockResolvedValue({ eventId: 'event-1' });
+    vi.mocked(prisma.scheduledHabit.update).mockRejectedValue(new Error('DB update failed'));
+
+    await expect(
+      acceptSuggestion(
+        'user-1',
+        'habit-1',
+        '2026-06-25T09:00:00-05:00',
+        '2026-06-25T09:30:00-05:00'
+      )
+    ).rejects.toThrow('DB update failed');
+    expect(calendarService.deleteEvent).toHaveBeenCalledWith('user-1', 'primary', 'event-1');
+    expect(prisma.scheduledHabit.delete).toHaveBeenCalledWith({ where: { id: 'reservation-1' } });
+  });
+
+  it('keeps the reservation as a blocker when Google cleanup fails after finalization fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(prisma.habit.findFirst).mockResolvedValue({
+      id: 'habit-1',
+      userId: 'user-1',
+      title: 'Run',
+      description: null,
+      frequency: 'daily',
+      daysOfWeek: [],
+      durationMinutes: 30,
+    } as any);
+    vi.mocked(prisma.scheduledHabit.create).mockResolvedValue({ id: 'reservation-1' } as any);
+    vi.mocked(calendarService.createEvent).mockResolvedValue({ eventId: 'event-1' });
+    vi.mocked(prisma.scheduledHabit.update).mockRejectedValue(new Error('DB update failed'));
+    vi.mocked(calendarService.deleteEvent).mockRejectedValue(new Error('Google cleanup failed'));
+
+    await expect(
+      acceptSuggestion(
+        'user-1',
+        'habit-1',
+        '2026-06-25T09:00:00-05:00',
+        '2026-06-25T09:30:00-05:00'
+      )
+    ).rejects.toThrow('DB update failed');
+    expect(calendarService.deleteEvent).toHaveBeenCalledWith('user-1', 'primary', 'event-1');
+    expect(prisma.scheduledHabit.delete).not.toHaveBeenCalled();
+    consoleErrorSpy.mockRestore();
   });
 });

@@ -244,36 +244,79 @@ export async function acceptSuggestion(
     throw new Error('Habit is not due on the selected date');
   }
 
-  const [existingScheduled, completedToday] = await Promise.all([
-    prisma.scheduledHabit.findFirst({
-      where: {
-        userId,
-        habitId: habit.id,
-        startDateTime: { gte: selectedRange.start, lt: selectedRange.end },
-      },
-      select: { id: true },
-    }),
-    prisma.habitCompletion.findFirst({
-      where: {
-        userId,
-        habitId: habit.id,
-        status: 'completed',
-        completedAt: { gte: selectedRange.start, lt: selectedRange.end },
-      },
-      select: { id: true },
-    }),
-  ]);
-
-  if (existingScheduled) {
-    throw new Error('Habit is already scheduled for the selected date');
-  }
-
-  if (completedToday) {
-    throw new Error('Habit is already completed for the selected date');
-  }
-
-  // Create Google Calendar event
   const calendarId = user.defaultCalendarId || 'primary';
+  const reservation = await prisma.$transaction(async (tx: any) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`habit-suggestion:${userId}`}))`;
+
+    const selectedStart = selectedWindow.start.toJSDate();
+    const selectedEnd = selectedWindow.end.toJSDate();
+
+    const [existingScheduled, completedToday, overlappingTask, overlappingHabit] = await Promise.all([
+      tx.scheduledHabit.findFirst({
+        where: {
+          userId,
+          habitId: habit.id,
+          startDateTime: { gte: selectedRange.start, lt: selectedRange.end },
+        },
+        select: { id: true },
+      }),
+      tx.habitCompletion.findFirst({
+        where: {
+          userId,
+          habitId: habit.id,
+          status: 'completed',
+          completedAt: { gte: selectedRange.start, lt: selectedRange.end },
+        },
+        select: { id: true },
+      }),
+      tx.scheduledTask.findFirst({
+        where: {
+          task: { userId },
+          startDateTime: { lt: selectedEnd },
+          endDateTime: { gt: selectedStart },
+        },
+        select: { id: true },
+      }),
+      tx.scheduledHabit.findFirst({
+        where: {
+          userId,
+          startDateTime: { lt: selectedEnd },
+          endDateTime: { gt: selectedStart },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    if (existingScheduled) {
+      throw new Error('Habit is already scheduled for the selected date');
+    }
+
+    if (completedToday) {
+      throw new Error('Habit is already completed for the selected date');
+    }
+
+    if (overlappingTask) {
+      throw new Error('Habit suggestion overlaps a scheduled task');
+    }
+
+    if (overlappingHabit) {
+      throw new Error('Habit suggestion overlaps another scheduled habit');
+    }
+
+    return tx.scheduledHabit.create({
+      data: {
+        habitId: habit.id,
+        userId,
+        provider: 'google',
+        calendarId,
+        eventId: `pending:${habit.id}:${selectedWindow.start.toISO()}`,
+        startDateTime: new Date(start),
+        endDateTime: new Date(end),
+        status: 'pending',
+      },
+    });
+  });
+
   const habitEvent = buildTimeflowEventDetails({
     title: habit.title,
     kind: 'habit',
@@ -281,26 +324,41 @@ export async function acceptSuggestion(
     prefix: user.eventPrefix,
     description: habit.description,
   });
-  const { eventId } = await calendarService.createEvent(userId, calendarId, {
-    summary: habitEvent.summary,
-    description: habitEvent.description || undefined,
-    start,
-    end,
-  });
 
-  // Save ScheduledHabit record
-  const scheduledHabit = await prisma.scheduledHabit.create({
-    data: {
-      habitId: habit.id,
-      userId,
-      provider: 'google',
-      calendarId,
-      eventId,
-      startDateTime: new Date(start),
-      endDateTime: new Date(end),
-      status: 'scheduled',
-    },
-  });
+  let eventId: string | null = null;
+  try {
+    const createdEvent = await calendarService.createEvent(userId, calendarId, {
+      summary: habitEvent.summary,
+      description: habitEvent.description || undefined,
+      start,
+      end,
+    });
+    eventId = createdEvent.eventId;
 
-  return scheduledHabit;
+    return await prisma.scheduledHabit.update({
+      where: { id: reservation.id },
+      data: { eventId, status: 'scheduled' },
+    });
+  } catch (error) {
+    let shouldDeleteReservation = true;
+
+    if (eventId) {
+      try {
+        await calendarService.deleteEvent(userId, calendarId, eventId);
+      } catch (cleanupError) {
+        console.error('[HabitSuggestionService] Failed to delete orphaned habit event', cleanupError);
+        shouldDeleteReservation = false;
+      }
+    }
+
+    if (shouldDeleteReservation) {
+      try {
+        await prisma.scheduledHabit.delete({ where: { id: reservation.id } });
+      } catch (cleanupError) {
+        console.error('[HabitSuggestionService] Failed to delete failed habit reservation', cleanupError);
+      }
+    }
+
+    throw error;
+  }
 }
