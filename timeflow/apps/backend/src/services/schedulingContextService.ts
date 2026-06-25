@@ -6,6 +6,7 @@
 
 import { prisma } from '../config/prisma.js';
 import { DateTime } from 'luxon';
+import { isHabitDueOnDate } from '@timeflow/shared';
 
 export interface SchedulingContext {
   unscheduledHabitsCount: number;
@@ -30,7 +31,7 @@ export async function getSchedulingContext(userId: string): Promise<SchedulingCo
     where: { userId, isActive: true },
   });
 
-  const scheduledForTomorrow = await prisma.scheduledHabit.count({
+  const scheduledForTomorrow = await prisma.scheduledHabit.findMany({
     where: {
       userId,
       startDateTime: {
@@ -38,9 +39,16 @@ export async function getSchedulingContext(userId: string): Promise<SchedulingCo
         lt: tomorrow.plus({ days: 1 }).toJSDate(),
       },
     },
+    select: { habitId: true },
   });
 
-  const unscheduledHabitsCount = Math.max(0, activeHabits.length - scheduledForTomorrow);
+  const dueTomorrowHabits = activeHabits.filter((habit) =>
+    isHabitDueOnDate(habit, tomorrow.toJSDate(), timeZone)
+  );
+  const scheduledTomorrowHabitIds = new Set(scheduledForTomorrow.map((s) => s.habitId));
+  const unscheduledHabitsCount = dueTomorrowHabits.filter(
+    (habit) => !scheduledTomorrowHabitIds.has(habit.id)
+  ).length;
 
   // Determine next relevant day
   const dayOfWeek = now.weekday; // 1=Monday, 7=Sunday
@@ -52,7 +60,7 @@ export async function getSchedulingContext(userId: string): Promise<SchedulingCo
     nextRelevantDay = 'next week';
   }
 
-  // Check for urgent habits (daily habits not completed today)
+  // Check for urgent habits due today and not completed today
   const completionsToday = await prisma.habitCompletion.findMany({
     where: {
       habit: { userId },
@@ -65,8 +73,10 @@ export async function getSchedulingContext(userId: string): Promise<SchedulingCo
   });
 
   const completedHabitIds = new Set(completionsToday.map((c) => c.habitId));
-  const dailyHabits = activeHabits.filter((h) => h.frequency === 'daily');
-  const urgentHabits = dailyHabits.filter((h) => !completedHabitIds.has(h.id)).length;
+  const dueTodayHabits = activeHabits.filter((habit) =>
+    isHabitDueOnDate(habit, today.toJSDate(), timeZone)
+  );
+  const urgentHabits = dueTodayHabits.filter((h) => !completedHabitIds.has(h.id)).length;
 
   // TODO: Implement calendar density check (requires Google Calendar API call)
   const calendarDensity: 'light' | 'moderate' | 'busy' = 'moderate';

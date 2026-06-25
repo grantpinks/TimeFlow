@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../config/prisma.js', () => ({
   prisma: {
@@ -25,9 +25,11 @@ import { getHabitStudioSummary } from '../habitStudioSummaryService.js';
 describe('getHabitStudioSummary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-25T15:00:00.000Z')); // Thursday
     vi.mocked(prisma.user.findUnique).mockResolvedValue({ timeZone: 'UTC' } as any);
     vi.mocked(prisma.habit.findMany).mockResolvedValue([
-      { id: 'h1', identityId: 'id-1', frequency: 'daily' },
+      { id: 'h1', identityId: 'id-1', frequency: 'daily', daysOfWeek: [] },
     ] as any);
     vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
     vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([]);
@@ -57,6 +59,10 @@ describe('getHabitStudioSummary', () => {
     } as any);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('returns one row per active habit and strip counts', async () => {
     const result = await getHabitStudioSummary('user-1');
     expect(result.rows).toHaveLength(1);
@@ -64,5 +70,22 @@ describe('getHabitStudioSummary', () => {
     expect(result.strip.unscheduledWeekCount).toBe(2);
     expect(result.strip.dueTodayCount).toBe(1);
     expect(result.weekProgressByIdentityId['id-1']).toEqual({ completed: 2, target: 4 });
+  });
+
+  it('counts weekly and custom habits as due only on configured local days', async () => {
+    vi.mocked(prisma.habit.findMany).mockResolvedValue([
+      { id: 'daily', identityId: null, frequency: 'daily', daysOfWeek: [] },
+      { id: 'weekly-due', identityId: null, frequency: 'weekly', daysOfWeek: ['thu'] },
+      { id: 'weekly-off', identityId: null, frequency: 'weekly', daysOfWeek: ['fri'] },
+      { id: 'custom-due', identityId: null, frequency: 'custom', daysOfWeek: ['thu'] },
+      { id: 'custom-off', identityId: null, frequency: 'custom', daysOfWeek: ['fri'] },
+    ] as any);
+    vi.mocked(getHabitInsights).mockResolvedValue({
+      habits: [],
+    } as any);
+
+    const result = await getHabitStudioSummary('user-1');
+
+    expect(result.strip.dueTodayCount).toBe(3);
   });
 });

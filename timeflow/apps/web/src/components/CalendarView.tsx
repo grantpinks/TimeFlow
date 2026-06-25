@@ -17,6 +17,7 @@ import { buildDueTaskCalendarWindow } from './calendarDueTaskEvents';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { resolveEventDisplayColor } from '@/lib/eventDisplayColor';
 import { useViewport } from '@/hooks/useViewport';
+import type { CalendarHabitSuggestionEvent } from '@/app/calendar/habitSuggestionEvents';
 
 // Setup luxon localizer
 const localizer = luxonLocalizer(DateTime);
@@ -59,11 +60,14 @@ interface EventCategorization {
 interface CalendarViewProps {
   tasks: Task[];
   externalEvents: CalendarEvent[];
+  habitSuggestionEvents?: CalendarHabitSuggestionEvent[];
+  acceptingHabitSuggestionKey?: string | null;
   eventCategorizations?: Record<string, EventCategorization>;
   categories?: Category[];
   habitStreakMap?: Map<string, { current: number; atRisk: boolean }>;
   scheduledHabitInstances?: Array<{ scheduledHabitId: string; habitId: string }>;
   selectedDate?: Date;
+  onDateChange?: (date: Date) => void;
   dropPreview?: CalendarDropPreview | null;
   isDraggingActive?: boolean; // Disable animations during drag for better performance
   onSelectSlot?: (slotInfo: { start: Date; end: Date }) => void;
@@ -72,6 +76,7 @@ interface CalendarViewProps {
   onResizeEvent?: (taskId: string, start: Date, end: Date) => Promise<void>;
   onCompleteTask?: (taskId: string) => Promise<void>;
   onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => Promise<void>;
+  onAcceptHabitSuggestion?: (suggestion: CalendarHabitSuggestionEvent) => Promise<void>;
   onUndoHabit?: (scheduledHabitId: string) => Promise<void>;
   onSkipHabit?: (scheduledHabitId: string, reasonCode: HabitSkipReason) => Promise<void>;
   onHabitReschedule?: (scheduledHabitId: string, start: Date, end: Date) => Promise<void>;
@@ -106,6 +111,9 @@ export interface CalendarEventItem {
   isHabit?: boolean;
   scheduledHabitId?: string;
   eventId?: string;
+  isHabitSuggestion?: boolean;
+  habitSuggestion?: CalendarHabitSuggestionEvent;
+  habitId?: string;
   attendees?: { email: string }[];
   // Completion tracking
   sourceType?: 'task' | 'habit' | 'external';
@@ -121,11 +129,14 @@ export interface CalendarEventItem {
 export function CalendarView({
   tasks,
   externalEvents,
+  habitSuggestionEvents = [],
+  acceptingHabitSuggestionKey,
   eventCategorizations,
   categories,
   habitStreakMap,
   scheduledHabitInstances,
   selectedDate,
+  onDateChange,
   dropPreview,
   isDraggingActive = false,
   onSelectSlot,
@@ -134,6 +145,7 @@ export function CalendarView({
   onResizeEvent,
   onCompleteTask,
   onCompleteHabit,
+  onAcceptHabitSuggestion,
   onUndoHabit,
   onSkipHabit,
   onHabitReschedule,
@@ -305,8 +317,26 @@ export function CalendarView({
       });
     }
 
+    for (const suggestion of habitSuggestionEvents) {
+      calendarEvents.push({
+        id: suggestion.id,
+        title: suggestion.title,
+        start: suggestion.start,
+        end: suggestion.end,
+        layoutEnd: toExclusiveLayoutEnd(suggestion.start, suggestion.end),
+        isTask: false,
+        isHabit: false,
+        isHabitSuggestion: true,
+        habitSuggestion: suggestion,
+        habitId: suggestion.habitId,
+        sourceType: 'external',
+        sourceId: suggestion.habitId,
+        categoryColor: habitCategory?.color ?? '#8B5CF6',
+      });
+    }
+
     return calendarEvents;
-  }, [tasks, externalEvents, eventCategorizations, categories]);
+  }, [tasks, externalEvents, eventCategorizations, categories, habitSuggestionEvents]);
 
   const eventStyleGetter = useCallback((event: CalendarEventItem) => {
     // Due tasks in all-day section get priority-based colors
@@ -331,6 +361,22 @@ export function CalendarView({
           color: '#1e293b',
           fontWeight: '500',
           fontSize: '0.875rem',
+        },
+      };
+    }
+
+    if (event.isHabitSuggestion) {
+      const accentColor = event.categoryColor || '#8B5CF6';
+
+      return {
+        className: 'habit-suggestion-event',
+        style: {
+          backgroundColor: `${accentColor}18`,
+          borderRadius: '6px',
+          border: `1px dashed ${accentColor}`,
+          borderLeft: `5px solid ${accentColor}`,
+          color: '#4c1d95',
+          fontWeight: '500',
         },
       };
     }
@@ -398,7 +444,8 @@ export function CalendarView({
 
   const handleNavigate = useCallback((newDate: Date) => {
     setDate(newDate);
-  }, []);
+    onDateChange?.(newDate);
+  }, [onDateChange]);
 
   const handleViewChange = useCallback((newView: View) => {
     setView(newView);
@@ -429,6 +476,10 @@ export function CalendarView({
 
       // Check if this is a habit event
       const isHabit = event.sourceType === 'habit';
+      if (event.isHabitSuggestion) {
+        onSelectEvent?.(event);
+        return;
+      }
       const scheduledHabitId = isHabit ? event.sourceId : undefined;
       const habitCompletion = isHabit && event.isCompleted ? { status: 'completed' as const } : undefined;
 
@@ -619,6 +670,8 @@ export function CalendarView({
                 onResize={onResizeEvent}
                 onCompleteTask={onCompleteTask}
                 onCompleteHabit={onCompleteHabit}
+                onAcceptHabitSuggestion={onAcceptHabitSuggestion}
+                acceptingHabitSuggestionKey={acceptingHabitSuggestionKey}
               />
             ),
             timeSlotWrapper: TimeSlotWrapper,
@@ -711,6 +764,8 @@ function DraggableEvent({
   onHoverEnd,
   onCompleteTask,
   onCompleteHabit,
+  onAcceptHabitSuggestion,
+  acceptingHabitSuggestionKey,
 }: {
   event: CalendarEventItem;
   prefersReducedMotion: boolean;
@@ -719,10 +774,13 @@ function DraggableEvent({
   onHoverEnd?: () => void;
   onCompleteTask?: (taskId: string) => Promise<void>;
   onCompleteHabit?: (scheduledHabitId: string, actualDurationMinutes?: number) => Promise<void>;
+  onAcceptHabitSuggestion?: (suggestion: CalendarHabitSuggestionEvent) => Promise<void>;
+  acceptingHabitSuggestionKey?: string | null;
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isAcceptingSuggestion, setIsAcceptingSuggestion] = useState(false);
   const [localCompleted, setLocalCompleted] = useState(Boolean(event.isCompleted));
   const [resizePreviewEnd, setResizePreviewEnd] = useState<Date | null>(null);
   const [isNarrow, setIsNarrow] = useState(false);
@@ -757,7 +815,7 @@ function DraggableEvent({
   // Disable drag for: non-task/non-habit events, all-day events (except due tasks), and while resizing
   // All-day events should not be draggable as converting them to timed events would break them
   // Exception: Due tasks (isDueTask) in all-day section ARE draggable for scheduling
-  const isDragDisabled = (!event.isTask && !event.isHabit) || isResizing || (event.allDay && !event.isDueTask);
+  const isDragDisabled = event.isHabitSuggestion || (!event.isTask && !event.isHabit) || isResizing || (event.allDay && !event.isDueTask);
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
@@ -847,7 +905,7 @@ function DraggableEvent({
   const previewDuration = resizePreviewEnd
     ? Math.max(15, (resizePreviewEnd.getTime() - event.start.getTime()) / (1000 * 60))
     : originalDuration;
-  const canDrag = event.isTask || event.isHabit;
+  const canDrag = !event.isHabitSuggestion && (event.isTask || event.isHabit);
 
   const style: React.CSSProperties = {
     opacity: isDragging ? 0 : 1, // Completely hide original event during drag - only show DragOverlay
@@ -940,10 +998,31 @@ function DraggableEvent({
     }
   }, [event, localCompleted, isCompleting, onCompleteTask, onCompleteHabit]);
 
-  const showCheckbox = !isNarrow && (isHovered || localCompleted);
+  const canCompleteEvent =
+    (event.sourceType === 'task' && Boolean(event.taskId)) ||
+    (event.sourceType === 'habit' && Boolean(event.scheduledHabitId));
+  const showCheckbox = !event.isHabitSuggestion && canCompleteEvent && !isNarrow && (isHovered || localCompleted);
 
-  const textColorClass = localCompleted ? 'text-slate-600' : 'text-white';
+  const textColorClass = event.isHabitSuggestion ? 'text-violet-900' : localCompleted ? 'text-slate-600' : 'text-white';
   const dragHandleColorClass = localCompleted ? 'text-slate-600 hover:text-slate-800' : 'text-white/90 hover:text-white';
+
+  const suggestionKey = event.habitSuggestion
+    ? `${event.habitSuggestion.suggestion.habitId}-${event.habitSuggestion.suggestion.start}`
+    : null;
+  const isSuggestionAccepting = isAcceptingSuggestion || (Boolean(suggestionKey) && acceptingHabitSuggestionKey === suggestionKey);
+
+  const handleAcceptSuggestion = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!event.habitSuggestion || !onAcceptHabitSuggestion || isSuggestionAccepting) return;
+
+    setIsAcceptingSuggestion(true);
+    try {
+      await onAcceptHabitSuggestion(event.habitSuggestion);
+    } finally {
+      setIsAcceptingSuggestion(false);
+    }
+  }, [event.habitSuggestion, isSuggestionAccepting, onAcceptHabitSuggestion]);
 
   // Compact mode for narrow/overlapping events
   const showDragHandle = canDrag && !isNarrow; // Hide drag handle when narrow
@@ -993,7 +1072,32 @@ function DraggableEvent({
         >
           {event.title}
         </div>
+        {event.isHabitSuggestion && !isVeryShortEvent && (
+          <div className="mt-0.5 flex items-center gap-1">
+            <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
+              Suggested
+            </span>
+            {event.habitSuggestion?.suggestion.reason && !isNarrow && (
+              <span className="truncate text-[10px] text-violet-700/80">
+                {event.habitSuggestion.suggestion.reason}
+              </span>
+            )}
+          </div>
+        )}
       </div>
+      {event.isHabitSuggestion && event.habitSuggestion && onAcceptHabitSuggestion && (
+        <button
+          type="button"
+          onClick={handleAcceptSuggestion}
+          disabled={isSuggestionAccepting}
+          className={`absolute bottom-1 right-1 z-20 rounded-full bg-violet-600 font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60 ${
+            isNarrow ? 'h-5 w-5 text-[12px]' : 'px-2 py-0.5 text-[10px]'
+          }`}
+          aria-label={`Schedule ${event.habitSuggestion.suggestion.habit.title}`}
+        >
+          {isSuggestionAccepting ? (isNarrow ? '…' : 'Scheduling...') : isNarrow ? '+' : 'Schedule'}
+        </button>
+      )}
       {event.isTask && !event.isDueTask && onResize && !isDragging && (isHovered || isResizing) && (
         <div
           className="absolute bottom-0 left-0 right-0 h-3 bg-white/25 hover:bg-white/45 cursor-ns-resize flex items-center justify-center"

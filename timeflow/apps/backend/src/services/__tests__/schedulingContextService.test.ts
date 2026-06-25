@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { getSchedulingContext } from '../schedulingContextService.js';
 import { prisma } from '../../config/prisma.js';
 
@@ -13,6 +13,7 @@ vi.mock('../../config/prisma.js', () => ({
     },
     scheduledHabit: {
       count: vi.fn(),
+      findMany: vi.fn(),
     },
     habitCompletion: {
       findMany: vi.fn(),
@@ -25,6 +26,10 @@ describe('schedulingContextService', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('should return context with unscheduled habits count', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-123',
@@ -32,14 +37,15 @@ describe('schedulingContextService', () => {
     } as any);
 
     vi.mocked(prisma.habit.findMany).mockResolvedValue([
-      { id: 'habit-1' },
-      { id: 'habit-2' },
-      { id: 'habit-3' },
-      { id: 'habit-4' },
-      { id: 'habit-5' },
+      { id: 'habit-1', frequency: 'daily', daysOfWeek: [] },
+      { id: 'habit-2', frequency: 'daily', daysOfWeek: [] },
+      { id: 'habit-3', frequency: 'daily', daysOfWeek: [] },
+      { id: 'habit-4', frequency: 'daily', daysOfWeek: [] },
+      { id: 'habit-5', frequency: 'daily', daysOfWeek: [] },
     ] as any);
 
     vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(0);
+    vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([]);
     vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
 
     const context = await getSchedulingContext('user-123');
@@ -69,6 +75,7 @@ describe('schedulingContextService', () => {
 
     vi.mocked(prisma.habit.findMany).mockResolvedValue([habit] as any);
     vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(0);
+    vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([]);
     vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
 
     const context = await getSchedulingContext('user-123');
@@ -83,12 +90,16 @@ describe('schedulingContextService', () => {
     } as any);
 
     vi.mocked(prisma.habit.findMany).mockResolvedValue([
-      { id: 'habit-1' },
-      { id: 'habit-2' },
+      { id: 'habit-1', frequency: 'daily', daysOfWeek: [] },
+      { id: 'habit-2', frequency: 'daily', daysOfWeek: [] },
     ] as any);
 
     // All habits have scheduled instances for the next 7 days
     vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(2);
+    vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([
+      { habitId: 'habit-1' },
+      { habitId: 'habit-2' },
+    ] as any);
     vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
 
     const context = await getSchedulingContext('user-123');
@@ -104,6 +115,7 @@ describe('schedulingContextService', () => {
 
     vi.mocked(prisma.habit.findMany).mockResolvedValue([]);
     vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(0);
+    vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([]);
     vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
 
     const context = await getSchedulingContext('user-123');
@@ -119,15 +131,37 @@ describe('schedulingContextService', () => {
     } as any);
 
     vi.mocked(prisma.habit.findMany).mockResolvedValue([
-      { id: 'habit-1' },
+      { id: 'habit-1', frequency: 'daily', daysOfWeek: [] },
     ] as any);
 
     vi.mocked(prisma.scheduledHabit.count).mockResolvedValue(0);
+    vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([]);
     vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
 
     const context = await getSchedulingContext('user-123');
 
-    // nextRelevantDay should be one of: 'today', 'tomorrow', 'next week'
-    expect(['today', 'tomorrow', 'next week']).toContain(context.nextRelevantDay);
+    expect(['this week', 'tomorrow', 'next week']).toContain(context.nextRelevantDay);
+  });
+
+  it('counts only habits due tomorrow as unscheduled', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-24T15:00:00.000Z')); // Wednesday; tomorrow is Thursday
+
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      id: 'user-123',
+      timeZone: 'America/Chicago',
+    } as any);
+    vi.mocked(prisma.habit.findMany).mockResolvedValue([
+      { id: 'daily', frequency: 'daily', daysOfWeek: [] },
+      { id: 'weekly-due', frequency: 'weekly', daysOfWeek: ['thu'] },
+      { id: 'weekly-off', frequency: 'weekly', daysOfWeek: ['fri'] },
+      { id: 'custom-due', frequency: 'custom', daysOfWeek: ['thu'] },
+    ] as any);
+    vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([{ habitId: 'daily' }] as any);
+    vi.mocked(prisma.habitCompletion.findMany).mockResolvedValue([]);
+
+    const context = await getSchedulingContext('user-123');
+
+    expect(context.unscheduledHabitsCount).toBe(2);
   });
 });

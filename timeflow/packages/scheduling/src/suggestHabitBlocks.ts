@@ -89,13 +89,20 @@ export function suggestHabitBlocks(
  * Determine if a given day should schedule the habit based on frequency.
  */
 function isHabitDay(habit: HabitInput, day: DateTime): boolean {
-  if (habit.frequency === 'daily' || habit.frequency === 'custom') {
+  if (habit.frequency === 'daily') {
     return true;
   }
 
+  const selectedDays = habit.daysOfWeek?.map((d) => d.trim().toLowerCase().slice(0, 3)) ?? [];
+
   if (habit.frequency === 'weekly') {
     const dayCode = day.toFormat('ccc').toLowerCase(); // mon, tue, wed...
-    return habit.daysOfWeek?.map((d) => d.toLowerCase()).includes(dayCode) ?? false;
+    return selectedDays.includes(dayCode);
+  }
+
+  if (habit.frequency === 'custom') {
+    const dayCode = day.toFormat('ccc').toLowerCase();
+    return selectedDays.length === 0 || selectedDays.includes(dayCode);
   }
 
   return false;

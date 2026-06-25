@@ -10,6 +10,7 @@ import type {
   BestWindow,
   StreakMetrics,
 } from '@timeflow/shared';
+import { isHabitDueOnDate } from '@timeflow/shared';
 import * as habitRecommendationService from './habitRecommendationService.js';
 
 /**
@@ -259,7 +260,7 @@ function calculateStreak(
   const yesterdayCompleted = completedDates.has(subtractDays(today, 1));
 
   // Check if today should be scheduled based on habit frequency
-  const isTodayScheduled = isHabitScheduledForDate(referenceDate, frequency, daysOfWeek, userTz);
+  const isTodayScheduled = isHabitDueOnDate({ frequency, daysOfWeek }, referenceDate, userTz);
 
   // Only mark at risk if today is actually a scheduled day
   const atRisk = isTodayScheduled && !todayCompleted && (currentStreak > 0 || yesterdayCompleted);
@@ -270,34 +271,6 @@ function calculateStreak(
     lastCompleted,
     atRisk,
   };
-}
-
-/**
- * Check if a habit should be scheduled on a given date based on its frequency
- */
-function isHabitScheduledForDate(
-  date: Date,
-  frequency: string,
-  daysOfWeek: string[],
-  userTz: string
-): boolean {
-  // Daily habits are scheduled every day
-  if (frequency === 'daily') {
-    return true;
-  }
-
-  // Weekly habits are only scheduled on specified days
-  if (frequency === 'weekly' && daysOfWeek.length > 0) {
-    const dayOfWeek = date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      timeZone: userTz
-    }).toLowerCase(); // 'mon', 'tue', etc.
-
-    return daysOfWeek.includes(dayOfWeek);
-  }
-
-  // For custom frequency or unknown, assume it's scheduled (conservative approach)
-  return true;
 }
 
 /**

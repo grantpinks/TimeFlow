@@ -169,4 +169,20 @@ describe('suggestHabitBlocks', () => {
     expect(scheduledDays).not.toContain('2025-12-01'); // Monday skipped due to invalid bounds
     expect(scheduledDays).toContain('2025-12-02'); // Tuesday scheduled normally
   });
+
+  it('respects selected days for custom-frequency habits', () => {
+    const habits: HabitInput[] = [
+      {
+        id: 'custom-habit',
+        durationMinutes: 30,
+        frequency: 'custom',
+        daysOfWeek: ['tue', 'fri'],
+      },
+    ];
+
+    const suggestions = suggestHabitBlocks(habits, [], prefs, rangeStart, rangeEnd);
+    const scheduledDays = suggestions.map((s) => s.start.slice(0, 10));
+
+    expect(scheduledDays).toEqual(['2025-12-02', '2025-12-05']);
+  });
 });

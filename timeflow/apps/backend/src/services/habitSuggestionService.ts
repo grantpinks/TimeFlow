@@ -11,7 +11,8 @@ import {
   type HabitSuggestionBlock,
   type UserPreferences,
 } from '@timeflow/scheduling';
-import type { DailyScheduleConfig } from '@timeflow/shared';
+import { isHabitDueOnDate, type DailyScheduleConfig } from '@timeflow/shared';
+import { DateTime } from 'luxon';
 import { prisma } from '../config/prisma.js';
 import * as calendarService from './googleCalendarService.js';
 import { buildTimeflowEventDetails } from '../utils/timeflowEventPrefix.js';
@@ -25,6 +26,54 @@ export interface EnrichedHabitSuggestion extends HabitSuggestionBlock {
     title: string;
     description: string | null;
     durationMinutes: number;
+  };
+}
+
+function localDayKey(value: string | Date, timeZone: string): string {
+  const dateTime =
+    value instanceof Date
+      ? DateTime.fromJSDate(value, { zone: timeZone })
+      : DateTime.fromISO(value, { setZone: true }).setZone(timeZone);
+
+  if (!dateTime.isValid) {
+    throw new Error('Invalid date');
+  }
+
+  return dateTime.toISODate()!;
+}
+
+function localDayRange(value: string, timeZone: string): { start: Date; end: Date } {
+  const dateTime = DateTime.fromISO(value, { setZone: true }).setZone(timeZone);
+  if (!dateTime.isValid) {
+    throw new Error('Invalid date');
+  }
+
+  return {
+    start: dateTime.startOf('day').toJSDate(),
+    end: dateTime.plus({ days: 1 }).startOf('day').toJSDate(),
+  };
+}
+
+function parseSuggestionWindow(start: string, end: string, timeZone: string): { start: DateTime; end: DateTime } {
+  const parsedStart = DateTime.fromISO(start, { setZone: true }).setZone(timeZone);
+  const parsedEnd = DateTime.fromISO(end, { setZone: true }).setZone(timeZone);
+
+  if (!parsedStart.isValid || !parsedEnd.isValid) {
+    throw new Error('Invalid date');
+  }
+
+  if (parsedEnd <= parsedStart) {
+    throw new Error('Suggestion end must be after start');
+  }
+
+  return { start: parsedStart, end: parsedEnd };
+}
+
+function localDaySpan(start: string, end: string, timeZone: string): { start: Date; end: Date } {
+  const window = parseSuggestionWindow(start, end, timeZone);
+  return {
+    start: window.start.startOf('day').toJSDate(),
+    end: window.end.startOf('day').plus({ days: 1 }).toJSDate(),
   };
 }
 
@@ -65,10 +114,50 @@ export async function getHabitSuggestionsForUser(
     include: { task: true },
   });
 
+  const preferences: UserPreferences = {
+    timeZone: user.timeZone || 'UTC',
+    wakeTime: user.wakeTime || '08:00',
+    sleepTime: user.sleepTime || '23:00',
+    dailySchedule: (user.dailyScheduleConstraints as DailyScheduleConfig | null) || (user.dailySchedule as DailyScheduleConfig | null) || null,
+  };
+
+  const unavailableRange = localDaySpan(dateRangeStart, dateRangeEnd, preferences.timeZone);
+
+  const scheduledHabits = await prisma.scheduledHabit.findMany({
+    where: {
+      userId,
+      startDateTime: { lt: new Date(dateRangeEnd) },
+      endDateTime: { gt: new Date(dateRangeStart) },
+    },
+    select: { habitId: true, startDateTime: true, endDateTime: true },
+  });
+
+  const scheduledHabitDays = await prisma.scheduledHabit.findMany({
+    where: {
+      userId,
+      startDateTime: { gte: unavailableRange.start, lt: unavailableRange.end },
+    },
+    select: { habitId: true, startDateTime: true, endDateTime: true },
+  });
+
+  const habitCompletions = await prisma.habitCompletion.findMany({
+    where: {
+      userId,
+      status: 'completed',
+      completedAt: { gte: unavailableRange.start, lt: unavailableRange.end },
+    },
+    select: { habitId: true, completedAt: true },
+  });
+
   const scheduledTaskEvents: SchedulerEvent[] = scheduledTasks.map((st) => ({
     id: st.id,
     start: st.startDateTime.toISOString(),
     end: st.endDateTime.toISOString(),
+  }));
+  const scheduledHabitEvents: SchedulerEvent[] = scheduledHabits.map((scheduledHabit) => ({
+    id: `${scheduledHabit.habitId}-${scheduledHabit.startDateTime.toISOString()}`,
+    start: scheduledHabit.startDateTime.toISOString(),
+    end: scheduledHabit.endDateTime.toISOString(),
   }));
 
   const schedulerEvents: SchedulerEvent[] = [
@@ -78,6 +167,7 @@ export async function getHabitSuggestionsForUser(
       end: e.end,
     })),
     ...scheduledTaskEvents,
+    ...scheduledHabitEvents,
   ];
 
   const habitInputs: HabitInput[] = habits.map((habit) => ({
@@ -88,19 +178,26 @@ export async function getHabitSuggestionsForUser(
     preferredTimeOfDay: (habit.preferredTimeOfDay as HabitInput['preferredTimeOfDay']) || undefined,
   }));
 
-  const preferences: UserPreferences = {
-    timeZone: user.timeZone || 'UTC',
-    wakeTime: user.wakeTime || '08:00',
-    sleepTime: user.sleepTime || '23:00',
-    dailySchedule: (user.dailyScheduleConstraints as DailyScheduleConfig | null) || (user.dailySchedule as DailyScheduleConfig | null) || null,
-  };
-
   const suggestions = suggestHabitBlocks(habitInputs, schedulerEvents, preferences, dateRangeStart, dateRangeEnd);
+  const unavailableHabitDays = new Set<string>();
+  for (const scheduledHabit of scheduledHabitDays) {
+    unavailableHabitDays.add(
+      `${scheduledHabit.habitId}:${localDayKey(scheduledHabit.startDateTime, preferences.timeZone)}`
+    );
+  }
+  for (const completion of habitCompletions) {
+    unavailableHabitDays.add(
+      `${completion.habitId}:${localDayKey(completion.completedAt, preferences.timeZone)}`
+    );
+  }
 
   // Enrich suggestions with habit details
   const habitMap = new Map(habits.map((h) => [h.id, h]));
 
-  return suggestions.map((suggestion) => {
+  return suggestions.filter((suggestion) => {
+    const dayKey = localDayKey(suggestion.start, preferences.timeZone);
+    return !unavailableHabitDays.has(`${suggestion.habitId}:${dayKey}`);
+  }).map((suggestion) => {
     const habit = habitMap.get(suggestion.habitId);
     if (!habit) {
       throw new Error(`Habit ${suggestion.habitId} not found in habit map`);
@@ -137,6 +234,42 @@ export async function acceptSuggestion(
   });
   if (!habit) {
     throw new Error('Habit not found');
+  }
+
+  const timeZone = user.timeZone || 'UTC';
+  const selectedWindow = parseSuggestionWindow(start, end, timeZone);
+  const selectedRange = localDayRange(start, timeZone);
+
+  if (!isHabitDueOnDate(habit, selectedWindow.start.toJSDate(), timeZone)) {
+    throw new Error('Habit is not due on the selected date');
+  }
+
+  const [existingScheduled, completedToday] = await Promise.all([
+    prisma.scheduledHabit.findFirst({
+      where: {
+        userId,
+        habitId: habit.id,
+        startDateTime: { gte: selectedRange.start, lt: selectedRange.end },
+      },
+      select: { id: true },
+    }),
+    prisma.habitCompletion.findFirst({
+      where: {
+        userId,
+        habitId: habit.id,
+        status: 'completed',
+        completedAt: { gte: selectedRange.start, lt: selectedRange.end },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  if (existingScheduled) {
+    throw new Error('Habit is already scheduled for the selected date');
+  }
+
+  if (completedToday) {
+    throw new Error('Habit is already completed for the selected date');
   }
 
   // Create Google Calendar event

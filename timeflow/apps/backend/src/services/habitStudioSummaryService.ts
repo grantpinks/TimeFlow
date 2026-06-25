@@ -4,7 +4,7 @@
 
 import { DateTime } from 'luxon';
 import { prisma } from '../config/prisma.js';
-import type { HabitRowStatus, StudioSummaryResponse } from '@timeflow/shared';
+import { isHabitDueOnDate, type HabitRowStatus, type StudioSummaryResponse } from '@timeflow/shared';
 import { getHabitInsights } from './habitInsightsService.js';
 import { getSchedulingContext } from './schedulingContextService.js';
 
@@ -27,7 +27,7 @@ export async function getHabitStudioSummary(userId: string): Promise<StudioSumma
     await Promise.all([
       prisma.habit.findMany({
         where: { userId, isActive: true },
-        select: { id: true, identityId: true, frequency: true },
+        select: { id: true, identityId: true, frequency: true, daysOfWeek: true },
       }),
       getHabitInsights(userId, 14),
       getSchedulingContext(userId),
@@ -81,7 +81,7 @@ export async function getHabitStudioSummary(userId: string): Promise<StudioSumma
       }
     }
 
-    if (habit.frequency === 'daily' && !completedToday) {
+    if (isHabitDueOnDate(habit, todayStart.toJSDate(), timeZone) && !completedToday) {
       dueTodayCount += 1;
     }
 
