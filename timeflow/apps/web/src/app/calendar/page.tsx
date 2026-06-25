@@ -26,7 +26,9 @@ import { ConnectedCalendarsPanel } from '@/components/calendar/ConnectedCalendar
 import { CalendarConnectBanner } from '@/components/calendar/CalendarConnectBanner';
 import {
   isConnectBannerDismissed,
+  areHabitRecommendationsEnabled,
   setConnectBannerDismissed,
+  setHabitRecommendationsEnabled,
 } from '@/lib/calendarSidebarPrefs';
 import { isValidCalendarColor } from '@/lib/calendarColorPresets';
 import { Button, Input, Select, Textarea, Label, LoadingSpinner } from '@/components/ui';
@@ -49,6 +51,7 @@ import type {
   ScheduledBlock,
   ApplyScheduleBlock,
   Habit,
+  EnrichedHabitSuggestion,
 } from '@timeflow/shared';
 import { track, hashHabitId } from '@/lib/analytics';
 import { PostHabitRelatedTasksModal } from '@/components/habits/PostHabitRelatedTasksModal';
@@ -57,6 +60,10 @@ import { useIdentityProgress } from '@/hooks/useIdentityProgress';
 import { useStudioSummary } from '@/hooks/useStudioSummary';
 import { ToastContainer } from '@/components/Toast';
 import { useToast } from '@/hooks/useToast';
+import {
+  buildHabitSuggestionCalendarEvents,
+  type CalendarHabitSuggestionEvent,
+} from './habitSuggestionEvents';
 
 /** Only droppables under the pointer count — never pick a "nearest" slot when releasing outside the grid. */
 const calendarCollisionDetection = pointerWithin;
@@ -133,6 +140,10 @@ export default function CalendarPage() {
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([]);
   const [scheduledHabitInstances, setScheduledHabitInstances] = useState<ScheduledHabitInstance[]>([]);
   const [habitInsights, setHabitInsights] = useState<HabitInsightsSummary | null>(null);
+  const [habitSuggestions, setHabitSuggestions] = useState<EnrichedHabitSuggestion[]>([]);
+  const [habitSuggestionsLoading, setHabitSuggestionsLoading] = useState(false);
+  const [showHabitRecommendations, setShowHabitRecommendations] = useState(true);
+  const [acceptingHabitSuggestionKey, setAcceptingHabitSuggestionKey] = useState<string | null>(null);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [calendarReady, setCalendarReady] = useState(false);
   const [syncingCount, setSyncingCount] = useState(0);
@@ -140,6 +151,11 @@ export default function CalendarPage() {
   const [connectedAccounts, setConnectedAccounts] = useState<api.ConnectedAccount[]>([]);
   const [connectedAccountsLoading, setConnectedAccountsLoading] = useState(true);
   const [connectBannerDismissed, setConnectBannerDismissedState] = useState(false);
+  const [calendarsCollapsed, setCalendarsCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const stored = localStorage.getItem('timeflow_calendars_collapsed');
+    return stored === 'true';
+  });
   const [eventCategorizations, setEventCategorizations] = useState<Record<string, api.EventCategorization>>({});
   const [categories, setCategories] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
   const [scheduling, setScheduling] = useState(false);
@@ -233,6 +249,43 @@ export default function CalendarPage() {
     }
   }, [user?.id]);
 
+  const fetchHabitSuggestions = useCallback(async (options?: { silent?: boolean }): Promise<boolean> => {
+    if (!user?.id) {
+      setHabitSuggestions([]);
+      return true;
+    }
+
+    try {
+      if (!options?.silent) {
+        setHabitSuggestionsLoading(true);
+      }
+
+      const start = new Date(calendarDate);
+      start.setDate(start.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(calendarDate);
+      end.setDate(end.getDate() + 14);
+      end.setHours(23, 59, 59, 999);
+
+      const res = await api.getHabitSuggestions({
+        from: start.toISOString(),
+        to: end.toISOString(),
+      });
+      setHabitSuggestions(res.suggestions);
+      return true;
+    } catch (err) {
+      console.error('Failed to fetch habit suggestions:', err);
+      if (!options?.silent) {
+        setHabitSuggestions([]);
+      }
+      return false;
+    } finally {
+      if (!options?.silent) {
+        setHabitSuggestionsLoading(false);
+      }
+    }
+  }, [calendarDate, user?.id]);
+
   const refreshCalendar = useCallback(
     async (options?: { silent?: boolean }) => {
       const silent = options?.silent ?? false;
@@ -278,6 +331,11 @@ export default function CalendarPage() {
       setCalendarReady(true);
     }
   }, [tasksLoading, eventsLoading]);
+
+  // Persist calendars collapsed state
+  useEffect(() => {
+    localStorage.setItem('timeflow_calendars_collapsed', String(calendarsCollapsed));
+  }, [calendarsCollapsed]);
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
@@ -339,6 +397,10 @@ export default function CalendarPage() {
     fetchHabitInsights();
     fetchConnectedAccounts();
   }, [user?.id, fetchConnectedAccounts, fetchExternalEvents]);
+
+  useEffect(() => {
+    void fetchHabitSuggestions();
+  }, [fetchHabitSuggestions]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -414,6 +476,10 @@ export default function CalendarPage() {
   const externalEventsForView = useMemo(
     () => enrichEventsWithCalendarColors(filteredExternalEvents, connectedAccounts),
     [filteredExternalEvents, connectedAccounts]
+  );
+  const habitSuggestionEvents = useMemo(
+    () => buildHabitSuggestionCalendarEvents(habitSuggestions, showHabitRecommendations),
+    [habitSuggestions, showHabitRecommendations]
   );
 
   // Fetch event categorizations with caching and background auto-categorization
@@ -608,6 +674,46 @@ export default function CalendarPage() {
     }
   };
 
+  const handleToggleHabitRecommendations = (enabled: boolean) => {
+    setShowHabitRecommendations(enabled);
+    setHabitRecommendationsEnabled(enabled);
+    if (enabled && habitSuggestions.length === 0) {
+      void fetchHabitSuggestions();
+    }
+  };
+
+  const handleAcceptHabitSuggestion = async (suggestionEvent: CalendarHabitSuggestionEvent) => {
+    const { suggestion } = suggestionEvent;
+    const key = `${suggestion.habitId}-${suggestion.start}`;
+    setAcceptingHabitSuggestionKey(key);
+    setHabitSuggestions((prev) =>
+      prev.filter((item) => !(item.habitId === suggestion.habitId && item.start === suggestion.start))
+    );
+
+    try {
+      await api.acceptHabitSuggestion({
+        habitId: suggestion.habitId,
+        start: suggestion.start,
+        end: suggestion.end,
+      });
+      await Promise.all([
+        fetchExternalEvents({ silent: true }),
+        fetchHabitSuggestions({ silent: true }),
+        fetchHabitInsights(),
+        refreshHabitStudioSummary(),
+      ]);
+      setMessage({ type: 'success', text: `${suggestion.habit.title} scheduled.` });
+    } catch (err) {
+      await fetchHabitSuggestions({ silent: true });
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to schedule habit recommendation.',
+      });
+    } finally {
+      setAcceptingHabitSuggestionKey(null);
+    }
+  };
+
   const handleToggleConnectedCalendar = useCallback(
     async (connectedCalendarId: string, visible: boolean) => {
       setConnectedAccounts((prev) =>
@@ -674,6 +780,7 @@ export default function CalendarPage() {
 
   useEffect(() => {
     setConnectBannerDismissedState(isConnectBannerDismissed());
+    setShowHabitRecommendations(areHabitRecommendationsEnabled());
   }, []);
 
   const handleSetCalendarColor = useCallback(
@@ -1882,7 +1989,21 @@ export default function CalendarPage() {
               <div className="flex flex-col divide-y divide-slate-100 border-t border-slate-100">
                 <section className="px-3 py-2">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-slate-900">My calendars</h3>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarsCollapsed(!calendarsCollapsed)}
+                      className="flex items-center gap-2 text-left"
+                    >
+                      <svg
+                        className={`h-3.5 w-3.5 text-slate-500 transition-transform ${calendarsCollapsed ? '' : 'rotate-90'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <h3 className="text-sm font-semibold text-slate-900">My calendars</h3>
+                    </button>
                     <Link
                       href="/settings"
                       className="text-xs font-medium text-primary-600 hover:text-primary-700"
@@ -1890,14 +2011,16 @@ export default function CalendarPage() {
                       Manage
                     </Link>
                   </div>
-                  <ConnectedCalendarsPanel
-                    accounts={connectedAccounts}
-                    loading={connectedAccountsLoading}
-                    onToggleCalendar={handleToggleConnectedCalendar}
-                    onSetListedInSidebar={handleSetListedInSidebar}
-                    onSetCalendarColor={handleSetCalendarColor}
-                    onResyncAccount={handleResyncConnectedAccount}
-                  />
+                  {!calendarsCollapsed && (
+                    <ConnectedCalendarsPanel
+                      accounts={connectedAccounts}
+                      loading={connectedAccountsLoading}
+                      onToggleCalendar={handleToggleConnectedCalendar}
+                      onSetListedInSidebar={handleSetListedInSidebar}
+                      onSetCalendarColor={handleSetCalendarColor}
+                      onResyncAccount={handleResyncConnectedAccount}
+                    />
+                  )}
                 </section>
 
                 <section className="px-3 py-2">
@@ -1949,20 +2072,51 @@ export default function CalendarPage() {
                       Syncing…
                     </div>
                   )}
+                  <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm">
+                    <span className="h-2 w-2 rounded-full bg-violet-500" aria-hidden />
+                    <span>Habit suggestions</span>
+                    {habitSuggestionsLoading && (
+                      <span className="text-slate-400">syncing</span>
+                    )}
+                    <label
+                      className={`relative h-5 w-9 cursor-pointer rounded-full transition-colors focus-within:ring-2 focus-within:ring-violet-500 focus-within:ring-offset-2 ${
+                        showHabitRecommendations ? 'bg-violet-600' : 'bg-slate-300'
+                      }`}
+                      title="Toggle habit suggestions"
+                    >
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={showHabitRecommendations}
+                        onChange={(event) => handleToggleHabitRecommendations(event.target.checked)}
+                        aria-label="Show habit suggestions"
+                      />
+                      <span
+                        aria-hidden
+                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                          showHabitRecommendations ? 'translate-x-4' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </label>
+                  </div>
                 <CalendarView
                   tasks={tasks}
                   externalEvents={externalEventsForView}
+                  habitSuggestionEvents={habitSuggestionEvents}
+                  acceptingHabitSuggestionKey={acceptingHabitSuggestionKey}
                   eventCategorizations={eventCategorizations}
                   categories={categories}
                   habitStreakMap={habitStreakMap}
                   scheduledHabitInstances={scheduledHabitInstances}
                   selectedDate={calendarDate}
+                  onDateChange={setCalendarDate}
                   dropPreview={activeDropPreview}
                   isDraggingActive={!!(activeDragTask || activeDragHabit)}
                   onRescheduleTask={handleRescheduleTask}
                   onResizeEvent={handleResizeTask}
                   onCompleteTask={handleCompleteTaskById}
                   onCompleteHabit={handleCompleteHabitById}
+                  onAcceptHabitSuggestion={handleAcceptHabitSuggestion}
                   onUndoHabit={handleUndoHabitById}
                   onSkipHabit={handleSkipHabitById}
                   onHabitReschedule={handleRescheduleHabitInstance}
