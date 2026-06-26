@@ -133,7 +133,11 @@ export type AnalyticsEvent =
   | { name: 'identity.evolution.preview_visible'; properties: { source?: 'today' | 'habits' } }
   | { name: 'identity.evolution.trial_checkpoint_visible'; properties: {} }
   | { name: 'identity.evolution.habits_layout_visible'; properties: {} }
-  | { name: 'identity.flow_customization.saved'; properties: { fields: string[] } };
+  | { name: 'identity.flow_customization.saved'; properties: { fields: string[] } }
+  | { name: 'identity_xp_toast_shown'; properties: { source: 'task' | 'habit'; variant: 'xp' | 'level' | 'stage' | 'batch' } }
+  | { name: 'identity_xp_toast_clicked'; properties: { source: 'task' | 'habit'; variant: 'xp' | 'level' | 'stage' | 'batch' } }
+  | { name: 'identity_level_up_shown'; properties: { source: 'task' | 'habit' } }
+  | { name: 'identity_stage_unlocked_shown'; properties: { source: 'task' | 'habit' } };
 
 // Track event
 export function track<T extends AnalyticsEvent>(event: T['name'], properties?: T['properties']) {

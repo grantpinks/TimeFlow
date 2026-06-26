@@ -83,6 +83,8 @@ export interface IdentityCompletionEngagement {
   milestoneUnlocked: number | null;
   currentStreak: number;
   completionCountTotal: number;
+  /** Present when identity evolution XP feedback is available for this completion. */
+  identityXp?: IdentityXpFeedbackEvent | null;
 }
 
 export interface UserRestDay {
@@ -106,6 +108,22 @@ export interface UserRestDaysResponse {
 export type IdentityStage = 'Seed' | 'Builder' | 'Disciplined' | 'Embodied' | 'FutureSelf';
 
 export type IdentityTrialState = 'NotStarted' | 'Active' | 'CheckpointFailed' | 'Passed' | 'Failed';
+
+export interface IdentityXpFeedbackEvent {
+  identityId: string;
+  identityName: string;
+  source: 'task' | 'habit';
+  sourceId: string;
+  xpGranted: number;
+  levelBefore: number;
+  levelAfter: number;
+  stageBefore: IdentityStage;
+  stageAfter: IdentityStage;
+  trialStarted: boolean;
+  newUnlocks: string[];
+  xpToNextLevel: number;
+  dailyCapRemaining: number;
+}
 
 export interface IdentityEvolutionState {
   identityId: string;

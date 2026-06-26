@@ -78,6 +78,7 @@ import type {
 import { getAiDebugEnabled } from './aiDebug';
 import { track } from './analytics';
 import { clearEmailCache } from './emailCache';
+import { emitIdentityXpFeedback } from './identityXpFeedback';
 
 /**
  * Email category configuration type (matches backend)
@@ -471,12 +472,14 @@ export async function deleteTask(id: string): Promise<void> {
 export async function completeTask(
   id: string
 ): Promise<Task & { identityEngagement?: IdentityCompletionEngagement | null }> {
-  return request<Task & { identityEngagement?: IdentityCompletionEngagement | null }>(
+  const result = await request<Task & { identityEngagement?: IdentityCompletionEngagement | null }>(
     `/tasks/${id}/complete`,
     {
       method: 'POST',
     }
   );
+  emitIdentityXpFeedback(result.identityEngagement?.identityXp);
+  return result;
 }
 
 /**
@@ -673,6 +676,7 @@ export async function completeHabitInstance(scheduledHabitId: string, actualDura
     method: 'POST',
     body: actualDurationMinutes !== undefined ? JSON.stringify({ actualDurationMinutes }) : undefined,
   });
+  emitIdentityXpFeedback(res.identityEngagement?.identityXp);
   const tier = res.identityEngagement?.milestoneUnlocked;
   if (tier === 25 || tier === 50 || tier === 100) {
     track('identity.milestone_unlocked', { tier });

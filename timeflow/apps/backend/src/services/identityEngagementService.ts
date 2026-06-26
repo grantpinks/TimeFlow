@@ -6,6 +6,7 @@
 import { DateTime } from 'luxon';
 import { prisma } from '../config/prisma.js';
 import { grantIdentityXp } from './identityEvolutionService.js';
+import type { IdentityXpFeedbackEvent } from '@timeflow/shared';
 
 export type MilestoneTier = 0 | 25 | 50 | 100;
 
@@ -107,6 +108,7 @@ export interface RecordCompletionResult {
   milestoneUnlocked: MilestoneTier | null;
   currentStreak: number;
   completionCountTotal: number;
+  identityXp: IdentityXpFeedbackEvent | null;
 }
 
 /**
@@ -125,10 +127,10 @@ export async function recordIdentityCompletion(
 
   const before = await prisma.identity.findFirst({
     where: { id: identityId, userId },
-    select: { milestoneTier: true, completionCountTotal: true, isActive: true },
+    select: { id: true, name: true, milestoneTier: true, completionCountTotal: true, isActive: true },
   });
   if (!before) {
-    return { milestoneUnlocked: null, currentStreak: 0, completionCountTotal: 0 };
+    return { milestoneUnlocked: null, currentStreak: 0, completionCountTotal: 0, identityXp: null };
   }
 
   const tierBefore = tierFromCompletionCount(before.completionCountTotal);
@@ -149,21 +151,55 @@ export async function recordIdentityCompletion(
   const milestoneUnlocked: MilestoneTier | null =
     newTierLevel > tierBefore ? (newTierLevel as MilestoneTier) : null;
 
-  // Fire-and-forget XP grant — only for active identities
+  let identityXp: IdentityXpFeedbackEvent | null = null;
+
+  // Completion must still succeed if XP feedback fails or evolution is unavailable.
   if (before.isActive) {
-    grantIdentityXp({
-      userId,
-      identityId,
-      reason: opts?.reason ?? 'habit_completed',
-      sourceId: opts?.sourceId ?? 'unknown',
-      userTimeZone: tz,
-    }).catch((err) => console.error('XP grant failed', err));
+    const reason = opts?.reason ?? 'habit_completed';
+    const sourceId = opts?.sourceId ?? 'unknown';
+    try {
+      const xpResult = await grantIdentityXp({
+        userId,
+        identityId,
+        reason,
+        sourceId,
+        userTimeZone: tz,
+      });
+
+      if (
+        xpResult.levelBefore !== undefined &&
+        xpResult.levelAfter !== undefined &&
+        xpResult.stageBefore !== undefined &&
+        xpResult.stageAfter !== undefined &&
+        xpResult.xpToNextLevel !== undefined &&
+        xpResult.dailyCapRemaining !== undefined
+      ) {
+        identityXp = {
+          identityId,
+          identityName: before.name,
+          source: reason === 'task_completed' ? 'task' : 'habit',
+          sourceId,
+          xpGranted: xpResult.xpGranted,
+          levelBefore: xpResult.levelBefore,
+          levelAfter: xpResult.levelAfter,
+          stageBefore: xpResult.stageBefore,
+          stageAfter: xpResult.stageAfter,
+          trialStarted: xpResult.trialStarted,
+          newUnlocks: xpResult.newUnlocks,
+          xpToNextLevel: xpResult.xpToNextLevel,
+          dailyCapRemaining: xpResult.dailyCapRemaining,
+        };
+      }
+    } catch (err) {
+      console.error('XP grant failed', err);
+    }
   }
 
   return {
     milestoneUnlocked,
     currentStreak: streak,
     completionCountTotal: updated.completionCountTotal,
+    identityXp,
   };
 }
 

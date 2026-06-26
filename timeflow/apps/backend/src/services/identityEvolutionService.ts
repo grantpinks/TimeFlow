@@ -89,6 +89,12 @@ export interface GrantXpResult {
   newStage: IdentityStage | null;
   trialStarted: boolean;
   newUnlocks: string[];
+  levelBefore?: number;
+  levelAfter?: number;
+  stageBefore?: IdentityStage;
+  stageAfter?: IdentityStage;
+  xpToNextLevel?: number;
+  dailyCapRemaining?: number;
 }
 
 export async function grantIdentityXp(params: {
@@ -195,7 +201,20 @@ export async function grantIdentityXp(params: {
           metadata: { sourceId },
         },
       });
-      return { xpGranted: 0, leveledUp: false, newStage: null, trialStarted: false, newUnlocks: [] };
+      const stage = identity.stage as IdentityStage;
+      return {
+        xpGranted: 0,
+        leveledUp: false,
+        newStage: null,
+        trialStarted: false,
+        newUnlocks: [],
+        levelBefore: identity.level,
+        levelAfter: identity.level,
+        stageBefore: stage,
+        stageAfter: stage,
+        xpToNextLevel: xpToNextLevel(identity.xp),
+        dailyCapRemaining: capRemaining,
+      };
     }
 
     // 8. Accumulate XP
@@ -353,6 +372,12 @@ export async function grantIdentityXp(params: {
       newStage: stageChanged ? newStage : null,
       trialStarted,
       newUnlocks,
+      levelBefore: oldLevel,
+      levelAfter: newLevel,
+      stageBefore: oldStage,
+      stageAfter: newStage,
+      xpToNextLevel: xpToNextLevel(newXp),
+      dailyCapRemaining: Math.max(0, DAILY_CAP - newXpThisPeriod),
     };
   });
 
