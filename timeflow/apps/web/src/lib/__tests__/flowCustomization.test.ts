@@ -4,6 +4,7 @@ import {
   allowedSlugsWithDefaults,
   buildPaletteOptions,
   collectUnlockedCustomizationSlugs,
+  mergeFlowCustomization,
 } from '../flowCustomization';
 
 const baseUnlock: Omit<IdentityUnlockItem, 'unlockKey' | 'unlockType'> = {
@@ -32,5 +33,21 @@ describe('flowCustomization helpers', () => {
     const values = opts.map((o) => o.slug);
     expect(values).toContain('default');
     expect(values).toContain('ocean');
+  });
+
+  it('sanitizes invalid stored customization values to defaults', () => {
+    expect(
+      mergeFlowCustomization({
+        selectedPalette: 'unknown_palette',
+        selectedEmote: 'unknown_emote',
+        selectedAnimationPack: 'unknown_animation',
+        selectedStageVariant: 'unknown_stage',
+      })
+    ).toEqual({
+      selectedPalette: 'default',
+      selectedEmote: 'default',
+      selectedAnimationPack: 'default',
+      selectedStageVariant: 'default',
+    });
   });
 });

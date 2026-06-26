@@ -26,6 +26,13 @@ export const FLOW_PALETTE_SLUGS = [
 
 export type FlowPaletteSlug = (typeof FLOW_PALETTE_SLUGS)[number];
 
+export type FlowCustomizationOption = {
+  slug: string;
+  label: string;
+  locked?: boolean;
+  requirement?: string;
+};
+
 export function slugifyCustomizationValue(value: string): string {
   return value
     .trim()
@@ -43,7 +50,10 @@ export function mergeFlowCustomization(
       return DEFAULT_FLOW_CUSTOMIZATION[key];
     }
     const slug = slugifyCustomizationValue(String(raw));
-    return slug || DEFAULT_FLOW_CUSTOMIZATION[key];
+    if (!slug || !ALLOWED_CUSTOMIZATION_SLUGS[key].has(slug)) {
+      return DEFAULT_FLOW_CUSTOMIZATION[key];
+    }
+    return slug;
   };
 
   return {
@@ -60,6 +70,21 @@ export function normalizePaletteSlug(slug: string): FlowPaletteSlug {
 }
 
 const MASCOT_PACK_SLUGS = new Set(['default', 'basic', 'energetic', 'zen']);
+const EMOTE_SLUGS = new Set(['default', 'wave', 'celebrate', 'dance', 'fire', 'ascend']);
+const STAGE_VARIANT_SLUGS = new Set([
+  'default',
+  'seed',
+  'builder',
+  'disciplined',
+  'embodied',
+  'future_self',
+]);
+const ALLOWED_CUSTOMIZATION_SLUGS: Record<keyof FlowCustomizationFields, ReadonlySet<string>> = {
+  selectedPalette: new Set(FLOW_PALETTE_SLUGS),
+  selectedEmote: EMOTE_SLUGS,
+  selectedAnimationPack: MASCOT_PACK_SLUGS,
+  selectedStageVariant: STAGE_VARIANT_SLUGS,
+};
 
 /** Whitelist pack slug for CSS module classes on Flow mascot wrapper. */
 export function normalizeMascotPackSlug(pack: string): 'default' | 'basic' | 'energetic' | 'zen' {
@@ -137,46 +162,113 @@ export const FLOW_STAGE_VARIANT_LABELS: Record<string, string> = {
   future_self: 'Future self',
 };
 
+const FLOW_PALETTE_REQUIREMENTS: Record<string, string> = {
+  default: 'Available by default',
+  ocean: 'Level 3',
+  ember: 'Level 6',
+  forest: 'Builder stage',
+  storm: 'Disciplined stage',
+  gold: 'Embodied stage',
+  aurora: 'Future self stage',
+};
+
+const FLOW_EMOTE_REQUIREMENTS: Record<string, string> = {
+  default: 'Available by default',
+  wave: 'Level 1',
+  celebrate: 'Level 5',
+  dance: 'Builder stage',
+  fire: 'Disciplined stage',
+  ascend: 'Future self stage',
+};
+
+const FLOW_ANIMATION_REQUIREMENTS: Record<string, string> = {
+  default: 'Available by default',
+  basic: 'Level 1',
+  energetic: 'Level 8',
+  zen: 'Disciplined stage',
+};
+
+const FLOW_STAGE_REQUIREMENTS: Record<string, string> = {
+  default: 'Available by default',
+  seed: 'Seed stage',
+  builder: 'Builder stage',
+  disciplined: 'Disciplined stage',
+  embodied: 'Embodied stage',
+  future_self: 'Future self stage',
+};
+
 function labelFor(slug: string, labels: Record<string, string>): string {
   return labels[slug] ?? slug.replace(/_/g, ' ');
 }
 
-export function buildPaletteOptions(allowedSlugs: Set<string>): { slug: string; label: string }[] {
-  return FLOW_PALETTE_SLUGS.filter((s) => allowedSlugs.has(s)).map((slug) => ({
+function optionFor(
+  slug: string,
+  allowedSlugs: Set<string>,
+  labels: Record<string, string>,
+  requirements: Record<string, string>
+): FlowCustomizationOption {
+  const locked = !allowedSlugs.has(slug);
+  const requirement = requirements[slug];
+  return {
     slug,
-    label: FLOW_PALETTE_LABELS[slug] ?? labelFor(slug, FLOW_PALETTE_LABELS),
-  }));
+    label: locked && requirement
+      ? `${labelFor(slug, labels)} (Locked - ${requirement})`
+      : labelFor(slug, labels),
+    locked,
+    requirement,
+  };
+}
+
+export function buildPaletteOptions(
+  allowedSlugs: Set<string>,
+  opts?: { includeLocked?: boolean }
+): FlowCustomizationOption[] {
+  const slugs = opts?.includeLocked
+    ? [...FLOW_PALETTE_SLUGS]
+    : FLOW_PALETTE_SLUGS.filter((s) => allowedSlugs.has(s));
+  return slugs.map((slug) =>
+    optionFor(slug, allowedSlugs, FLOW_PALETTE_LABELS, FLOW_PALETTE_REQUIREMENTS)
+  );
 }
 
 const EMOTE_ORDER = ['default', 'wave', 'celebrate', 'dance', 'fire', 'ascend'] as const;
 const ANIM_ORDER = ['default', 'basic', 'energetic', 'zen'] as const;
 const STAGE_ORDER = ['default', 'seed', 'builder', 'disciplined', 'embodied', 'future_self'] as const;
 
-export function buildEmoteOptions(allowedSlugs: Set<string>): { slug: string; label: string }[] {
+export function buildEmoteOptions(
+  allowedSlugs: Set<string>,
+  opts?: { includeLocked?: boolean }
+): FlowCustomizationOption[] {
   const ordered = EMOTE_ORDER.filter((s) => allowedSlugs.has(s));
   const rest = [...allowedSlugs].filter((s) => !EMOTE_ORDER.includes(s as (typeof EMOTE_ORDER)[number])).sort();
-  return [...ordered, ...rest].map((slug) => ({
-    slug,
-    label: FLOW_EMOTE_LABELS[slug] ?? labelFor(slug, FLOW_EMOTE_LABELS),
-  }));
+  const slugs = opts?.includeLocked ? [...EMOTE_ORDER, ...rest] : [...ordered, ...rest];
+  return slugs.map((slug) =>
+    optionFor(slug, allowedSlugs, FLOW_EMOTE_LABELS, FLOW_EMOTE_REQUIREMENTS)
+  );
 }
 
-export function buildAnimationPackOptions(allowedSlugs: Set<string>): { slug: string; label: string }[] {
+export function buildAnimationPackOptions(
+  allowedSlugs: Set<string>,
+  opts?: { includeLocked?: boolean }
+): FlowCustomizationOption[] {
   const ordered = ANIM_ORDER.filter((s) => allowedSlugs.has(s));
   const rest = [...allowedSlugs].filter((s) => !ANIM_ORDER.includes(s as (typeof ANIM_ORDER)[number])).sort();
-  return [...ordered, ...rest].map((slug) => ({
-    slug,
-    label: FLOW_ANIMATION_PACK_LABELS[slug] ?? labelFor(slug, FLOW_ANIMATION_PACK_LABELS),
-  }));
+  const slugs = opts?.includeLocked ? [...ANIM_ORDER, ...rest] : [...ordered, ...rest];
+  return slugs.map((slug) =>
+    optionFor(slug, allowedSlugs, FLOW_ANIMATION_PACK_LABELS, FLOW_ANIMATION_REQUIREMENTS)
+  );
 }
 
-export function buildStageVariantOptions(allowedSlugs: Set<string>): { slug: string; label: string }[] {
+export function buildStageVariantOptions(
+  allowedSlugs: Set<string>,
+  opts?: { includeLocked?: boolean }
+): FlowCustomizationOption[] {
   const ordered = STAGE_ORDER.filter((s) => allowedSlugs.has(s));
   const rest = [...allowedSlugs].filter((s) => !STAGE_ORDER.includes(s as (typeof STAGE_ORDER)[number])).sort();
-  return [...ordered, ...rest].map((slug) => ({
-    slug,
-    label: FLOW_STAGE_VARIANT_LABELS[slug] ?? labelFor(slug, FLOW_STAGE_VARIANT_LABELS),
-  }));
+  const slugs = opts?.includeLocked ? [...STAGE_ORDER, ...rest] : [...ordered, ...rest];
+  return slugs.map((slug) =>
+    optionFor(slug, allowedSlugs, FLOW_STAGE_VARIANT_LABELS, FLOW_STAGE_REQUIREMENTS)
+  );
 }
 
 /** Merge unlocked slugs with defaults that are always available in the picker. */

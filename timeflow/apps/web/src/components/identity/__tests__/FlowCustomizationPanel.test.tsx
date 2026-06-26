@@ -97,7 +97,7 @@ describe('FlowCustomizationPanel', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('hides palette options that are not unlocked (except default)', async () => {
+  it('shows locked palette options with unlock requirements', async () => {
     mockApis({
       unlocks: [
         {
@@ -119,10 +119,16 @@ describe('FlowCustomizationPanel', () => {
       expect(document.getElementById('flow-custom-palette')).toBeTruthy();
     });
 
+    expect(
+      document.body.textContent
+    ).toMatch(/unlocked options are selectable; locked options show how to earn them/i);
+
     const paletteSelect = document.getElementById('flow-custom-palette') as HTMLSelectElement;
-    const options = [...paletteSelect.options].map((o) => o.textContent);
-    expect(options.some((t) => /ocean/i.test(t ?? ''))).toBe(false);
-    expect(options.some((t) => /default/i.test(t ?? ''))).toBe(true);
+    const oceanOption = [...paletteSelect.options].find((o) => o.value === 'ocean');
+    expect(oceanOption).toBeTruthy();
+    expect(oceanOption).toBeDisabled();
+    expect(oceanOption?.textContent).toMatch(/ocean/i);
+    expect(oceanOption?.textContent).toMatch(/level 3/i);
   });
 
   it('calls updateFlowCustomization when palette changes', async () => {
@@ -153,6 +159,32 @@ describe('FlowCustomizationPanel', () => {
         expect.objectContaining({ selectedPalette: 'ocean' })
       );
     });
+  });
+
+  it('updates the Flow preview before the save request resolves', async () => {
+    const user = userEvent.setup();
+    const oceanUnlock: IdentityUnlockItem = {
+      id: '1',
+      identityId: 'id-lead',
+      userId: 'u1',
+      unlockKey: 'flow_palette_ocean',
+      unlockType: 'flow_palette',
+      grantedAt: new Date().toISOString(),
+      grantedByStage: null,
+      grantedByLevel: 3,
+    };
+    mockApis({ unlocks: [oceanUnlock] });
+    apiMocks.updateFlowCustomization.mockReturnValue(new Promise(() => {}));
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(document.querySelector('.flow-mascot-palette-default')).toBeTruthy();
+    });
+
+    await user.selectOptions(document.getElementById('flow-custom-palette')!, 'ocean');
+
+    expect(document.querySelector('.flow-mascot-palette-ocean')).toBeTruthy();
   });
 
   it('merges unlocked cosmetics from all identities (global customization)', async () => {

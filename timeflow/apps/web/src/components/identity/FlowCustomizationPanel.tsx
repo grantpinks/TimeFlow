@@ -82,18 +82,28 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
   const { paletteOptions, emoteOptions, animOptions, stageOptions } = useMemo(() => {
     const { palettes, emotes, animationPacks, stageVariants } = collectUnlockedCustomizationSlugs(unlocks);
     return {
-      paletteOptions: buildPaletteOptions(allowedSlugsWithDefaults(palettes, 'palette')),
-      emoteOptions: buildEmoteOptions(allowedSlugsWithDefaults(emotes, 'emote')),
-      animOptions: buildAnimationPackOptions(allowedSlugsWithDefaults(animationPacks, 'animation')),
-      stageOptions: buildStageVariantOptions(allowedSlugsWithDefaults(stageVariants, 'stage')),
+      paletteOptions: buildPaletteOptions(allowedSlugsWithDefaults(palettes, 'palette'), {
+        includeLocked: true,
+      }),
+      emoteOptions: buildEmoteOptions(allowedSlugsWithDefaults(emotes, 'emote'), {
+        includeLocked: true,
+      }),
+      animOptions: buildAnimationPackOptions(allowedSlugsWithDefaults(animationPacks, 'animation'), {
+        includeLocked: true,
+      }),
+      stageOptions: buildStageVariantOptions(allowedSlugsWithDefaults(stageVariants, 'stage'), {
+        includeLocked: true,
+      }),
     };
   }, [unlocks]);
 
   const persistField = useCallback(
     async (key: keyof FlowCustomizationFields, raw: string) => {
       const slug = slugifyCustomizationValue(raw);
+      const previousValues = values;
       setSavingKey(key);
       setError(null);
+      setValues((current) => (current ? { ...current, [key]: slug } : current));
       try {
         const body: Partial<FlowCustomizationFields> = { [key]: slug };
         const updated = await api.updateFlowCustomization(body);
@@ -102,12 +112,13 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         track('identity.flow_customization.saved', { fields: [key] });
         await refreshContext();
       } catch (e) {
+        setValues(previousValues);
         setError(e instanceof Error ? e.message : 'Save failed.');
       } finally {
         setSavingKey(null);
       }
     },
-    [refreshContext]
+    [refreshContext, values]
   );
 
   if (!evolutionEnabled) return null;
@@ -150,7 +161,8 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
             Flow companion look
           </h2>
           <p className="mt-1 max-w-xl text-sm text-slate-600 dark:text-slate-400">
-            Unlock palettes and motion through identity progression. Only options you&apos;ve earned appear here.
+            Unlock palettes and motion through identity progression. Unlocked options are selectable;
+            locked options show how to earn them.
           </p>
         </div>
         <div
@@ -170,13 +182,14 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         <FieldBlock id="flow-custom-palette" label="Palette" description="Tint for Flow across the app.">
           <select
             id="flow-custom-palette"
+            aria-label="Palette"
             className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
             value={values.selectedPalette}
             disabled={!!savingKey}
             onChange={(e) => void persistField('selectedPalette', e.target.value)}
           >
             {paletteOptions.map((o) => (
-              <option key={o.slug} value={o.slug}>
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
                 {o.label}
               </option>
             ))}
@@ -186,13 +199,14 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         <FieldBlock id="flow-custom-emote" label="Emote preset" description="Reserved for future mascot moods.">
           <select
             id="flow-custom-emote"
+            aria-label="Emote preset"
             className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
             value={values.selectedEmote}
             disabled={!!savingKey}
             onChange={(e) => void persistField('selectedEmote', e.target.value)}
           >
             {emoteOptions.map((o) => (
-              <option key={o.slug} value={o.slug}>
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
                 {o.label}
               </option>
             ))}
@@ -202,13 +216,14 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         <FieldBlock id="flow-custom-anim" label="Animation pack" description="Subtle motion on supported Flow moments.">
           <select
             id="flow-custom-anim"
+            aria-label="Animation pack"
             className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
             value={values.selectedAnimationPack}
             disabled={!!savingKey}
             onChange={(e) => void persistField('selectedAnimationPack', e.target.value)}
           >
             {animOptions.map((o) => (
-              <option key={o.slug} value={o.slug}>
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
                 {o.label}
               </option>
             ))}
@@ -218,13 +233,14 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         <FieldBlock id="flow-custom-stage" label="Stage form" description="Visual form tied to identity stage unlocks.">
           <select
             id="flow-custom-stage"
+            aria-label="Stage form"
             className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
             value={values.selectedStageVariant}
             disabled={!!savingKey}
             onChange={(e) => void persistField('selectedStageVariant', e.target.value)}
           >
             {stageOptions.map((o) => (
-              <option key={o.slug} value={o.slug}>
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
                 {o.label}
               </option>
             ))}
