@@ -9,6 +9,8 @@ import { grantIdentityXp } from './identityEvolutionService.js';
 import type { IdentityXpFeedbackEvent } from '@timeflow/shared';
 
 export type MilestoneTier = 0 | 25 | 50 | 100;
+export const XP_FEEDBACK_GRANT_TIMEOUT_MS = 250;
+type IdentityXpGrantResult = Awaited<ReturnType<typeof grantIdentityXp>>;
 
 function tierFromCompletionCount(total: number): MilestoneTier {
   if (total >= 100) return 100;
@@ -111,6 +113,45 @@ export interface RecordCompletionResult {
   identityXp: IdentityXpFeedbackEvent | null;
 }
 
+function grantIdentityXpWithFeedbackTimeout(
+  params: Parameters<typeof grantIdentityXp>[0]
+): Promise<IdentityXpGrantResult | null> {
+  let settled = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const grantPromise = grantIdentityXp(params)
+    .then((result) => {
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      return result;
+    })
+    .catch((err) => {
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      console.error('XP grant failed', err);
+      return null;
+    });
+
+  const timeoutPromise = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => {
+      if (!settled) {
+        console.warn(
+          'XP grant exceeded feedback timeout; completion response returned without XP feedback',
+          {
+            identityId: params.identityId,
+            sourceId: params.sourceId,
+            reason: params.reason,
+            timeoutMs: XP_FEEDBACK_GRANT_TIMEOUT_MS,
+          }
+        );
+      }
+      resolve(null);
+    }, XP_FEEDBACK_GRANT_TIMEOUT_MS);
+  });
+
+  return Promise.race([grantPromise, timeoutPromise]);
+}
+
 /**
  * Call when a task or habit instance completes and counts toward an identity.
  */
@@ -157,8 +198,7 @@ export async function recordIdentityCompletion(
   if (before.isActive) {
     const reason = opts?.reason ?? 'habit_completed';
     const sourceId = opts?.sourceId ?? 'unknown';
-    try {
-      const xpResult = await grantIdentityXp({
+    const xpResult = await grantIdentityXpWithFeedbackTimeout({
         userId,
         identityId,
         reason,
@@ -166,6 +206,7 @@ export async function recordIdentityCompletion(
         userTimeZone: tz,
       });
 
+    if (xpResult) {
       if (
         xpResult.levelBefore !== undefined &&
         xpResult.levelAfter !== undefined &&
@@ -190,8 +231,6 @@ export async function recordIdentityCompletion(
           dailyCapRemaining: xpResult.dailyCapRemaining,
         };
       }
-    } catch (err) {
-      console.error('XP grant failed', err);
     }
   }
 

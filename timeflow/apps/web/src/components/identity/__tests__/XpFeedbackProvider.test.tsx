@@ -71,6 +71,16 @@ describe('XpFeedbackProvider', () => {
     cleanup();
   });
 
+  it('does not render when progress visibility is not explicitly enabled', async () => {
+    vi.unstubAllEnvs();
+    render(<XpFeedbackProvider />);
+
+    dispatchXp(xpEvent());
+    await advance(350);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('renders XP amount and identity name after an eligible completion', async () => {
     render(<XpFeedbackProvider />);
 
@@ -151,7 +161,7 @@ describe('XpFeedbackProvider', () => {
 
     dispatchXp(xpEvent());
     await advance(350);
-    fireEvent.click(screen.getByRole('button', { name: /view progress/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open identity studio/i }));
 
     expect(onOpenProgress).toHaveBeenCalledWith('identity-1');
     expect(mocks.track).toHaveBeenCalledWith('identity_xp_toast_clicked', {

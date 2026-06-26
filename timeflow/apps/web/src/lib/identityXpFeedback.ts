@@ -5,7 +5,7 @@ import type { IdentityXpFeedbackEvent } from '@timeflow/shared';
 export const IDENTITY_XP_FEEDBACK_EVENT = 'timeflow:identity-xp-feedback';
 
 export function isIdentityXpFeedbackEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_CHARACTER_EVOLUTION_PROGRESS_VISIBILITY !== 'false';
+  return process.env.NEXT_PUBLIC_CHARACTER_EVOLUTION_PROGRESS_VISIBILITY === 'true';
 }
 
 export function emitIdentityXpFeedback(event?: IdentityXpFeedbackEvent | null) {

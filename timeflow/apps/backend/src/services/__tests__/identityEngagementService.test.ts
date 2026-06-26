@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prisma } from '../../config/prisma.js';
 import { grantIdentityXp } from '../identityEvolutionService.js';
-import { recordIdentityCompletion } from '../identityEngagementService.js';
+import {
+  XP_FEEDBACK_GRANT_TIMEOUT_MS,
+  recordIdentityCompletion,
+} from '../identityEngagementService.js';
 
 vi.mock('../../config/prisma.js', () => ({
   prisma: {
@@ -109,5 +112,47 @@ describe('recordIdentityCompletion XP feedback', () => {
       identityXp: null,
     });
     expect(errorSpy).toHaveBeenCalledWith('XP grant failed', expect.any(Error));
+  });
+
+  it('returns without XP feedback when the XP grant exceeds the latency guard', async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.mocked(grantIdentityXp).mockImplementation(
+      () => new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({
+            xpGranted: 10,
+            leveledUp: false,
+            newStage: null,
+            trialStarted: false,
+            newUnlocks: [],
+            levelBefore: 1,
+            levelAfter: 1,
+            stageBefore: 'Seed',
+            stageAfter: 'Seed',
+            xpToNextLevel: 40,
+            dailyCapRemaining: 70,
+          } as any);
+        }, XP_FEEDBACK_GRANT_TIMEOUT_MS + 1000);
+      })
+    );
+
+    const resultPromise = recordIdentityCompletion('user-1', 'identity-1', {
+      reason: 'task_completed',
+      sourceId: 'task-1',
+    });
+
+    await vi.advanceTimersByTimeAsync(XP_FEEDBACK_GRANT_TIMEOUT_MS + 1);
+    await expect(resultPromise).resolves.toMatchObject({
+      completionCountTotal: 5,
+      identityXp: null,
+    });
+    expect(warnSpy).toHaveBeenCalledWith(
+      'XP grant exceeded feedback timeout; completion response returned without XP feedback',
+      expect.objectContaining({ identityId: 'identity-1', sourceId: 'task-1' })
+    );
+
+    await vi.advanceTimersByTimeAsync(1000);
+    vi.useRealTimers();
   });
 });

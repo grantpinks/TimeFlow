@@ -131,7 +131,7 @@ export function XpFeedbackProvider({ onOpenProgress }: XpFeedbackProviderProps) 
         return;
       }
       if (typeof window !== 'undefined') {
-        window.location.assign(`/habits?progress=${encodeURIComponent(toast.identityId)}`);
+        window.location.assign('/habits');
       }
     },
     [onOpenProgress]

@@ -74,7 +74,7 @@ export function XpFeedbackToast({
               onClick={() => onOpenProgress(toast.identityId)}
               className="text-xs font-semibold text-teal-700 underline-offset-4 hover:underline"
             >
-              View progress
+              Open Identity Studio
             </button>
             <button
               type="button"
