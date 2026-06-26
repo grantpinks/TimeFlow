@@ -50,10 +50,7 @@ export function mergeFlowCustomization(
       return DEFAULT_FLOW_CUSTOMIZATION[key];
     }
     const slug = slugifyCustomizationValue(String(raw));
-    if (!slug || !ALLOWED_CUSTOMIZATION_SLUGS[key].has(slug)) {
-      return DEFAULT_FLOW_CUSTOMIZATION[key];
-    }
-    return slug;
+    return slug || DEFAULT_FLOW_CUSTOMIZATION[key];
   };
 
   return {
@@ -70,22 +67,6 @@ export function normalizePaletteSlug(slug: string): FlowPaletteSlug {
 }
 
 const MASCOT_PACK_SLUGS = new Set(['default', 'basic', 'energetic', 'zen']);
-const EMOTE_SLUGS = new Set(['default', 'wave', 'celebrate', 'dance', 'fire', 'ascend']);
-const STAGE_VARIANT_SLUGS = new Set([
-  'default',
-  'seed',
-  'builder',
-  'disciplined',
-  'embodied',
-  'future_self',
-]);
-const ALLOWED_CUSTOMIZATION_SLUGS: Record<keyof FlowCustomizationFields, ReadonlySet<string>> = {
-  selectedPalette: new Set(FLOW_PALETTE_SLUGS),
-  selectedEmote: EMOTE_SLUGS,
-  selectedAnimationPack: MASCOT_PACK_SLUGS,
-  selectedStageVariant: STAGE_VARIANT_SLUGS,
-};
-
 /** Whitelist pack slug for CSS module classes on Flow mascot wrapper. */
 export function normalizeMascotPackSlug(pack: string): 'default' | 'basic' | 'energetic' | 'zen' {
   const s = slugifyCustomizationValue(pack);
@@ -223,9 +204,13 @@ export function buildPaletteOptions(
   allowedSlugs: Set<string>,
   opts?: { includeLocked?: boolean }
 ): FlowCustomizationOption[] {
+  const ordered = FLOW_PALETTE_SLUGS.filter((s) => allowedSlugs.has(s));
+  const rest = [...allowedSlugs]
+    .filter((s) => !FLOW_PALETTE_SLUGS.includes(s as (typeof FLOW_PALETTE_SLUGS)[number]))
+    .sort();
   const slugs = opts?.includeLocked
-    ? [...FLOW_PALETTE_SLUGS]
-    : FLOW_PALETTE_SLUGS.filter((s) => allowedSlugs.has(s));
+    ? [...FLOW_PALETTE_SLUGS, ...rest]
+    : [...ordered, ...rest];
   return slugs.map((slug) =>
     optionFor(slug, allowedSlugs, FLOW_PALETTE_LABELS, FLOW_PALETTE_REQUIREMENTS)
   );

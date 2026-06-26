@@ -35,13 +35,44 @@ describe('flowCustomization helpers', () => {
     expect(values).toContain('ocean');
   });
 
-  it('sanitizes invalid stored customization values to defaults', () => {
+  it('includes unknown unlocked palette slugs from the backend catalog', () => {
+    const { palettes } = collectUnlockedCustomizationSlugs([
+      { ...baseUnlock, unlockKey: 'flow_palette_sunset', unlockType: 'flow_palette' },
+    ]);
+    const allowed = allowedSlugsWithDefaults(palettes, 'palette');
+    const opts = buildPaletteOptions(allowed, { includeLocked: true });
+    const sunset = opts.find((o) => o.slug === 'sunset');
+
+    expect(sunset).toMatchObject({
+      slug: 'sunset',
+      label: 'sunset',
+      locked: false,
+    });
+  });
+
+  it('preserves well-formed unknown stored customization values', () => {
     expect(
       mergeFlowCustomization({
-        selectedPalette: 'unknown_palette',
-        selectedEmote: 'unknown_emote',
-        selectedAnimationPack: 'unknown_animation',
-        selectedStageVariant: 'unknown_stage',
+        selectedPalette: 'sunset',
+        selectedEmote: 'sparkle',
+        selectedAnimationPack: 'gentle_bounce',
+        selectedStageVariant: 'transcendent',
+      })
+    ).toEqual({
+      selectedPalette: 'sunset',
+      selectedEmote: 'sparkle',
+      selectedAnimationPack: 'gentle_bounce',
+      selectedStageVariant: 'transcendent',
+    });
+  });
+
+  it('sanitizes malformed stored customization values to defaults', () => {
+    expect(
+      mergeFlowCustomization({
+        selectedPalette: '!!!',
+        selectedEmote: '   ',
+        selectedAnimationPack: '%$#',
+        selectedStageVariant: '',
       })
     ).toEqual({
       selectedPalette: 'default',
