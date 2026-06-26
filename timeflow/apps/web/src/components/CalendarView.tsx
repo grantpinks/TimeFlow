@@ -323,7 +323,7 @@ export function CalendarView({
         title: suggestion.title,
         start: suggestion.start,
         end: suggestion.end,
-        layoutEnd: toExclusiveLayoutEnd(suggestion.start, suggestion.end),
+        layoutEnd: toExclusiveLayoutEnd(suggestion.start, suggestion.displayEnd),
         isTask: false,
         isHabit: false,
         isHabitSuggestion: true,
@@ -366,17 +366,19 @@ export function CalendarView({
     }
 
     if (event.isHabitSuggestion) {
-      const accentColor = event.categoryColor || '#8B5CF6';
+      const accentColor = '#2563EB';
+      const glowColor = '#0EA5E9';
 
       return {
         className: 'habit-suggestion-event',
         style: {
-          backgroundColor: `${accentColor}18`,
-          borderRadius: '6px',
-          border: `1px dashed ${accentColor}`,
+          background: `linear-gradient(135deg, ${accentColor}18 0%, ${glowColor}12 62%, #ffffff 100%)`,
+          borderRadius: '10px',
+          border: `1px dashed ${accentColor}99`,
           borderLeft: `5px solid ${accentColor}`,
-          color: '#4c1d95',
-          fontWeight: '500',
+          boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.72), 0 10px 22px -18px ${accentColor}`,
+          color: '#1e3a8a',
+          fontWeight: '600',
         },
       };
     }
@@ -1003,7 +1005,7 @@ function DraggableEvent({
     (event.sourceType === 'habit' && Boolean(event.scheduledHabitId));
   const showCheckbox = !event.isHabitSuggestion && canCompleteEvent && !isNarrow && (isHovered || localCompleted);
 
-  const textColorClass = event.isHabitSuggestion ? 'text-violet-900' : localCompleted ? 'text-slate-600' : 'text-white';
+  const textColorClass = event.isHabitSuggestion ? 'text-primary-900' : localCompleted ? 'text-slate-600' : 'text-white';
   const dragHandleColorClass = localCompleted ? 'text-slate-600 hover:text-slate-800' : 'text-white/90 hover:text-white';
 
   const suggestionKey = event.habitSuggestion
@@ -1074,11 +1076,11 @@ function DraggableEvent({
         </div>
         {event.isHabitSuggestion && !isVeryShortEvent && (
           <div className="mt-0.5 flex items-center gap-1">
-            <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
+            <span className="rounded-full border border-primary-200 bg-primary-50 px-1.5 py-0.5 text-[10px] font-semibold text-primary-700">
               Suggested
             </span>
             {event.habitSuggestion?.suggestion.reason && !isNarrow && (
-              <span className="truncate text-[10px] text-violet-700/80">
+              <span className="truncate text-[10px] text-primary-700/80">
                 {event.habitSuggestion.suggestion.reason}
               </span>
             )}
@@ -1090,8 +1092,8 @@ function DraggableEvent({
           type="button"
           onClick={handleAcceptSuggestion}
           disabled={isSuggestionAccepting}
-          className={`absolute bottom-1 right-1 z-20 rounded-full bg-violet-600 font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60 ${
-            isNarrow ? 'h-5 w-5 text-[12px]' : 'px-2 py-0.5 text-[10px]'
+          className={`absolute bottom-1 right-1 z-20 rounded-full bg-gradient-to-r from-primary-600 to-blue-500 font-semibold text-white shadow-sm shadow-primary-600/20 transition hover:from-primary-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-1 disabled:opacity-60 ${
+            isNarrow ? 'h-7 min-w-7 px-1 text-[13px]' : 'min-h-7 px-3 py-1 text-[11px]'
           }`}
           aria-label={`Schedule ${event.habitSuggestion.suggestion.habit.title}`}
         >

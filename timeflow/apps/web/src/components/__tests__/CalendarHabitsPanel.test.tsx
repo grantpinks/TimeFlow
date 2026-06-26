@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { CalendarHabitsPanel } from '../CalendarHabitsPanel';
 import type { Habit, StudioSummaryResponse } from '@timeflow/shared';
 
@@ -118,5 +118,25 @@ describe('CalendarHabitsPanel', () => {
 
     expect(screen.queryByText(/Invalid Date/)).toBeNull();
     expect(screen.getAllByText('Needs a slot').length).toBeGreaterThan(0);
+  });
+
+  it('renders habit suggestion controls inside the habits panel', () => {
+    const onToggle = vi.fn();
+
+    render(
+      <CalendarHabitsPanel
+        habits={[habit({ id: 'open', title: 'Clean Up' })]}
+        showHabitRecommendations={true}
+        habitSuggestionsLoading={true}
+        onToggleHabitRecommendations={onToggle}
+      />
+    );
+
+    expect(screen.getByText('Calendar suggestions')).toBeTruthy();
+    expect(screen.getByText('Syncing slots')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Show habit suggestions'));
+
+    expect(onToggle).toHaveBeenCalledWith(false);
   });
 });

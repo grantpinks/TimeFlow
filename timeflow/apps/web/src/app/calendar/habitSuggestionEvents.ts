@@ -5,9 +5,12 @@ export interface CalendarHabitSuggestionEvent {
   title: string;
   start: Date;
   end: Date;
+  displayEnd: Date;
   habitId: string;
   suggestion: EnrichedHabitSuggestion;
 }
+
+const MIN_SUGGESTION_DISPLAY_MINUTES = 30;
 
 export function buildHabitSuggestionCalendarEvents(
   suggestions: EnrichedHabitSuggestion[],
@@ -30,6 +33,9 @@ export function buildHabitSuggestionCalendarEvents(
         title: `Suggested: ${suggestion.habit.title}`,
         start,
         end,
+        displayEnd: new Date(
+          Math.max(end.getTime(), start.getTime() + MIN_SUGGESTION_DISPLAY_MINUTES * 60 * 1000)
+        ),
         habitId: suggestion.habitId,
         suggestion,
       };

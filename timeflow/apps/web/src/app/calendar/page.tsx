@@ -2045,6 +2045,9 @@ export default function CalendarPage() {
                     studioSummary={habitStudioSummary}
                     loadingSummary={habitStudioLoading}
                     timeZone={user?.timeZone}
+                    showHabitRecommendations={showHabitRecommendations}
+                    habitSuggestionsLoading={habitSuggestionsLoading}
+                    onToggleHabitRecommendations={handleToggleHabitRecommendations}
                   />
                 </section>
 
@@ -2072,33 +2075,6 @@ export default function CalendarPage() {
                       Syncing…
                     </div>
                   )}
-                  <div className="absolute left-3 top-3 z-30 flex items-center gap-2 rounded-full border border-violet-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur-sm">
-                    <span className="h-2 w-2 rounded-full bg-violet-500" aria-hidden />
-                    <span>Habit suggestions</span>
-                    {habitSuggestionsLoading && (
-                      <span className="text-slate-400">syncing</span>
-                    )}
-                    <label
-                      className={`relative h-5 w-9 cursor-pointer rounded-full transition-colors focus-within:ring-2 focus-within:ring-violet-500 focus-within:ring-offset-2 ${
-                        showHabitRecommendations ? 'bg-violet-600' : 'bg-slate-300'
-                      }`}
-                      title="Toggle habit suggestions"
-                    >
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={showHabitRecommendations}
-                        onChange={(event) => handleToggleHabitRecommendations(event.target.checked)}
-                        aria-label="Show habit suggestions"
-                      />
-                      <span
-                        aria-hidden
-                        className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                          showHabitRecommendations ? 'translate-x-4' : 'translate-x-0.5'
-                        }`}
-                      />
-                    </label>
-                  </div>
                 <CalendarView
                   tasks={tasks}
                   externalEvents={externalEventsForView}
