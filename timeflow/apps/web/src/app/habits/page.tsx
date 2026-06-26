@@ -51,7 +51,10 @@ import { useUser } from '@/hooks/useUser';
 import { useStudioSummary } from '@/hooks/useStudioSummary';
 import { useHabitInsightsSeries } from '@/hooks/useHabitInsightsSeries';
 import { IdentityProgressionSidebar } from '@/components/habits/IdentityProgressionSidebar';
-import { getProgressIdentityIdFromSearch } from '@/lib/identityProgressRoute';
+import {
+  getProgressIdentityIdFromSearch,
+  removeProgressParamFromUrl,
+} from '@/lib/identityProgressRoute';
 
 function resolveGroupIdentity(
   key: string,
@@ -204,6 +207,17 @@ export default function HabitsPage() {
       scoped: identityId !== null,
       ...(identityId ? { identity_id_hash: hashHabitId(identityId) } : {}),
     });
+  }, []);
+
+  const closeProgressSheet = useCallback(() => {
+    setProgressSheetOpen(false);
+    if (typeof window === 'undefined') return;
+    if (!getProgressIdentityIdFromSearch(window.location.search)) return;
+
+    const nextUrl = removeProgressParamFromUrl(
+      `${window.location.pathname}${window.location.search}`
+    );
+    window.history.replaceState(window.history.state, '', nextUrl);
   }, []);
 
   const openCreateSheet = useCallback((identityId?: string | null) => {
@@ -590,7 +604,7 @@ export default function HabitsPage() {
 
       <IdentityStudioProgressSheet
         open={progressSheetOpen}
-        onClose={() => setProgressSheetOpen(false)}
+        onClose={closeProgressSheet}
         surfaceMode={evolutionMode}
         evolutionStates={evolutionStates}
         identities={identities}

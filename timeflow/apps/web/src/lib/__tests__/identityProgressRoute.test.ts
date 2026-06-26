@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildIdentityProgressHref,
   getProgressIdentityIdFromSearch,
+  removeProgressParamFromUrl,
 } from '../identityProgressRoute';
 
 describe('identity progress route helpers', () => {
@@ -16,5 +17,12 @@ describe('identity progress route helpers', () => {
   it('ignores missing or blank progress params', () => {
     expect(getProgressIdentityIdFromSearch('')).toBeNull();
     expect(getProgressIdentityIdFromSearch('?progress=')).toBeNull();
+  });
+
+  it('removes only the progress param from a URL', () => {
+    expect(removeProgressParamFromUrl('/habits?progress=identity-1')).toBe('/habits');
+    expect(removeProgressParamFromUrl('/habits?progress=identity-1&tab=weekly')).toBe(
+      '/habits?tab=weekly'
+    );
   });
 });
