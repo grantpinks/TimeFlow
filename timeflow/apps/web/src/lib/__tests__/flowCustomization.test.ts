@@ -104,4 +104,28 @@ describe('flowCustomization helpers', () => {
       requirement: 'Disciplined stage',
     });
   });
+
+  it('offers early accessory goals across MVP accessory categories', () => {
+    const opts = buildAccessoryOptions(allowedSlugsWithDefaults(new Set(), 'accessory'), {
+      includeLocked: true,
+    });
+    const values = opts.map((o) => o.slug);
+
+    expect(values).toEqual(
+      expect.arrayContaining([
+        'cap',
+        'crown',
+        'laurel',
+        'bright_eyes',
+        'focus_eyes',
+        'future_gaze',
+        'spark',
+        'halo',
+        'sunrise',
+        'forest_glow',
+      ])
+    );
+    expect(opts.find((o) => o.slug === 'cap')?.requirement).toBe('Level 2');
+    expect(opts.find((o) => o.slug === 'sunrise')?.requirement).toBe('Level 2');
+  });
 });

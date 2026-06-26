@@ -1,0 +1,9 @@
+<svg width="96" height="64" viewBox="0 0 96 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Laurel wreath accessory">
+  <path d="M20 46C20 28 30 16 44 12" stroke="#16A34A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M76 46C76 28 66 16 52 12" stroke="#16A34A" stroke-width="4" stroke-linecap="round"/>
+  <path d="M26 36L14 30L28 26L26 36Z" fill="#86EFAC"/>
+  <path d="M32 26L22 18L36 18L32 26Z" fill="#4ADE80"/>
+  <path d="M70 36L82 30L68 26L70 36Z" fill="#86EFAC"/>
+  <path d="M64 26L74 18L60 18L64 26Z" fill="#4ADE80"/>
+  <circle cx="48" cy="14" r="5" fill="#FACC15"/>
+</svg>

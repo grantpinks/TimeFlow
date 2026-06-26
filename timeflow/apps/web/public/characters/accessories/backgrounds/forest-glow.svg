@@ -1,0 +1,7 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Forest glow background">
+  <circle cx="64" cy="64" r="52" fill="#DCFCE7" fill-opacity="0.7"/>
+  <path d="M28 92L44 42L60 92H28Z" fill="#86EFAC" fill-opacity="0.8"/>
+  <path d="M58 96L78 34L100 96H58Z" fill="#22C55E" fill-opacity="0.65"/>
+  <circle cx="38" cy="36" r="4" fill="#FDE68A"/>
+  <circle cx="92" cy="42" r="5" fill="#A7F3D0"/>
+</svg>

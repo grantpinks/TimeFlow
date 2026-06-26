@@ -1,0 +1,7 @@
+<svg width="96" height="32" viewBox="0 0 96 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Focus eyes accessory">
+  <path d="M24 18C29 10 39 10 44 18C39 24 29 24 24 18Z" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="3"/>
+  <path d="M52 18C57 10 67 10 72 18C67 24 57 24 52 18Z" fill="#DBEAFE" stroke="#1D4ED8" stroke-width="3"/>
+  <circle cx="34" cy="18" r="4" fill="#1E3A8A"/>
+  <circle cx="62" cy="18" r="4" fill="#1E3A8A"/>
+  <path d="M24 8L44 11M52 11L72 8" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+</svg>

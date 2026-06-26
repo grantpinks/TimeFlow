@@ -1,0 +1,5 @@
+<svg width="96" height="64" viewBox="0 0 96 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flow cap accessory">
+  <path d="M20 42C24 24 36 16 52 16C66 16 76 24 80 40H20Z" fill="#14B8A6" stroke="#0F766E" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M50 40C62 36 76 36 88 44C76 50 62 50 48 44L50 40Z" fill="#0F766E" stroke="#115E59" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M28 37C34 29 42 25 52 25" stroke="#CCFBF1" stroke-width="4" stroke-linecap="round"/>
+</svg>

@@ -12,6 +12,16 @@ describe('characterAssets', () => {
       src: '/characters/accessories/hats/crown.svg',
       alt: 'Crown accessory',
     });
+    expect(resolveAccessoryAsset('sunrise')).toMatchObject({
+      slug: 'sunrise',
+      layer: 'background',
+      src: '/characters/accessories/backgrounds/sunrise.svg',
+    });
+    expect(resolveAccessoryAsset('bright_eyes')).toMatchObject({
+      slug: 'bright_eyes',
+      layer: 'eyes',
+      src: '/characters/accessories/eyes/bright-eyes.svg',
+    });
   });
 
   it('falls back for none or unknown accessories', () => {

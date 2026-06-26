@@ -156,9 +156,17 @@ export const FLOW_STAGE_VARIANT_LABELS: Record<string, string> = {
 
 export const FLOW_ACCESSORY_LABELS: Record<string, string> = {
   none: 'None',
+  cap: 'Flow cap',
   crown: 'Crown',
+  laurel: 'Laurel wreath',
+  bright_eyes: 'Bright eyes',
+  focus_eyes: 'Focus eyes',
+  future_gaze: 'Future gaze',
+  spark: 'Spark aura',
   wings: 'Wings',
   halo: 'Halo',
+  sunrise: 'Sunrise field',
+  forest_glow: 'Forest glow',
 };
 
 const FLOW_PALETTE_REQUIREMENTS: Record<string, string> = {
@@ -198,9 +206,17 @@ const FLOW_STAGE_REQUIREMENTS: Record<string, string> = {
 
 const FLOW_ACCESSORY_REQUIREMENTS: Record<string, string> = {
   none: 'Available by default',
+  cap: 'Level 2',
   crown: 'Disciplined stage',
+  laurel: 'Embodied stage',
+  bright_eyes: 'Level 4',
+  focus_eyes: 'Level 7',
+  future_gaze: 'Future self stage',
+  spark: 'Builder stage',
   wings: 'Embodied stage',
   halo: 'Future self stage',
+  sunrise: 'Level 2',
+  forest_glow: 'Builder stage',
 };
 
 function labelFor(slug: string, labels: Record<string, string>): string {
@@ -244,7 +260,20 @@ export function buildPaletteOptions(
 const EMOTE_ORDER = ['default', 'wave', 'celebrate', 'dance', 'fire', 'ascend'] as const;
 const ANIM_ORDER = ['default', 'basic', 'energetic', 'zen'] as const;
 const STAGE_ORDER = ['default', 'seed', 'builder', 'disciplined', 'embodied', 'future_self'] as const;
-const ACCESSORY_ORDER = ['none', 'crown', 'wings', 'halo'] as const;
+const ACCESSORY_ORDER = [
+  'none',
+  'cap',
+  'crown',
+  'laurel',
+  'bright_eyes',
+  'focus_eyes',
+  'future_gaze',
+  'spark',
+  'wings',
+  'halo',
+  'sunrise',
+  'forest_glow',
+] as const;
 
 export function buildEmoteOptions(
   allowedSlugs: Set<string>,
