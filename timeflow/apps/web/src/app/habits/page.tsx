@@ -51,6 +51,7 @@ import { useUser } from '@/hooks/useUser';
 import { useStudioSummary } from '@/hooks/useStudioSummary';
 import { useHabitInsightsSeries } from '@/hooks/useHabitInsightsSeries';
 import { IdentityProgressionSidebar } from '@/components/habits/IdentityProgressionSidebar';
+import { getProgressIdentityIdFromSearch } from '@/lib/identityProgressRoute';
 
 function resolveGroupIdentity(
   key: string,
@@ -136,6 +137,16 @@ export default function HabitsPage() {
     () => new Set()
   );
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const progressIdentityId = getProgressIdentityIdFromSearch(window.location.search);
+    if (!progressIdentityId) return;
+
+    setFocusedIdentityId(progressIdentityId);
+    setProgressSheetOpen(true);
+    track('identity_progress_details_opened', { source: 'toast' });
+  }, []);
 
   useEffect(() => {
     api.getIdentities().then(setIdentities).catch(() => {});

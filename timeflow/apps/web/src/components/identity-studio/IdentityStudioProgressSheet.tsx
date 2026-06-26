@@ -3,6 +3,7 @@
 import type { Identity, IdentityEvolutionState } from '@timeflow/shared';
 import type { EvolutionSurfaceMode } from '@/hooks/useEvolutionSurface';
 import { IdentityProgressionSidebar } from '@/components/habits/IdentityProgressionSidebar';
+import { MobileModal } from '@/components/ui';
 
 export interface IdentityStudioProgressSheetProps {
   open: boolean;
@@ -27,38 +28,18 @@ export function IdentityStudioProgressSheet({
   onRefresh,
   onRetry,
 }: IdentityStudioProgressSheetProps) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/40"
-        aria-label="Close progress"
-        onClick={onClose}
+    <MobileModal isOpen={open} onClose={onClose} title="Progress Details">
+      <IdentityProgressionSidebar
+        surfaceMode={surfaceMode}
+        evolutionStates={evolutionStates}
+        identities={identities}
+        timeZone={timeZone}
+        focusedIdentityId={focusedIdentityId}
+        onRefresh={onRefresh}
+        onRetry={onRetry}
+        variant="embedded"
       />
-      <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Progress</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-          >
-            ✕
-          </button>
-        </div>
-        <IdentityProgressionSidebar
-          surfaceMode={surfaceMode}
-          evolutionStates={evolutionStates}
-          identities={identities}
-          timeZone={timeZone}
-          focusedIdentityId={focusedIdentityId}
-          onRefresh={onRefresh}
-          onRetry={onRetry}
-          variant="embedded"
-        />
-      </div>
-    </div>
+    </MobileModal>
   );
 }

@@ -8,6 +8,7 @@ import {
   IDENTITY_XP_FEEDBACK_EVENT,
   isIdentityXpFeedbackEnabled,
 } from '@/lib/identityXpFeedback';
+import { buildIdentityProgressHref } from '@/lib/identityProgressRoute';
 import {
   XpFeedbackToast,
   formatXpFeedbackMessage,
@@ -131,7 +132,7 @@ export function XpFeedbackProvider({ onOpenProgress }: XpFeedbackProviderProps) 
         return;
       }
       if (typeof window !== 'undefined') {
-        window.location.assign('/habits');
+        window.location.assign(buildIdentityProgressHref(toast.identityId));
       }
     },
     [onOpenProgress]

@@ -137,7 +137,8 @@ export type AnalyticsEvent =
   | { name: 'identity_xp_toast_shown'; properties: { source: 'task' | 'habit'; variant: 'xp' | 'level' | 'stage' | 'batch' } }
   | { name: 'identity_xp_toast_clicked'; properties: { source: 'task' | 'habit'; variant: 'xp' | 'level' | 'stage' | 'batch' } }
   | { name: 'identity_level_up_shown'; properties: { source: 'task' | 'habit' } }
-  | { name: 'identity_stage_unlocked_shown'; properties: { source: 'task' | 'habit' } };
+  | { name: 'identity_stage_unlocked_shown'; properties: { source: 'task' | 'habit' } }
+  | { name: 'identity_progress_details_opened'; properties: { source: 'toast' | 'identity_studio' } };
 
 // Track event
 export function track<T extends AnalyticsEvent>(event: T['name'], properties?: T['properties']) {

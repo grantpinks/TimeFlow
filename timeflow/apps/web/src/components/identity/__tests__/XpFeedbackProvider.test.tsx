@@ -161,12 +161,32 @@ describe('XpFeedbackProvider', () => {
 
     dispatchXp(xpEvent());
     await advance(350);
-    fireEvent.click(screen.getByRole('button', { name: /open identity studio/i }));
+    fireEvent.click(screen.getByRole('button', { name: /view progress/i }));
 
     expect(onOpenProgress).toHaveBeenCalledWith('identity-1');
     expect(mocks.track).toHaveBeenCalledWith('identity_xp_toast_clicked', {
       source: 'task',
       variant: 'xp',
+    });
+  });
+
+  it('routes to progress details when no custom click handler is provided', async () => {
+    const assign = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, assign },
+    });
+    render(<XpFeedbackProvider />);
+
+    dispatchXp(xpEvent());
+    await advance(350);
+    fireEvent.click(screen.getByRole('button', { name: /view progress/i }));
+
+    expect(assign).toHaveBeenCalledWith('/habits?progress=identity-1');
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
     });
   });
 });
