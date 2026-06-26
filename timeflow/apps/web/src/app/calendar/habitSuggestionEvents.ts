@@ -1,4 +1,5 @@
 import type { EnrichedHabitSuggestion } from '@timeflow/shared';
+import { DateTime } from 'luxon';
 
 export interface CalendarHabitSuggestionEvent {
   id: string;
@@ -14,17 +15,28 @@ const MIN_SUGGESTION_DISPLAY_MINUTES = 30;
 
 export function buildHabitSuggestionCalendarEvents(
   suggestions: EnrichedHabitSuggestion[],
-  enabled: boolean
+  enabled: boolean,
+  referenceDate = new Date(),
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 ): CalendarHabitSuggestionEvent[] {
   if (!enabled) return [];
+
+  const todayStart = DateTime.fromJSDate(referenceDate).setZone(timeZone).startOf('day');
 
   return suggestions
     .filter((suggestion) => suggestion.status === 'proposed')
     .map((suggestion) => {
       const start = new Date(suggestion.start);
       const end = new Date(suggestion.end);
+      const suggestionStart = DateTime.fromJSDate(start).setZone(timeZone);
 
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime()) ||
+        !suggestionStart.isValid ||
+        end <= start ||
+        suggestionStart < todayStart
+      ) {
         return null;
       }
 

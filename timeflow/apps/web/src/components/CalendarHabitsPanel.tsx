@@ -54,7 +54,8 @@ export function CalendarHabitsPanel({
   const doneTodayCount = activeWithStatus.filter((item) => item.status?.completedToday).length;
   const stillDueCount = studioSummary?.strip.dueTodayCount ?? 0;
   const atRiskCount =
-    studioSummary?.strip.atRiskCount ?? activeWithStatus.filter((item) => item.status?.streakAtRisk).length;
+    studioSummary?.strip.atRiskCount ??
+    activeWithStatus.filter((item) => item.status?.status === 'at_risk' && item.status.streakAtRisk).length;
   const needsSlotCount =
     studioSummary?.strip.unscheduledWeekCount ??
     activeWithStatus.filter((item) => item.status?.status === 'open' || !item.status?.nextStart).length;
@@ -272,13 +273,17 @@ function DraggableHabitItem({
         ...(timeZone ? { timeZone } : {}),
       })
       : null;
+  const scheduledTime = status?.status === 'scheduled' ? nextTime : null;
+  const isScheduled = status?.status === 'scheduled';
   const statusLabel =
     status?.completedToday
       ? 'Done today'
+      : scheduledTime
+      ? `Scheduled ${scheduledTime}`
+      : isScheduled
+      ? 'Scheduled today'
       : status?.streakAtRisk
       ? 'Streak at risk'
-      : nextTime
-      ? `Scheduled ${nextTime}`
       : 'Needs a slot';
 
   return (
@@ -294,10 +299,10 @@ function DraggableHabitItem({
           className={`w-2 h-2 rounded-full mt-1 flex-shrink-0 ${
             status?.completedToday
               ? 'bg-emerald-500'
+              : isScheduled
+              ? 'bg-blue-500'
               : status?.streakAtRisk
               ? 'bg-rose-500'
-              : nextTime
-              ? 'bg-blue-500'
               : 'bg-amber-500'
           }`}
         />

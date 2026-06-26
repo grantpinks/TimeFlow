@@ -41,7 +41,7 @@ export async function getHabitStudioSummary(userId: string): Promise<StudioSumma
       prisma.scheduledHabit.findMany({
         where: {
           userId,
-          startDateTime: { gte: now.toJSDate(), lt: weekEnd.toJSDate() },
+          startDateTime: { gte: todayStart.toJSDate(), lt: weekEnd.toJSDate() },
         },
         orderBy: { startDateTime: 'asc' },
         select: { habitId: true, startDateTime: true },
@@ -67,21 +67,20 @@ export async function getHabitStudioSummary(userId: string): Promise<StudioSumma
     const streakAtRisk = insight?.streak.atRisk ?? false;
     const currentStreak = insight?.streak.current ?? 0;
     const nextStart = nextByHabit.get(habit.id) ?? null;
+    const nextDt = nextStart ? DateTime.fromJSDate(new Date(nextStart), { zone: timeZone }) : null;
+    const scheduledToday = Boolean(nextDt && nextDt >= todayStart && nextDt < todayEnd);
 
     let status: HabitRowStatus = 'open';
     if (completedToday) {
       status = 'done_today';
+    } else if (scheduledToday) {
+      status = 'scheduled';
     } else if (streakAtRisk) {
       status = 'at_risk';
       atRiskCount += 1;
-    } else if (nextStart) {
-      const nextDt = DateTime.fromJSDate(new Date(nextStart), { zone: timeZone });
-      if (nextDt >= todayStart && nextDt < todayEnd) {
-        status = 'scheduled';
-      }
     }
 
-    if (isHabitDueOnDate(habit, todayStart.toJSDate(), timeZone) && !completedToday) {
+    if (isHabitDueOnDate(habit, todayStart.toJSDate(), timeZone) && !completedToday && status !== 'scheduled') {
       dueTodayCount += 1;
     }
 

@@ -77,6 +77,25 @@ function localDaySpan(start: string, end: string, timeZone: string): { start: Da
   };
 }
 
+function clampSuggestionWindowToToday(
+  start: string,
+  end: string,
+  timeZone: string
+): { start: DateTime; end: DateTime } | null {
+  const requestedWindow = parseSuggestionWindow(start, end, timeZone);
+  const todayStart = DateTime.now().setZone(timeZone).startOf('day');
+  const effectiveStart = requestedWindow.start < todayStart ? todayStart : requestedWindow.start;
+
+  if (requestedWindow.end <= effectiveStart) {
+    return null;
+  }
+
+  return {
+    start: effectiveStart,
+    end: requestedWindow.end,
+  };
+}
+
 export async function getHabitSuggestionsForUser(
   userId: string,
   dateRangeStart: string,
@@ -100,20 +119,6 @@ export async function getHabitSuggestionsForUser(
     return [];
   }
 
-  // Gather existing calendar events (Google) and already scheduled tasks to avoid conflicts
-  const calendarId = user.defaultCalendarId || 'primary';
-  const existingEvents = await calendarService.getEvents(
-    userId,
-    calendarId,
-    dateRangeStart,
-    dateRangeEnd
-  );
-
-  const scheduledTasks = await prisma.scheduledTask.findMany({
-    where: { task: { userId } },
-    include: { task: true },
-  });
-
   const preferences: UserPreferences = {
     timeZone: user.timeZone || 'UTC',
     wakeTime: user.wakeTime || '08:00',
@@ -121,13 +126,39 @@ export async function getHabitSuggestionsForUser(
     dailySchedule: (user.dailyScheduleConstraints as DailyScheduleConfig | null) || (user.dailySchedule as DailyScheduleConfig | null) || null,
   };
 
-  const unavailableRange = localDaySpan(dateRangeStart, dateRangeEnd, preferences.timeZone);
+  const effectiveWindow = clampSuggestionWindowToToday(dateRangeStart, dateRangeEnd, preferences.timeZone);
+  if (!effectiveWindow) {
+    return [];
+  }
+
+  const effectiveDateRangeStart = effectiveWindow.start.toISO()!;
+  const effectiveDateRangeEnd = effectiveWindow.end.toISO()!;
+
+  // Gather existing calendar events (Google) and already scheduled tasks to avoid conflicts
+  const calendarId = user.defaultCalendarId || 'primary';
+  const existingEvents = await calendarService.getEvents(
+    userId,
+    calendarId,
+    effectiveDateRangeStart,
+    effectiveDateRangeEnd
+  );
+
+  const scheduledTasks = await prisma.scheduledTask.findMany({
+    where: {
+      task: { userId },
+      startDateTime: { lt: effectiveWindow.end.toJSDate() },
+      endDateTime: { gt: effectiveWindow.start.toJSDate() },
+    },
+    include: { task: true },
+  });
+
+  const unavailableRange = localDaySpan(effectiveDateRangeStart, effectiveDateRangeEnd, preferences.timeZone);
 
   const scheduledHabits = await prisma.scheduledHabit.findMany({
     where: {
       userId,
-      startDateTime: { lt: new Date(dateRangeEnd) },
-      endDateTime: { gt: new Date(dateRangeStart) },
+      startDateTime: { lt: effectiveWindow.end.toJSDate() },
+      endDateTime: { gt: effectiveWindow.start.toJSDate() },
     },
     select: { habitId: true, startDateTime: true, endDateTime: true },
   });
@@ -178,7 +209,13 @@ export async function getHabitSuggestionsForUser(
     preferredTimeOfDay: (habit.preferredTimeOfDay as HabitInput['preferredTimeOfDay']) || undefined,
   }));
 
-  const suggestions = suggestHabitBlocks(habitInputs, schedulerEvents, preferences, dateRangeStart, dateRangeEnd);
+  const suggestions = suggestHabitBlocks(
+    habitInputs,
+    schedulerEvents,
+    preferences,
+    effectiveDateRangeStart,
+    effectiveDateRangeEnd
+  );
   const unavailableHabitDays = new Set<string>();
   for (const scheduledHabit of scheduledHabitDays) {
     unavailableHabitDays.add(

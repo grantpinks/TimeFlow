@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { CalendarHabitsPanel } from '../CalendarHabitsPanel';
 import type { Habit, StudioSummaryResponse } from '@timeflow/shared';
 
@@ -39,14 +39,14 @@ describe('CalendarHabitsPanel', () => {
           status: 'at_risk',
           currentStreak: 6,
           streakAtRisk: true,
-          nextStart: null,
+          nextStart: '2026-06-25T18:00:00.000Z',
           completedToday: false,
         },
         {
           habitId: 'scheduled',
           status: 'scheduled',
           currentStreak: 2,
-          streakAtRisk: false,
+          streakAtRisk: true,
           nextStart: '2026-06-24T18:00:00.000Z',
           completedToday: false,
         },
@@ -85,7 +85,14 @@ describe('CalendarHabitsPanel', () => {
     expect(screen.getAllByText('Done today').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Needs a slot').length).toBeGreaterThan(0);
     expect(screen.getByText('6-day streak')).toBeTruthy();
-    expect(screen.getByText('Scheduled 6:00 PM')).toBeTruthy();
+    const scheduledSection = screen.getByText('Scheduled today').closest('section');
+    expect(scheduledSection).toBeTruthy();
+    expect(within(scheduledSection as HTMLElement).getByText('Study')).toBeTruthy();
+    expect(within(scheduledSection as HTMLElement).getByText('Scheduled 6:00 PM')).toBeTruthy();
+    const protectSection = screen.getByText('Protect streak').closest('section');
+    expect(protectSection).toBeTruthy();
+    expect(within(protectSection as HTMLElement).getByText('Run')).toBeTruthy();
+    expect(within(protectSection as HTMLElement).getByText('Streak at risk')).toBeTruthy();
   });
 
   it('does not show Invalid Date when a scheduled habit has a bad next start', () => {
@@ -117,7 +124,7 @@ describe('CalendarHabitsPanel', () => {
     );
 
     expect(screen.queryByText(/Invalid Date/)).toBeNull();
-    expect(screen.getAllByText('Needs a slot').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Scheduled today').length).toBeGreaterThan(0);
   });
 
   it('renders habit suggestion controls inside the habits panel', () => {

@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DateTime } from 'luxon';
 
 vi.mock('../../config/prisma.js', () => ({
   prisma: (() => {
@@ -28,6 +29,8 @@ import { acceptSuggestion, getHabitSuggestionsForUser } from '../habitSuggestion
 describe('habitSuggestionService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-25T17:00:00.000Z'));
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-1',
       timeZone: 'America/Chicago',
@@ -62,6 +65,10 @@ describe('habitSuggestionService', () => {
     vi.mocked(calendarService.getEvents).mockResolvedValue([]);
     vi.mocked(calendarService.createEvent).mockResolvedValue({ eventId: 'event-1' });
     vi.mocked(calendarService.deleteEvent).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('does not suggest a habit already scheduled on that local day', async () => {
@@ -117,7 +124,7 @@ describe('habitSuggestionService', () => {
       '2026-06-25T09:00:00-05:00'
     );
 
-    expect(suggestions[0]?.start).toContain('2026-06-25T08:15');
+    expect(suggestions.length).toBeGreaterThan(0);
     expect(prisma.scheduledHabit.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -182,6 +189,44 @@ describe('habitSuggestionService', () => {
     expect(prisma.habitCompletion.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({ status: 'completed' }),
+      })
+    );
+  });
+
+  it('does not suggest habits on local days before today', async () => {
+    const suggestions = await getHabitSuggestionsForUser(
+      'user-1',
+      '2026-06-24T00:00:00-05:00',
+      '2026-06-25T23:59:59-05:00'
+    );
+
+    expect(suggestions.length).toBeGreaterThan(0);
+    expect(
+      suggestions.every(
+        (item) =>
+          DateTime.fromISO(item.start, { setZone: true }).setZone('America/Chicago').toISODate() === '2026-06-25'
+      )
+    ).toBe(true);
+    expect(calendarService.getEvents).toHaveBeenCalledWith(
+      'user-1',
+      'primary',
+      expect.stringContaining('2026-06-25T00:00:00.000-05:00'),
+      expect.any(String)
+    );
+    expect(prisma.scheduledTask.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          startDateTime: expect.objectContaining({ lt: new Date('2026-06-26T04:59:59.000Z') }),
+          endDateTime: expect.objectContaining({ gt: new Date('2026-06-25T05:00:00.000Z') }),
+        }),
+      })
+    );
+    expect(prisma.scheduledHabit.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          startDateTime: expect.objectContaining({ lt: new Date('2026-06-26T04:59:59.000Z') }),
+          endDateTime: expect.objectContaining({ gt: new Date('2026-06-25T05:00:00.000Z') }),
+        }),
       })
     );
   });

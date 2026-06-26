@@ -20,7 +20,11 @@ function suggestion(overrides: Partial<EnrichedHabitSuggestion> = {}): EnrichedH
 
 describe('buildHabitSuggestionCalendarEvents', () => {
   it('builds distinct calendar ghost events when enabled', () => {
-    const events = buildHabitSuggestionCalendarEvents([suggestion()], true);
+    const events = buildHabitSuggestionCalendarEvents(
+      [suggestion()],
+      true,
+      new Date('2026-06-25T12:00:00.000-05:00')
+    );
 
     expect(events).toHaveLength(1);
     expect(events[0]?.id).toContain('habit-suggestion-habit-1');
@@ -36,7 +40,8 @@ describe('buildHabitSuggestionCalendarEvents', () => {
           end: '2026-06-25T17:05:00.000-05:00',
         }),
       ],
-      true
+      true,
+      new Date('2026-06-25T12:00:00.000-05:00')
     );
 
     expect(events[0]?.end.toISOString()).toBe(new Date('2026-06-25T17:05:00.000-05:00').toISOString());
@@ -45,6 +50,62 @@ describe('buildHabitSuggestionCalendarEvents', () => {
 
   it('returns no events when disabled', () => {
     expect(buildHabitSuggestionCalendarEvents([suggestion()], false)).toEqual([]);
+  });
+
+  it('ignores suggestions from days before today', () => {
+    const events = buildHabitSuggestionCalendarEvents(
+      [
+        suggestion({
+          start: '2026-06-24T17:00:00.000-05:00',
+          end: '2026-06-24T17:30:00.000-05:00',
+        }),
+        suggestion({
+          habitId: 'habit-2',
+          start: '2026-06-25T08:00:00.000-05:00',
+          end: '2026-06-25T08:30:00.000-05:00',
+          habit: {
+            id: 'habit-2',
+            title: 'Study',
+            description: null,
+            durationMinutes: 30,
+          },
+        }),
+      ],
+      true,
+      new Date('2026-06-25T12:00:00.000-05:00')
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.habitId).toBe('habit-2');
+  });
+
+  it('keeps profile-timezone morning suggestions even when browser midnight would be later', () => {
+    const events = buildHabitSuggestionCalendarEvents(
+      [
+        suggestion({
+          habitId: 'habit-past',
+          start: '2026-06-24T20:00:00.000Z',
+          end: '2026-06-24T20:30:00.000Z',
+        }),
+        suggestion({
+          habitId: 'habit-london-morning',
+          start: '2026-06-24T23:30:00.000Z',
+          end: '2026-06-25T00:00:00.000Z',
+          habit: {
+            id: 'habit-london-morning',
+            title: 'London Morning',
+            description: null,
+            durationMinutes: 30,
+          },
+        }),
+      ],
+      true,
+      new Date('2026-06-25T12:00:00.000+01:00'),
+      'Europe/London'
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.habitId).toBe('habit-london-morning');
   });
 
   it('ignores rejected and invalid suggestions', () => {

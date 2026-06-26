@@ -88,4 +88,44 @@ describe('getHabitStudioSummary', () => {
 
     expect(result.strip.dueTodayCount).toBe(3);
   });
+
+  it('treats an at-risk habit scheduled today as scheduled instead of needing protection', async () => {
+    vi.mocked(prisma.scheduledHabit.findMany).mockResolvedValue([
+      { habitId: 'h1', startDateTime: new Date('2026-06-25T14:00:00.000Z') },
+    ] as any);
+    vi.mocked(getHabitInsights).mockResolvedValue({
+      habits: [
+        {
+          habitId: 'h1',
+          habitTitle: 'Run',
+          adherenceRate: 0.5,
+          scheduled: 4,
+          completed: 2,
+          skipped: 0,
+          minutesScheduled: 60,
+          minutesCompleted: 30,
+          streak: { current: 3, best: 5, lastCompleted: null, atRisk: true },
+          bestWindow: null,
+          adherenceSeries: [],
+          skipReasons: [],
+        },
+      ],
+    } as any);
+
+    const result = await getHabitStudioSummary('user-1');
+
+    expect(result.rows[0]?.status).toBe('scheduled');
+    expect(result.rows[0]?.streakAtRisk).toBe(true);
+    expect(result.strip.dueTodayCount).toBe(0);
+    expect(result.strip.atRiskCount).toBe(0);
+    expect(prisma.scheduledHabit.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          startDateTime: expect.objectContaining({
+            gte: new Date('2026-06-25T00:00:00.000Z'),
+          }),
+        }),
+      })
+    );
+  });
 });

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { DateTime } from 'luxon';
 import {
   DndContext,
   DragOverlay,
@@ -165,6 +166,7 @@ export default function CalendarPage() {
   const [activeDragHabit, setActiveDragHabit] = useState<{ title: string; durationMinutes: number } | null>(null);
   const [activeDropPreview, setActiveDropPreview] = useState<CalendarDropPreview | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [habitSuggestionReferenceDate, setHabitSuggestionReferenceDate] = useState(() => new Date());
   // Preview state for drag-and-drop scheduling
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const [previewHabit, setPreviewHabit] = useState<{ habitId: string; title: string; durationMinutes: number } | null>(null);
@@ -260,16 +262,19 @@ export default function CalendarPage() {
         setHabitSuggestionsLoading(true);
       }
 
-      const start = new Date(calendarDate);
-      start.setDate(start.getDate() - 7);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(calendarDate);
-      end.setDate(end.getDate() + 14);
-      end.setHours(23, 59, 59, 999);
+      const timeZone = user?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const requestedStart = DateTime.fromJSDate(calendarDate).setZone(timeZone).minus({ days: 7 }).startOf('day');
+      const todayStart = DateTime.now().setZone(timeZone).startOf('day');
+      const start = requestedStart < todayStart ? todayStart : requestedStart;
+      const end = DateTime.fromJSDate(calendarDate).setZone(timeZone).plus({ days: 14 }).endOf('day');
+      if (end < todayStart) {
+        setHabitSuggestions([]);
+        return true;
+      }
 
       const res = await api.getHabitSuggestions({
-        from: start.toISOString(),
-        to: end.toISOString(),
+        from: start.toISO()!,
+        to: end.toISO()!,
       });
       setHabitSuggestions(res.suggestions);
       return true;
@@ -284,7 +289,7 @@ export default function CalendarPage() {
         setHabitSuggestionsLoading(false);
       }
     }
-  }, [calendarDate, user?.id]);
+  }, [calendarDate, user?.id, user?.timeZone]);
 
   const refreshCalendar = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -403,6 +408,27 @@ export default function CalendarPage() {
   }, [fetchHabitSuggestions]);
 
   useEffect(() => {
+    const timeZone = user?.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const scheduleNextRefresh = () => {
+      const now = DateTime.now().setZone(timeZone);
+      const nextMidnight = now.plus({ days: 1 }).startOf('day');
+      const delayMs = Math.max(1000, nextMidnight.diff(now).as('milliseconds') + 1000);
+
+      timeoutId = setTimeout(() => {
+        setHabitSuggestionReferenceDate(new Date());
+        scheduleNextRefresh();
+      }, delayMs);
+    };
+
+    setHabitSuggestionReferenceDate(new Date());
+    scheduleNextRefresh();
+
+    return () => clearTimeout(timeoutId);
+  }, [user?.timeZone]);
+
+  useEffect(() => {
     if (!user?.id) {
       setHabits([]);
       return;
@@ -478,8 +504,14 @@ export default function CalendarPage() {
     [filteredExternalEvents, connectedAccounts]
   );
   const habitSuggestionEvents = useMemo(
-    () => buildHabitSuggestionCalendarEvents(habitSuggestions, showHabitRecommendations),
-    [habitSuggestions, showHabitRecommendations]
+    () =>
+      buildHabitSuggestionCalendarEvents(
+        habitSuggestions,
+        showHabitRecommendations,
+        habitSuggestionReferenceDate,
+        user?.timeZone
+      ),
+    [habitSuggestions, showHabitRecommendations, habitSuggestionReferenceDate, user?.timeZone]
   );
 
   // Fetch event categorizations with caching and background auto-categorization
