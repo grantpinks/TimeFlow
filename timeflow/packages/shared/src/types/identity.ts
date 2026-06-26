@@ -177,6 +177,7 @@ export interface FlowCustomizationState {
   selectedPalette: string;
   selectedEmote: string;
   selectedAnimationPack: string;
+  selectedAccessory: string;
   updatedAt: string;
 }
 

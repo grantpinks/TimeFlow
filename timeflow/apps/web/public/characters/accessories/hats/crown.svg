@@ -1,0 +1,5 @@
+<svg width="96" height="64" viewBox="0 0 96 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Crown accessory">
+  <path d="M14 50L20 18L36 36L48 12L60 36L76 18L82 50H14Z" fill="#FACC15" stroke="#A16207" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M18 50H78V58H18V50Z" fill="#F59E0B" stroke="#A16207" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="48" cy="28" r="4" fill="#0F766E"/>
+</svg>

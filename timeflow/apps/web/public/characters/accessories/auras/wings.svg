@@ -1,0 +1,6 @@
+<svg width="128" height="96" viewBox="0 0 128 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wings accessory">
+  <path d="M58 44C36 22 20 18 8 24C14 28 18 34 20 42C12 42 7 46 4 54C16 52 27 56 38 66C46 74 54 76 62 72" fill="#CCFBF1" stroke="#0F766E" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M70 44C92 22 108 18 120 24C114 28 110 34 108 42C116 42 121 46 124 54C112 52 101 56 90 66C82 74 74 76 66 72" fill="#CCFBF1" stroke="#0F766E" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M28 44C38 47 46 52 54 60" stroke="#5EEAD4" stroke-width="3" stroke-linecap="round"/>
+  <path d="M100 44C90 47 82 52 74 60" stroke="#5EEAD4" stroke-width="3" stroke-linecap="round"/>
+</svg>

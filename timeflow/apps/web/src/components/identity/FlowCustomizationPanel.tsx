@@ -6,9 +6,10 @@ import * as api from '@/lib/api';
 import { ApiRequestError } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import type { IdentityUnlockItem } from '@timeflow/shared';
-import { FlowMascot } from '@/components/FlowMascot';
+import { LayeredFlowCharacter } from '@/components/character/LayeredFlowCharacter';
 import {
   allowedSlugsWithDefaults,
+  buildAccessoryOptions,
   buildAnimationPackOptions,
   buildEmoteOptions,
   buildPaletteOptions,
@@ -79,8 +80,9 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
     void load();
   }, [evolutionEnabled, load]);
 
-  const { paletteOptions, emoteOptions, animOptions, stageOptions } = useMemo(() => {
-    const { palettes, emotes, animationPacks, stageVariants } = collectUnlockedCustomizationSlugs(unlocks);
+  const { paletteOptions, emoteOptions, animOptions, stageOptions, accessoryOptions } = useMemo(() => {
+    const { palettes, emotes, animationPacks, stageVariants, accessories } =
+      collectUnlockedCustomizationSlugs(unlocks);
     return {
       paletteOptions: buildPaletteOptions(allowedSlugsWithDefaults(palettes, 'palette'), {
         includeLocked: true,
@@ -92,6 +94,9 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         includeLocked: true,
       }),
       stageOptions: buildStageVariantOptions(allowedSlugsWithDefaults(stageVariants, 'stage'), {
+        includeLocked: true,
+      }),
+      accessoryOptions: buildAccessoryOptions(allowedSlugsWithDefaults(accessories, 'accessory'), {
         includeLocked: true,
       }),
     };
@@ -168,7 +173,10 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         <div
           className={`flex shrink-0 justify-center rounded-xl border border-teal-200/40 bg-white/50 p-4 dark:border-teal-800/40 dark:bg-slate-800/50 ${previewMotionClass}`}
         >
-          <FlowMascot size="lg" expression="happy" palette={values.selectedPalette} />
+          <LayeredFlowCharacter
+            palette={values.selectedPalette}
+            accessory={values.selectedAccessory}
+          />
         </div>
       </div>
 
@@ -240,6 +248,23 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
             onChange={(e) => void persistField('selectedStageVariant', e.target.value)}
           >
             {stageOptions.map((o) => (
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </FieldBlock>
+
+        <FieldBlock id="flow-custom-accessory" label="Accessory" description="Optional flourish layered on Flow.">
+          <select
+            id="flow-custom-accessory"
+            aria-label="Accessory"
+            className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+            value={values.selectedAccessory}
+            disabled={!!savingKey}
+            onChange={(e) => void persistField('selectedAccessory', e.target.value)}
+          >
+            {accessoryOptions.map((o) => (
               <option key={o.slug} value={o.slug} disabled={o.locked}>
                 {o.label}
               </option>

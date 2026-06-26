@@ -51,6 +51,7 @@ function baseCustomization(): FlowCustomizationState {
     selectedEmote: 'default',
     selectedAnimationPack: 'default',
     selectedStageVariant: 'default',
+    selectedAccessory: 'none',
     updatedAt: new Date().toISOString(),
   };
 }
@@ -131,6 +132,35 @@ describe('FlowCustomizationPanel', () => {
     expect(oceanOption?.textContent).toMatch(/level 3/i);
   });
 
+  it('shows locked accessory options with unlock requirements', async () => {
+    mockApis({
+      unlocks: [
+        {
+          id: '1',
+          identityId: 'id-lead',
+          userId: 'u1',
+          unlockKey: 'flow_accessory_none',
+          unlockType: 'flow_accessory',
+          grantedAt: new Date().toISOString(),
+          grantedByStage: null,
+          grantedByLevel: 1,
+        },
+      ],
+    });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(document.getElementById('flow-custom-accessory')).toBeTruthy();
+    });
+
+    const accessorySelect = document.getElementById('flow-custom-accessory') as HTMLSelectElement;
+    const crownOption = [...accessorySelect.options].find((o) => o.value === 'crown');
+    expect(crownOption).toBeTruthy();
+    expect(crownOption).toBeDisabled();
+    expect(crownOption?.textContent).toMatch(/disciplined stage/i);
+  });
+
   it('calls updateFlowCustomization when palette changes', async () => {
     const user = userEvent.setup();
     const oceanUnlock: IdentityUnlockItem = {
@@ -157,6 +187,36 @@ describe('FlowCustomizationPanel', () => {
     await waitFor(() => {
       expect(apiMocks.updateFlowCustomization).toHaveBeenCalledWith(
         expect.objectContaining({ selectedPalette: 'ocean' })
+      );
+    });
+  });
+
+  it('calls updateFlowCustomization when accessory changes', async () => {
+    const user = userEvent.setup();
+    const crownUnlock: IdentityUnlockItem = {
+      id: '1',
+      identityId: 'id-lead',
+      userId: 'u1',
+      unlockKey: 'flow_accessory_crown',
+      unlockType: 'flow_accessory',
+      grantedAt: new Date().toISOString(),
+      grantedByStage: 'Disciplined',
+      grantedByLevel: null,
+    };
+    mockApis({ unlocks: [crownUnlock] });
+
+    renderPanel();
+
+    await waitFor(() => {
+      const sel = document.getElementById('flow-custom-accessory') as HTMLSelectElement;
+      expect([...sel.options].some((o) => o.value === 'crown')).toBe(true);
+    });
+
+    await user.selectOptions(document.getElementById('flow-custom-accessory')!, 'crown');
+
+    await waitFor(() => {
+      expect(apiMocks.updateFlowCustomization).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedAccessory: 'crown' })
       );
     });
   });

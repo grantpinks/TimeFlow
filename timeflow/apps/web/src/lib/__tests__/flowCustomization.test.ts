@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { IdentityUnlockItem } from '@timeflow/shared';
 import {
   allowedSlugsWithDefaults,
+  buildAccessoryOptions,
   buildPaletteOptions,
   collectUnlockedCustomizationSlugs,
   mergeFlowCustomization,
@@ -18,10 +19,12 @@ const baseUnlock: Omit<IdentityUnlockItem, 'unlockKey' | 'unlockType'> = {
 
 describe('flowCustomization helpers', () => {
   it('maps flow_palette_ocean unlock to palette slug ocean', () => {
-    const { palettes } = collectUnlockedCustomizationSlugs([
+    const { palettes, accessories } = collectUnlockedCustomizationSlugs([
       { ...baseUnlock, unlockKey: 'flow_palette_ocean', unlockType: 'flow_palette' },
+      { ...baseUnlock, unlockKey: 'flow_accessory_crown', unlockType: 'flow_accessory' },
     ]);
     expect(palettes.has('ocean')).toBe(true);
+    expect(accessories.has('crown')).toBe(true);
   });
 
   it('buildPaletteOptions respects allowed slugs', () => {
@@ -57,12 +60,14 @@ describe('flowCustomization helpers', () => {
         selectedEmote: 'sparkle',
         selectedAnimationPack: 'gentle_bounce',
         selectedStageVariant: 'transcendent',
+        selectedAccessory: 'visor',
       })
     ).toEqual({
       selectedPalette: 'sunset',
       selectedEmote: 'sparkle',
       selectedAnimationPack: 'gentle_bounce',
       selectedStageVariant: 'transcendent',
+      selectedAccessory: 'visor',
     });
   });
 
@@ -73,12 +78,30 @@ describe('flowCustomization helpers', () => {
         selectedEmote: '   ',
         selectedAnimationPack: '%$#',
         selectedStageVariant: '',
+        selectedAccessory: '!!!',
       })
     ).toEqual({
       selectedPalette: 'default',
       selectedEmote: 'default',
       selectedAnimationPack: 'default',
       selectedStageVariant: 'default',
+      selectedAccessory: 'none',
+    });
+  });
+
+  it('builds accessory options with locked requirements', () => {
+    const { accessories } = collectUnlockedCustomizationSlugs([
+      { ...baseUnlock, unlockKey: 'flow_accessory_none', unlockType: 'flow_accessory' },
+    ]);
+    const opts = buildAccessoryOptions(allowedSlugsWithDefaults(accessories, 'accessory'), {
+      includeLocked: true,
+    });
+    const crown = opts.find((o) => o.slug === 'crown');
+
+    expect(crown).toMatchObject({
+      slug: 'crown',
+      locked: true,
+      requirement: 'Disciplined stage',
     });
   });
 });

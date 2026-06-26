@@ -3,7 +3,11 @@ import type { FlowCustomizationState, IdentityUnlockItem } from '@timeflow/share
 /** Client-side shape for Flow companion preferences (mirrors persisted fields). */
 export type FlowCustomizationFields = Pick<
   FlowCustomizationState,
-  'selectedPalette' | 'selectedEmote' | 'selectedAnimationPack' | 'selectedStageVariant'
+  | 'selectedPalette'
+  | 'selectedEmote'
+  | 'selectedAnimationPack'
+  | 'selectedStageVariant'
+  | 'selectedAccessory'
 >;
 
 export const DEFAULT_FLOW_CUSTOMIZATION: FlowCustomizationFields = {
@@ -11,6 +15,7 @@ export const DEFAULT_FLOW_CUSTOMIZATION: FlowCustomizationFields = {
   selectedEmote: 'default',
   selectedAnimationPack: 'default',
   selectedStageVariant: 'default',
+  selectedAccessory: 'none',
 };
 
 /** Allowed mascot palette slugs (matches unlock catalog suffixes + default). */
@@ -58,6 +63,7 @@ export function mergeFlowCustomization(
     selectedEmote: pick('selectedEmote'),
     selectedAnimationPack: pick('selectedAnimationPack'),
     selectedStageVariant: pick('selectedStageVariant'),
+    selectedAccessory: pick('selectedAccessory'),
   };
 }
 
@@ -77,6 +83,7 @@ const PREFIX_PALETTE = 'flow_palette_';
 const PREFIX_EMOTE = 'flow_emote_';
 const PREFIX_ANIM = 'flow_anim_';
 const PREFIX_STAGE = 'flow_form_';
+const PREFIX_ACCESSORY = 'flow_accessory_';
 
 function suffixAfterPrefix(key: string, prefix: string): string | null {
   if (!key.startsWith(prefix)) return null;
@@ -88,11 +95,13 @@ export function collectUnlockedCustomizationSlugs(unlocks: IdentityUnlockItem[])
   emotes: Set<string>;
   animationPacks: Set<string>;
   stageVariants: Set<string>;
+  accessories: Set<string>;
 } {
   const palettes = new Set<string>();
   const emotes = new Set<string>();
   const animationPacks = new Set<string>();
   const stageVariants = new Set<string>();
+  const accessories = new Set<string>();
 
   for (const u of unlocks) {
     const p = suffixAfterPrefix(u.unlockKey, PREFIX_PALETTE);
@@ -103,9 +112,11 @@ export function collectUnlockedCustomizationSlugs(unlocks: IdentityUnlockItem[])
     if (a) animationPacks.add(a);
     const s = suffixAfterPrefix(u.unlockKey, PREFIX_STAGE);
     if (s) stageVariants.add(s);
+    const accessory = suffixAfterPrefix(u.unlockKey, PREFIX_ACCESSORY);
+    if (accessory) accessories.add(accessory);
   }
 
-  return { palettes, emotes, animationPacks, stageVariants };
+  return { palettes, emotes, animationPacks, stageVariants, accessories };
 }
 
 export const FLOW_PALETTE_LABELS: Record<string, string> = {
@@ -143,6 +154,13 @@ export const FLOW_STAGE_VARIANT_LABELS: Record<string, string> = {
   future_self: 'Future self',
 };
 
+export const FLOW_ACCESSORY_LABELS: Record<string, string> = {
+  none: 'None',
+  crown: 'Crown',
+  wings: 'Wings',
+  halo: 'Halo',
+};
+
 const FLOW_PALETTE_REQUIREMENTS: Record<string, string> = {
   default: 'Available by default',
   ocean: 'Level 3',
@@ -176,6 +194,13 @@ const FLOW_STAGE_REQUIREMENTS: Record<string, string> = {
   disciplined: 'Disciplined stage',
   embodied: 'Embodied stage',
   future_self: 'Future self stage',
+};
+
+const FLOW_ACCESSORY_REQUIREMENTS: Record<string, string> = {
+  none: 'Available by default',
+  crown: 'Disciplined stage',
+  wings: 'Embodied stage',
+  halo: 'Future self stage',
 };
 
 function labelFor(slug: string, labels: Record<string, string>): string {
@@ -219,6 +244,7 @@ export function buildPaletteOptions(
 const EMOTE_ORDER = ['default', 'wave', 'celebrate', 'dance', 'fire', 'ascend'] as const;
 const ANIM_ORDER = ['default', 'basic', 'energetic', 'zen'] as const;
 const STAGE_ORDER = ['default', 'seed', 'builder', 'disciplined', 'embodied', 'future_self'] as const;
+const ACCESSORY_ORDER = ['none', 'crown', 'wings', 'halo'] as const;
 
 export function buildEmoteOptions(
   allowedSlugs: Set<string>,
@@ -256,13 +282,27 @@ export function buildStageVariantOptions(
   );
 }
 
+export function buildAccessoryOptions(
+  allowedSlugs: Set<string>,
+  opts?: { includeLocked?: boolean }
+): FlowCustomizationOption[] {
+  const ordered = ACCESSORY_ORDER.filter((s) => allowedSlugs.has(s));
+  const rest = [...allowedSlugs]
+    .filter((s) => !ACCESSORY_ORDER.includes(s as (typeof ACCESSORY_ORDER)[number]))
+    .sort();
+  const slugs = opts?.includeLocked ? [...ACCESSORY_ORDER, ...rest] : [...ordered, ...rest];
+  return slugs.map((slug) =>
+    optionFor(slug, allowedSlugs, FLOW_ACCESSORY_LABELS, FLOW_ACCESSORY_REQUIREMENTS)
+  );
+}
+
 /** Merge unlocked slugs with defaults that are always available in the picker. */
 export function allowedSlugsWithDefaults(
   unlocked: Set<string>,
-  field: 'palette' | 'emote' | 'animation' | 'stage'
+  field: 'palette' | 'emote' | 'animation' | 'stage' | 'accessory'
 ): Set<string> {
   const next = new Set(unlocked);
-  next.add('default');
+  next.add(field === 'accessory' ? 'none' : 'default');
   if (field === 'animation') {
     // Catalog uses `basic` as starter pack; treat as default-adjacent for UX.
     if (unlocked.has('basic')) next.add('basic');

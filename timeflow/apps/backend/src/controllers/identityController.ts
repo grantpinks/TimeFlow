@@ -51,6 +51,7 @@ const flowCustomizationSchema = z
     selectedPalette: CUSTOMIZATION_SLUG.optional(),
     selectedEmote: CUSTOMIZATION_SLUG.optional(),
     selectedAnimationPack: CUSTOMIZATION_SLUG.optional(),
+    selectedAccessory: CUSTOMIZATION_SLUG.optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: 'At least one field is required.',
@@ -61,7 +62,16 @@ const COSMETIC_PREFIX_BY_FIELD = {
   selectedPalette: 'flow_palette_',
   selectedEmote: 'flow_emote_',
   selectedAnimationPack: 'flow_anim_',
+  selectedAccessory: 'flow_accessory_',
 } as const;
+
+const DEFAULT_CUSTOMIZATION_BY_FIELD: Record<keyof typeof COSMETIC_PREFIX_BY_FIELD, string> = {
+  selectedStageVariant: 'default',
+  selectedPalette: 'default',
+  selectedEmote: 'default',
+  selectedAnimationPack: 'default',
+  selectedAccessory: 'none',
+};
 
 // ---------------------------------------------------------------------------
 // Handlers
@@ -215,7 +225,7 @@ async function getUserUnlockedCosmeticKeys(userId: string): Promise<Set<string>>
     where: {
       userId,
       unlockType: {
-        in: ['flow_palette', 'flow_emote', 'flow_animation_pack', 'flow_stage_form'],
+        in: ['flow_palette', 'flow_emote', 'flow_animation_pack', 'flow_stage_form', 'flow_accessory'],
       },
     },
     select: { unlockKey: true },
@@ -228,7 +238,7 @@ function assertCustomizationValueUnlocked(
   slug: string,
   unlockedKeys: Set<string>
 ): boolean {
-  if (slug === 'default') return true;
+  if (slug === DEFAULT_CUSTOMIZATION_BY_FIELD[field]) return true;
   const requiredKey = `${COSMETIC_PREFIX_BY_FIELD[field]}${slug}`;
   return unlockedKeys.has(requiredKey);
 }
@@ -239,6 +249,7 @@ function sanitizeStoredCustomizationFields(
     selectedEmote: string;
     selectedAnimationPack: string;
     selectedStageVariant: string;
+    selectedAccessory: string;
   },
   unlockedKeys: Set<string>
 ): {
@@ -246,6 +257,7 @@ function sanitizeStoredCustomizationFields(
   selectedEmote: string;
   selectedAnimationPack: string;
   selectedStageVariant: string;
+  selectedAccessory: string;
 } {
   const fields = Object.keys(COSMETIC_PREFIX_BY_FIELD) as Array<keyof typeof COSMETIC_PREFIX_BY_FIELD>;
   const out = {
@@ -253,11 +265,12 @@ function sanitizeStoredCustomizationFields(
     selectedEmote: row.selectedEmote,
     selectedAnimationPack: row.selectedAnimationPack,
     selectedStageVariant: row.selectedStageVariant,
+    selectedAccessory: row.selectedAccessory,
   };
   for (const field of fields) {
     const slug = out[field];
     if (!assertCustomizationValueUnlocked(field, slug, unlockedKeys)) {
-      out[field] = 'default';
+      out[field] = DEFAULT_CUSTOMIZATION_BY_FIELD[field];
     }
   }
   return out;
@@ -294,6 +307,7 @@ export async function getFlowCustomization(request: FastifyRequest, reply: Fasti
     selectedPalette: 'default',
     selectedEmote: 'default',
     selectedAnimationPack: 'default',
+    selectedAccessory: 'none',
   };
 
   // When evolution is disabled, return safe defaults immediately — no DB access needed.
@@ -312,12 +326,16 @@ export async function getFlowCustomization(request: FastifyRequest, reply: Fasti
 
   try {
     const unlockedKeys = await getUserUnlockedCosmeticKeys(userId);
+    const customizationWithAccessory = customization as typeof customization & {
+      selectedAccessory?: string | null;
+    };
     const sanitized = sanitizeStoredCustomizationFields(
       {
         selectedPalette: customization.selectedPalette,
         selectedEmote: customization.selectedEmote,
         selectedAnimationPack: customization.selectedAnimationPack,
         selectedStageVariant: customization.selectedStageVariant,
+        selectedAccessory: customizationWithAccessory.selectedAccessory ?? 'none',
       },
       unlockedKeys
     );
@@ -361,6 +379,7 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
       selectedPalette: parsed.data.selectedPalette ?? 'default',
       selectedEmote: parsed.data.selectedEmote ?? 'default',
       selectedAnimationPack: parsed.data.selectedAnimationPack ?? 'default',
+      selectedAccessory: parsed.data.selectedAccessory ?? 'none',
     },
     update: {
       ...(parsed.data.selectedStageVariant !== undefined && {
@@ -375,8 +394,11 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
       ...(parsed.data.selectedAnimationPack !== undefined && {
         selectedAnimationPack: parsed.data.selectedAnimationPack,
       }),
+      ...(parsed.data.selectedAccessory !== undefined && {
+        selectedAccessory: parsed.data.selectedAccessory,
+      }),
     },
-  });
+  } as any);
 
   return reply.send(updated);
 }
