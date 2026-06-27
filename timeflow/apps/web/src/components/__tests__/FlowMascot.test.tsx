@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { FlowMascot } from '../FlowMascot';
 
@@ -26,6 +26,17 @@ vi.mock('@/components/identity/FlowCustomizationProvider', () => ({
 }));
 
 describe('FlowMascot', () => {
+  beforeEach(() => {
+    customizationMocks.customization = {
+      selectedPalette: 'ocean',
+      selectedAnimationPack: 'default',
+      selectedHat: 'crown',
+      selectedEyes: 'bright_eyes',
+      selectedAura: 'spark',
+      selectedBackground: 'sunrise',
+    };
+  });
+
   afterEach(() => {
     cleanup();
   });
@@ -46,5 +57,17 @@ describe('FlowMascot', () => {
     render(<FlowMascot size="md" expression="happy" showAccessory={false} />);
 
     expect(screen.queryByTestId('flow-mascot-accessory')).toBeNull();
+  });
+
+  it('normalizes stale legacy customization context before resolving cosmetic layers', () => {
+    customizationMocks.customization = {
+      selectedPalette: 'ocean',
+      selectedAnimationPack: 'default',
+      selectedAccessory: 'spark',
+    } as any;
+
+    render(<FlowMascot size="md" expression="happy" />);
+
+    expect(screen.getByTestId('flow-mascot-accessory')).toHaveAttribute('data-layer', 'aura');
   });
 });

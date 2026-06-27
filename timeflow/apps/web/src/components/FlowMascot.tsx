@@ -15,7 +15,11 @@ import {
   resolveFlowCosmeticAssets,
   type CharacterLayerAsset,
 } from '@/lib/characterAssets';
-import { normalizeMascotPackSlug, normalizePaletteSlug } from '@/lib/flowCustomization';
+import {
+  mergeFlowCustomization,
+  normalizeMascotPackSlug,
+  normalizePaletteSlug,
+} from '@/lib/flowCustomization';
 
 interface FlowMascotProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -46,19 +50,20 @@ export function FlowMascot({
   showAccessory = true,
 }: FlowMascotProps) {
   const { customization } = useFlowCustomization();
+  const normalizedCustomization = mergeFlowCustomization(customization as any);
   const reduceMotion = useReducedMotion() ?? false;
-  const palette = normalizePaletteSlug(paletteProp ?? customization.selectedPalette);
-  const pack = normalizeMascotPackSlug(customization.selectedAnimationPack);
+  const palette = normalizePaletteSlug(paletteProp ?? normalizedCustomization.selectedPalette);
+  const pack = normalizeMascotPackSlug(normalizedCustomization.selectedAnimationPack);
   const assets = showAccessory
     ? accessoryProp
       ? [resolveAccessoryAsset(accessoryProp)].filter(
           (asset): asset is CharacterLayerAsset => asset !== null
         )
       : resolveFlowCosmeticAssets({
-          selectedHat: hat ?? customization.selectedHat,
-          selectedEyes: eyes ?? customization.selectedEyes,
-          selectedAura: aura ?? customization.selectedAura,
-          selectedBackground: background ?? customization.selectedBackground,
+          selectedHat: hat ?? normalizedCustomization.selectedHat,
+          selectedEyes: eyes ?? normalizedCustomization.selectedEyes,
+          selectedAura: aura ?? normalizedCustomization.selectedAura,
+          selectedBackground: background ?? normalizedCustomization.selectedBackground,
         })
     : [];
 

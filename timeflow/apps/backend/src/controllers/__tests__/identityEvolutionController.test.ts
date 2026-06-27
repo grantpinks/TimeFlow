@@ -268,6 +268,47 @@ describe('identityEvolutionController', () => {
       expect(reply.send).toHaveBeenCalledWith(upserted);
     });
 
+    it('translates legacy selectedAccessory writes into the matching cosmetic slot', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: true,
+      } as any);
+
+      const upserted = {
+        id: 'custom-1',
+        userId: USER_ID,
+        selectedStageVariant: 'default',
+        selectedPalette: 'default',
+        selectedEmote: 'default',
+        selectedAnimationPack: 'default',
+        selectedAccessory: 'crown',
+        selectedHat: 'crown',
+        selectedEyes: 'none',
+        selectedAura: 'none',
+        selectedBackground: 'none',
+        updatedAt: new Date(),
+      };
+      vi.mocked(prisma.userFlowCustomization.upsert).mockResolvedValue(upserted as any);
+
+      const request = makeRequest({ body: { selectedAccessory: 'crown' } });
+      const reply = createControllerReply();
+
+      await updateFlowCustomization(request as any, reply);
+
+      expect(prisma.userFlowCustomization.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({
+            selectedAccessory: 'crown',
+            selectedHat: 'crown',
+          }),
+          update: expect.objectContaining({
+            selectedAccessory: 'crown',
+            selectedHat: 'crown',
+          }),
+        })
+      );
+      expect(reply.send).toHaveBeenCalledWith(upserted);
+    });
+
     it('returns 400 for invalid body (non-string field)', async () => {
       vi.mocked(prisma.user.findFirst).mockResolvedValue({
         identityEvolutionEnabled: true,

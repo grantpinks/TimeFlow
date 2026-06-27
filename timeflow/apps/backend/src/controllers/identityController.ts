@@ -132,6 +132,25 @@ function accessorySlotForSlug(
   return 'selectedHat';
 }
 
+function slotUpdatesForLegacyAccessory(
+  slug: string | undefined
+): Partial<Pick<
+  Record<keyof typeof COSMETIC_PREFIX_BY_FIELD, string>,
+  'selectedHat' | 'selectedEyes' | 'selectedAura' | 'selectedBackground'
+>> {
+  if (!slug) return {};
+  if (slug === 'none') {
+    return {
+      selectedHat: 'none',
+      selectedEyes: 'none',
+      selectedAura: 'none',
+      selectedBackground: 'none',
+    };
+  }
+  const slot = accessorySlotForSlug(slug);
+  return slot ? { [slot]: slug } : {};
+}
+
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
@@ -466,6 +485,7 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
       });
     }
   }
+  const legacySlotUpdates = slotUpdatesForLegacyAccessory(parsed.data.selectedAccessory);
 
   const updated = await prisma.userFlowCustomization.upsert({
     where: { userId },
@@ -476,12 +496,13 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
       selectedEmote: parsed.data.selectedEmote ?? 'default',
       selectedAnimationPack: parsed.data.selectedAnimationPack ?? 'default',
       selectedAccessory: parsed.data.selectedAccessory ?? 'none',
-      selectedHat: parsed.data.selectedHat ?? 'none',
-      selectedEyes: parsed.data.selectedEyes ?? 'none',
-      selectedAura: parsed.data.selectedAura ?? 'none',
-      selectedBackground: parsed.data.selectedBackground ?? 'none',
+      selectedHat: parsed.data.selectedHat ?? legacySlotUpdates.selectedHat ?? 'none',
+      selectedEyes: parsed.data.selectedEyes ?? legacySlotUpdates.selectedEyes ?? 'none',
+      selectedAura: parsed.data.selectedAura ?? legacySlotUpdates.selectedAura ?? 'none',
+      selectedBackground: parsed.data.selectedBackground ?? legacySlotUpdates.selectedBackground ?? 'none',
     },
     update: {
+      ...legacySlotUpdates,
       ...(parsed.data.selectedStageVariant !== undefined && {
         selectedStageVariant: parsed.data.selectedStageVariant,
       }),
