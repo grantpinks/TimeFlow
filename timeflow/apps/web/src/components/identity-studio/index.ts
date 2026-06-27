@@ -8,5 +8,6 @@ export { HabitEditSheet } from './HabitEditSheet';
 export { IdentityStudioInsightsDrawer } from './IdentityStudioInsightsDrawer';
 export { IdentityStudioCoachmark } from './IdentityStudioCoachmark';
 export { IdentityStudioProgressSheet } from './IdentityStudioProgressSheet';
+export { IdentityStudioEvolutionPanel } from './IdentityStudioEvolutionPanel';
 export { resolveSectionExpansion } from './utils';
 export type { IdentityStudioSectionExpansion } from './types';
