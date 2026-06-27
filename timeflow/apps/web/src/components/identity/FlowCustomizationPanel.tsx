@@ -80,8 +80,17 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
     void load();
   }, [evolutionEnabled, load]);
 
-  const { paletteOptions, emoteOptions, animOptions, stageOptions, accessoryOptions } = useMemo(() => {
-    const { palettes, emotes, animationPacks, stageVariants, accessories } =
+  const {
+    paletteOptions,
+    emoteOptions,
+    animOptions,
+    stageOptions,
+    hatOptions,
+    eyesOptions,
+    auraOptions,
+    backgroundOptions,
+  } = useMemo(() => {
+    const { palettes, emotes, animationPacks, stageVariants, hats, eyes, auras, backgrounds } =
       collectUnlockedCustomizationSlugs(unlocks);
     return {
       paletteOptions: buildPaletteOptions(allowedSlugsWithDefaults(palettes, 'palette'), {
@@ -96,7 +105,16 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
       stageOptions: buildStageVariantOptions(allowedSlugsWithDefaults(stageVariants, 'stage'), {
         includeLocked: true,
       }),
-      accessoryOptions: buildAccessoryOptions(allowedSlugsWithDefaults(accessories, 'accessory'), {
+      hatOptions: buildAccessoryOptions('hat', allowedSlugsWithDefaults(hats, 'accessory'), {
+        includeLocked: true,
+      }),
+      eyesOptions: buildAccessoryOptions('eyes', allowedSlugsWithDefaults(eyes, 'accessory'), {
+        includeLocked: true,
+      }),
+      auraOptions: buildAccessoryOptions('aura', allowedSlugsWithDefaults(auras, 'accessory'), {
+        includeLocked: true,
+      }),
+      backgroundOptions: buildAccessoryOptions('background', allowedSlugsWithDefaults(backgrounds, 'accessory'), {
         includeLocked: true,
       }),
     };
@@ -175,7 +193,10 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
         >
           <LayeredFlowCharacter
             palette={values.selectedPalette}
-            accessory={values.selectedAccessory}
+            hat={values.selectedHat}
+            eyes={values.selectedEyes}
+            aura={values.selectedAura}
+            background={values.selectedBackground}
           />
         </div>
       </div>
@@ -255,16 +276,67 @@ export function FlowCustomizationPanel({ evolutionEnabled }: Props) {
           </select>
         </FieldBlock>
 
-        <FieldBlock id="flow-custom-accessory" label="Accessory" description="Optional flourish layered on Flow.">
+        <FieldBlock id="flow-custom-hat" label="Hat" description="Headwear that sits above Flow.">
           <select
-            id="flow-custom-accessory"
-            aria-label="Accessory"
+            id="flow-custom-hat"
+            aria-label="Hat"
             className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
-            value={values.selectedAccessory}
+            value={values.selectedHat}
             disabled={!!savingKey}
-            onChange={(e) => void persistField('selectedAccessory', e.target.value)}
+            onChange={(e) => void persistField('selectedHat', e.target.value)}
           >
-            {accessoryOptions.map((o) => (
+            {hatOptions.map((o) => (
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </FieldBlock>
+
+        <FieldBlock id="flow-custom-eyes" label="Eyes" description="Expression details for Flow's face.">
+          <select
+            id="flow-custom-eyes"
+            aria-label="Eyes"
+            className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+            value={values.selectedEyes}
+            disabled={!!savingKey}
+            onChange={(e) => void persistField('selectedEyes', e.target.value)}
+          >
+            {eyesOptions.map((o) => (
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </FieldBlock>
+
+        <FieldBlock id="flow-custom-aura" label="Aura" description="Motion and glow behind Flow.">
+          <select
+            id="flow-custom-aura"
+            aria-label="Aura"
+            className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+            value={values.selectedAura}
+            disabled={!!savingKey}
+            onChange={(e) => void persistField('selectedAura', e.target.value)}
+          >
+            {auraOptions.map((o) => (
+              <option key={o.slug} value={o.slug} disabled={o.locked}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </FieldBlock>
+
+        <FieldBlock id="flow-custom-background" label="Background" description="Atmosphere behind Flow.">
+          <select
+            id="flow-custom-background"
+            aria-label="Background"
+            className="mt-2 w-full rounded-lg border border-slate-200/80 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-inner backdrop-blur-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/30 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-100"
+            value={values.selectedBackground}
+            disabled={!!savingKey}
+            onChange={(e) => void persistField('selectedBackground', e.target.value)}
+          >
+            {backgroundOptions.map((o) => (
               <option key={o.slug} value={o.slug} disabled={o.locked}>
                 {o.label}
               </option>

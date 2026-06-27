@@ -1,0 +1,8 @@
+<svg width="96" height="32" viewBox="0 0 96 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kind eyes accessory">
+  <path d="M24 15C30 8 38 8 44 15" stroke="#0F766E" stroke-width="4" stroke-linecap="round"/>
+  <path d="M52 15C58 8 66 8 72 15" stroke="#0F766E" stroke-width="4" stroke-linecap="round"/>
+  <path d="M30 21C34 25 38 25 42 21" stroke="#14B8A6" stroke-width="3" stroke-linecap="round"/>
+  <path d="M54 21C58 25 62 25 66 21" stroke="#14B8A6" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="24" cy="23" r="3" fill="#FDA4AF" fill-opacity="0.75"/>
+  <circle cx="72" cy="23" r="3" fill="#FDA4AF" fill-opacity="0.75"/>
+</svg>

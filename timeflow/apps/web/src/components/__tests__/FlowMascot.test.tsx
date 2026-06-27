@@ -10,7 +10,10 @@ const customizationMocks = vi.hoisted(() => ({
   customization: {
     selectedPalette: 'ocean',
     selectedAnimationPack: 'default',
-    selectedAccessory: 'crown',
+    selectedHat: 'crown',
+    selectedEyes: 'bright_eyes',
+    selectedAura: 'spark',
+    selectedBackground: 'sunrise',
   },
 }));
 
@@ -27,18 +30,20 @@ describe('FlowMascot', () => {
     cleanup();
   });
 
-  it('renders the equipped accessory outside the customization panel', () => {
+  it('renders equipped cosmetic slots outside the customization panel', () => {
     render(<FlowMascot size="md" expression="happy" />);
 
-    expect(screen.getByTestId('flow-mascot-accessory')).toHaveAttribute('data-layer', 'hat');
-    expect(screen.getByTestId('flow-mascot-accessory')).toHaveAttribute(
-      'aria-label',
-      'Crown accessory'
-    );
+    const layers = screen.getAllByTestId('flow-mascot-accessory');
+    expect(layers.map((layer) => layer.getAttribute('data-layer'))).toEqual([
+      'background',
+      'aura',
+      'hat',
+      'eyes',
+    ]);
   });
 
   it('allows callers to suppress the accessory layer', () => {
-    render(<FlowMascot size="md" expression="happy" accessory="none" />);
+    render(<FlowMascot size="md" expression="happy" showAccessory={false} />);
 
     expect(screen.queryByTestId('flow-mascot-accessory')).toBeNull();
   });

@@ -177,7 +177,12 @@ export interface FlowCustomizationState {
   selectedPalette: string;
   selectedEmote: string;
   selectedAnimationPack: string;
-  selectedAccessory: string;
+  /** @deprecated Use selectedHat/selectedEyes/selectedAura/selectedBackground. */
+  selectedAccessory?: string;
+  selectedHat: string;
+  selectedEyes: string;
+  selectedAura: string;
+  selectedBackground: string;
   updatedAt: string;
 }
 

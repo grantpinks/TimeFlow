@@ -1,0 +1,6 @@
+<svg width="96" height="64" viewBox="0 0 96 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Trophy circlet accessory">
+  <ellipse cx="48" cy="42" rx="32" ry="10" fill="#FDE68A" stroke="#B45309" stroke-width="4"/>
+  <path d="M24 38C32 24 42 18 48 18C54 18 64 24 72 38" stroke="#F59E0B" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="48" cy="20" r="7" fill="#FACC15" stroke="#B45309" stroke-width="3"/>
+  <path d="M37 38L48 28L59 38" stroke="#B45309" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

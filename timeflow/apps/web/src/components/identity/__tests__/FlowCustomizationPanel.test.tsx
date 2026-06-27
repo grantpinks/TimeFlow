@@ -52,6 +52,10 @@ function baseCustomization(): FlowCustomizationState {
     selectedAnimationPack: 'default',
     selectedStageVariant: 'default',
     selectedAccessory: 'none',
+    selectedHat: 'none',
+    selectedEyes: 'none',
+    selectedAura: 'none',
+    selectedBackground: 'none',
     updatedAt: new Date().toISOString(),
   };
 }
@@ -132,7 +136,7 @@ describe('FlowCustomizationPanel', () => {
     expect(oceanOption?.textContent).toMatch(/level 3/i);
   });
 
-  it('shows locked accessory options with unlock requirements', async () => {
+  it('shows separate cosmetic slot options with unlock requirements', async () => {
     mockApis({
       unlocks: [
         {
@@ -151,14 +155,26 @@ describe('FlowCustomizationPanel', () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(document.getElementById('flow-custom-accessory')).toBeTruthy();
+      expect(document.getElementById('flow-custom-hat')).toBeTruthy();
+      expect(document.getElementById('flow-custom-eyes')).toBeTruthy();
+      expect(document.getElementById('flow-custom-aura')).toBeTruthy();
+      expect(document.getElementById('flow-custom-background')).toBeTruthy();
     });
 
-    const accessorySelect = document.getElementById('flow-custom-accessory') as HTMLSelectElement;
-    const crownOption = [...accessorySelect.options].find((o) => o.value === 'crown');
+    const hatSelect = document.getElementById('flow-custom-hat') as HTMLSelectElement;
+    const eyesSelect = document.getElementById('flow-custom-eyes') as HTMLSelectElement;
+    const auraSelect = document.getElementById('flow-custom-aura') as HTMLSelectElement;
+    const backgroundSelect = document.getElementById('flow-custom-background') as HTMLSelectElement;
+    const crownOption = [...hatSelect.options].find((o) => o.value === 'crown');
+    const starryEyesOption = [...eyesSelect.options].find((o) => o.value === 'starry_eyes');
+    const constellationOption = [...auraSelect.options].find((o) => o.value === 'constellation');
+    const auroraSkyOption = [...backgroundSelect.options].find((o) => o.value === 'aurora_sky');
     expect(crownOption).toBeTruthy();
     expect(crownOption).toBeDisabled();
     expect(crownOption?.textContent).toMatch(/disciplined stage/i);
+    expect(starryEyesOption?.textContent).toMatch(/builder stage/i);
+    expect(constellationOption?.textContent).toMatch(/future self stage/i);
+    expect(auroraSkyOption?.textContent).toMatch(/future self stage/i);
   });
 
   it('calls updateFlowCustomization when palette changes', async () => {
@@ -191,9 +207,9 @@ describe('FlowCustomizationPanel', () => {
     });
   });
 
-  it('calls updateFlowCustomization when accessory changes', async () => {
+  it('calls updateFlowCustomization when separate cosmetic slots change', async () => {
     const user = userEvent.setup();
-    const crownUnlock: IdentityUnlockItem = {
+    const unlocks: IdentityUnlockItem[] = [{
       id: '1',
       identityId: 'id-lead',
       userId: 'u1',
@@ -202,21 +218,34 @@ describe('FlowCustomizationPanel', () => {
       grantedAt: new Date().toISOString(),
       grantedByStage: 'Disciplined',
       grantedByLevel: null,
-    };
-    mockApis({ unlocks: [crownUnlock] });
+    }, {
+      id: '2',
+      identityId: 'id-lead',
+      userId: 'u1',
+      unlockKey: 'flow_accessory_bright_eyes',
+      unlockType: 'flow_accessory',
+      grantedAt: new Date().toISOString(),
+      grantedByStage: null,
+      grantedByLevel: 4,
+    }];
+    mockApis({ unlocks });
 
     renderPanel();
 
     await waitFor(() => {
-      const sel = document.getElementById('flow-custom-accessory') as HTMLSelectElement;
+      const sel = document.getElementById('flow-custom-hat') as HTMLSelectElement;
       expect([...sel.options].some((o) => o.value === 'crown')).toBe(true);
     });
 
-    await user.selectOptions(document.getElementById('flow-custom-accessory')!, 'crown');
+    await user.selectOptions(document.getElementById('flow-custom-hat')!, 'crown');
+    await user.selectOptions(document.getElementById('flow-custom-eyes')!, 'bright_eyes');
 
     await waitFor(() => {
       expect(apiMocks.updateFlowCustomization).toHaveBeenCalledWith(
-        expect.objectContaining({ selectedAccessory: 'crown' })
+        expect.objectContaining({ selectedHat: 'crown' })
+      );
+      expect(apiMocks.updateFlowCustomization).toHaveBeenCalledWith(
+        expect.objectContaining({ selectedEyes: 'bright_eyes' })
       );
     });
   });

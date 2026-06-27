@@ -1,0 +1,11 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Constellation aura accessory">
+  <circle cx="64" cy="64" r="52" fill="#312E81" fill-opacity="0.18"/>
+  <path d="M30 46L52 28L78 42L98 24M48 92L70 76L96 88" stroke="#C4B5FD" stroke-width="3" stroke-linecap="round" stroke-opacity="0.75"/>
+  <circle cx="30" cy="46" r="5" fill="#FDE68A"/>
+  <circle cx="52" cy="28" r="4" fill="#A5F3FC"/>
+  <circle cx="78" cy="42" r="5" fill="#F0ABFC"/>
+  <circle cx="98" cy="24" r="4" fill="#DDD6FE"/>
+  <circle cx="48" cy="92" r="4" fill="#A7F3D0"/>
+  <circle cx="70" cy="76" r="5" fill="#FDE68A"/>
+  <circle cx="96" cy="88" r="4" fill="#C4B5FD"/>
+</svg>

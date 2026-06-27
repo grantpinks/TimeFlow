@@ -19,12 +19,18 @@ const baseUnlock: Omit<IdentityUnlockItem, 'unlockKey' | 'unlockType'> = {
 
 describe('flowCustomization helpers', () => {
   it('maps flow_palette_ocean unlock to palette slug ocean', () => {
-    const { palettes, accessories } = collectUnlockedCustomizationSlugs([
+    const { palettes, hats, eyes, auras, backgrounds } = collectUnlockedCustomizationSlugs([
       { ...baseUnlock, unlockKey: 'flow_palette_ocean', unlockType: 'flow_palette' },
       { ...baseUnlock, unlockKey: 'flow_accessory_crown', unlockType: 'flow_accessory' },
+      { ...baseUnlock, unlockKey: 'flow_accessory_bright_eyes', unlockType: 'flow_accessory' },
+      { ...baseUnlock, unlockKey: 'flow_accessory_spark', unlockType: 'flow_accessory' },
+      { ...baseUnlock, unlockKey: 'flow_accessory_sunrise', unlockType: 'flow_accessory' },
     ]);
     expect(palettes.has('ocean')).toBe(true);
-    expect(accessories.has('crown')).toBe(true);
+    expect(hats.has('crown')).toBe(true);
+    expect(eyes.has('bright_eyes')).toBe(true);
+    expect(auras.has('spark')).toBe(true);
+    expect(backgrounds.has('sunrise')).toBe(true);
   });
 
   it('buildPaletteOptions respects allowed slugs', () => {
@@ -60,14 +66,33 @@ describe('flowCustomization helpers', () => {
         selectedEmote: 'sparkle',
         selectedAnimationPack: 'gentle_bounce',
         selectedStageVariant: 'transcendent',
-        selectedAccessory: 'visor',
+        selectedHat: 'visor',
+        selectedEyes: 'starry_eyes',
+        selectedAura: 'tide_ring',
+        selectedBackground: 'aurora_sky',
       })
     ).toEqual({
       selectedPalette: 'sunset',
       selectedEmote: 'sparkle',
       selectedAnimationPack: 'gentle_bounce',
       selectedStageVariant: 'transcendent',
-      selectedAccessory: 'visor',
+      selectedHat: 'visor',
+      selectedEyes: 'starry_eyes',
+      selectedAura: 'tide_ring',
+      selectedBackground: 'aurora_sky',
+    });
+  });
+
+  it('maps legacy selectedAccessory into the matching cosmetic slot', () => {
+    expect(
+      mergeFlowCustomization({
+        selectedAccessory: 'spark',
+      })
+    ).toMatchObject({
+      selectedHat: 'none',
+      selectedEyes: 'none',
+      selectedAura: 'spark',
+      selectedBackground: 'none',
     });
   });
 
@@ -78,22 +103,28 @@ describe('flowCustomization helpers', () => {
         selectedEmote: '   ',
         selectedAnimationPack: '%$#',
         selectedStageVariant: '',
-        selectedAccessory: '!!!',
+        selectedHat: '!!!',
+        selectedEyes: '!!!',
+        selectedAura: '!!!',
+        selectedBackground: '!!!',
       })
     ).toEqual({
       selectedPalette: 'default',
       selectedEmote: 'default',
       selectedAnimationPack: 'default',
       selectedStageVariant: 'default',
-      selectedAccessory: 'none',
+      selectedHat: 'none',
+      selectedEyes: 'none',
+      selectedAura: 'none',
+      selectedBackground: 'none',
     });
   });
 
-  it('builds accessory options with locked requirements', () => {
-    const { accessories } = collectUnlockedCustomizationSlugs([
+  it('builds hat options with locked requirements', () => {
+    const { hats } = collectUnlockedCustomizationSlugs([
       { ...baseUnlock, unlockKey: 'flow_accessory_none', unlockType: 'flow_accessory' },
     ]);
-    const opts = buildAccessoryOptions(allowedSlugsWithDefaults(accessories, 'accessory'), {
+    const opts = buildAccessoryOptions('hat', allowedSlugsWithDefaults(hats, 'accessory'), {
       includeLocked: true,
     });
     const crown = opts.find((o) => o.slug === 'crown');
@@ -105,27 +136,62 @@ describe('flowCustomization helpers', () => {
     });
   });
 
-  it('offers early accessory goals across MVP accessory categories', () => {
-    const opts = buildAccessoryOptions(allowedSlugsWithDefaults(new Set(), 'accessory'), {
+  it('offers a deeper reward catalog across cosmetic slots', () => {
+    const hatValues = buildAccessoryOptions('hat', allowedSlugsWithDefaults(new Set(), 'accessory'), {
       includeLocked: true,
-    });
-    const values = opts.map((o) => o.slug);
+    }).map((o) => o.slug);
+    const eyeValues = buildAccessoryOptions('eyes', allowedSlugsWithDefaults(new Set(), 'accessory'), {
+      includeLocked: true,
+    }).map((o) => o.slug);
+    const auraValues = buildAccessoryOptions('aura', allowedSlugsWithDefaults(new Set(), 'accessory'), {
+      includeLocked: true,
+    }).map((o) => o.slug);
+    const backgroundValues = buildAccessoryOptions(
+      'background',
+      allowedSlugsWithDefaults(new Set(), 'accessory'),
+      {
+        includeLocked: true,
+      }
+    ).map((o) => o.slug);
 
-    expect(values).toEqual(
+    expect(hatValues).toEqual(
       expect.arrayContaining([
         'cap',
         'crown',
         'laurel',
+        'star_visor',
+        'moon_hood',
+        'trophy_circlet',
+      ])
+    );
+    expect(eyeValues).toEqual(
+      expect.arrayContaining([
         'bright_eyes',
         'focus_eyes',
         'future_gaze',
-        'spark',
-        'halo',
-        'sunrise',
-        'forest_glow',
+        'kind_eyes',
+        'starry_eyes',
+        'laser_focus',
       ])
     );
-    expect(opts.find((o) => o.slug === 'cap')?.requirement).toBe('Level 2');
-    expect(opts.find((o) => o.slug === 'sunrise')?.requirement).toBe('Level 2');
+    expect(auraValues).toEqual(
+      expect.arrayContaining([
+        'spark',
+        'wings',
+        'halo',
+        'tide_ring',
+        'ember_orbit',
+        'constellation',
+      ])
+    );
+    expect(backgroundValues).toEqual(
+      expect.arrayContaining([
+        'sunrise',
+        'forest_glow',
+        'night_garden',
+        'aurora_sky',
+      ])
+    );
+    expect(hatValues.length + eyeValues.length + auraValues.length + backgroundValues.length).toBeGreaterThanOrEqual(26);
   });
 });

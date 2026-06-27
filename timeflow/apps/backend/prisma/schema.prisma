@@ -294,6 +294,10 @@ model UserFlowCustomization {
   selectedEmote        String   @default("default")
   selectedAnimationPack String  @default("default")
   selectedAccessory    String   @default("none")
+  selectedHat          String   @default("none")
+  selectedEyes         String   @default("none")
+  selectedAura         String   @default("none")
+  selectedBackground   String   @default("none")
   updatedAt            DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

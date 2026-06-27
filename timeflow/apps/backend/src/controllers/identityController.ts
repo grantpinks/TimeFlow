@@ -52,6 +52,10 @@ const flowCustomizationSchema = z
     selectedEmote: CUSTOMIZATION_SLUG.optional(),
     selectedAnimationPack: CUSTOMIZATION_SLUG.optional(),
     selectedAccessory: CUSTOMIZATION_SLUG.optional(),
+    selectedHat: CUSTOMIZATION_SLUG.optional(),
+    selectedEyes: CUSTOMIZATION_SLUG.optional(),
+    selectedAura: CUSTOMIZATION_SLUG.optional(),
+    selectedBackground: CUSTOMIZATION_SLUG.optional(),
   })
   .refine((d) => Object.values(d).some((v) => v !== undefined), {
     message: 'At least one field is required.',
@@ -63,6 +67,10 @@ const COSMETIC_PREFIX_BY_FIELD = {
   selectedEmote: 'flow_emote_',
   selectedAnimationPack: 'flow_anim_',
   selectedAccessory: 'flow_accessory_',
+  selectedHat: 'flow_accessory_',
+  selectedEyes: 'flow_accessory_',
+  selectedAura: 'flow_accessory_',
+  selectedBackground: 'flow_accessory_',
 } as const;
 
 const DEFAULT_CUSTOMIZATION_BY_FIELD: Record<keyof typeof COSMETIC_PREFIX_BY_FIELD, string> = {
@@ -71,7 +79,58 @@ const DEFAULT_CUSTOMIZATION_BY_FIELD: Record<keyof typeof COSMETIC_PREFIX_BY_FIE
   selectedEmote: 'default',
   selectedAnimationPack: 'default',
   selectedAccessory: 'none',
+  selectedHat: 'none',
+  selectedEyes: 'none',
+  selectedAura: 'none',
+  selectedBackground: 'none',
 };
+
+const ACCESSORY_SLOT_BY_SLUG: Record<string, 'selectedHat' | 'selectedEyes' | 'selectedAura' | 'selectedBackground'> = {
+  cap: 'selectedHat',
+  crown: 'selectedHat',
+  laurel: 'selectedHat',
+  star_visor: 'selectedHat',
+  moon_hood: 'selectedHat',
+  trophy_circlet: 'selectedHat',
+  bright_eyes: 'selectedEyes',
+  focus_eyes: 'selectedEyes',
+  future_gaze: 'selectedEyes',
+  kind_eyes: 'selectedEyes',
+  starry_eyes: 'selectedEyes',
+  laser_focus: 'selectedEyes',
+  spark: 'selectedAura',
+  wings: 'selectedAura',
+  halo: 'selectedAura',
+  tide_ring: 'selectedAura',
+  ember_orbit: 'selectedAura',
+  constellation: 'selectedAura',
+  sunrise: 'selectedBackground',
+  forest_glow: 'selectedBackground',
+  night_garden: 'selectedBackground',
+  aurora_sky: 'selectedBackground',
+};
+
+function isAccessorySlotField(
+  field: keyof typeof COSMETIC_PREFIX_BY_FIELD
+): field is 'selectedHat' | 'selectedEyes' | 'selectedAura' | 'selectedBackground' {
+  return field === 'selectedHat' || field === 'selectedEyes' || field === 'selectedAura' || field === 'selectedBackground';
+}
+
+function accessorySlotMatches(field: keyof typeof COSMETIC_PREFIX_BY_FIELD, slug: string): boolean {
+  if (slug === 'none' || !isAccessorySlotField(field)) return true;
+  return accessorySlotForSlug(slug) === field;
+}
+
+function accessorySlotForSlug(
+  slug: string
+): 'selectedHat' | 'selectedEyes' | 'selectedAura' | 'selectedBackground' | undefined {
+  const known = ACCESSORY_SLOT_BY_SLUG[slug];
+  if (known) return known;
+  if (/(eyes?|gaze|focus)/.test(slug)) return 'selectedEyes';
+  if (/(aura|orbit|ring|wings?|halo|spark|constellation)/.test(slug)) return 'selectedAura';
+  if (/(background|field|glow|garden|sky)/.test(slug)) return 'selectedBackground';
+  return 'selectedHat';
+}
 
 // ---------------------------------------------------------------------------
 // Handlers
@@ -249,7 +308,11 @@ function sanitizeStoredCustomizationFields(
     selectedEmote: string;
     selectedAnimationPack: string;
     selectedStageVariant: string;
-    selectedAccessory: string;
+    selectedAccessory?: string | null;
+    selectedHat?: string | null;
+    selectedEyes?: string | null;
+    selectedAura?: string | null;
+    selectedBackground?: string | null;
   },
   unlockedKeys: Set<string>
 ): {
@@ -258,18 +321,34 @@ function sanitizeStoredCustomizationFields(
   selectedAnimationPack: string;
   selectedStageVariant: string;
   selectedAccessory: string;
+  selectedHat: string;
+  selectedEyes: string;
+  selectedAura: string;
+  selectedBackground: string;
 } {
+  const legacyAccessory = row.selectedAccessory ?? 'none';
+  const pickSlot = (
+    value: string | null | undefined,
+    slot: 'selectedHat' | 'selectedEyes' | 'selectedAura' | 'selectedBackground'
+  ): string => {
+    if (value && value !== 'none') return value;
+    return accessorySlotForSlug(legacyAccessory) === slot ? legacyAccessory : 'none';
+  };
   const fields = Object.keys(COSMETIC_PREFIX_BY_FIELD) as Array<keyof typeof COSMETIC_PREFIX_BY_FIELD>;
   const out = {
     selectedPalette: row.selectedPalette,
     selectedEmote: row.selectedEmote,
     selectedAnimationPack: row.selectedAnimationPack,
     selectedStageVariant: row.selectedStageVariant,
-    selectedAccessory: row.selectedAccessory,
+    selectedAccessory: legacyAccessory,
+    selectedHat: pickSlot(row.selectedHat, 'selectedHat'),
+    selectedEyes: pickSlot(row.selectedEyes, 'selectedEyes'),
+    selectedAura: pickSlot(row.selectedAura, 'selectedAura'),
+    selectedBackground: pickSlot(row.selectedBackground, 'selectedBackground'),
   };
   for (const field of fields) {
     const slug = out[field];
-    if (!assertCustomizationValueUnlocked(field, slug, unlockedKeys)) {
+    if (!accessorySlotMatches(field, slug) || !assertCustomizationValueUnlocked(field, slug, unlockedKeys)) {
       out[field] = DEFAULT_CUSTOMIZATION_BY_FIELD[field];
     }
   }
@@ -308,6 +387,10 @@ export async function getFlowCustomization(request: FastifyRequest, reply: Fasti
     selectedEmote: 'default',
     selectedAnimationPack: 'default',
     selectedAccessory: 'none',
+    selectedHat: 'none',
+    selectedEyes: 'none',
+    selectedAura: 'none',
+    selectedBackground: 'none',
   };
 
   // When evolution is disabled, return safe defaults immediately — no DB access needed.
@@ -328,6 +411,10 @@ export async function getFlowCustomization(request: FastifyRequest, reply: Fasti
     const unlockedKeys = await getUserUnlockedCosmeticKeys(userId);
     const customizationWithAccessory = customization as typeof customization & {
       selectedAccessory?: string | null;
+      selectedHat?: string | null;
+      selectedEyes?: string | null;
+      selectedAura?: string | null;
+      selectedBackground?: string | null;
     };
     const sanitized = sanitizeStoredCustomizationFields(
       {
@@ -336,6 +423,10 @@ export async function getFlowCustomization(request: FastifyRequest, reply: Fasti
         selectedAnimationPack: customization.selectedAnimationPack,
         selectedStageVariant: customization.selectedStageVariant,
         selectedAccessory: customizationWithAccessory.selectedAccessory ?? 'none',
+        selectedHat: customizationWithAccessory.selectedHat ?? null,
+        selectedEyes: customizationWithAccessory.selectedEyes ?? null,
+        selectedAura: customizationWithAccessory.selectedAura ?? null,
+        selectedBackground: customizationWithAccessory.selectedBackground ?? null,
       },
       unlockedKeys
     );
@@ -364,6 +455,11 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
     [keyof typeof COSMETIC_PREFIX_BY_FIELD, string | undefined]
   >) {
     if (!slug) continue;
+    if (!accessorySlotMatches(field, slug)) {
+      return reply.status(403).send({
+        error: `Customization option "${slug}" cannot be used for ${field}.`,
+      });
+    }
     if (!assertCustomizationValueUnlocked(field, slug, unlockedKeys)) {
       return reply.status(403).send({
         error: `Customization option "${slug}" is not unlocked yet.`,
@@ -380,6 +476,10 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
       selectedEmote: parsed.data.selectedEmote ?? 'default',
       selectedAnimationPack: parsed.data.selectedAnimationPack ?? 'default',
       selectedAccessory: parsed.data.selectedAccessory ?? 'none',
+      selectedHat: parsed.data.selectedHat ?? 'none',
+      selectedEyes: parsed.data.selectedEyes ?? 'none',
+      selectedAura: parsed.data.selectedAura ?? 'none',
+      selectedBackground: parsed.data.selectedBackground ?? 'none',
     },
     update: {
       ...(parsed.data.selectedStageVariant !== undefined && {
@@ -396,6 +496,18 @@ export async function updateFlowCustomization(request: FastifyRequest, reply: Fa
       }),
       ...(parsed.data.selectedAccessory !== undefined && {
         selectedAccessory: parsed.data.selectedAccessory,
+      }),
+      ...(parsed.data.selectedHat !== undefined && {
+        selectedHat: parsed.data.selectedHat,
+      }),
+      ...(parsed.data.selectedEyes !== undefined && {
+        selectedEyes: parsed.data.selectedEyes,
+      }),
+      ...(parsed.data.selectedAura !== undefined && {
+        selectedAura: parsed.data.selectedAura,
+      }),
+      ...(parsed.data.selectedBackground !== undefined && {
+        selectedBackground: parsed.data.selectedBackground,
       }),
     },
   } as any);

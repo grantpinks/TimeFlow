@@ -84,6 +84,18 @@ describe('identityEvolutionController', () => {
         unlockKey: 'flow_accessory_crown',
         unlockType: 'flow_accessory',
       },
+      {
+        unlockKey: 'flow_accessory_bright_eyes',
+        unlockType: 'flow_accessory',
+      },
+      {
+        unlockKey: 'flow_accessory_spark',
+        unlockType: 'flow_accessory',
+      },
+      {
+        unlockKey: 'flow_accessory_sunrise',
+        unlockType: 'flow_accessory',
+      },
     ] as any);
   });
 
@@ -210,7 +222,7 @@ describe('identityEvolutionController', () => {
       expect(reply.send).toHaveBeenCalledWith(upserted);
     });
 
-    it('upserts selectedAccessory when the accessory is unlocked', async () => {
+    it('upserts separate cosmetic slots when the cosmetics are unlocked', async () => {
       vi.mocked(prisma.user.findFirst).mockResolvedValue({
         identityEvolutionEnabled: true,
       } as any);
@@ -222,12 +234,22 @@ describe('identityEvolutionController', () => {
         selectedPalette: 'default',
         selectedEmote: 'default',
         selectedAnimationPack: 'default',
-        selectedAccessory: 'crown',
+        selectedHat: 'crown',
+        selectedEyes: 'bright_eyes',
+        selectedAura: 'spark',
+        selectedBackground: 'sunrise',
         updatedAt: new Date(),
       };
       vi.mocked(prisma.userFlowCustomization.upsert).mockResolvedValue(upserted as any);
 
-      const request = makeRequest({ body: { selectedAccessory: 'crown' } });
+      const request = makeRequest({
+        body: {
+          selectedHat: 'crown',
+          selectedEyes: 'bright_eyes',
+          selectedAura: 'spark',
+          selectedBackground: 'sunrise',
+        },
+      });
       const reply = createControllerReply();
 
       await updateFlowCustomization(request as any, reply);
@@ -235,7 +257,12 @@ describe('identityEvolutionController', () => {
       expect(prisma.userFlowCustomization.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { userId: USER_ID },
-          update: expect.objectContaining({ selectedAccessory: 'crown' }),
+          update: expect.objectContaining({
+            selectedHat: 'crown',
+            selectedEyes: 'bright_eyes',
+            selectedAura: 'spark',
+            selectedBackground: 'sunrise',
+          }),
         })
       );
       expect(reply.send).toHaveBeenCalledWith(upserted);
@@ -280,7 +307,7 @@ describe('identityEvolutionController', () => {
         { unlockKey: 'flow_accessory_none', unlockType: 'flow_accessory' },
       ] as any);
 
-      const request = makeRequest({ body: { selectedAccessory: 'halo' } });
+      const request = makeRequest({ body: { selectedAura: 'halo' } });
       const reply = createControllerReply();
 
       await updateFlowCustomization(request as any, reply);
@@ -288,6 +315,23 @@ describe('identityEvolutionController', () => {
       expect(reply.statusCode).toBe(403);
       expect(reply.send).toHaveBeenCalledWith({
         error: 'Customization option "halo" is not unlocked yet.',
+      });
+      expect(prisma.userFlowCustomization.upsert).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when selecting a cosmetic in the wrong slot', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: true,
+      } as any);
+
+      const request = makeRequest({ body: { selectedEyes: 'crown' } });
+      const reply = createControllerReply();
+
+      await updateFlowCustomization(request as any, reply);
+
+      expect(reply.statusCode).toBe(403);
+      expect(reply.send).toHaveBeenCalledWith({
+        error: 'Customization option "crown" cannot be used for selectedEyes.',
       });
       expect(prisma.userFlowCustomization.upsert).not.toHaveBeenCalled();
     });
@@ -315,6 +359,10 @@ describe('identityEvolutionController', () => {
         selectedEmote: 'default',
         selectedAnimationPack: 'default',
         selectedAccessory: 'none',
+        selectedHat: 'none',
+        selectedEyes: 'none',
+        selectedAura: 'none',
+        selectedBackground: 'none',
       });
     });
 
@@ -335,6 +383,10 @@ describe('identityEvolutionController', () => {
         selectedEmote: 'default',
         selectedAnimationPack: 'default',
         selectedAccessory: 'none',
+        selectedHat: 'none',
+        selectedEyes: 'none',
+        selectedAura: 'none',
+        selectedBackground: 'none',
       });
     });
 
@@ -350,6 +402,10 @@ describe('identityEvolutionController', () => {
         selectedEmote: 'celebrate',
         selectedAnimationPack: 'energetic',
         selectedAccessory: 'crown',
+        selectedHat: 'crown',
+        selectedEyes: 'bright_eyes',
+        selectedAura: 'spark',
+        selectedBackground: 'sunrise',
         updatedAt: new Date().toISOString(),
       };
       vi.mocked(prisma.userFlowCustomization.findUnique).mockResolvedValue(existing as any);
@@ -359,6 +415,9 @@ describe('identityEvolutionController', () => {
         { unlockKey: 'flow_anim_energetic', unlockType: 'flow_animation_pack' },
         { unlockKey: 'flow_form_builder', unlockType: 'flow_stage_form' },
         { unlockKey: 'flow_accessory_crown', unlockType: 'flow_accessory' },
+        { unlockKey: 'flow_accessory_bright_eyes', unlockType: 'flow_accessory' },
+        { unlockKey: 'flow_accessory_spark', unlockType: 'flow_accessory' },
+        { unlockKey: 'flow_accessory_sunrise', unlockType: 'flow_accessory' },
       ] as any);
 
       const request = makeRequest();
@@ -381,6 +440,10 @@ describe('identityEvolutionController', () => {
         selectedEmote: 'default',
         selectedAnimationPack: 'default',
         selectedAccessory: 'halo',
+        selectedHat: 'crown',
+        selectedEyes: 'laser_focus',
+        selectedAura: 'halo',
+        selectedBackground: 'aurora_sky',
         updatedAt: new Date().toISOString(),
       };
       vi.mocked(prisma.userFlowCustomization.findUnique).mockResolvedValue(stored as any);
@@ -398,6 +461,48 @@ describe('identityEvolutionController', () => {
           ...stored,
           selectedPalette: 'default',
           selectedAccessory: 'none',
+          selectedHat: 'none',
+          selectedEyes: 'none',
+          selectedAura: 'none',
+          selectedBackground: 'none',
+        })
+      );
+    });
+
+    it('maps a legacy selectedAccessory into its matching slot when new slots are empty', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({
+        identityEvolutionEnabled: true,
+      } as any);
+      const stored = {
+        id: 'custom-1',
+        userId: USER_ID,
+        selectedStageVariant: 'default',
+        selectedPalette: 'default',
+        selectedEmote: 'default',
+        selectedAnimationPack: 'default',
+        selectedAccessory: 'spark',
+        selectedHat: 'none',
+        selectedEyes: 'none',
+        selectedAura: 'none',
+        selectedBackground: 'none',
+        updatedAt: new Date().toISOString(),
+      };
+      vi.mocked(prisma.userFlowCustomization.findUnique).mockResolvedValue(stored as any);
+      vi.mocked(prisma.identityUnlock.findMany).mockResolvedValue([
+        { unlockKey: 'flow_accessory_spark', unlockType: 'flow_accessory' },
+      ] as any);
+
+      const request = makeRequest();
+      const reply = createControllerReply();
+
+      await getFlowCustomization(request, reply);
+
+      expect(reply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          selectedAura: 'spark',
+          selectedHat: 'none',
+          selectedEyes: 'none',
+          selectedBackground: 'none',
         })
       );
     });

@@ -18,7 +18,7 @@ export function FloatingAssistantButton() {
       aria-label="Open Flow assistant"
     >
       <span className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/35 flex-shrink-0 overflow-hidden">
-        <FlowMascot size="sm" expression="happy" className="scale-[1.08]" />
+        <FlowMascot size="sm" expression="happy" className="scale-[1.08]" showAccessory={false} />
       </span>
       <div className="text-left hidden sm:block">
         <p className="text-xs uppercase tracking-wide text-white/80">Need a hand?</p>

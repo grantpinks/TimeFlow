@@ -101,7 +101,7 @@ export function LoadingSpinner({
         <span
           className={`animate-flow-mascot-pulse ${variant === 'inverse' ? 'drop-shadow-md' : ''} ${mascotVisual}`}
         >
-          <FlowMascot size={mascotSz} expression="happy" />
+          <FlowMascot size={mascotSz} expression="happy" showAccessory={false} />
         </span>
       </span>
       <span className="sr-only">{label}</span>

@@ -1,0 +1,7 @@
+<svg width="96" height="32" viewBox="0 0 96 32" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Laser focus accessory">
+  <path d="M20 16H44" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+  <path d="M52 16H76" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="34" cy="16" r="6" fill="#FEE2E2" stroke="#991B1B" stroke-width="3"/>
+  <circle cx="62" cy="16" r="6" fill="#FEE2E2" stroke="#991B1B" stroke-width="3"/>
+  <path d="M22 8L44 12M52 12L74 8" stroke="#111827" stroke-width="3" stroke-linecap="round"/>
+</svg>

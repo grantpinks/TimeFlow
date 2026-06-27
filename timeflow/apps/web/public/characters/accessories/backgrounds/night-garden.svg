@@ -1,0 +1,8 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Night garden background">
+  <circle cx="64" cy="64" r="54" fill="#0F172A" fill-opacity="0.18"/>
+  <path d="M22 96C36 70 50 70 64 96C78 70 92 70 106 96" fill="#14532D" fill-opacity="0.38"/>
+  <path d="M36 86C38 68 46 58 58 52C56 68 50 80 36 86Z" fill="#86EFAC" fill-opacity="0.65"/>
+  <path d="M88 88C84 70 76 60 64 54C68 70 74 82 88 88Z" fill="#34D399" fill-opacity="0.6"/>
+  <circle cx="36" cy="34" r="4" fill="#FDE68A"/>
+  <circle cx="96" cy="42" r="3" fill="#C4B5FD"/>
+</svg>

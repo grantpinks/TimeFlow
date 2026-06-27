@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CHARACTER_LAYER_ORDER,
   resolveAccessoryAsset,
+  resolveFlowCosmeticAssets,
 } from '../characterAssets';
 
 describe('characterAssets', () => {
@@ -22,6 +23,11 @@ describe('characterAssets', () => {
       layer: 'eyes',
       src: '/characters/accessories/eyes/bright-eyes.svg',
     });
+    expect(resolveAccessoryAsset('aurora_sky')).toMatchObject({
+      slug: 'aurora_sky',
+      layer: 'background',
+      src: '/characters/accessories/backgrounds/aurora-sky.svg',
+    });
   });
 
   it('falls back for none or unknown accessories', () => {
@@ -36,6 +42,28 @@ describe('characterAssets', () => {
       'eyes',
       'hat',
       'aura',
+    ]);
+  });
+
+  it('resolves composed cosmetic slots in render order', () => {
+    const assets = resolveFlowCosmeticAssets({
+      selectedHat: 'star_visor',
+      selectedEyes: 'starry_eyes',
+      selectedAura: 'constellation',
+      selectedBackground: 'aurora_sky',
+    });
+
+    expect(assets.map((asset) => asset.layer)).toEqual([
+      'background',
+      'aura',
+      'hat',
+      'eyes',
+    ]);
+    expect(assets.map((asset) => asset.slug)).toEqual([
+      'aurora_sky',
+      'constellation',
+      'star_visor',
+      'starry_eyes',
     ]);
   });
 });

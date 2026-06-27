@@ -7,7 +7,10 @@ export type FlowCustomizationFields = Pick<
   | 'selectedEmote'
   | 'selectedAnimationPack'
   | 'selectedStageVariant'
-  | 'selectedAccessory'
+  | 'selectedHat'
+  | 'selectedEyes'
+  | 'selectedAura'
+  | 'selectedBackground'
 >;
 
 export const DEFAULT_FLOW_CUSTOMIZATION: FlowCustomizationFields = {
@@ -15,7 +18,10 @@ export const DEFAULT_FLOW_CUSTOMIZATION: FlowCustomizationFields = {
   selectedEmote: 'default',
   selectedAnimationPack: 'default',
   selectedStageVariant: 'default',
-  selectedAccessory: 'none',
+  selectedHat: 'none',
+  selectedEyes: 'none',
+  selectedAura: 'none',
+  selectedBackground: 'none',
 };
 
 /** Allowed mascot palette slugs (matches unlock catalog suffixes + default). */
@@ -38,6 +44,8 @@ export type FlowCustomizationOption = {
   requirement?: string;
 };
 
+export type FlowCosmeticSlot = 'hat' | 'eyes' | 'aura' | 'background';
+
 export function slugifyCustomizationValue(value: string): string {
   return value
     .trim()
@@ -57,13 +65,23 @@ export function mergeFlowCustomization(
     const slug = slugifyCustomizationValue(String(raw));
     return slug || DEFAULT_FLOW_CUSTOMIZATION[key];
   };
+  const legacyAccessory = slugifyCustomizationValue(String(partial?.selectedAccessory ?? ''));
+  const legacySlot = accessorySlotForSlug(legacyAccessory);
+  const pickSlot = (key: keyof FlowCustomizationFields, slot: FlowCosmeticSlot): string => {
+    const value = pick(key);
+    if (value !== DEFAULT_FLOW_CUSTOMIZATION[key]) return value;
+    return legacySlot === slot ? legacyAccessory : DEFAULT_FLOW_CUSTOMIZATION[key];
+  };
 
   return {
     selectedPalette: pick('selectedPalette'),
     selectedEmote: pick('selectedEmote'),
     selectedAnimationPack: pick('selectedAnimationPack'),
     selectedStageVariant: pick('selectedStageVariant'),
-    selectedAccessory: pick('selectedAccessory'),
+    selectedHat: pickSlot('selectedHat', 'hat'),
+    selectedEyes: pickSlot('selectedEyes', 'eyes'),
+    selectedAura: pickSlot('selectedAura', 'aura'),
+    selectedBackground: pickSlot('selectedBackground', 'background'),
   };
 }
 
@@ -95,13 +113,19 @@ export function collectUnlockedCustomizationSlugs(unlocks: IdentityUnlockItem[])
   emotes: Set<string>;
   animationPacks: Set<string>;
   stageVariants: Set<string>;
-  accessories: Set<string>;
+  hats: Set<string>;
+  eyes: Set<string>;
+  auras: Set<string>;
+  backgrounds: Set<string>;
 } {
   const palettes = new Set<string>();
   const emotes = new Set<string>();
   const animationPacks = new Set<string>();
   const stageVariants = new Set<string>();
-  const accessories = new Set<string>();
+  const hats = new Set<string>();
+  const eyes = new Set<string>();
+  const auras = new Set<string>();
+  const backgrounds = new Set<string>();
 
   for (const u of unlocks) {
     const p = suffixAfterPrefix(u.unlockKey, PREFIX_PALETTE);
@@ -113,10 +137,14 @@ export function collectUnlockedCustomizationSlugs(unlocks: IdentityUnlockItem[])
     const s = suffixAfterPrefix(u.unlockKey, PREFIX_STAGE);
     if (s) stageVariants.add(s);
     const accessory = suffixAfterPrefix(u.unlockKey, PREFIX_ACCESSORY);
-    if (accessory) accessories.add(accessory);
+    const slot = accessorySlotForSlug(accessory ?? '');
+    if (slot === 'hat') hats.add(accessory!);
+    if (slot === 'eyes') eyes.add(accessory!);
+    if (slot === 'aura') auras.add(accessory!);
+    if (slot === 'background') backgrounds.add(accessory!);
   }
 
-  return { palettes, emotes, animationPacks, stageVariants, accessories };
+  return { palettes, emotes, animationPacks, stageVariants, hats, eyes, auras, backgrounds };
 }
 
 export const FLOW_PALETTE_LABELS: Record<string, string> = {
@@ -159,14 +187,25 @@ export const FLOW_ACCESSORY_LABELS: Record<string, string> = {
   cap: 'Flow cap',
   crown: 'Crown',
   laurel: 'Laurel wreath',
+  star_visor: 'Star visor',
+  moon_hood: 'Moon hood',
+  trophy_circlet: 'Trophy circlet',
   bright_eyes: 'Bright eyes',
   focus_eyes: 'Focus eyes',
   future_gaze: 'Future gaze',
+  kind_eyes: 'Kind eyes',
+  starry_eyes: 'Starry eyes',
+  laser_focus: 'Laser focus',
   spark: 'Spark aura',
   wings: 'Wings',
   halo: 'Halo',
+  tide_ring: 'Tide ring',
+  ember_orbit: 'Ember orbit',
+  constellation: 'Constellation aura',
   sunrise: 'Sunrise field',
   forest_glow: 'Forest glow',
+  night_garden: 'Night garden',
+  aurora_sky: 'Aurora sky',
 };
 
 const FLOW_PALETTE_REQUIREMENTS: Record<string, string> = {
@@ -209,15 +248,68 @@ const FLOW_ACCESSORY_REQUIREMENTS: Record<string, string> = {
   cap: 'Level 2',
   crown: 'Disciplined stage',
   laurel: 'Embodied stage',
+  star_visor: 'Level 9',
+  moon_hood: 'Disciplined stage',
+  trophy_circlet: 'Embodied stage',
   bright_eyes: 'Level 4',
   focus_eyes: 'Level 7',
   future_gaze: 'Future self stage',
+  kind_eyes: 'Level 5',
+  starry_eyes: 'Builder stage',
+  laser_focus: 'Future self stage',
   spark: 'Builder stage',
   wings: 'Embodied stage',
   halo: 'Future self stage',
+  tide_ring: 'Builder stage',
+  ember_orbit: 'Disciplined stage',
+  constellation: 'Future self stage',
   sunrise: 'Level 2',
   forest_glow: 'Builder stage',
+  night_garden: 'Embodied stage',
+  aurora_sky: 'Future self stage',
 };
+
+const HAT_ORDER = ['none', 'cap', 'crown', 'laurel', 'star_visor', 'moon_hood', 'trophy_circlet'] as const;
+const EYES_ORDER = [
+  'none',
+  'bright_eyes',
+  'focus_eyes',
+  'future_gaze',
+  'kind_eyes',
+  'starry_eyes',
+  'laser_focus',
+] as const;
+const AURA_ORDER = [
+  'none',
+  'spark',
+  'wings',
+  'halo',
+  'tide_ring',
+  'ember_orbit',
+  'constellation',
+] as const;
+const BACKGROUND_ORDER = ['none', 'sunrise', 'forest_glow', 'night_garden', 'aurora_sky'] as const;
+
+const ACCESSORY_SLOT_ORDER: Record<FlowCosmeticSlot, readonly string[]> = {
+  hat: HAT_ORDER,
+  eyes: EYES_ORDER,
+  aura: AURA_ORDER,
+  background: BACKGROUND_ORDER,
+};
+
+export function accessorySlotForSlug(slug: string): FlowCosmeticSlot | null {
+  const s = slugifyCustomizationValue(slug);
+  if (!s || s === 'none') return null;
+  for (const [slot, order] of Object.entries(ACCESSORY_SLOT_ORDER) as Array<
+    [FlowCosmeticSlot, readonly string[]]
+  >) {
+    if (order.includes(s)) return slot;
+  }
+  if (/(eyes?|gaze|focus)/.test(s)) return 'eyes';
+  if (/(aura|orbit|ring|wings?|halo|spark|constellation)/.test(s)) return 'aura';
+  if (/(background|field|glow|garden|sky)/.test(s)) return 'background';
+  return 'hat';
+}
 
 function labelFor(slug: string, labels: Record<string, string>): string {
   return labels[slug] ?? slug.replace(/_/g, ' ');
@@ -260,20 +352,6 @@ export function buildPaletteOptions(
 const EMOTE_ORDER = ['default', 'wave', 'celebrate', 'dance', 'fire', 'ascend'] as const;
 const ANIM_ORDER = ['default', 'basic', 'energetic', 'zen'] as const;
 const STAGE_ORDER = ['default', 'seed', 'builder', 'disciplined', 'embodied', 'future_self'] as const;
-const ACCESSORY_ORDER = [
-  'none',
-  'cap',
-  'crown',
-  'laurel',
-  'bright_eyes',
-  'focus_eyes',
-  'future_gaze',
-  'spark',
-  'wings',
-  'halo',
-  'sunrise',
-  'forest_glow',
-] as const;
 
 export function buildEmoteOptions(
   allowedSlugs: Set<string>,
@@ -312,14 +390,16 @@ export function buildStageVariantOptions(
 }
 
 export function buildAccessoryOptions(
+  slot: FlowCosmeticSlot,
   allowedSlugs: Set<string>,
   opts?: { includeLocked?: boolean }
 ): FlowCustomizationOption[] {
-  const ordered = ACCESSORY_ORDER.filter((s) => allowedSlugs.has(s));
+  const order = ACCESSORY_SLOT_ORDER[slot];
+  const ordered = order.filter((s) => allowedSlugs.has(s));
   const rest = [...allowedSlugs]
-    .filter((s) => !ACCESSORY_ORDER.includes(s as (typeof ACCESSORY_ORDER)[number]))
+    .filter((s) => !order.includes(s))
     .sort();
-  const slugs = opts?.includeLocked ? [...ACCESSORY_ORDER, ...rest] : [...ordered, ...rest];
+  const slugs = opts?.includeLocked ? [...order, ...rest] : [...ordered, ...rest];
   return slugs.map((slug) =>
     optionFor(slug, allowedSlugs, FLOW_ACCESSORY_LABELS, FLOW_ACCESSORY_REQUIREMENTS)
   );
