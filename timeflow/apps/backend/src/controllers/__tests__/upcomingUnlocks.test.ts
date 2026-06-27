@@ -50,7 +50,10 @@ describe('GET /api/identities/:id/upcoming-unlocks', () => {
   it('excludes globally earned Flow cosmetics even when earned by another identity', async () => {
     (prisma.identityUnlock.findMany as any).mockImplementationOnce((args: any) => {
       if (args.where?.OR) {
-        return Promise.resolve([{ unlockKey: 'flow_accessory_cap' }]);
+        return Promise.resolve([
+          { unlockKey: 'flow_accessory_cap' },
+          { unlockKey: 'flow_palette_ocean' },
+        ]);
       }
       return Promise.resolve([]);
     });
@@ -71,6 +74,7 @@ describe('GET /api/identities/:id/upcoming-unlocks', () => {
       })
     );
     expect(body.upcoming.every((u: any) => u.unlockKey !== 'flow_accessory_cap')).toBe(true);
+    expect(body.upcoming.every((u: any) => u.unlockKey !== 'flow_palette_ocean')).toBe(true);
   });
 
   it('returns 404 when identity does not belong to user', async () => {

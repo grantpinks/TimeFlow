@@ -64,7 +64,7 @@ describe('FlowStudioTodayCard', () => {
     );
   });
 
-  it('keeps a lightweight path back to the Today identity workflow', () => {
+  it('keeps Today lightweight while linking to identity habit planning', () => {
     render(
       <FlowStudioTodayCard
         identities={identities}
@@ -75,7 +75,9 @@ describe('FlowStudioTodayCard', () => {
       />
     );
 
-    expect(screen.getByText(/Today's identity actions/i)).toBeInTheDocument();
+    expect(screen.getByText(/Identity habit planning/i)).toBeInTheDocument();
+    expect(screen.getByText(/Open Identity Studio to plan and schedule/i)).toBeInTheDocument();
+    expect(screen.queryByText(/scheduling identity-linked habits without loading reward previews here/i)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /plan identity habits/i })).toHaveAttribute(
       'href',
       '/habits'

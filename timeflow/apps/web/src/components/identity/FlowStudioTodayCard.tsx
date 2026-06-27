@@ -83,10 +83,10 @@ export function FlowStudioTodayCard({
       <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/65 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            Today&apos;s identity actions
+            Identity habit planning
           </p>
           <p className="mt-1 text-sm text-slate-600">
-            Keep planning and scheduling identity-linked habits without loading reward previews here.
+            Open Identity Studio to plan and schedule identity-linked habits without loading reward previews on Today.
           </p>
         </div>
         <Link
