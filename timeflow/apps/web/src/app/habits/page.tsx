@@ -26,7 +26,6 @@ import {
   IdentityStudioInsightsDrawer,
   IdentityStudioCoachmark,
   IdentityStudioProgressSheet,
-  IdentityStudioEvolutionPanel,
   resolveSectionExpansion,
 } from '@/components/identity-studio';
 import { track, hashHabitId } from '@/lib/analytics';
@@ -96,7 +95,6 @@ export default function HabitsPage() {
   const {
     mode: evolutionMode,
     states: evolutionStates,
-    loading: evolutionLoading,
     refresh: refreshEvolution,
   } = useEvolutionSurface(isAuthenticated, user?.identityEvolutionEnabled === true);
 
@@ -485,18 +483,6 @@ export default function HabitsPage() {
                 ) : undefined
               }
             >
-              <IdentityStudioEvolutionPanel
-                evolutionEnabled={user?.identityEvolutionEnabled === true}
-                isAuthenticated={isAuthenticated}
-                surfaceMode={evolutionMode}
-                evolutionStates={evolutionStates}
-                identities={identities}
-                loading={evolutionLoading}
-                timeZone={user?.timeZone ?? 'UTC'}
-                focusedIdentityId={focusedIdentityId}
-                onRefresh={refreshEvolution}
-              />
-
               <div className="flex items-center justify-between gap-2 mb-1">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Habits by identity

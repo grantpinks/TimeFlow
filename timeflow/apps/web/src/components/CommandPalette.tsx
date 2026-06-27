@@ -64,6 +64,12 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
       keywords: ['today', 'home', 'dashboard'],
     },
     {
+      id: 'flow-studio',
+      label: 'Go to Flow Studio',
+      action: () => router.push('/flow-studio'),
+      keywords: ['flow', 'studio', 'identity', 'evolution', 'rewards'],
+    },
+    {
       id: 'tasks',
       label: 'Go to Tasks',
       action: () => router.push('/tasks'),

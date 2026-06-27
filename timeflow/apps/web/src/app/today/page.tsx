@@ -21,7 +21,7 @@ import { Panel, SectionHeader, LoadingSpinner } from '@/components/ui';
 import { FlowMascot } from '@/components/FlowMascot';
 import PlanningRitualPanel, { type PlanningRitualData } from '@/components/today/PlanningRitualPanel';
 import { StreakReminderBanner } from '@/components/habits/StreakReminderBanner';
-import { IdentityPanel } from '@/components/identity/IdentityPanel';
+import { FlowStudioTodayCard } from '@/components/identity/FlowStudioTodayCard';
 import { WhatsNowWidget } from '@/components/today/WhatsNowWidget';
 import { FlowTodayCommandSection } from '@/components/analytics/FlowTodayCommandSection';
 import { useScheduleConflicts } from '@/hooks/useScheduleConflicts';
@@ -882,18 +882,14 @@ Please generate a schedule preview for today.`;
           {reshuffleMessage && (
             <p className="mt-2 text-sm text-primary-700">{reshuffleMessage}</p>
           )}
-          {/* Identity Panel */}
+          {/* Flow Studio summary */}
           <div className="mt-4">
-            <IdentityPanel
+            <FlowStudioTodayCard
               identities={identityProgressFull?.identities ?? []}
               evolutionStates={evolutionStates}
               evolutionMode={evolutionMode}
               evolutionFeatureEnabled={user?.identityEvolutionEnabled === true}
-              evolutionLoading={evolutionLoading}
-              onRefreshEvolution={refreshEvolution}
-              sessionReady={isAuthenticated}
-              timeZone={user?.timeZone ?? 'America/Chicago'}
-              loading={identityProgressFull === null}
+              loading={identityProgressFull === null || evolutionLoading}
             />
           </div>
           {/* What's Now — current and upcoming */}
