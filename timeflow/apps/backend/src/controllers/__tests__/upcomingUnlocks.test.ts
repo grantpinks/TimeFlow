@@ -24,6 +24,10 @@ vi.mock('../../middlewares/auth.js', () => ({
     req.user = { id: 'u1' };
     done();
   }),
+  optionalAuth: vi.fn((req: any, _reply: any, done: any) => {
+    req.user = { id: 'u1' };
+    done();
+  }),
 }));
 
 describe('GET /api/identities/:id/upcoming-unlocks', () => {
@@ -41,6 +45,32 @@ describe('GET /api/identities/:id/upcoming-unlocks', () => {
     expect(body.upcoming.every((u: any) => u.unlockKey !== 'flow_palette_default')).toBe(true);
     expect(body).toHaveProperty('xpToNextLevel');
     expect(body).toHaveProperty('sessionsNeeded');
+  });
+
+  it('excludes globally earned Flow cosmetics even when earned by another identity', async () => {
+    (prisma.identityUnlock.findMany as any).mockImplementationOnce((args: any) => {
+      if (args.where?.OR) {
+        return Promise.resolve([{ unlockKey: 'flow_accessory_cap' }]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const server = await buildServer();
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/identities/identity1/upcoming-unlocks',
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(prisma.identityUnlock.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: expect.any(Array),
+        }),
+      })
+    );
+    expect(body.upcoming.every((u: any) => u.unlockKey !== 'flow_accessory_cap')).toBe(true);
   });
 
   it('returns 404 when identity does not belong to user', async () => {

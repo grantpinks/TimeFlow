@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import '@testing-library/jest-dom/vitest';
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import type { IdentityDayProgress, IdentityEvolutionState } from '@timeflow/shared';
 import { FlowStudioTodayCard } from '../FlowStudioTodayCard';
 
@@ -40,6 +40,8 @@ const evolutionStates: IdentityEvolutionState[] = [
   },
 ];
 
+afterEach(cleanup);
+
 describe('FlowStudioTodayCard', () => {
   it('renders a lightweight Flow Studio summary with CTA', () => {
     render(
@@ -59,6 +61,24 @@ describe('FlowStudioTodayCard', () => {
     expect(screen.getByRole('link', { name: /open flow studio/i })).toHaveAttribute(
       'href',
       '/flow-studio'
+    );
+  });
+
+  it('keeps a lightweight path back to the Today identity workflow', () => {
+    render(
+      <FlowStudioTodayCard
+        identities={identities}
+        evolutionStates={evolutionStates}
+        evolutionMode="active"
+        evolutionFeatureEnabled
+        loading={false}
+      />
+    );
+
+    expect(screen.getByText(/Today's identity actions/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /plan identity habits/i })).toHaveAttribute(
+      'href',
+      '/habits'
     );
   });
 });

@@ -80,6 +80,22 @@ export function FlowStudioTodayCard({
           </Link>
         </div>
       </div>
+      <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/65 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            Today&apos;s identity actions
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            Keep planning and scheduling identity-linked habits without loading reward previews here.
+          </p>
+        </div>
+        <Link
+          href="/habits"
+          className="inline-flex shrink-0 items-center justify-center rounded-full border border-teal-200 bg-white px-4 py-2 text-sm font-semibold text-teal-700 shadow-sm transition hover:border-teal-300 hover:bg-teal-50"
+        >
+          Plan identity habits
+        </Link>
+      </div>
     </section>
   );
 }

@@ -298,12 +298,20 @@ async function requireEvolutionEnabled(userId: string, reply: FastifyReply): Pro
   return true;
 }
 
+const FLOW_COSMETIC_UNLOCK_TYPES = [
+  'flow_palette',
+  'flow_emote',
+  'flow_animation_pack',
+  'flow_stage_form',
+  'flow_accessory',
+] as const;
+
 async function getUserUnlockedCosmeticKeys(userId: string): Promise<Set<string>> {
   const rows = await prisma.identityUnlock.findMany({
     where: {
       userId,
       unlockType: {
-        in: ['flow_palette', 'flow_emote', 'flow_animation_pack', 'flow_stage_form', 'flow_accessory'],
+        in: [...FLOW_COSMETIC_UNLOCK_TYPES],
       },
     },
     select: { unlockKey: true },
@@ -584,7 +592,17 @@ export async function getUpcomingUnlocks(
   }
 
   const earned = await prisma.identityUnlock.findMany({
-    where: { identityId, userId },
+    where: {
+      userId,
+      OR: [
+        { identityId },
+        {
+          unlockType: {
+            in: [...FLOW_COSMETIC_UNLOCK_TYPES],
+          },
+        },
+      ],
+    },
     select: { unlockKey: true },
   });
   const earnedKeys = new Set(earned.map((e) => e.unlockKey));
