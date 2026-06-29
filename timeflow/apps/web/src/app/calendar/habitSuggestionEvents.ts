@@ -22,7 +22,7 @@ export interface HabitSuggestionOccupiedSlot {
 
 function overlapsOccupiedSlot(start: Date, end: Date, occupiedSlots: HabitSuggestionOccupiedSlot[]): boolean {
   return occupiedSlots.some((slot) => {
-    if (slot.allDay || slot.transparency === 'transparent') return false;
+    if (slot.transparency === 'transparent') return false;
 
     const busyStart = new Date(slot.start);
     const busyEnd = new Date(slot.end);

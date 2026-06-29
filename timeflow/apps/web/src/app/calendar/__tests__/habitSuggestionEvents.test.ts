@@ -94,6 +94,45 @@ describe('buildHabitSuggestionCalendarEvents', () => {
     expect(events[0]?.habitId).toBe('available');
   });
 
+  it('drops proposed suggestions that overlap opaque all-day calendar events', () => {
+    const events = buildHabitSuggestionCalendarEvents(
+      [suggestion()],
+      true,
+      new Date('2026-06-25T12:00:00.000-05:00'),
+      'America/Chicago',
+      [
+        busyEvent({
+          allDay: true,
+          start: '2026-06-25T00:00:00.000-05:00',
+          end: '2026-06-26T00:00:00.000-05:00',
+          transparency: 'opaque',
+        }),
+      ]
+    );
+
+    expect(events).toEqual([]);
+  });
+
+  it('keeps proposed suggestions that overlap transparent all-day calendar events', () => {
+    const events = buildHabitSuggestionCalendarEvents(
+      [suggestion()],
+      true,
+      new Date('2026-06-25T12:00:00.000-05:00'),
+      'America/Chicago',
+      [
+        busyEvent({
+          allDay: true,
+          start: '2026-06-25T00:00:00.000-05:00',
+          end: '2026-06-26T00:00:00.000-05:00',
+          transparency: 'transparent',
+        }),
+      ]
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.habitId).toBe('habit-1');
+  });
+
   it('ignores suggestions from days before today', () => {
     const events = buildHabitSuggestionCalendarEvents(
       [
