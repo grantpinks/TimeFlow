@@ -13,11 +13,38 @@ export interface CalendarHabitSuggestionEvent {
 
 const MIN_SUGGESTION_DISPLAY_MINUTES = 30;
 
+export interface HabitSuggestionOccupiedSlot {
+  start: string | Date;
+  end: string | Date;
+  allDay?: boolean;
+  transparency?: 'opaque' | 'transparent';
+}
+
+function overlapsOccupiedSlot(start: Date, end: Date, occupiedSlots: HabitSuggestionOccupiedSlot[]): boolean {
+  return occupiedSlots.some((slot) => {
+    if (slot.allDay || slot.transparency === 'transparent') return false;
+
+    const busyStart = new Date(slot.start);
+    const busyEnd = new Date(slot.end);
+
+    if (
+      Number.isNaN(busyStart.getTime()) ||
+      Number.isNaN(busyEnd.getTime()) ||
+      busyEnd <= busyStart
+    ) {
+      return false;
+    }
+
+    return start < busyEnd && end > busyStart;
+  });
+}
+
 export function buildHabitSuggestionCalendarEvents(
   suggestions: EnrichedHabitSuggestion[],
   enabled: boolean,
   referenceDate = new Date(),
-  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  occupiedSlots: HabitSuggestionOccupiedSlot[] = []
 ): CalendarHabitSuggestionEvent[] {
   if (!enabled) return [];
 
@@ -35,7 +62,8 @@ export function buildHabitSuggestionCalendarEvents(
         Number.isNaN(end.getTime()) ||
         !suggestionStart.isValid ||
         end <= start ||
-        suggestionStart < todayStart
+        suggestionStart < todayStart ||
+        overlapsOccupiedSlot(start, end, occupiedSlots)
       ) {
         return null;
       }

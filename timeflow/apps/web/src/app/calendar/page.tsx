@@ -64,6 +64,7 @@ import { useToast } from '@/hooks/useToast';
 import {
   buildHabitSuggestionCalendarEvents,
   type CalendarHabitSuggestionEvent,
+  type HabitSuggestionOccupiedSlot,
 } from './habitSuggestionEvents';
 
 /** Only droppables under the pointer count — never pick a "nearest" slot when releasing outside the grid. */
@@ -503,15 +504,46 @@ export default function CalendarPage() {
     () => enrichEventsWithCalendarColors(filteredExternalEvents, connectedAccounts),
     [filteredExternalEvents, connectedAccounts]
   );
+
+  const habitSuggestionOccupiedSlots = useMemo<HabitSuggestionOccupiedSlot[]>(() => {
+    const scheduledTaskSlots = tasks.flatMap((task) =>
+      task.scheduledTask
+        ? [
+            {
+              start: task.scheduledTask.startDateTime,
+              end: task.scheduledTask.endDateTime,
+            },
+          ]
+        : []
+    );
+
+    return [
+      ...scheduledTaskSlots,
+      ...displayExternalEvents.map((event) => ({
+        start: event.start,
+        end: event.end,
+        allDay: event.allDay,
+        transparency: event.transparency,
+      })),
+    ];
+  }, [tasks, displayExternalEvents]);
+
   const habitSuggestionEvents = useMemo(
     () =>
       buildHabitSuggestionCalendarEvents(
         habitSuggestions,
         showHabitRecommendations,
         habitSuggestionReferenceDate,
-        user?.timeZone
+        user?.timeZone,
+        habitSuggestionOccupiedSlots
       ),
-    [habitSuggestions, showHabitRecommendations, habitSuggestionReferenceDate, user?.timeZone]
+    [
+      habitSuggestions,
+      showHabitRecommendations,
+      habitSuggestionReferenceDate,
+      user?.timeZone,
+      habitSuggestionOccupiedSlots,
+    ]
   );
 
   // Fetch event categorizations with caching and background auto-categorization

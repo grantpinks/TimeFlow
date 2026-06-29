@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildHabitSuggestionCalendarEvents } from '../habitSuggestionEvents';
-import type { EnrichedHabitSuggestion } from '@timeflow/shared';
+import type { CalendarEvent, EnrichedHabitSuggestion } from '@timeflow/shared';
 
 function suggestion(overrides: Partial<EnrichedHabitSuggestion> = {}): EnrichedHabitSuggestion {
   return {
@@ -14,6 +14,18 @@ function suggestion(overrides: Partial<EnrichedHabitSuggestion> = {}): EnrichedH
       description: null,
       durationMinutes: 30,
     },
+    ...overrides,
+  };
+}
+
+function busyEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
+  return {
+    id: 'busy-1',
+    summary: 'Busy',
+    start: '2026-06-25T09:15:00.000-05:00',
+    end: '2026-06-25T09:45:00.000-05:00',
+    sourceType: 'external',
+    transparency: 'opaque',
     ...overrides,
   };
 }
@@ -50,6 +62,36 @@ describe('buildHabitSuggestionCalendarEvents', () => {
 
   it('returns no events when disabled', () => {
     expect(buildHabitSuggestionCalendarEvents([suggestion()], false)).toEqual([]);
+  });
+
+  it('drops proposed suggestions that overlap occupied timed calendar events', () => {
+    const events = buildHabitSuggestionCalendarEvents(
+      [
+        suggestion({
+          habitId: 'overlap',
+          start: '2026-06-25T09:00:00.000-05:00',
+          end: '2026-06-25T09:30:00.000-05:00',
+        }),
+        suggestion({
+          habitId: 'available',
+          start: '2026-06-25T10:00:00.000-05:00',
+          end: '2026-06-25T10:30:00.000-05:00',
+          habit: {
+            id: 'available',
+            title: 'Read',
+            description: null,
+            durationMinutes: 30,
+          },
+        }),
+      ],
+      true,
+      new Date('2026-06-25T12:00:00.000-05:00'),
+      'America/Chicago',
+      [busyEvent()]
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]?.habitId).toBe('available');
   });
 
   it('ignores suggestions from days before today', () => {
